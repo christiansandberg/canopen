@@ -1,18 +1,21 @@
 import collections
 
 
-INTEGER8 = 1
-INTEGER16 = 2
-INTEGER32 = 3
-UNSIGNED8 = 4
-UNSIGNED16 = 5
-UNSIGNED32 = 6
-REAL32 = 7
-VIS_STR = 8
+INTEGER8 = 2
+INTEGER16 = 3
+INTEGER32 = 4
+UNSIGNED8 = 5
+UNSIGNED16 = 6
+UNSIGNED32 = 7
+REAL32 = 8
+VIS_STR = 9
 
 
 def import_any(filename):
-    if filename.endswith(".epf"):
+    if filename.endswith(".eds"):
+        from . import eds
+        return eds.import_eds(filename)
+    elif filename.endswith(".epf"):
         from . import epf
         return epf.import_epf(filename)
 
@@ -22,10 +25,6 @@ class ObjectDictionary(collections.Mapping):
     def __init__(self):
         self.indexes = collections.OrderedDict()
         self.names = collections.OrderedDict()
-
-    def add_group(self, group):
-        self.indexes[group.index] = group
-        self.names[group.name] = group
 
     def __getitem__(self, index):
         """Get Object Dictionary index."""
@@ -41,25 +40,26 @@ class ObjectDictionary(collections.Mapping):
     def __contains__(self, index):
         return index in self.names or index in self.indexes
 
+    def add_group(self, group):
+        group.parent = self
+        self.indexes[group.index] = group
+        self.names[group.name] = group
+
 
 class Group(collections.Mapping):
 
-    def __init__(self, parent, index, name):
-        self.parent = parent
+    def __init__(self, index, name):
+        self.parent = None
         self.index = index
         self.name = name
         self.is_array = False
         self.subindexes = collections.OrderedDict()
         self.names = collections.OrderedDict()
-    
-    def add_parameter(self, par):
-        self.subindexes[par.subindex] = par
-        self.names[par.name] = par
 
     def __getitem__(self, subindex):
         if self.is_array and isinstance(subindex, int) and subindex > 0:
-            # Create a new parameter instance
-            par = self[1]
+            # Create a new parameter object
+            par = self.subindexes[1].copy()
             # Set correct subindex
             par.subindex = subindex
             return par
@@ -78,24 +78,43 @@ class Group(collections.Mapping):
     def __eq__(self, other):
         return self.index == other.index
 
+    def add_parameter(self, par):
+        par.parent = self
+        self.subindexes[par.subindex] = par
+        self.names[par.name] = par
+
 
 class Parameter(object):
     """Object Dictionary subindex.
     """
 
-    def __init__(self, parent, subindex, name):
-        self.parent = parent
+    def __init__(self, subindex, name):
+        self.parent = None
         self.subindex = subindex
         self.name = name
         self.data_type = UNSIGNED32
-        self.unit = ''
+        self.unit = ""
         self.factor = 1
         self.offset = 0
+        self.min = None
+        self.max = None
         self.value_descriptions = {}
-
-    def add_value_description(self, value, descr):
-        self.value_descriptions[value] = descr
 
     def __eq__(self, other):
         return (self.parent.index == other.parent.index and
                 self.subindex == other.subindex)
+
+    def add_value_description(self, value, descr):
+        self.value_descriptions[value] = descr
+
+    def copy(self):
+        par = Parameter(self.subindex, self.name)
+        par.parent = self.parent
+        par.data_type = self.data_type
+        par.unit = self.unit
+        par.factor = self.factor
+        par.offset = self.offset
+        par.min = self.min
+        par.max = self.max
+        par.value_descriptions = self.value_descriptions
+        return par

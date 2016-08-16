@@ -1,20 +1,40 @@
 import collections
 import struct
-import time
 import logging
 import threading
 from canopen import objectdictionary
 
 
-SDO_STRUCT = struct.Struct("<BHBL")
+logger = logging.getLogger(__name__)
+# Command, index, subindex, value/abort code
+SDO_STRUCT = struct.Struct("<BHB4s")
+
+
+RESPONSE_SEGMENT_UPLOAD = 0
+RESPONSE_SEGMENT_DOWNLOAD = 1
+RESPONSE_UPLOAD = 2
+RESPONSE_DOWNLOAD = 3
+ABORTED = 4
+
+
+def get_command_bits(command):
+    s = command & 0x1
+    command >>= 1
+    e = command & 0x1
+    command >>= 1
+    n = command & 0x3
+    command >>= 3
+    ccs = command & 0x7
+    return (ccs, n, e, s)
 
 
 class Node(collections.Mapping):
 
-    def __init__(self, node_id, object_dictionary, network):
+    def __init__(self, node_id, object_dictionary):
         self.node_id = node_id
         self.object_dictionary = object_dictionary
-        self.network = network
+        self.parent = None
+        self.response = None
         self.response_received = threading.Condition()
 
     def on_response(self, msg):
@@ -22,16 +42,15 @@ class Node(collections.Mapping):
             self.response = msg
             self.response_received.notify_all()
 
-    def query(self, sdo_request):
-        """Send an SDO query, check the response and return the raw data."""
+    def send_request(self, sdo_request):
         attempts_left = 5
         while attempts_left:
-            self.network.send_message(0x600 + self.node_id, sdo_request)
+            self.parent.network.send_message(0x600 + self.node_id, sdo_request)
 
             # Wait for node to respond
             with self.response_received:
                 self.response = None
-                self.response_received.wait(0.2)
+                self.response_received.wait(0.5)
 
             if self.response:
                 attempts_left = 0
@@ -40,32 +59,71 @@ class Node(collections.Mapping):
 
         if not self.response:
             raise SdoCommunicationError("No SDO response received")
-
-        command, index, subindex, value = SDO_STRUCT.unpack(self.response.data)
-
-        """
-        # Check that the message is for us
-        if isinstance(sdo_request, SDO) and (
-            sdo_response.index != sdo_request.index or
-            sdo_response.subindex != sdo_request.subindex):
-            raise SDOCommunicationError((
-                "Node returned a value for "
-                "0x{0.index:X}:{0.subindex:d} instead, "
-                "maybe there is another SDO master communicating "
-                "on the same SDO channel?").format(sdo_response))
-        """
-
-        # Check abort code and raise appropriate exceptions
-        if command == 0x80:
-            abort_code = value
+        elif self.response.data[0] == 0x80:
+            # Abort code
+            abort_code, = struct.unpack("<L", self.response.data[4:8])
             if abort_code == 0x06090011 or abort_code == 0x06020000:
                 raise KeyError("0x{:X}:{:d} does not exist".format(index, subindex))
-            #elif abort_code == 0x06090030:
-            #    raise ValueError("Value range of parameter exceeded")
             else:
                 raise SdoAbortedError(abort_code)
+        else:
+            return self.response.data
 
-        return self.response.data
+    def query(self, command, index, subindex, data=b''):
+        """Send an SDO query, check the response and return the raw data."""
+        if isinstance(data, int):
+            req_data = struct.pack("<L", data)
+        elif command == 0x21:
+            req_data = struct.pack("<L", len(data))
+        else:
+            req_data = data
+        sdo_request = SDO_STRUCT.pack(command, index, subindex, req_data)
+        response = self.send_request(sdo_request)
+        res_command, res_index, res_subindex, res_data = SDO_STRUCT.unpack(response)
+
+        # Check that the message is for us
+        if res_index != index or res_subindex != subindex:
+            raise SdoCommunicationError((
+                "Node returned a value for 0x{:X}:{:d} instead, "
+                "maybe there is another SDO master communicating "
+                "on the same SDO channel?").format(index, subindex))
+
+        (command_specifier, free_bytes, is_expedited,
+            is_size_specified) = get_command_bits(res_command)
+
+        if command_specifier == RESPONSE_UPLOAD and is_expedited and is_size_specified:
+            # Expedited upload
+            res_data = res_data[:4-free_bytes]
+        elif command_specifier == RESPONSE_UPLOAD and is_size_specified:
+            # Segmented upload
+            length, = struct.unpack("<L", res_data)
+            logger.debug("Starting segmented transfer for %d bytes", length)
+            res_data = bytearray(length)
+            sdo_request = bytearray(8)
+            sdo_request[0] = 0x60
+
+            for pos in range(0, length, 7):
+                response = self.send_request(sdo_request)
+                res_data[pos:pos+7] = response[1:8]
+
+                # Toggle bit
+                sdo_request[0] ^= 0x10
+
+            del res_data[length:]
+        elif command == 0x21 and command_specifier == RESPONSE_DOWNLOAD:
+            # Segmented download
+            sdo_request = bytearray(8)
+            sdo_request[0] = 0
+            for pos in range(0, len(data), 7):
+                sdo_request[1:8] = data[pos:pos+7]
+                if pos+7 >= len(data):
+                    sdo_request[0] |= 1
+                self.send_request(sdo_request.ljust(8, b'\x00'))
+
+                # Toggle bit
+                sdo_request[0] ^= 0x10
+
+        return res_data
 
     def __getitem__(self, index):
         return Group(self, self.object_dictionary[index])
@@ -130,77 +188,34 @@ class Parameter(object):
     @property
     def raw(self):
         """Get raw value of parameter (SDO upload)"""
-        logging.info("Reading %s.%s (0x%X:%d) from node %d",
+        logger.debug("Reading %s.%s (0x%X:%d) from node %d",
             self.od.parent.name, self.od.name, self.od.parent.index,
             self.subindex, self.node.node_id)
 
-        sdo_request = SDO_STRUCT.pack(0x40,
-                                      self.od.parent.index,
-                                      self.subindex,
-                                      0)
-
-        msg = self.node.query(sdo_request)
-        command, index, subindex, value = SDO_STRUCT.unpack(msg)
-
-        if command == 0x41:
-            # Segmented transfer
-            length = value
-            logging.debug("Starting segmented transfer for %d bytes", length)
-            data = bytearray(length)
-            sdo_request = bytearray(8)
-            sdo_request[0] = 0x60
-
-            for pos in range(0, length, 7):
-                msg = self.parent.node.sdo_query(sdo_request)
-                data[pos:pos+7] = msg[1:8]
-
-                # Toggle bit
-                sdo_request[0] ^= 0x10
-
-            del data[length:]
-        else:
-            # Expedited transfer
-            data = msg[4:8]
+        data = self.node.query(0x40, self.od.parent.index, self.subindex)
 
         if self.od.data_type == objectdictionary.VIS_STR:
             value = data.decode("ascii")
         else:
             fmt = "<" + self.DATA_TYPES[self.od.data_type]
-            value, = struct.unpack_from(fmt, data)
+            try:
+                value, = struct.unpack(fmt, data)
+            except struct.error:
+                raise SdoError("Mismatch between expected and actual data type")
 
         return value
 
     @raw.setter
     def raw(self, value):
         """Write raw value to parameter (SDO download)"""
-        logging.info("Writing %s.%s (0x%X:%d) = %s to node %d",
+        logger.debug("Writing %s.%s (0x%X:%d) = %s to node %d",
             self.od.parent.name, self.od.name, self.od.parent.index,
             self.subindex, value, self.node.node_id)
 
         if self.od.data_type == objectdictionary.VIS_STR:
             # Segmented transfer
             data = value.encode("ascii")
-            length = len(data)
-
-            sdo_request = SDO_STRUCT.pack(0x21,
-                                          self.od.parent.index,
-                                          self.subindex,
-                                          length)
-            logging.debug("Starting segmented transfer for %d bytes", length)
-            self.node.sdo_query(sdo_request)
-
-            # Start transmission of segments
-            sdo_request = bytearray(8)
-            for pos in range(0, length, 7):
-                sdo_request[1:8] = data[pos:pos+7]
-                if pos+7 >= length:
-                    sdo_request[0] |= 1
-                    # Make sure DLC is 8
-                    sdo_request = sdo_request.ljust(8, b"\x00")
-                self.node.sdo_query(sdo_request)
-
-                # Toggle bit
-                sdo_request[0] ^= 0x10
+            self.node.query(0x21, self.od.parent.index, self.subindex, data)
         else:
             # Expedited transfer
             if (self.od.data_type == objectdictionary.INTEGER8 or
@@ -212,15 +227,10 @@ class Parameter(object):
             else:
                 command = 0x23
 
-            sdo_request = bytearray(8)
-            fmt = "<BHB" + self.DATA_TYPES[self.od.data_type]
-            struct.pack_into(fmt, sdo_request, 0, command,
-                             self.od.parent.index,
-                             self.subindex, int(value))
+            data = struct.pack("<" + self.DATA_TYPES[self.od.data_type], int(value))
+            self.node.query(command, self.od.parent.index, self.subindex, data)
 
-            self.node.query(sdo_request)
-
-        logging.debug("Node accepted")
+        logger.debug("Node accepted")
 
     @property
     def phys(self):
@@ -249,28 +259,32 @@ class Parameter(object):
     def desc(self):
         value = self.raw
 
-        if not self.value_descriptions:
-            raise Exception("No value descriptions exist")
-        elif value not in self.value_descriptions:
-            raise Exception("No value description exists for %d" % value)
+        if not self.od.value_descriptions:
+            raise SdoError("No value descriptions exist")
+        elif value not in self.od.value_descriptions:
+            raise SdoError("No value description exists for %d" % value)
         else:
-            return self.value_descriptions[value]
+            return self.od.value_descriptions[value]
 
     @desc.setter
     def desc(self, desc):
-        if not self.value_descriptions:
-            raise Exception("No value descriptions exist")
+        if not self.od.value_descriptions:
+            raise SdoError("No value descriptions exist")
         else:
-            for value, description in self.value_descriptions.items():
+            for value, description in self.od.value_descriptions.items():
                 if description == desc:
                     self.raw = value
                     return
-        valid_values = ", ".join(self.value_descriptions.values())
+        valid_values = ", ".join(self.od.value_descriptions.values())
         error_text = "No value corresponds to '%s'. Valid values are: %s"
-        raise Exception(error_text % (desc, valid_values))
+        raise SdoError(error_text % (desc, valid_values))
 
 
-class SdoAbortedError(Exception):
+class SdoError(Exception):
+    pass
+
+
+class SdoAbortedError(SdoError):
     """SDO abort exception."""
 
     CODES = {
@@ -297,5 +311,5 @@ class SdoAbortedError(Exception):
             return "SDO was aborted with code 0x{:08X}".format(self.code)
 
 
-class SdoCommunicationError(Exception):
+class SdoCommunicationError(SdoError):
     pass

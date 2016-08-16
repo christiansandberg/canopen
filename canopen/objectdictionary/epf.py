@@ -1,4 +1,3 @@
-import logging
 import xml.etree.ElementTree as etree
 from canopen import objectdictionary
 
@@ -17,28 +16,34 @@ DATA_TYPES = {
 
 def import_epf(filename):
     od = objectdictionary.ObjectDictionary()
-
-    logging.info("Parsing %s", filename)
     tree = etree.parse(filename).getroot()
 
     # Parse Object Dictionary
     for group_tree in tree.iterfind("Dictionary/Parameters/Group"):
         name = group_tree.get("SymbolName")
         index = int(group_tree.find("Parameter").get("Index"), 0)
-        group = objectdictionary.Group(od, index, name)
+        group = objectdictionary.Group(index, name)
         od.add_group(group)
 
         for par_tree in group_tree.iter("Parameter"):
+            if par_tree.get("ObjectType") == "ARRAY":
+                group.is_array = True
             subindex = int(par_tree.get("SubIndex"))
             name = par_tree.get("SymbolName")
-            factor = float(par_tree.get("Factor", 1.0))
-            unit = par_tree.get("Unit", "")
             data_type = par_tree.get("DataType")
 
-            par = objectdictionary.Parameter(group, subindex, name)
-            par.factor = factor
-            par.unit = unit
+            par = objectdictionary.Parameter(subindex, name)
+            par.factor = float(par_tree.get("Factor", 1.0))
+            par.unit = par_tree.get("Unit", "")
             par.data_type = DATA_TYPES[data_type]
+            try:
+                par.min = int(par_tree.get("MinimumValue"))
+            except (ValueError, TypeError):
+                pass
+            try:
+                par.max = int(par_tree.get("MaximumValue"))
+            except (ValueError, TypeError):
+                pass
 
             # Find value descriptions
             for value_field_def in par_tree.iterfind("ValueFieldDefs/ValueFieldDef"):
