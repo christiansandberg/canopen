@@ -10,22 +10,20 @@ logger = logging.getLogger(__name__)
 SDO_STRUCT = struct.Struct("<BHB4s")
 
 
-RESPONSE_SEGMENT_UPLOAD = 0
-RESPONSE_SEGMENT_DOWNLOAD = 1
-RESPONSE_UPLOAD = 2
-RESPONSE_DOWNLOAD = 3
-ABORTED = 4
+REQUEST_SEGMENT_DOWNLOAD = 0 << 5
+REQUEST_DOWNLOAD = 1 << 5
+REQUEST_UPLOAD = 2 << 5
+REQUEST_SEGMENT_UPLOAD = 3 << 5
 
+RESPONSE_SEGMENT_UPLOAD = 0 << 5
+RESPONSE_SEGMENT_DOWNLOAD = 1 << 5
+RESPONSE_UPLOAD = 2 << 5
+RESPONSE_DOWNLOAD = 3 << 5
 
-def get_command_bits(command):
-    s = command & 0x1
-    command >>= 1
-    e = command & 0x1
-    command >>= 1
-    n = command & 0x3
-    command >>= 3
-    ccs = command & 0x7
-    return (ccs, n, e, s)
+ABORTED = 0x80
+
+EXPEDITED = 0x2
+SIZE_SPECIFIED = 0x1
 
 
 class Node(collections.Mapping):
@@ -37,9 +35,9 @@ class Node(collections.Mapping):
         self.response = None
         self.response_received = threading.Condition()
 
-    def on_response(self, msg):
+    def on_response(self, can_id, data):
         with self.response_received:
-            self.response = msg
+            self.response = data
             self.response_received.notify_all()
 
     def send_request(self, sdo_request):
@@ -52,32 +50,21 @@ class Node(collections.Mapping):
                 self.response = None
                 self.response_received.wait(0.5)
 
-            if self.response:
+            if self.response is not None:
                 attempts_left = 0
             else:
                 attempts_left -= 1
 
-        if not self.response:
+        if self.response is None:
             raise SdoCommunicationError("No SDO response received")
-        elif self.response.data[0] == 0x80:
-            # Abort code
-            abort_code, = struct.unpack("<L", self.response.data[4:8])
-            if abort_code == 0x06090011 or abort_code == 0x06020000:
-                raise KeyError("0x{:X}:{:d} does not exist".format(index, subindex))
-            else:
-                raise SdoAbortedError(abort_code)
+        elif self.response[0] == ABORTED:
+            abort_code, = struct.unpack("<L", self.response[4:8])
+            raise SdoAbortedError(abort_code)
         else:
-            return self.response.data
+            return self.response
 
-    def query(self, command, index, subindex, data=b''):
-        """Send an SDO query, check the response and return the raw data."""
-        if isinstance(data, int):
-            req_data = struct.pack("<L", data)
-        elif command == 0x21:
-            req_data = struct.pack("<L", len(data))
-        else:
-            req_data = data
-        sdo_request = SDO_STRUCT.pack(command, index, subindex, req_data)
+    def upload(self, index, subindex):
+        sdo_request = SDO_STRUCT.pack(REQUEST_UPLOAD, index, subindex, b'')
         response = self.send_request(sdo_request)
         res_command, res_index, res_subindex, res_data = SDO_STRUCT.unpack(response)
 
@@ -88,13 +75,14 @@ class Node(collections.Mapping):
                 "maybe there is another SDO master communicating "
                 "on the same SDO channel?").format(index, subindex))
 
-        (command_specifier, free_bytes, is_expedited,
-            is_size_specified) = get_command_bits(res_command)
+        ccs = res_command & 0xE0
+        expedited = res_command & EXPEDITED
+        size_specified = res_command & SIZE_SPECIFIED
 
-        if command_specifier == RESPONSE_UPLOAD and is_expedited and is_size_specified:
+        if ccs == RESPONSE_UPLOAD and expedited and size_specified:
             # Expedited upload
-            res_data = res_data[:4-free_bytes]
-        elif command_specifier == RESPONSE_UPLOAD and is_size_specified:
+            length = 4 - ((res_command >> 2) & 0x3)
+        elif ccs == RESPONSE_UPLOAD and size_specified:
             # Segmented upload
             length, = struct.unpack("<L", res_data)
             logger.debug("Starting segmented transfer for %d bytes", length)
@@ -105,25 +93,38 @@ class Node(collections.Mapping):
             for pos in range(0, length, 7):
                 response = self.send_request(sdo_request)
                 res_data[pos:pos+7] = response[1:8]
-
-                # Toggle bit
                 sdo_request[0] ^= 0x10
+        else:
+            raise SdoCommunicationError("Unknown response type 0x%X" % res_command)
 
-            del res_data[length:]
-        elif command == 0x21 and command_specifier == RESPONSE_DOWNLOAD:
+        return res_data[:length]
+
+    def download(self, index, subindex, data):
+        length = len(data)
+        command = REQUEST_DOWNLOAD | SIZE_SPECIFIED
+
+        if length <= 4:
+            # Expedited download
+            command |= EXPEDITED
+            command |= (4 - length) << 2
+            sdo_request = SDO_STRUCT.pack(command, index, subindex, data)
+            response = self.send_request(sdo_request)
+            # TODO: Check response
+        else:
             # Segmented download
+            req_data = struct.pack("<L", length)
+            sdo_request = SDO_STRUCT.pack(command, index, subindex, req_data)
+            response = self.send_request(sdo_request)
+            # TODO: Check response
+
             sdo_request = bytearray(8)
-            sdo_request[0] = 0
-            for pos in range(0, len(data), 7):
+            for pos in range(0, length, 7):
                 sdo_request[1:8] = data[pos:pos+7]
-                if pos+7 >= len(data):
+                if pos+7 >= length:
                     sdo_request[0] |= 1
                 self.send_request(sdo_request.ljust(8, b'\x00'))
-
-                # Toggle bit
                 sdo_request[0] ^= 0x10
-
-        return res_data
+                # TODO: Check response
 
     def __getitem__(self, index):
         return Group(self, self.object_dictionary[index])
@@ -177,13 +178,23 @@ class Parameter(object):
         objectdictionary.UNSIGNED8: "B",
         objectdictionary.UNSIGNED16: "H",
         objectdictionary.UNSIGNED32: "L",
-        objectdictionary.REAL32: "f"
+        objectdictionary.REAL32: "f",
+        objectdictionary.VIS_STR: "s"
     }
 
     def __init__(self, node, od_par):
         self.node = node
         self.od = od_par
         self.subindex = self.od.subindex
+        self.struct = struct.Struct("<" + self.DATA_TYPES[od_par.data_type])
+
+    @property
+    def data(self):
+        return self.node.upload(self.od.parent.index, self.subindex)
+
+    @data.setter
+    def data(self, data):
+        self.node.download(self.od.parent.index, self.subindex, data)
 
     @property
     def raw(self):
@@ -192,17 +203,17 @@ class Parameter(object):
             self.od.parent.name, self.od.name, self.od.parent.index,
             self.subindex, self.node.node_id)
 
-        data = self.node.query(0x40, self.od.parent.index, self.subindex)
+        data = self.data
 
         if self.od.data_type == objectdictionary.VIS_STR:
             value = data.decode("ascii")
         else:
-            fmt = "<" + self.DATA_TYPES[self.od.data_type]
             try:
-                value, = struct.unpack(fmt, data)
+                value, = self.struct.unpack(data)
             except struct.error:
-                raise SdoError("Mismatch between expected and actual data type")
+                raise SdoError("Mismatch between expected and actual data size")
 
+        logger.debug("Node returned %s", value)
         return value
 
     @raw.setter
@@ -213,24 +224,11 @@ class Parameter(object):
             self.subindex, value, self.node.node_id)
 
         if self.od.data_type == objectdictionary.VIS_STR:
-            # Segmented transfer
             data = value.encode("ascii")
-            self.node.query(0x21, self.od.parent.index, self.subindex, data)
         else:
-            # Expedited transfer
-            if (self.od.data_type == objectdictionary.INTEGER8 or
-                self.od.data_type == objectdictionary.UNSIGNED8):
-                command = 0x2F
-            elif (self.od.data_type == objectdictionary.INTEGER16 or
-                  self.od.data_type == objectdictionary.UNSIGNED16):
-                command = 0x2B
-            else:
-                command = 0x23
+            data = self.struct.pack(int(value))
 
-            data = struct.pack("<" + self.DATA_TYPES[self.od.data_type], int(value))
-            self.node.query(command, self.od.parent.index, self.subindex, data)
-
-        logger.debug("Node accepted")
+        self.data = data
 
     @property
     def phys(self):
@@ -302,13 +300,12 @@ class SdoAbortedError(SdoError):
 
     def __init__(self, code):
         self.code = code
-        super(SdoAbortedError, self).__init__()
 
     def __str__(self):
-        try:
-            return self.CODES[self.code]
-        except KeyError:
-            return "SDO was aborted with code 0x{:08X}".format(self.code)
+        text = "Code 0x{:08X}".format(self.code)
+        if self.code in self.CODES:
+            text = text + ", " + self.CODES[self.code]
+        return text
 
 
 class SdoCommunicationError(SdoError):

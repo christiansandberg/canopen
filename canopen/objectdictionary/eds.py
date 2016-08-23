@@ -2,7 +2,7 @@ import re
 try:
     from configparser import ConfigParser
 except ImportError:
-    from ConfigParser import SafeConfigParser as ConfigParser
+    from ConfigParser import RawConfigParser as ConfigParser
 from canopen import objectdictionary
 
 

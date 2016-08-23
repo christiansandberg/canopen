@@ -57,14 +57,7 @@ class Group(collections.Mapping):
         self.names = collections.OrderedDict()
 
     def __getitem__(self, subindex):
-        if self.is_array and isinstance(subindex, int) and subindex > 0:
-            # Create a new parameter object
-            par = self.subindexes[1].copy()
-            # Set correct subindex
-            par.subindex = subindex
-            return par
-        else:
-            return self.names.get(subindex) or self.subindexes[subindex]
+        return self.names.get(subindex) or self.subindexes[subindex]
 
     def __len__(self):
         return len(self.names)
@@ -106,15 +99,3 @@ class Parameter(object):
 
     def add_value_description(self, value, descr):
         self.value_descriptions[value] = descr
-
-    def copy(self):
-        par = Parameter(self.subindex, self.name)
-        par.parent = self.parent
-        par.data_type = self.data_type
-        par.unit = self.unit
-        par.factor = self.factor
-        par.offset = self.offset
-        par.min = self.min
-        par.max = self.max
-        par.value_descriptions = self.value_descriptions
-        return par

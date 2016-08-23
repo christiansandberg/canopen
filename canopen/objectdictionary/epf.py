@@ -33,7 +33,8 @@ def import_epf(filename):
             data_type = par_tree.get("DataType")
 
             par = objectdictionary.Parameter(subindex, name)
-            par.factor = float(par_tree.get("Factor", 1.0))
+            factor = float(par_tree.get("Factor", 1.0))
+            par.factor = int(factor) if factor.is_integer() else factor
             par.unit = par_tree.get("Unit", "")
             par.data_type = DATA_TYPES[data_type]
             try:
