@@ -12,7 +12,7 @@ NMT_STATES = {
 
 
 NMT_TRANSITIONS = {
-    'START': 1,
+    'OPERATIONAL': 1,
     'STOPPED': 2,
     'SLEEP': 80,
     'STANDBY': 96,
@@ -22,7 +22,7 @@ NMT_TRANSITIONS = {
 }
 
 
-class Node(object):
+class NmtNode(object):
 
     def __init__(self, node_id):
         self.node_id = node_id
@@ -30,7 +30,7 @@ class Node(object):
         self.state_change = threading.Condition()
         self.parent = None
 
-    def on_response(self, can_id, data):
+    def on_heartbeat(self, can_id, data):
         new_state = data[0]
         with self.state_change:
             if new_state != self._state:

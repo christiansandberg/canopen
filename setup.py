@@ -11,7 +11,7 @@ setup(
     author_email="christian.sandberg@evs-inmotion.com",
     description="CANopen stack implementation",
     keywords="CAN CANopen",
-    #long_description=open('README').read(),
+    long_description=open("README.rst").read(),
     #license="LGPL v3",
     platforms=["any"],
     install_requires=["python-can"]

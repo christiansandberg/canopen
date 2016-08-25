@@ -6,6 +6,8 @@ from canopen import objectdictionary
 
 
 logger = logging.getLogger(__name__)
+
+
 # Command, index, subindex, value/abort code
 SDO_STRUCT = struct.Struct("<BHB4s")
 
@@ -26,7 +28,7 @@ EXPEDITED = 0x2
 SIZE_SPECIFIED = 0x1
 
 
-class Node(collections.Mapping):
+class SdoNode(collections.Mapping):
 
     def __init__(self, node_id, object_dictionary):
         self.node_id = node_id
@@ -88,7 +90,7 @@ class Node(collections.Mapping):
             logger.debug("Starting segmented transfer for %d bytes", length)
             res_data = bytearray(length)
             sdo_request = bytearray(8)
-            sdo_request[0] = 0x60
+            sdo_request[0] = REQUEST_SEGMENT_UPLOAD
 
             for pos in range(0, length, 7):
                 response = self.send_request(sdo_request)
@@ -118,6 +120,7 @@ class Node(collections.Mapping):
             # TODO: Check response
 
             sdo_request = bytearray(8)
+            sdo_request[0] = REQUEST_SEGMENT_DOWNLOAD
             for pos in range(0, length, 7):
                 sdo_request[1:8] = data[pos:pos+7]
                 if pos+7 >= length:
@@ -185,22 +188,23 @@ class Parameter(object):
     def __init__(self, node, od_par):
         self.node = node
         self.od = od_par
+        self.index = od_par.parent.index
         self.subindex = self.od.subindex
         self.struct = struct.Struct("<" + self.DATA_TYPES[od_par.data_type])
 
     @property
     def data(self):
-        return self.node.upload(self.od.parent.index, self.subindex)
+        return self.node.upload(self.index, self.subindex)
 
     @data.setter
     def data(self, data):
-        self.node.download(self.od.parent.index, self.subindex, data)
+        self.node.download(self.index, self.subindex, data)
 
     @property
     def raw(self):
         """Get raw value of parameter (SDO upload)"""
         logger.debug("Reading %s.%s (0x%X:%d) from node %d",
-            self.od.parent.name, self.od.name, self.od.parent.index,
+            self.od.parent.name, self.od.name, self.index,
             self.subindex, self.node.node_id)
 
         data = self.data
@@ -220,7 +224,7 @@ class Parameter(object):
     def raw(self, value):
         """Write raw value to parameter (SDO download)"""
         logger.debug("Writing %s.%s (0x%X:%d) = %s to node %d",
-            self.od.parent.name, self.od.name, self.od.parent.index,
+            self.od.parent.name, self.od.name, self.index,
             self.subindex, value, self.node.node_id)
 
         if self.od.data_type == objectdictionary.VIS_STR:
