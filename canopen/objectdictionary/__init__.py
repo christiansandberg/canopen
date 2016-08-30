@@ -1,3 +1,4 @@
+import struct
 import collections
 
 
@@ -81,6 +82,16 @@ class Parameter(object):
     """Object Dictionary subindex.
     """
 
+    STRUCT_TYPES = {
+        INTEGER8: struct.Struct("<b"),
+        INTEGER16: struct.Struct("<h"),
+        INTEGER32: struct.Struct("<l"),
+        UNSIGNED8: struct.Struct("<B"),
+        UNSIGNED16: struct.Struct("<H"),
+        UNSIGNED32: struct.Struct("<L"),
+        REAL32: struct.Struct("<f")
+    }
+
     def __init__(self, subindex, name):
         self.parent = None
         self.subindex = subindex
@@ -88,7 +99,6 @@ class Parameter(object):
         self.data_type = UNSIGNED32
         self.unit = ""
         self.factor = 1
-        self.offset = 0
         self.min = None
         self.max = None
         self.value_descriptions = {}
@@ -97,5 +107,71 @@ class Parameter(object):
         return (self.parent.index == other.parent.index and
                 self.subindex == other.subindex)
 
+    def __len__(self):
+        if self.data_type in self.STRUCT_TYPES:
+            return self.STRUCT_TYPES[self.data_type].size
+        else:
+            return 1
+
     def add_value_description(self, value, descr):
         self.value_descriptions[value] = descr
+
+    def decode_raw(self, data):
+        if self.data_type == VIS_STR:
+            value = data.decode("ascii")
+        else:
+            try:
+                value, = self.STRUCT_TYPES[self.data_type].unpack(data)
+            except struct.error:
+                raise ObjectDictionaryError("Mismatch between expected and actual data size")
+        return value
+
+    def encode_raw(self, value):
+        if self.data_type == VIS_STR:
+            return value.encode("ascii")
+        else:
+            value = int(value)
+            try:
+                return self.STRUCT_TYPES[self.data_type].pack(value)
+            except struct.error:
+                raise ObjectDictionaryError("Value does not fit in specified type")
+
+    def decode_phys(self, data):
+        value = self.decode_raw(data)
+        try:
+            value *= self.factor
+        except TypeError:
+            pass
+        return value
+
+    def encode_phys(self, value):
+        try:
+            value /= self.factor
+            value = int(round(value))
+        except TypeError:
+            pass
+        return self.encode_raw(value)
+
+    def decode_desc(self, data):
+        value = self.decode_raw(data)
+        if not self.value_descriptions:
+            raise ObjectDictionaryError("No value descriptions exist")
+        elif value not in self.value_descriptions:
+            raise ObjectDictionaryError("No value description exists for %d" % value)
+        else:
+            return self.value_descriptions[value]
+
+    def encode_desc(self, desc):
+        if not self.value_descriptions:
+            raise ObjectDictionaryError("No value descriptions exist")
+        else:
+            for value, description in self.value_descriptions.items():
+                if description == desc:
+                    return self.encode_raw(value)
+        valid_values = ", ".join(self.value_descriptions.values())
+        error_text = "No value corresponds to '%s'. Valid values are: %s"
+        raise ObjectDictionaryError(error_text % (desc, valid_values))
+
+
+class ObjectDictionaryError(Exception):
+    pass

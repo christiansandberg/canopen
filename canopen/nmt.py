@@ -17,15 +17,14 @@ NMT_TRANSITIONS = {
     'SLEEP': 80,
     'STANDBY': 96,
     'PRE OPERATIONAL': 128,
-    'RESET': 129,
+    'INIT': 129,
     'RESET COMMUNICATION': 130
 }
 
 
 class NmtNode(object):
 
-    def __init__(self, node_id):
-        self.node_id = node_id
+    def __init__(self):
         self._state = 0
         self.state_change = threading.Condition()
         self.parent = None
@@ -36,6 +35,9 @@ class NmtNode(object):
             if new_state != self._state:
                 self._state = new_state
                 self.state_change.notify_all()
+
+    def send_command(self, code):
+        self.parent.network.send_message(0, [code, self.parent.id])
 
     @property
     def state(self):
@@ -51,7 +53,7 @@ class NmtNode(object):
             raise KeyError("'%s' is an invalid state. Must be one of %s." %
                            (transition, ", ".join(NMT_TRANSITIONS)))
 
-        self.parent.network.send_message(0, [code, self.node_id])
+        self.send_command(code)
 
     def wait_for_state_change(self, timeout=10):
         with self.state_change:

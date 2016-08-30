@@ -12,7 +12,7 @@ setup(
     description="CANopen stack implementation",
     keywords="CAN CANopen",
     long_description=open("README.rst").read(),
-    #license="LGPL v3",
+    #license="MIT",
     platforms=["any"],
     install_requires=["python-can"]
 )

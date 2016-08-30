@@ -2,7 +2,6 @@ import collections
 import struct
 import logging
 import threading
-from canopen import objectdictionary
 
 
 logger = logging.getLogger(__name__)
@@ -30,32 +29,32 @@ SIZE_SPECIFIED = 0x1
 
 class SdoNode(collections.Mapping):
 
-    def __init__(self, node_id, object_dictionary):
-        self.node_id = node_id
-        self.object_dictionary = object_dictionary
+    def __init__(self, node_id):
+        self.id = node_id
         self.parent = None
         self.response = None
         self.response_received = threading.Condition()
 
     def on_response(self, can_id, data):
-        with self.response_received:
-            self.response = data
-            self.response_received.notify_all()
+        if can_id == 0x580 + self.id:
+            with self.response_received:
+                self.response = data
+                self.response_received.notify_all()
 
     def send_request(self, sdo_request):
-        attempts_left = 5
-        while attempts_left:
-            self.parent.network.send_message(0x600 + self.node_id, sdo_request)
+        retries = 5
+        while retries:
+            self.parent.network.send_message(0x600 + self.id, sdo_request)
 
             # Wait for node to respond
             with self.response_received:
                 self.response = None
                 self.response_received.wait(0.5)
 
-            if self.response is not None:
-                attempts_left = 0
+            if self.response is None:
+                retries -= 1
             else:
-                attempts_left -= 1
+                retries = 0
 
         if self.response is None:
             raise SdoCommunicationError("No SDO response received")
@@ -125,18 +124,18 @@ class SdoNode(collections.Mapping):
                 sdo_request[1:8] = data[pos:pos+7]
                 if pos+7 >= length:
                     sdo_request[0] |= 1
-                self.send_request(sdo_request.ljust(8, b'\x00'))
+                response = self.send_request(sdo_request.ljust(8, b'\x00'))
                 sdo_request[0] ^= 0x10
                 # TODO: Check response
 
     def __getitem__(self, index):
-        return Group(self, self.object_dictionary[index])
+        return Group(self, self.parent.object_dictionary[index])
 
     def __iter__(self):
-        return iter(self.object_dictionary)
+        return iter(self.parent.object_dictionary)
 
     def __len__(self):
-        return len(self.object_dictionary)
+        return len(self.parent.object_dictionary)
 
 
 class Group(collections.Mapping):
@@ -174,23 +173,11 @@ class Group(collections.Mapping):
 
 class Parameter(object):
 
-    DATA_TYPES = {
-        objectdictionary.INTEGER8: "b",
-        objectdictionary.INTEGER16: "h",
-        objectdictionary.INTEGER32: "l",
-        objectdictionary.UNSIGNED8: "B",
-        objectdictionary.UNSIGNED16: "H",
-        objectdictionary.UNSIGNED32: "L",
-        objectdictionary.REAL32: "f",
-        objectdictionary.VIS_STR: "s"
-    }
-
     def __init__(self, node, od_par):
         self.node = node
         self.od = od_par
         self.index = od_par.parent.index
-        self.subindex = self.od.subindex
-        self.struct = struct.Struct("<" + self.DATA_TYPES[od_par.data_type])
+        self.subindex = od_par.subindex
 
     @property
     def data(self):
@@ -202,84 +189,48 @@ class Parameter(object):
 
     @property
     def raw(self):
-        """Get raw value of parameter (SDO upload)"""
-        logger.debug("Reading %s.%s (0x%X:%d) from node %d",
+        value = self.od.decode_raw(self.data)
+        text = "Value of %s.%s (0x%X:%d) in node %d = %d" % (
             self.od.parent.name, self.od.name, self.index,
-            self.subindex, self.node.node_id)
-
-        data = self.data
-
-        if self.od.data_type == objectdictionary.VIS_STR:
-            value = data.decode("ascii")
-        else:
-            try:
-                value, = self.struct.unpack(data)
-            except struct.error:
-                raise SdoError("Mismatch between expected and actual data size")
-
-        logger.debug("Node returned %s", value)
+            self.subindex, self.node.id, value)
+        if value in self.od.value_descriptions:
+            text += " (%s)" % self.od.value_descriptions[value]
+        logger.debug(text)
         return value
 
     @raw.setter
     def raw(self, value):
-        """Write raw value to parameter (SDO download)"""
         logger.debug("Writing %s.%s (0x%X:%d) = %s to node %d",
             self.od.parent.name, self.od.name, self.index,
-            self.subindex, value, self.node.node_id)
-
-        if self.od.data_type == objectdictionary.VIS_STR:
-            data = value.encode("ascii")
-        else:
-            data = self.struct.pack(int(value))
-
-        self.data = data
+            self.subindex, value, self.node.id)
+        self.data = self.od.encode_raw(value)
 
     @property
     def phys(self):
-        value = self.raw
-
-        try:
-            value *= self.od.factor
-            value += self.od.offset
-        except TypeError:
-            pass
-
+        value = self.od.decode_phys(self.data)
+        logger.debug("Value of %s.%s (0x%X:%d) in node %d = %s %s",
+            self.od.parent.name, self.od.name, self.index,
+            self.subindex, self.node.id, value, self.od.unit)
         return value
 
     @phys.setter
     def phys(self, value):
-        try:
-            value -= self.od.offset
-            value /= self.od.factor
-            value = int(round(value))
-        except TypeError:
-            pass
-
-        self.raw = value
+        logger.debug("Writing %s.%s (0x%X:%d) = %s to node %d",
+            self.od.parent.name, self.od.name, self.index,
+            self.subindex, value, self.node.id)
+        self.data = self.od.encode_phys(value)
 
     @property
     def desc(self):
-        value = self.raw
-
-        if not self.od.value_descriptions:
-            raise SdoError("No value descriptions exist")
-        elif value not in self.od.value_descriptions:
-            raise SdoError("No value description exists for %d" % value)
-        else:
-            return self.od.value_descriptions[value]
+        value = self.od.decode_desc(self.data)
+        logger.debug("Description of %s.%s (0x%X:%d) in node %d = %s",
+            self.od.parent.name, self.od.name, self.index,
+            self.subindex, self.node.id, value)
+        return value
 
     @desc.setter
     def desc(self, desc):
-        if not self.od.value_descriptions:
-            raise SdoError("No value descriptions exist")
-        else:
-            for value, description in self.od.value_descriptions.items():
-                if description == desc:
-                    self.raw = value
-                    return
-        valid_values = ", ".join(self.od.value_descriptions.values())
-        error_text = "No value corresponds to '%s'. Valid values are: %s"
-        raise SdoError(error_text % (desc, valid_values))
+        self.data = self.od.encode_desc(desc)
 
 
 class SdoError(Exception):

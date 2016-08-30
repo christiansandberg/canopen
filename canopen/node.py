@@ -4,26 +4,43 @@ from . import objectdictionary
 
 
 SDO_RESPONSE = 0x580
-SDO_REQUEST = 0x600
 HEARTBEAT = 0x700
 
 
 class Node(object):
 
-    def __init__(self, node_id, object_dictionary):
+    def __init__(self, node_id=1, object_dictionary=None):
         self.id = node_id
         self.network = None
+        self.object_dictionary = objectdictionary.ObjectDictionary()
         self.service_callbacks = {}
+        self.callbacks = []
 
-        self.object_dictionary = objectdictionary.import_any(object_dictionary)
+        if object_dictionary:
+            self.set_object_dictionary(object_dictionary)
 
-        self.sdo = SdoNode(node_id, self.object_dictionary)
+        self.sdo = SdoNode(node_id)
         self.sdo.parent = self
         self.register_service(SDO_RESPONSE, self.sdo.on_response)
 
-        self.nmt = NmtNode(node_id)
+        self.nmt = NmtNode()
         self.nmt.parent = self
         self.register_service(HEARTBEAT, self.nmt.on_heartbeat)
+
+    def add_callback(self, callback):
+        self.callbacks.append(callback)
+
+    def set_node_id(self, node_id):
+        self.id = node_id
+        self.sdo.id = node_id
+
+    def set_object_dictionary(self, object_dictionary):
+        if not isinstance(object_dictionary, objectdictionary.ObjectDictionary):
+            object_dictionary = objectdictionary.import_any(object_dictionary)
+        self.object_dictionary = object_dictionary
+
+    def set_sdo_channel(self, node_id):
+        self.sdo.id = node_id
 
     def register_service(self, cob_id, callback):
         self.service_callbacks[cob_id] = callback
