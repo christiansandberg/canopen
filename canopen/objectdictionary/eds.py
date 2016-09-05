@@ -6,53 +6,58 @@ except ImportError:
 from canopen import objectdictionary
 
 
+VAR = 7
+ARR = 8
+RECORD = 9
+
+
 def import_eds(filename):
     od = objectdictionary.ObjectDictionary()
     eds = ConfigParser()
     eds.read(filename)
 
     for section in eds.sections():
-        # Match groups
+        # Match indexes
         match = re.match(r"^[0-9A-F]{4}$", section)
         if match is not None:
             index = int(section, 16)
             name = eds.get(section, "ParameterName")
             object_type = int(eds.get(section, "ObjectType"), 0)
 
-            group = objectdictionary.Group(index, name)
-            od.add_group(group)
-
-            # If the group only contains one parameter
-            if object_type == 7:
-                par = build_parameter(eds, section, 0)
-                group.add_parameter(par)
-            elif object_type == 8 and eds.has_option(section, "CompactSubObj"):
-                group.is_array = True
-                last_subindex = objectdictionary.Parameter(0, "LastSubIndex")
-                last_subindex.data_type = objectdictionary.UNSIGNED8
-                par = build_parameter(eds, section, 1)
-                group.add_parameter(last_subindex)
-                group.add_parameter(par)
+            if object_type == VAR:
+                var = build_variable(eds, section, index)
+                od.add_object(var)
+            elif object_type == ARR and eds.has_option(section, "CompactSubObj"):
+                arr = objectdictionary.Array(name, index)
+                arr.variable = build_variable(eds, section, index, 1)
+                od.add_object(arr)
+            elif object_type == ARR:
+                arr = objectdictionary.Array(name, index)
+                arr.variable = build_variable(eds, section + "sub1", index, 1)
+                od.add_object(arr)
+            elif object_type == RECORD:
+                record = objectdictionary.Record(name, index)
+                od.add_object(record)
 
             continue
 
-        # Match parameters
+        # Match subindexes
         match = re.match(r"^([0-9A-F]{4})sub([0-9A-F]+)$", section)
         if match is not None:
             index = int(match.group(1), 16)
             subindex = int(match.group(2), 16)
-            par = build_parameter(eds, section, subindex)
-            od[index].add_parameter(par)
+            var = build_variable(eds, section, index, subindex)
+            od[index].add_member(var)
 
     return od
 
 
-def build_parameter(eds, section, subindex):
+def build_variable(eds, section, index, subindex=0):
     name = eds.get(section, "ParameterName")
-    par = objectdictionary.Parameter(subindex, name)
-    par.data_type = int(eds.get(section, "DataType"), 0)
+    var = objectdictionary.Variable(name, index, subindex)
+    var.data_type = int(eds.get(section, "DataType"), 0)
     if eds.has_option(section, "LowLimit"):
-        par.min = eds.getint(section, "LowLimit")
+        var.min = eds.getint(section, "LowLimit")
     if eds.has_option(section, "HighLimit"):
-        par.max = eds.getint(section, "HighLimit")
-    return par
+        var.max = eds.getint(section, "HighLimit")
+    return var

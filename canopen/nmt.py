@@ -11,13 +11,14 @@ NMT_STATES = {
 }
 
 
-NMT_TRANSITIONS = {
+NMT_COMMANDS = {
     'OPERATIONAL': 1,
     'STOPPED': 2,
     'SLEEP': 80,
     'STANDBY': 96,
     'PRE OPERATIONAL': 128,
     'INIT': 129,
+    'RESET': 129,
     'RESET COMMUNICATION': 130
 }
 
@@ -31,8 +32,8 @@ class NmtNode(object):
 
     def on_heartbeat(self, can_id, data):
         new_state = data[0]
-        with self.state_change:
-            if new_state != self._state:
+        if new_state != self._state:
+            with self.state_change:
                 self._state = new_state
                 self.state_change.notify_all()
 
@@ -44,14 +45,12 @@ class NmtNode(object):
         return NMT_STATES[self._state]
 
     @state.setter
-    def state(self, transition):
-        if isinstance(transition, int):
-            code = transition
-        elif transition in NMT_TRANSITIONS:
-            code = NMT_TRANSITIONS[transition]
+    def state(self, new_state):
+        if new_state in NMT_COMMANDS:
+            code = NMT_COMMANDS[new_state]
         else:
             raise KeyError("'%s' is an invalid state. Must be one of %s." %
-                           (transition, ", ".join(NMT_TRANSITIONS)))
+                           (new_state, ", ".join(NMT_COMMANDS)))
 
         self.send_command(code)
 

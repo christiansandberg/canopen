@@ -2,6 +2,7 @@ import struct
 import collections
 
 
+BOOLEAN = 1
 INTEGER8 = 2
 INTEGER16 = 3
 INTEGER32 = 4
@@ -10,6 +11,9 @@ UNSIGNED16 = 6
 UNSIGNED32 = 7
 REAL32 = 8
 VIS_STR = 9
+REAL64 = 17
+INTEGER64 = 21
+UNSIGNED64 = 27
 
 
 def import_any(filename):
@@ -41,19 +45,18 @@ class ObjectDictionary(collections.Mapping):
     def __contains__(self, index):
         return index in self.names or index in self.indexes
 
-    def add_group(self, group):
-        group.parent = self
-        self.indexes[group.index] = group
-        self.names[group.name] = group
+    def add_object(self, obj):
+        obj.parent = self
+        self.indexes[obj.index] = obj
+        self.names[obj.name] = obj
 
 
-class Group(collections.Mapping):
+class Record(collections.Mapping):
 
-    def __init__(self, index, name):
+    def __init__(self, name, index):
         self.parent = None
         self.index = index
         self.name = name
-        self.is_array = False
         self.subindexes = collections.OrderedDict()
         self.names = collections.OrderedDict()
 
@@ -72,28 +75,59 @@ class Group(collections.Mapping):
     def __eq__(self, other):
         return self.index == other.index
 
-    def add_parameter(self, par):
-        par.parent = self
-        self.subindexes[par.subindex] = par
-        self.names[par.name] = par
+    def add_member(self, variable):
+        variable.parent = self
+        self.subindexes[variable.subindex] = variable
+        self.names[variable.name] = variable
 
 
-class Parameter(object):
-    """Object Dictionary subindex.
-    """
+class Array(collections.Sequence):
+
+    def __init__(self, name, index):
+        self.parent = None
+        self.index = index
+        self.name = name
+        self.variable = None
+
+    def __getitem__(self, subindex):
+        if subindex == 0:
+            var = Variable("Number of Entries", self.index, 0)
+            var.data_type = UNSIGNED8
+        elif 0 < subindex < 256:
+            var = Variable("%s [%d]" % (self.name, subindex), self.index, subindex)
+            for attr in ("data_type", "unit", "factor", "min", "max",
+                         "value_descriptions"):
+                var.__dict__[attr] = self.variable.__dict__[attr]
+        else:
+            raise KeyError("Subindex must be 0 - 255")
+
+        var.parent = self
+        return var
+
+    def __len__(self):
+        return 255
+
+
+class Variable(object):
+    """Object Dictionary VAR."""
 
     STRUCT_TYPES = {
-        INTEGER8: struct.Struct("<b"),
+        BOOLEAN: struct.Struct("?"),
+        INTEGER8: struct.Struct("b"),
         INTEGER16: struct.Struct("<h"),
         INTEGER32: struct.Struct("<l"),
-        UNSIGNED8: struct.Struct("<B"),
+        INTEGER64: struct.Struct("<q"),
+        UNSIGNED8: struct.Struct("B"),
         UNSIGNED16: struct.Struct("<H"),
         UNSIGNED32: struct.Struct("<L"),
-        REAL32: struct.Struct("<f")
+        UNSIGNED64: struct.Struct("<Q"),
+        REAL32: struct.Struct("<f"),
+        REAL64: struct.Struct("<d")
     }
 
-    def __init__(self, subindex, name):
+    def __init__(self, name, index, subindex=0):
         self.parent = None
+        self.index = index
         self.subindex = subindex
         self.name = name
         self.data_type = UNSIGNED32
@@ -104,7 +138,7 @@ class Parameter(object):
         self.value_descriptions = {}
 
     def __eq__(self, other):
-        return (self.parent.index == other.parent.index and
+        return (self.index == other.index and
                 self.subindex == other.subindex)
 
     def __len__(self):
@@ -134,7 +168,7 @@ class Parameter(object):
             try:
                 return self.STRUCT_TYPES[self.data_type].pack(value)
             except struct.error:
-                raise ObjectDictionaryError("Value does not fit in specified type")
+                raise ValueError("Value does not fit in specified type")
 
     def decode_phys(self, data):
         value = self.decode_raw(data)
@@ -170,8 +204,41 @@ class Parameter(object):
                     return self.encode_raw(value)
         valid_values = ", ".join(self.value_descriptions.values())
         error_text = "No value corresponds to '%s'. Valid values are: %s"
-        raise ObjectDictionaryError(error_text % (desc, valid_values))
+        raise ValueError(error_text % (desc, valid_values))
 
+"""
+class Bits(Parameter):
+
+    def __init__(self, bits, name):
+        self.mask = 0
+        for bit in bits:
+            self.mask += 1 << bit
+        self.lowest_bit = min(bits)
+        super(Bits, self).__init__(None, name)
+
+    def decode_raw(self, data):
+        try:
+            value, = self.STRUCT_TYPES[self.data_type].unpack(data)
+        except struct.error:
+            raise ObjectDictionaryError("Mismatch between expected and actual data size")
+        value &= self.mask
+        value >>= self.lowest_bit
+        return value
+
+    def encode_raw(self, value):
+        value = int(value)
+
+        if value > (self.mask >> self.lowest_bit):
+            raise ValueError("Value is outside bitfield range")
+
+        data = self.parent.raw
+        data &= ~self.mask
+        data |= value << self.lowest_bit
+        try:
+            return self.STRUCT_TYPES[self.data_type].pack(value)
+        except struct.error:
+            raise ObjectDictionaryError("Value does not fit in specified type")
+"""
 
 class ObjectDictionaryError(Exception):
     pass

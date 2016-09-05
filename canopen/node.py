@@ -35,6 +35,7 @@ class Node(object):
         self.sdo.id = node_id
 
     def set_object_dictionary(self, object_dictionary):
+        assert object_dictionary, "An Object Dictionary file has not been specified"
         if not isinstance(object_dictionary, objectdictionary.ObjectDictionary):
             object_dictionary = objectdictionary.import_any(object_dictionary)
         self.object_dictionary = object_dictionary

@@ -2,6 +2,7 @@ import collections
 import struct
 import logging
 import threading
+from . import objectdictionary
 
 
 logger = logging.getLogger(__name__)
@@ -69,6 +70,8 @@ class SdoNode(collections.Mapping):
         response = self.send_request(sdo_request)
         res_command, res_index, res_subindex, res_data = SDO_STRUCT.unpack(response)
 
+        assert res_command & 0xE0 == RESPONSE_UPLOAD
+
         # Check that the message is for us
         if res_index != index or res_subindex != subindex:
             raise SdoCommunicationError((
@@ -76,29 +79,31 @@ class SdoNode(collections.Mapping):
                 "maybe there is another SDO master communicating "
                 "on the same SDO channel?").format(index, subindex))
 
-        ccs = res_command & 0xE0
         expedited = res_command & EXPEDITED
         size_specified = res_command & SIZE_SPECIFIED
 
-        if ccs == RESPONSE_UPLOAD and expedited and size_specified:
+        length = None
+
+        if expedited and size_specified:
             # Expedited upload
             length = 4 - ((res_command >> 2) & 0x3)
-        elif ccs == RESPONSE_UPLOAD and size_specified:
-            # Segmented upload
-            length, = struct.unpack("<L", res_data)
-            logger.debug("Starting segmented transfer for %d bytes", length)
-            res_data = bytearray(length)
-            sdo_request = bytearray(8)
-            sdo_request[0] = REQUEST_SEGMENT_UPLOAD
-
-            for pos in range(0, length, 7):
-                response = self.send_request(sdo_request)
-                res_data[pos:pos+7] = response[1:8]
-                sdo_request[0] ^= 0x10
         else:
-            raise SdoCommunicationError("Unknown response type 0x%X" % res_command)
+            # Segmented upload
+            if size_specified:
+                length, = struct.unpack("<L", res_data)
+                logger.debug("Starting segmented transfer for %d bytes", length)
+            request = bytearray(8)
+            request[0] = REQUEST_SEGMENT_UPLOAD
 
-        return res_data[:length]
+            res_data = b''
+            while True:
+                response = self.send_request(request)
+                res_data += response[1:8]
+                request[0] ^= 0x10
+                if response[0] & 1:
+                    break
+
+        return res_data[:length] if length is not None else res_data
 
     def download(self, index, subindex, data):
         length = len(data)
@@ -108,28 +113,32 @@ class SdoNode(collections.Mapping):
             # Expedited download
             command |= EXPEDITED
             command |= (4 - length) << 2
-            sdo_request = SDO_STRUCT.pack(command, index, subindex, data)
-            response = self.send_request(sdo_request)
+            request = SDO_STRUCT.pack(command, index, subindex, data)
+            response = self.send_request(request)
             # TODO: Check response
         else:
             # Segmented download
-            req_data = struct.pack("<L", length)
-            sdo_request = SDO_STRUCT.pack(command, index, subindex, req_data)
-            response = self.send_request(sdo_request)
+            length_data = struct.pack("<L", length)
+            request = SDO_STRUCT.pack(command, index, subindex, length_data)
+            response = self.send_request(request)
             # TODO: Check response
 
-            sdo_request = bytearray(8)
-            sdo_request[0] = REQUEST_SEGMENT_DOWNLOAD
+            request = bytearray(8)
+            request[0] = REQUEST_SEGMENT_DOWNLOAD
             for pos in range(0, length, 7):
-                sdo_request[1:8] = data[pos:pos+7]
+                request[1:8] = data[pos:pos+7]
                 if pos+7 >= length:
-                    sdo_request[0] |= 1
-                response = self.send_request(sdo_request.ljust(8, b'\x00'))
-                sdo_request[0] ^= 0x10
+                    request[0] |= 1
+                response = self.send_request(request.ljust(8, b'\x00'))
+                request[0] ^= 0x10
                 # TODO: Check response
 
     def __getitem__(self, index):
-        return Group(self, self.parent.object_dictionary[index])
+        entry = self.parent.object_dictionary[index]
+        if isinstance(entry, objectdictionary.Variable):
+            return Variable(self, entry)
+        elif isinstance(entry, objectdictionary.Record):
+            return Record(self, entry)
 
     def __iter__(self):
         return iter(self.parent.object_dictionary)
@@ -138,61 +147,64 @@ class SdoNode(collections.Mapping):
         return len(self.parent.object_dictionary)
 
 
-class Group(collections.Mapping):
+class Record(collections.Mapping):
 
-    def __init__(self, node, od_group):
+    def __init__(self, node, od):
         self.node = node
-        self.od = od_group
+        self.od = od
 
     def __getitem__(self, subindex):
-        if self.od.is_array and isinstance(subindex, int) and subindex > 0:
-            # Create a new parameter instance
-            par = Parameter(self.node, self.od[1])
-            # Set correct subindex
-            par.subindex = subindex
-            return par
-        else:
-            return Parameter(self.node, self.od[subindex])
+        return Variable(self.node, self.od[subindex])
 
     def __iter__(self):
-        if self.od.is_array:
-            # Return [1, 2, 3, ..., n] where n is the last subindex
-            return iter(range(1, len(self) + 1))
-        else:
-            return iter(self.od)
+        return iter(self.od)
 
     def __len__(self):
-        return self[0].raw if self.od.is_array else len(self.od)
+        return len(self.od)
 
     def __contains__(self, subindex):
-        if self.od.is_array and isinstance(subindex, int):
-            return subindex <= len(self)
-        else:
-            return subindex in self.od
+        return subindex in self.od
 
 
-class Parameter(object):
+class Array(collections.Mapping):
 
-    def __init__(self, node, od_par):
+    def __init__(self, node, od):
         self.node = node
-        self.od = od_par
-        self.index = od_par.parent.index
-        self.subindex = od_par.subindex
+        self.od = od
+
+    def __getitem__(self, subindex):
+        return Variable(self.node, self.od[subindex])
+
+    def __iter__(self):
+        return iter(range(1, len(self) + 1))
+
+    def __len__(self):
+        return self[0].raw
+
+    def __contains__(self, subindex):
+        return 0 <= subindex <= len(self)
+
+
+class Variable(object):
+
+    def __init__(self, node, od):
+        self.node = node
+        self.od = od
 
     @property
     def data(self):
-        return self.node.upload(self.index, self.subindex)
+        return self.node.upload(self.od.index, self.od.subindex)
 
     @data.setter
     def data(self, data):
-        self.node.download(self.index, self.subindex, data)
+        self.node.download(self.od.index, self.od.subindex, data)
 
     @property
     def raw(self):
         value = self.od.decode_raw(self.data)
-        text = "Value of %s.%s (0x%X:%d) in node %d = %d" % (
-            self.od.parent.name, self.od.name, self.index,
-            self.subindex, self.node.id, value)
+        text = "Value of %s (0x%X:%d) in node %d = %d" % (
+            self.od.name, self.od.index,
+            self.od.subindex, self.node.id, value)
         if value in self.od.value_descriptions:
             text += " (%s)" % self.od.value_descriptions[value]
         logger.debug(text)
@@ -200,32 +212,32 @@ class Parameter(object):
 
     @raw.setter
     def raw(self, value):
-        logger.debug("Writing %s.%s (0x%X:%d) = %s to node %d",
-            self.od.parent.name, self.od.name, self.index,
-            self.subindex, value, self.node.id)
+        logger.debug("Writing %s (0x%X:%d) = %s to node %d",
+            self.od.name, self.od.index,
+            self.od.subindex, value, self.node.id)
         self.data = self.od.encode_raw(value)
 
     @property
     def phys(self):
         value = self.od.decode_phys(self.data)
-        logger.debug("Value of %s.%s (0x%X:%d) in node %d = %s %s",
-            self.od.parent.name, self.od.name, self.index,
-            self.subindex, self.node.id, value, self.od.unit)
+        logger.debug("Value of %s (0x%X:%d) in node %d = %s %s",
+            self.od.name, self.od.index,
+            self.od.subindex, self.node.id, value, self.od.unit)
         return value
 
     @phys.setter
     def phys(self, value):
-        logger.debug("Writing %s.%s (0x%X:%d) = %s to node %d",
-            self.od.parent.name, self.od.name, self.index,
-            self.subindex, value, self.node.id)
+        logger.debug("Writing %s (0x%X:%d) = %s to node %d",
+            self.od.name, self.od.index,
+            self.od.subindex, value, self.node.id)
         self.data = self.od.encode_phys(value)
 
     @property
     def desc(self):
         value = self.od.decode_desc(self.data)
-        logger.debug("Description of %s.%s (0x%X:%d) in node %d = %s",
-            self.od.parent.name, self.od.name, self.index,
-            self.subindex, self.node.id, value)
+        logger.debug("Description of %s (0x%X:%d) in node %d = %s",
+            self.od.name, self.od.index,
+            self.od.subindex, self.node.id, value)
         return value
 
     @desc.setter
