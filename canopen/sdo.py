@@ -21,8 +21,7 @@ RESPONSE_SEGMENT_UPLOAD = 0 << 5
 RESPONSE_SEGMENT_DOWNLOAD = 1 << 5
 RESPONSE_UPLOAD = 2 << 5
 RESPONSE_DOWNLOAD = 3 << 5
-
-ABORTED = 0x80
+RESPONSE_ABORTED = 4 << 5
 
 EXPEDITED = 0x2
 SIZE_SPECIFIED = 0x1
@@ -59,7 +58,7 @@ class SdoNode(collections.Mapping):
 
         if self.response is None:
             raise SdoCommunicationError("No SDO response received")
-        elif self.response[0] == ABORTED:
+        elif self.response[0] == RESPONSE_ABORTED:
             abort_code, = struct.unpack("<L", self.response[4:8])
             raise SdoAbortedError(abort_code)
         else:
@@ -91,10 +90,9 @@ class SdoNode(collections.Mapping):
             # Segmented upload
             if size_specified:
                 length, = struct.unpack("<L", res_data)
-                logger.debug("Starting segmented transfer for %d bytes", length)
+
             request = bytearray(8)
             request[0] = REQUEST_SEGMENT_UPLOAD
-
             res_data = b''
             while True:
                 response = self.send_request(request)
@@ -115,13 +113,13 @@ class SdoNode(collections.Mapping):
             command |= (4 - length) << 2
             request = SDO_STRUCT.pack(command, index, subindex, data)
             response = self.send_request(request)
-            # TODO: Check response
+            assert response[0] == RESPONSE_DOWNLOAD
         else:
             # Segmented download
             length_data = struct.pack("<L", length)
             request = SDO_STRUCT.pack(command, index, subindex, length_data)
             response = self.send_request(request)
-            # TODO: Check response
+            assert response[0] == RESPONSE_DOWNLOAD
 
             request = bytearray(8)
             request[0] = REQUEST_SEGMENT_DOWNLOAD
@@ -131,7 +129,7 @@ class SdoNode(collections.Mapping):
                     request[0] |= 1
                 response = self.send_request(request.ljust(8, b'\x00'))
                 request[0] ^= 0x10
-                # TODO: Check response
+                assert response[0] & 0xE0 == RESPONSE_SEGMENT_DOWNLOAD
 
     def __getitem__(self, index):
         entry = self.parent.object_dictionary[index]
@@ -139,6 +137,8 @@ class SdoNode(collections.Mapping):
             return Variable(self, entry)
         elif isinstance(entry, objectdictionary.Record):
             return Record(self, entry)
+        elif isinstance(entry, objectdictionary.Array):
+            return Array(self, entry)
 
     def __iter__(self):
         return iter(self.parent.object_dictionary)
@@ -190,13 +190,18 @@ class Variable(object):
     def __init__(self, node, od):
         self.node = node
         self.od = od
+        self.bits = Bits(self)
 
     @property
     def data(self):
+        if self.od.access_type == "wo":
+            raise SdoError("Variable is write only")
         return self.node.upload(self.od.index, self.od.subindex)
 
     @data.setter
     def data(self, data):
+        if "w" not in self.od.access_type:
+            raise SdoError("Variable is read only")
         self.node.download(self.od.index, self.od.subindex, data)
 
     @property
@@ -243,6 +248,29 @@ class Variable(object):
     @desc.setter
     def desc(self, desc):
         self.data = self.od.encode_desc(desc)
+
+
+class Bits(object):
+
+    def __init__(self, variable):
+        self.variable = variable
+
+    def _get_bits(self, key):
+        if isinstance(key, slice):
+            bits = range(key.start, key.stop, key.step)
+        elif isinstance(key, int):
+            bits = [key]
+        else:
+            bits = key
+        return bits
+
+    def __getitem__(self, key):
+        return self.variable.decode_bits(self.variable.data,
+            self._get_bits(key))
+
+    def __setitem__(self, key, value):
+        self.variable.data = self.variable.encode_bits(
+            self.variable.data, self._get_bits(key), value)
 
 
 class SdoError(Exception):

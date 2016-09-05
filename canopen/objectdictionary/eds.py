@@ -46,8 +46,10 @@ def import_eds(filename):
         if match is not None:
             index = int(match.group(1), 16)
             subindex = int(match.group(2), 16)
-            var = build_variable(eds, section, index, subindex)
-            od[index].add_member(var)
+            entry = od[index]
+            if isinstance(entry, objectdictionary.Record):
+                var = build_variable(eds, section, index, subindex)
+                entry.add_member(var)
 
     return od
 
@@ -56,8 +58,9 @@ def build_variable(eds, section, index, subindex=0):
     name = eds.get(section, "ParameterName")
     var = objectdictionary.Variable(name, index, subindex)
     var.data_type = int(eds.get(section, "DataType"), 0)
+    var.access_type = eds.get(section, "AccessType")
     if eds.has_option(section, "LowLimit"):
-        var.min = eds.getint(section, "LowLimit")
+        var.min = int(eds.get(section, "LowLimit"), 0)
     if eds.has_option(section, "HighLimit"):
-        var.max = eds.getint(section, "HighLimit")
+        var.max = int(eds.get(section, "HighLimit"), 0)
     return var

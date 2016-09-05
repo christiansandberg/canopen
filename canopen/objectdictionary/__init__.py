@@ -1,5 +1,9 @@
 import struct
 import collections
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 BOOLEAN = 1
@@ -96,10 +100,10 @@ class Array(collections.Sequence):
         elif 0 < subindex < 256:
             var = Variable("%s [%d]" % (self.name, subindex), self.index, subindex)
             for attr in ("data_type", "unit", "factor", "min", "max",
-                         "value_descriptions"):
+                         "access_type", "value_descriptions"):
                 var.__dict__[attr] = self.variable.__dict__[attr]
         else:
-            raise KeyError("Subindex must be 0 - 255")
+            raise IndexError("Subindex must be 0 - 255")
 
         var.parent = self
         return var
@@ -131,11 +135,13 @@ class Variable(object):
         self.subindex = subindex
         self.name = name
         self.data_type = UNSIGNED32
+        self.access_type = "rw"
         self.unit = ""
         self.factor = 1
         self.min = None
         self.max = None
         self.value_descriptions = {}
+        self.bit_definitions = {}
 
     def __eq__(self, other):
         return (self.index == other.index and
@@ -149,6 +155,9 @@ class Variable(object):
 
     def add_value_description(self, value, descr):
         self.value_descriptions[value] = descr
+
+    def add_bit_definition(self, name, bits):
+        self.bit_definitions[name] = bits
 
     def decode_raw(self, data):
         if self.data_type == VIS_STR:
@@ -165,6 +174,10 @@ class Variable(object):
             return value.encode("ascii")
         else:
             value = int(value)
+            if self.min is not None and value < self.min:
+                logger.warning("Value %d is less than min value %d", value, self.min)
+            if self.max is not None and value > self.max:
+                logger.warning("Value %d is greater than max value %d", value, self.max)
             try:
                 return self.STRUCT_TYPES[self.data_type].pack(value)
             except struct.error:
@@ -205,6 +218,27 @@ class Variable(object):
         valid_values = ", ".join(self.value_descriptions.values())
         error_text = "No value corresponds to '%s'. Valid values are: %s"
         raise ValueError(error_text % (desc, valid_values))
+
+    def decode_bits(self, data, bits):
+        if bits in self.bit_definitions:
+            bits = self.bit_definitions[bits]
+        value = self.decode_raw(data)
+        mask = 0
+        for bit in bits:
+            mask |= 1 << bit
+        return (value & mask) >> min(bits)
+
+    def encode_bits(self, data, bits, value):
+        if bits in self.bit_definitions:
+            bits = self.bit_definitions[bits]
+        temp = self.decode_raw(data)
+        mask = 0
+        for bit in bits:
+            mask |= 1 << bit
+        temp &= ~mask
+        temp |= value << min(bits)
+        return self.encode_raw(temp)
+
 
 """
 class Bits(Parameter):

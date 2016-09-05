@@ -55,6 +55,7 @@ def build_variable(par_tree):
     par.factor = int(factor) if factor.is_integer() else factor
     par.unit = par_tree.get("Unit", "")
     par.data_type = DATA_TYPES[data_type]
+    par.access_type = par_tree.get("AccessType", "rw")
     try:
         par.min = int(par_tree.get("MinimumValue"))
     except (ValueError, TypeError):
@@ -69,5 +70,11 @@ def build_variable(par_tree):
         value = int(value_field_def.get("Value"), 0)
         desc = value_field_def.get("Description")
         par.add_value_description(value, desc)
+
+    # Find bit field descriptions
+    for bits_tree in par_tree.iterfind("BitFieldDefs/BitFieldDef"):
+        name = bits_tree.get("Name")
+        bits = [int(bit) for bit in bits_tree.get("Bit").split(",")]
+        par.add_bit_definition(name, bits)
 
     return par
