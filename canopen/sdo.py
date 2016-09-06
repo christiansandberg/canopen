@@ -8,7 +8,7 @@ from . import objectdictionary
 logger = logging.getLogger(__name__)
 
 
-# Command, index, subindex, value/abort code
+# Command, index, subindex, data
 SDO_STRUCT = struct.Struct("<BHB4s")
 
 
@@ -96,6 +96,7 @@ class SdoNode(collections.Mapping):
             res_data = b''
             while True:
                 response = self.send_request(request)
+                assert response[0] & 0xE0 == RESPONSE_SEGMENT_UPLOAD
                 res_data += response[1:8]
                 request[0] ^= 0x10
                 if response[0] & 1:
@@ -207,7 +208,7 @@ class Variable(object):
     @property
     def raw(self):
         value = self.od.decode_raw(self.data)
-        text = "Value of %s (0x%X:%d) in node %d = %d" % (
+        text = "Value of %s (0x%X:%d) in node %d is %d" % (
             self.od.name, self.od.index,
             self.od.subindex, self.node.id, value)
         if value in self.od.value_descriptions:
@@ -225,7 +226,7 @@ class Variable(object):
     @property
     def phys(self):
         value = self.od.decode_phys(self.data)
-        logger.debug("Value of %s (0x%X:%d) in node %d = %s %s",
+        logger.debug("Value of %s (0x%X:%d) in node %d is %s %s",
             self.od.name, self.od.index,
             self.od.subindex, self.node.id, value, self.od.unit)
         return value
@@ -240,13 +241,16 @@ class Variable(object):
     @property
     def desc(self):
         value = self.od.decode_desc(self.data)
-        logger.debug("Description of %s (0x%X:%d) in node %d = %s",
+        logger.debug("Description of %s (0x%X:%d) in node %d is %s",
             self.od.name, self.od.index,
             self.od.subindex, self.node.id, value)
         return value
 
     @desc.setter
     def desc(self, desc):
+        logger.debug("Setting description of %s (0x%X:%d) in node %d to %s",
+            self.od.name, self.od.index,
+            self.od.subindex, self.node.id, desc)
         self.data = self.od.encode_desc(desc)
 
 
