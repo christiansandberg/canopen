@@ -244,39 +244,5 @@ class Variable(object):
         return self.encode_raw(temp)
 
 
-"""
-class Bits(Parameter):
-
-    def __init__(self, bits, name):
-        self.mask = 0
-        for bit in bits:
-            self.mask += 1 << bit
-        self.lowest_bit = min(bits)
-        super(Bits, self).__init__(None, name)
-
-    def decode_raw(self, data):
-        try:
-            value, = self.STRUCT_TYPES[self.data_type].unpack(data)
-        except struct.error:
-            raise ObjectDictionaryError("Mismatch between expected and actual data size")
-        value &= self.mask
-        value >>= self.lowest_bit
-        return value
-
-    def encode_raw(self, value):
-        value = int(value)
-
-        if value > (self.mask >> self.lowest_bit):
-            raise ValueError("Value is outside bitfield range")
-
-        data = self.parent.raw
-        data &= ~self.mask
-        data |= value << self.lowest_bit
-        try:
-            return self.STRUCT_TYPES[self.data_type].pack(value)
-        except struct.error:
-            raise ObjectDictionaryError("Value does not fit in specified type")
-"""
-
 class ObjectDictionaryError(Exception):
     pass

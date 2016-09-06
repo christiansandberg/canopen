@@ -53,7 +53,9 @@ def build_variable(par_tree):
     par = objectdictionary.Variable(name, index, subindex)
     factor = float(par_tree.get("Factor", 1.0))
     par.factor = int(factor) if factor.is_integer() else factor
-    par.unit = par_tree.get("Unit", "")
+    unit = par_tree.get("Unit")
+    if unit and unit != "-":
+        par.unit = unit
     par.data_type = DATA_TYPES[data_type]
     par.access_type = par_tree.get("AccessType", "rw")
     try:

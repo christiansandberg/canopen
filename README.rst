@@ -19,12 +19,12 @@ Here are some quick examples:
     network.add_node(7, '/path/to/object_dictionary.eds')
 
     # Connect to the CAN bus
-    # Arguments are passed to a `python-can bus <https://python-can.readthedocs.io/en/latest/bus.html>`_.
+    # Arguments are passed to a python-can bus (see https://python-can.readthedocs.io/en/latest/bus.html).
     network.connect(channel=0, bustype='kvaser', bitrate=250000)
 
     # Read a parameter using SDO
+    device_name = network[6].sdo['ManufacturerDeviceName'].raw
     vendor_id = network[6].sdo[0x1018][1].raw
-    device_name = network[6].sdo['ManufacturerDeviceName']['ManufacturerDeviceName'].raw
 
     # Change state to operational (NMT start)
     network[6].nmt.state = 'OPERATIONAL'

@@ -48,7 +48,7 @@ class SdoNode(collections.Mapping):
             with self.response_received:
                 self.parent.network.send_message(0x600 + self.id, sdo_request)
                 self.response = None
-                self.response_received.wait(2.0)
+                self.response_received.wait(0.5)
 
             if self.response is None:
                 retries -= 1
