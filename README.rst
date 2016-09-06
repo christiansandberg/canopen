@@ -19,7 +19,8 @@ Here are some quick examples:
     network.add_node(7, '/path/to/object_dictionary.eds')
 
     # Connect to the CAN bus
-    # Arguments are passed to a python-can bus (see https://python-can.readthedocs.io/en/latest/bus.html).
+    # Arguments are passed to a python-can bus
+    # (see https://python-can.readthedocs.io/en/latest/bus.html).
     network.connect(channel=0, bustype='kvaser', bitrate=250000)
 
     # Read a parameter using SDO
@@ -32,3 +33,17 @@ Here are some quick examples:
 
     # Disconnect from CAN bus
     network.disconnect()
+
+
+TODO
+----
+
+There are a lot of things that still needs implementing and fixing.
+Pull requests are most welcome!
+
+* Documentation (docs + API)
+* Unit tests
+* PDO
+* SYNC
+* TIME
+* XDS support
