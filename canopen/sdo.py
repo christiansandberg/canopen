@@ -44,12 +44,11 @@ class SdoNode(collections.Mapping):
     def send_request(self, sdo_request):
         retries = 5
         while retries:
-            self.parent.network.send_message(0x600 + self.id, sdo_request)
-
             # Wait for node to respond
             with self.response_received:
+                self.parent.network.send_message(0x600 + self.id, sdo_request)
                 self.response = None
-                self.response_received.wait(0.5)
+                self.response_received.wait(2.0)
 
             if self.response is None:
                 retries -= 1
@@ -65,8 +64,8 @@ class SdoNode(collections.Mapping):
             return self.response
 
     def upload(self, index, subindex):
-        sdo_request = SDO_STRUCT.pack(REQUEST_UPLOAD, index, subindex, b'')
-        response = self.send_request(sdo_request)
+        request = SDO_STRUCT.pack(REQUEST_UPLOAD, index, subindex, b'')
+        response = self.send_request(request)
         res_command, res_index, res_subindex, res_data = SDO_STRUCT.unpack(response)
 
         assert res_command & 0xE0 == RESPONSE_UPLOAD
@@ -76,7 +75,7 @@ class SdoNode(collections.Mapping):
             raise SdoCommunicationError((
                 "Node returned a value for 0x{:X}:{:d} instead, "
                 "maybe there is another SDO master communicating "
-                "on the same SDO channel?").format(index, subindex))
+                "on the same SDO channel?").format(res_index, res_subindex))
 
         expedited = res_command & EXPEDITED
         size_specified = res_command & SIZE_SPECIFIED
@@ -86,7 +85,7 @@ class SdoNode(collections.Mapping):
         if expedited and size_specified:
             # Expedited upload
             length = 4 - ((res_command >> 2) & 0x3)
-        else:
+        elif not expedited:
             # Segmented upload
             if size_specified:
                 length, = struct.unpack("<L", res_data)
@@ -196,13 +195,13 @@ class Variable(object):
     @property
     def data(self):
         if self.od.access_type == "wo":
-            raise SdoError("Variable is write only")
+            logger.warning("Variable is write only")
         return self.node.upload(self.od.index, self.od.subindex)
 
     @data.setter
     def data(self, data):
         if "w" not in self.od.access_type:
-            raise SdoError("Variable is read only")
+            logger.warning("Variable is read only")
         self.node.download(self.od.index, self.od.subindex, data)
 
     @property
@@ -269,11 +268,11 @@ class Bits(object):
         return bits
 
     def __getitem__(self, key):
-        return self.variable.decode_bits(self.variable.data,
+        return self.variable.od.decode_bits(self.variable.data,
             self._get_bits(key))
 
     def __setitem__(self, key, value):
-        self.variable.data = self.variable.encode_bits(
+        self.variable.data = self.variable.od.encode_bits(
             self.variable.data, self._get_bits(key), value)
 
 
@@ -291,6 +290,7 @@ class SdoAbortedError(SdoError):
         0x06010002: "Attempt to write a read only object",
         0x06060000: "Access failed due to a hardware error",
         0x06090030: "Value range of parameter exceeded",
+        0x060A0023: "Resource not available",
         0x08000021: ("Data can not be transferred or stored to the application "
                      "because of local control"),
         0x08000022: ("Data can not be transferred or stored to the application "

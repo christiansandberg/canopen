@@ -220,8 +220,10 @@ class Variable(object):
         raise ValueError(error_text % (desc, valid_values))
 
     def decode_bits(self, data, bits):
-        if bits in self.bit_definitions:
+        try:
             bits = self.bit_definitions[bits]
+        except (TypeError, KeyError):
+            pass
         value = self.decode_raw(data)
         mask = 0
         for bit in bits:
@@ -229,8 +231,10 @@ class Variable(object):
         return (value & mask) >> min(bits)
 
     def encode_bits(self, data, bits, value):
-        if bits in self.bit_definitions:
+        try:
             bits = self.bit_definitions[bits]
+        except (TypeError, KeyError):
+            pass
         temp = self.decode_raw(data)
         mask = 0
         for bit in bits:
