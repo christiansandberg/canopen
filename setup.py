@@ -14,5 +14,9 @@ setup(
     long_description=open("README.rst").read(),
     #license="MIT",
     platforms=["any"],
-    install_requires=["python-can"]
+    install_requires=["python-can"],
+
+    # Tests can be run using `python setup.py test`
+    test_suite="nose.collector",
+    tests_require=["nose"]
 )
