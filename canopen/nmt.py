@@ -1,4 +1,8 @@
 import threading
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 NMT_STATES = {
@@ -23,6 +27,16 @@ NMT_COMMANDS = {
 }
 
 
+COMMAND_TO_STATE = {
+    1: 5,
+    2: 4,
+    80: 80,
+    96: 96,
+    128: 127,
+    130: 0
+}
+
+
 class NmtNode(object):
 
     def __init__(self):
@@ -38,11 +52,18 @@ class NmtNode(object):
                 self.state_change.notify_all()
 
     def send_command(self, code):
+        logger.info("Sending NMT command 0x%X to node %d", code, self.parent.id)
         self.parent.network.send_message(0, [code, self.parent.id])
+        if code in COMMAND_TO_STATE:
+            self._state = COMMAND_TO_STATE[code]
+            logger.info("Changing NMT state to %s", self.state)
 
     @property
     def state(self):
-        return NMT_STATES[self._state]
+        if self._state in NMT_STATES:
+            return NMT_STATES[self._state]
+        else:
+            return self._state
 
     @state.setter
     def state(self, new_state):

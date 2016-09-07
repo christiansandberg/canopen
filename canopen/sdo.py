@@ -68,7 +68,7 @@ class SdoNode(collections.Mapping):
         response = self.send_request(request)
         res_command, res_index, res_subindex, res_data = SDO_STRUCT.unpack(response)
 
-        assert res_command & 0xE0 == RESPONSE_UPLOAD
+        assert res_command & 0xE0 == RESPONSE_UPLOAD, "Unexpected response"
 
         # Check that the message is for us
         if res_index != index or res_subindex != subindex:
@@ -95,7 +95,7 @@ class SdoNode(collections.Mapping):
             res_data = b''
             while True:
                 response = self.send_request(request)
-                assert response[0] & 0xE0 == RESPONSE_SEGMENT_UPLOAD
+                assert response[0] & 0xE0 == RESPONSE_SEGMENT_UPLOAD, "Unexpected response"
                 res_data += response[1:8]
                 request[0] ^= 0x10
                 if response[0] & 1:
@@ -113,13 +113,13 @@ class SdoNode(collections.Mapping):
             command |= (4 - length) << 2
             request = SDO_STRUCT.pack(command, index, subindex, data)
             response = self.send_request(request)
-            assert response[0] == RESPONSE_DOWNLOAD
+            assert response[0] == RESPONSE_DOWNLOAD, "Unexpected response"
         else:
             # Segmented download
             length_data = struct.pack("<L", length)
             request = SDO_STRUCT.pack(command, index, subindex, length_data)
             response = self.send_request(request)
-            assert response[0] == RESPONSE_DOWNLOAD
+            assert response[0] == RESPONSE_DOWNLOAD, "Unexpected response"
 
             request = bytearray(8)
             request[0] = REQUEST_SEGMENT_DOWNLOAD
@@ -129,7 +129,7 @@ class SdoNode(collections.Mapping):
                     request[0] |= 1
                 response = self.send_request(request.ljust(8, b'\x00'))
                 request[0] ^= 0x10
-                assert response[0] & 0xE0 == RESPONSE_SEGMENT_DOWNLOAD
+                assert response[0] & 0xE0 == RESPONSE_SEGMENT_DOWNLOAD, "Unexpected response"
 
     def __getitem__(self, index):
         entry = self.parent.object_dictionary[index]
