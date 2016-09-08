@@ -46,8 +46,7 @@ class Node(object):
     def register_service(self, cob_id, callback):
         self.service_callbacks[cob_id] = callback
 
-    def on_message(self, can_id, data):
+    def on_message(self, can_id, data, timestamp):
         fn_code = can_id & 0x780
         if fn_code in self.service_callbacks:
-            self.service_callbacks[fn_code](can_id, data)
-
+            self.service_callbacks[fn_code](can_id, data, timestamp)

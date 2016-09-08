@@ -18,6 +18,13 @@ def import_epf(filename):
     od = objectdictionary.ObjectDictionary()
     tree = etree.parse(filename).getroot()
 
+    # Find and set default bitrate
+    can_config = tree.find("Configuration/CANopen")
+    if can_config is not None:
+        bitrate = can_config.get("BitRate", "250")
+        bitrate = bitrate.replace("U", "")
+        od.bitrate = int(bitrate) * 1000
+
     # Parse Object Dictionary
     for group_tree in tree.iterfind("Dictionary/Parameters/Group"):
         name = group_tree.get("SymbolName")

@@ -18,6 +18,13 @@ class Network(collections.Mapping):
         #self.nmt = NmtNode(0)
 
     def connect(self, *args, **kwargs):
+        # If bitrate has not been specified, try to find one node where bitrate
+        # has been specified
+        if "bitrate" not in kwargs:
+            for node in self.nodes:
+                if node.object_dictionary.bitrate:
+                    kwargs["bitrate"] = node.object_dictionary.bitrate
+                    break
         self.bus = can.interface.Bus(*args, **kwargs)
         logger.info("Connected to '%s'", self.bus.channel_info)
         self.notifier = can.Notifier(self.bus, self.listeners, 1)
@@ -42,13 +49,13 @@ class Network(collections.Mapping):
                           data=data)
         self.bus.send(msg)
 
-    def put_message(self, can_id, data):
+    def put_message(self, can_id, data, timestamp):
         node_id = can_id & 0x7F
         for node in self.nodes:
             if node.id == node_id or node_id == 0:
-                node.on_message(can_id, data)
+                node.on_message(can_id, data, timestamp)
             for callback in node.callbacks:
-                callback(can_id, data)
+                callback(can_id, data, timestamp)
 
     def __getitem__(self, node_id):
         for node in self.nodes:
@@ -71,4 +78,4 @@ class MessageDispatcher(can.Listener):
         if msg.id_type or msg.is_error_frame or msg.is_remote_frame:
             return
 
-        self.network.put_message(msg.arbitration_id, msg.data)
+        self.network.put_message(msg.arbitration_id, msg.data, msg.timestamp)

@@ -41,15 +41,17 @@ class NmtNode(object):
 
     def __init__(self):
         self._state = 0
+        self._state_received = False
+        self.timestamp = 0
         self.state_change = threading.Condition()
         self.parent = None
 
-    def on_heartbeat(self, can_id, data):
-        new_state = data[0]
-        if new_state != self._state:
-            with self.state_change:
-                self._state = new_state
-                self.state_change.notify_all()
+    def on_heartbeat(self, can_id, data, timestamp):
+        self.timestamp = timestamp
+        with self.state_change:
+            self._state = data[0]
+            self._state_received = True
+            self.state_change.notify_all()
 
     def send_command(self, code):
         logger.info("Sending NMT command 0x%X to node %d", code, self.parent.id)
@@ -77,4 +79,12 @@ class NmtNode(object):
 
     def wait_for_state_change(self, timeout=10):
         with self.state_change:
+            self._state_received = False
             self.state_change.wait(timeout)
+        if not self._state_received:
+            raise NmtError("No boot-up or heartbeat received")
+        return self.state
+
+
+class NmtError(Exception):
+    pass

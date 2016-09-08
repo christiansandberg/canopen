@@ -34,6 +34,7 @@ class ObjectDictionary(collections.Mapping):
     def __init__(self):
         self.indexes = collections.OrderedDict()
         self.names = collections.OrderedDict()
+        self.bitrate = None
 
     def __getitem__(self, index):
         """Get Object Dictionary index."""

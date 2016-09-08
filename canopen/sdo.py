@@ -35,7 +35,7 @@ class SdoNode(collections.Mapping):
         self.response = None
         self.response_received = threading.Condition()
 
-    def on_response(self, can_id, data):
+    def on_response(self, can_id, data, timestamp):
         if can_id == 0x580 + self.id:
             with self.response_received:
                 self.response = data
@@ -207,7 +207,7 @@ class Variable(object):
     @property
     def raw(self):
         value = self.od.decode_raw(self.data)
-        text = "Value of %s (0x%X:%d) in node %d is %d" % (
+        text = "Value of %s (0x%X:%d) in node %d is %s" % (
             self.od.name, self.od.index,
             self.od.subindex, self.node.id, value)
         if value in self.od.value_descriptions:
@@ -218,38 +218,38 @@ class Variable(object):
     @raw.setter
     def raw(self, value):
         logger.debug("Writing %s (0x%X:%d) = %s to node %d",
-            self.od.name, self.od.index,
-            self.od.subindex, value, self.node.id)
+                     self.od.name, self.od.index,
+                     self.od.subindex, value, self.node.id)
         self.data = self.od.encode_raw(value)
 
     @property
     def phys(self):
         value = self.od.decode_phys(self.data)
         logger.debug("Value of %s (0x%X:%d) in node %d is %s %s",
-            self.od.name, self.od.index,
-            self.od.subindex, self.node.id, value, self.od.unit)
+                     self.od.name, self.od.index,
+                     self.od.subindex, self.node.id, value, self.od.unit)
         return value
 
     @phys.setter
     def phys(self, value):
         logger.debug("Writing %s (0x%X:%d) = %s to node %d",
-            self.od.name, self.od.index,
-            self.od.subindex, value, self.node.id)
+                     self.od.name, self.od.index,
+                     self.od.subindex, value, self.node.id)
         self.data = self.od.encode_phys(value)
 
     @property
     def desc(self):
         value = self.od.decode_desc(self.data)
         logger.debug("Description of %s (0x%X:%d) in node %d is %s",
-            self.od.name, self.od.index,
-            self.od.subindex, self.node.id, value)
+                     self.od.name, self.od.index,
+                     self.od.subindex, self.node.id, value)
         return value
 
     @desc.setter
     def desc(self, desc):
         logger.debug("Setting description of %s (0x%X:%d) in node %d to %s",
-            self.od.name, self.od.index,
-            self.od.subindex, self.node.id, desc)
+                     self.od.name, self.od.index,
+                     self.od.subindex, self.node.id, desc)
         self.data = self.od.encode_desc(desc)
 
 
