@@ -23,9 +23,18 @@ Here are some quick examples:
     # (see https://python-can.readthedocs.io/en/latest/bus.html).
     network.connect(channel=0, bustype='kvaser', bitrate=250000)
 
-    # Read a parameter using SDO
+    # Read a variable using .raw (always an integer)
     device_name = network[6].sdo['ManufacturerDeviceName'].raw
     vendor_id = network[6].sdo[0x1018][1].raw
+
+    # .phys takes factor into consideration (if supported)
+    network[6].sdo['ApplicationCommands']['CommandSpeed'].phys = 1502.3
+
+    # Accessing value descriptions as strings (if supported)
+    network[6].sdo['ApplicationCommands']['RequestedControlMode'].desc = 'Speed Mode'
+
+    # Accessing individual bits
+    network[6].sdo['ApplicationCommands']['CommandAll'].bits[2:3] = 2
 
     # Change state to operational (NMT start)
     network[6].nmt.state = 'OPERATIONAL'
@@ -46,4 +55,4 @@ Pull requests are most welcome!
 * PDO
 * SYNC
 * TIME
-* XDS support
+* XDD support

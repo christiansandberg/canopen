@@ -1,8 +1,10 @@
 from .sdo import SdoNode
 from .nmt import NmtNode
+from .emcy import EmcyNode
 from . import objectdictionary
 
 
+EMCY = 0x80
 SDO_RESPONSE = 0x580
 HEARTBEAT = 0x700
 
@@ -26,6 +28,9 @@ class Node(object):
         self.nmt = NmtNode()
         self.nmt.parent = self
         self.register_service(HEARTBEAT, self.nmt.on_heartbeat)
+
+        self.emcy = EmcyNode()
+        self.register_service(EMCY, self.emcy.on_emcy)
 
     def add_callback(self, callback):
         self.callbacks.append(callback)
