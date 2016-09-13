@@ -39,12 +39,12 @@ COMMAND_TO_STATE = {
 
 class NmtNode(object):
 
-    def __init__(self):
+    def __init__(self, parent):
         self._state = 0
         self._state_received = False
         self.timestamp = 0
         self.state_change = threading.Condition()
-        self.parent = None
+        self.parent = parent
 
     def on_heartbeat(self, can_id, data, timestamp):
         self.timestamp = timestamp

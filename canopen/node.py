@@ -1,6 +1,7 @@
 from .sdo import SdoNode
 from .nmt import NmtNode
 from .emcy import EmcyNode
+from .pdo import PdoNode
 from . import objectdictionary
 
 
@@ -16,24 +17,25 @@ class Node(object):
         self.network = None
         self.object_dictionary = objectdictionary.ObjectDictionary()
         self.service_callbacks = {}
-        self.callbacks = []
+        self.message_callbacks = []
 
         if object_dictionary:
             self.set_object_dictionary(object_dictionary)
 
-        self.sdo = SdoNode(node_id)
-        self.sdo.parent = self
+        self.sdo = SdoNode(self, node_id)
         self.register_service(SDO_RESPONSE, self.sdo.on_response)
 
-        self.nmt = NmtNode()
-        self.nmt.parent = self
+        self.pdo = PdoNode(self)
+        self.add_callback(self.pdo.on_message)
+
+        self.nmt = NmtNode(self)
         self.register_service(HEARTBEAT, self.nmt.on_heartbeat)
 
         self.emcy = EmcyNode()
         self.register_service(EMCY, self.emcy.on_emcy)
 
     def add_callback(self, callback):
-        self.callbacks.append(callback)
+        self.message_callbacks.append(callback)
 
     def set_node_id(self, node_id):
         self.id = node_id

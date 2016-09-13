@@ -3,6 +3,7 @@ import struct
 import logging
 import threading
 from . import objectdictionary
+from . import common
 
 
 logger = logging.getLogger(__name__)
@@ -29,9 +30,9 @@ SIZE_SPECIFIED = 0x1
 
 class SdoNode(collections.Mapping):
 
-    def __init__(self, node_id):
+    def __init__(self, parent, node_id):
         self.id = node_id
-        self.parent = None
+        self.parent = parent
         self.response = None
         self.response_received = threading.Condition()
 
@@ -146,6 +147,9 @@ class SdoNode(collections.Mapping):
     def __len__(self):
         return len(self.parent.object_dictionary)
 
+    def __contains__(self, key):
+        return key in self.parent.object_dictionary
+
 
 class Record(collections.Mapping):
 
@@ -185,95 +189,17 @@ class Array(collections.Mapping):
         return 0 <= subindex <= len(self)
 
 
-class Variable(object):
+class Variable(common.Variable):
 
-    def __init__(self, node, od):
-        self.node = node
-        self.od = od
-        self.bits = Bits(self)
+    def __init__(self, sdo_node, od):
+        self.sdo_node = sdo_node
+        common.Variable.__init__(self, od)
 
-    @property
-    def data(self):
-        if self.od.access_type == "wo":
-            logger.warning("Variable is write only")
-        return self.node.upload(self.od.index, self.od.subindex)
+    def get_data(self):
+        return self.sdo_node.upload(self.od.index, self.od.subindex)
 
-    @data.setter
-    def data(self, data):
-        if "w" not in self.od.access_type:
-            logger.warning("Variable is read only")
-        self.node.download(self.od.index, self.od.subindex, data)
-
-    @property
-    def raw(self):
-        value = self.od.decode_raw(self.data)
-        text = "Value of %s (0x%X:%d) in node %d is %s" % (
-            self.od.name, self.od.index,
-            self.od.subindex, self.node.id, value)
-        if value in self.od.value_descriptions:
-            text += " (%s)" % self.od.value_descriptions[value]
-        logger.debug(text)
-        return value
-
-    @raw.setter
-    def raw(self, value):
-        logger.debug("Writing %s (0x%X:%d) = %s to node %d",
-                     self.od.name, self.od.index,
-                     self.od.subindex, value, self.node.id)
-        self.data = self.od.encode_raw(value)
-
-    @property
-    def phys(self):
-        value = self.od.decode_phys(self.data)
-        logger.debug("Value of %s (0x%X:%d) in node %d is %s %s",
-                     self.od.name, self.od.index,
-                     self.od.subindex, self.node.id, value, self.od.unit)
-        return value
-
-    @phys.setter
-    def phys(self, value):
-        logger.debug("Writing %s (0x%X:%d) = %s to node %d",
-                     self.od.name, self.od.index,
-                     self.od.subindex, value, self.node.id)
-        self.data = self.od.encode_phys(value)
-
-    @property
-    def desc(self):
-        value = self.od.decode_desc(self.data)
-        logger.debug("Description of %s (0x%X:%d) in node %d is %s",
-                     self.od.name, self.od.index,
-                     self.od.subindex, self.node.id, value)
-        return value
-
-    @desc.setter
-    def desc(self, desc):
-        logger.debug("Setting description of %s (0x%X:%d) in node %d to %s",
-                     self.od.name, self.od.index,
-                     self.od.subindex, self.node.id, desc)
-        self.data = self.od.encode_desc(desc)
-
-
-class Bits(object):
-
-    def __init__(self, variable):
-        self.variable = variable
-
-    def _get_bits(self, key):
-        if isinstance(key, slice):
-            bits = range(key.start, key.stop, key.step)
-        elif isinstance(key, int):
-            bits = [key]
-        else:
-            bits = key
-        return bits
-
-    def __getitem__(self, key):
-        return self.variable.od.decode_bits(self.variable.data,
-            self._get_bits(key))
-
-    def __setitem__(self, key, value):
-        self.variable.data = self.variable.od.encode_bits(
-            self.variable.data, self._get_bits(key), value)
+    def set_data(self, data):
+        self.sdo_node.download(self.od.index, self.od.subindex, data)
 
 
 class SdoError(Exception):

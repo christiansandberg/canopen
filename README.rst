@@ -1,8 +1,23 @@
 A Python implementation of the CANopen standard. The application will act as a master.
 
 
+Hardware support
+================
+
+This library support multiple hardware and drivers through the
+`python-can <https://pypi.python.org/pypi/python-can/>`_ package.
+At the time of writing this includes:
+
+* Kvaser
+* Peak CAN
+* USB2CAN
+* Anything supported by socketcan on Linux
+
+It is also possible to integrate this library with a custom backend.
+
+
 Examples
---------
+========
 
 Here are some quick examples:
 
@@ -45,7 +60,7 @@ Here are some quick examples:
 
 
 TODO
-----
+====
 
 There are a lot of things that still needs implementing and fixing.
 Pull requests are most welcome!

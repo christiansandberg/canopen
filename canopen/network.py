@@ -1,6 +1,9 @@
 import collections
 import logging
+import threading
+
 import can
+
 from .node import Node
 
 
@@ -14,6 +17,7 @@ class Network(collections.Mapping):
         self.listeners = [MessageDispatcher(self)]
         self.notifier = None
         self.nodes = []
+        self.send_lock = threading.Lock()
         # NMT to all nodes
         #self.nmt = NmtNode(0)
 
@@ -30,7 +34,8 @@ class Network(collections.Mapping):
         self.notifier = can.Notifier(self.bus, self.listeners, 1)
 
     def disconnect(self):
-        self.notifier.running.clear()
+        self.notifier.stop()
+        self.bus.shutdown()
 
     def add_listener(self, listener):
         self.listeners.append(listener)
@@ -47,14 +52,15 @@ class Network(collections.Mapping):
         msg = can.Message(extended_id=False,
                           arbitration_id=can_id,
                           data=data)
-        self.bus.send(msg)
+        with self.send_lock:
+            self.bus.send(msg)
 
     def put_message(self, can_id, data, timestamp):
         node_id = can_id & 0x7F
         for node in self.nodes:
             if node.id == node_id or node_id == 0:
                 node.on_message(can_id, data, timestamp)
-            for callback in node.callbacks:
+            for callback in node.message_callbacks:
                 callback(can_id, data, timestamp)
 
     def __getitem__(self, node_id):

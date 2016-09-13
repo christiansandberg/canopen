@@ -19,6 +19,9 @@ REAL64 = 17
 INTEGER64 = 21
 UNSIGNED64 = 27
 
+SIGNED_TYPES = (INTEGER8, INTEGER16, INTEGER32, INTEGER64)
+UNSIGNED_TYPES = (BOOLEAN, UNSIGNED8, UNSIGNED16, UNSIGNED32, UNSIGNED64)
+
 
 def import_any(filename):
     if filename.endswith(".eds"):
@@ -110,7 +113,7 @@ class Array(collections.Sequence):
         return var
 
     def __len__(self):
-        return 255
+        return 256
 
 
 class Variable(object):
@@ -150,9 +153,9 @@ class Variable(object):
 
     def __len__(self):
         if self.data_type in self.STRUCT_TYPES:
-            return self.STRUCT_TYPES[self.data_type].size
+            return self.STRUCT_TYPES[self.data_type].size * 8
         else:
-            return 1
+            return 8
 
     def add_value_description(self, value, descr):
         self.value_descriptions[value] = descr

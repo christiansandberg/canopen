@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-__version__ = "0.3.0.dev2"
+__version__ = "0.3.0.dev3"
 
 setup(
     name="canopen",
@@ -14,7 +14,7 @@ setup(
     long_description=open("README.rst").read(),
     #license="MIT",
     platforms=["any"],
-    install_requires=["python-can"],
+    install_requires=["python-can", "canmatrix"],
 
     # Tests can be run using `python setup.py test`
     test_suite="nose.collector",
