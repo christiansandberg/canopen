@@ -5,6 +5,7 @@ import threading
 import can
 
 from .node import Node
+from .sync import SyncProducer
 
 
 logger = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ class Network(collections.Mapping):
         self.notifier = None
         self.nodes = []
         self.send_lock = threading.Lock()
+        self.sync = SyncProducer(self)
         # NMT to all nodes
         #self.nmt = NmtNode(0)
 

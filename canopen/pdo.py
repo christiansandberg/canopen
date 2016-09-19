@@ -24,8 +24,10 @@ class PdoNode(object):
     def on_message(self, can_id, data, timestamp):
         for pdo_map in self.tx.values():
             if pdo_map.cob_id == can_id:
-                pdo_map.data = data
-                pdo_map.timestamp = timestamp
+                with pdo_map.receive_condition:
+                    pdo_map.data = data
+                    pdo_map.timestamp = timestamp
+                    pdo_map.receive_condition.notify_all()
 
     def get_by_name(self, name):
         for pdo_maps in (self.rx, self.tx):
@@ -53,11 +55,10 @@ class PdoNode(object):
                     continue
                 frame = canmatrix.Frame("PDO_0x%X" % pdo_map.cob_id,
                                         Id=pdo_map.cob_id,
-                                        dlc=len(pdo_map.data),
                                         extended=0)
                 for var in pdo_map.map:
                     is_signed = var.od.data_type in objectdictionary.SIGNED_TYPES
-                    if_float = var.od.data_type == objectdictionary.REAL32
+                    is_float = var.od.data_type == objectdictionary.REAL32
                     min_value = var.od.min
                     max_value = var.od.max
                     if min_value is not None:
@@ -68,7 +69,7 @@ class PdoNode(object):
                                               startBit=var.offset,
                                               signalSize=len(var.od),
                                               is_signed=is_signed,
-                                              is_float=if_float,
+                                              is_float=is_float,
                                               factor=var.od.factor,
                                               min=min_value,
                                               max=max_value,
@@ -76,6 +77,7 @@ class PdoNode(object):
                     for value, desc in var.od.value_descriptions.items():
                         signal.addValues(value, desc)
                     frame.addSignal(signal)
+                frame.calcDLC()
                 db._fl.addFrame(frame)
         exportdbc.exportDbc(db, filename)
 
@@ -118,6 +120,7 @@ class Message(object):
         self.timestamp = None
         self.period = None
         self.transmit_thread = None
+        self.receive_condition = threading.Condition()
         self.stop_event = threading.Event()
 
     def __getitem__(self, key):
@@ -250,6 +253,12 @@ class Message(object):
         if self.transmit_thread:
             self.transmit_thread.join(2)
             self.transmit_thread = None
+
+    def wait_for_reception(self, timeout=10):
+        with self.receive_condition:
+            self.timestamp = None
+            self.receive_condition.wait(timeout)
+        return self.timestamp
 
     def _periodic_transmit(self):
         while not self.stop_event.is_set():

@@ -32,6 +32,8 @@ class EmcyNode(object):
         self.log = []
 
     def on_emcy(self, can_id, data, timestamp):
+        if can_id == 0x80:
+            return
         code, register, data = EMCY_STRUCT.unpack(data)
         if code & 0xFF == 0:
             entry = ErrorReset(code, register, data, timestamp)
