@@ -12,8 +12,10 @@ logger = logging.getLogger(__name__)
 
 
 class Network(collections.Mapping):
+    """Representation of one CAN bus containing one or more nodes."""
 
     def __init__(self):
+        #: python-can :class:`can.BusABC` instance
         self.bus = None
         self.listeners = [MessageDispatcher(self)]
         self.notifier = None
@@ -24,6 +26,10 @@ class Network(collections.Mapping):
         #self.nmt = NmtNode(0)
 
     def connect(self, *args, **kwargs):
+        """Connect to CAN bus using python-can.
+        
+        Arguments are passed to :class:`can.BusABC`.
+        """
         # If bitrate has not been specified, try to find one node where bitrate
         # has been specified
         if "bitrate" not in kwargs:
