@@ -4,15 +4,15 @@ __version__ = "0.3.0.dev4"
 
 setup(
     name="canopen",
-    url="https://bitbucket.org/evs-inmotion/canopen",
+    url="https://github.com/christiansandberg/canopen",
     version=__version__,
     packages=find_packages(),
     author="Christian Sandberg",
-    author_email="christian.sandberg@evs-inmotion.com",
+    author_email="christiansandberg@me.com",
     description="CANopen stack implementation",
     keywords="CAN CANopen",
     long_description=open("README.rst").read(),
-    #license="MIT",
+    license="MIT",
     platforms=["any"],
     install_requires=["python-can", "canmatrix"],
 
