@@ -14,6 +14,12 @@ setup(
     long_description=open("README.rst").read(),
     license="MIT",
     platforms=["any"],
+    classifiers=[
+        "Development Status :: 3 - Alpha",
+        "License :: OSI Approved :: MIT License",
+        "Intended Audience :: Developers",
+        "Topic :: Scientific/Engineering"
+    ],
     install_requires=["python-can", "canmatrix"],
 
     # Tests can be run using `python setup.py test`
