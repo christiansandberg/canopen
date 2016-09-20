@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-__version__ = "0.3.0.dev4"
+from canopen import __version__
 
 setup(
     name="canopen",

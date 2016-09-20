@@ -10,6 +10,7 @@ At the time of writing this includes:
 
 * Kvaser
 * Peak CAN
+* IXXAT
 * USB2CAN
 * Anything supported by socketcan on Linux
 
@@ -67,7 +68,5 @@ Pull requests are most welcome!
 
 * Documentation (docs + API)
 * Unit tests
-* PDO
-* SYNC
 * TIME
 * XDD support

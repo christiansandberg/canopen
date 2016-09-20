@@ -4,9 +4,6 @@ import math
 import collections
 import logging
 
-from canmatrix import canmatrix
-from canmatrix import exportdbc
-
 from . import objectdictionary
 from . import common
 
@@ -48,6 +45,9 @@ class PdoNode(object):
                 pdo_map.save()
 
     def export(self, filename):
+        from canmatrix import canmatrix
+        from canmatrix import exportdbc
+
         db = canmatrix.CanMatrix()
         for pdo_maps in (self.rx, self.tx):
             for pdo_map in pdo_maps.values():

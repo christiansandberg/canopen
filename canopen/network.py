@@ -2,7 +2,10 @@ import collections
 import logging
 import threading
 
-import can
+try:
+    import can
+except ImportError:
+    can = None
 
 from .node import Node
 from .sync import SyncProducer
