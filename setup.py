@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-from canopen import __version__
+exec(open('canopen/version.py').read())
 
 setup(
     name="canopen",

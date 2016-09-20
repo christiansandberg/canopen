@@ -4,8 +4,11 @@ import threading
 
 try:
     import can
+    from can import Listener
 except ImportError:
+    # Do not fail if python-can is not installed
     can = None
+    Listener = object
 
 from .node import Node
 from .sync import SyncProducer
@@ -86,7 +89,7 @@ class Network(collections.Mapping):
         return len(self.nodes)
 
 
-class MessageDispatcher(can.Listener):
+class MessageDispatcher(Listener):
 
     def __init__(self, network):
         self.network = network
