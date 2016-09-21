@@ -1,10 +1,21 @@
-.. canopen documentation master file, created by
-   sphinx-quickstart on Mon Sep 19 22:15:46 2016.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+CANopen for Python
+==================
 
-Welcome to canopen's documentation!
-===================================
+This package provides support for interacting with a network of CANopen_ nodes.
+
+.. warning::
+
+    This documentation is a work in progress.
+    Feedback and revisions are most welcome!
+
+
+Installation
+------------
+
+Easiest way to install is to use pip::
+
+    pip install canopen
+
 
 Contents:
 
@@ -22,3 +33,5 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
+
+.. _CANopen: https://en.wikipedia.org/wiki/CANopen
