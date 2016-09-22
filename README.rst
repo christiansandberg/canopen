@@ -1,4 +1,5 @@
-A Python implementation of the CANopen standard. The application will act as a master.
+A Python implementation of the CANopen_ standard.
+The application will act as a master.
 
 
 Hardware support
@@ -39,7 +40,7 @@ Here are some quick examples:
     # (see https://python-can.readthedocs.io/en/latest/bus.html).
     network.connect(channel=0, bustype='kvaser', bitrate=250000)
 
-    # Read a variable using .raw (always an integer)
+    # Read a variable using .raw
     device_name = network[6].sdo['ManufacturerDeviceName'].raw
     vendor_id = network[6].sdo[0x1018][1].raw
 
@@ -70,3 +71,6 @@ Pull requests are most welcome!
 * Unit tests
 * TIME
 * XDD support
+
+
+.. _CANopen: https://en.wikipedia.org/wiki/CANopen

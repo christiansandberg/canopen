@@ -53,12 +53,13 @@ class PdoNode(object):
             for pdo_map in pdo_maps.values():
                 if pdo_map.cob_id is None:
                     continue
-                frame = canmatrix.Frame("PDO_0x%X" % pdo_map.cob_id,
+                direction = "Tx" if pdo_map.cob_id & 0x80 else "Rx"
+                frame = canmatrix.Frame("%sPDO_0x%X" % (direction, pdo_map.cob_id),
                                         Id=pdo_map.cob_id,
                                         extended=0)
                 for var in pdo_map.map:
                     is_signed = var.od.data_type in objectdictionary.SIGNED_TYPES
-                    is_float = var.od.data_type == objectdictionary.REAL32
+                    is_float = var.od.data_type in objectdictionary.FLOAT_TYPES
                     min_value = var.od.min
                     max_value = var.od.max
                     if min_value is not None:

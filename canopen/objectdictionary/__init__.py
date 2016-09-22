@@ -21,6 +21,8 @@ UNSIGNED64 = 27
 
 SIGNED_TYPES = (INTEGER8, INTEGER16, INTEGER32, INTEGER64)
 UNSIGNED_TYPES = (BOOLEAN, UNSIGNED8, UNSIGNED16, UNSIGNED32, UNSIGNED64)
+INTEGER_TYPES = SIGNED_TYPES + UNSIGNED_TYPES
+FLOAT_TYPES = (REAL32, REAL64)
 
 
 def import_any(filename):
@@ -177,7 +179,8 @@ class Variable(object):
         if self.data_type == VIS_STR:
             return value.encode("ascii")
         else:
-            value = int(value)
+            if self.data_type in INTEGER_TYPES:
+                value = int(value)
             if self.min is not None and value < self.min:
                 logger.warning("Value %d is less than min value %d", value, self.min)
             if self.max is not None and value > self.max:
@@ -249,4 +252,5 @@ class Variable(object):
 
 
 class ObjectDictionaryError(Exception):
+    """Unsupported operation with the current Object Dictionary."""
     pass

@@ -14,17 +14,19 @@ Installation
 
 Easiest way to install is to use pip::
 
-    pip install canopen
+    # pip install canopen
 
 
-Contents:
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
 
+   network
+   node
+   sdo
 
-.. autoclass:: canopen.Network
-    :members:
 
 Indices and tables
 ==================

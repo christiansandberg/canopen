@@ -21,7 +21,8 @@ class Network(collections.Mapping):
     """Representation of one CAN bus containing one or more nodes."""
 
     def __init__(self):
-        #: python-can :class:`can.BusABC` instance
+        #: A python-can :class:`can.BusABC` instance which is set after
+        #: :meth:`canopen.Network.connect` is called
         self.bus = None
         self.listeners = [MessageDispatcher(self)]
         self.notifier = None
@@ -33,8 +34,18 @@ class Network(collections.Mapping):
 
     def connect(self, *args, **kwargs):
         """Connect to CAN bus using python-can.
-        
-        Arguments are passed to :class:`can.BusABC`.
+
+        Arguments are passed directly to :class:`can.BusABC`. Typically these
+        include:
+
+        :param channel:
+            Backend specific channel for the CAN interface.
+
+        :param str bustype:
+            Name of the interface, e.g. 'kvaser', 'socketcan', 'pcan'...
+
+        :param int bitrate:
+            Bitrate in bit/s.
         """
         # If bitrate has not been specified, try to find one node where bitrate
         # has been specified
@@ -48,6 +59,7 @@ class Network(collections.Mapping):
         self.notifier = can.Notifier(self.bus, self.listeners, 1)
 
     def disconnect(self):
+        """Disconnect from the CAN bus."""
         self.notifier.stop()
         self.bus.shutdown()
 
@@ -55,6 +67,20 @@ class Network(collections.Mapping):
         self.listeners.append(listener)
 
     def add_node(self, node, object_dictionary=None):
+        """Add a node to the network.
+
+        :param node:
+            Can be either an integer representing the node ID or a
+            :class:`canopen.Node` object.
+
+        :param object_dictionary:
+            Can be either a string for specifying the path to an
+            Object Dictionary file or a
+            :class:`canopen.objectdictionary.ObjectDictionary` object.
+
+        :return:
+            The :class:`canopen.Node` object that was added.
+        """
         if isinstance(node, int):
             node = Node(node, object_dictionary)
         node.network = self
