@@ -8,17 +8,10 @@ This package provides support for interacting with a network of CANopen_ nodes.
     This documentation is a work in progress.
     Feedback and revisions are most welcome!
 
+Easiest way to install is to use pip_::
 
-Installation
-------------
+    $ pip install canopen
 
-Easiest way to install is to use pip::
-
-    # pip install canopen
-
-
-Contents
---------
 
 .. toctree::
    :maxdepth: 2
@@ -28,12 +21,5 @@ Contents
    sdo
 
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
-
 .. _CANopen: https://en.wikipedia.org/wiki/CANopen
+.. _pip: https://pip.pypa.io/en/stable/

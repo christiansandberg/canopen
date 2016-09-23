@@ -5,8 +5,7 @@ The application will act as a master.
 Hardware support
 ================
 
-This library support multiple hardware and drivers through the
-`python-can <https://pypi.python.org/pypi/python-can/>`_ package.
+This library support multiple hardware and drivers through the python-can_ package.
 At the time of writing this includes:
 
 * Kvaser
@@ -69,8 +68,10 @@ Pull requests are most welcome!
 
 * Documentation (docs + API)
 * Unit tests
+* SDO block transfer
 * TIME
 * XDD support
 
 
 .. _CANopen: https://en.wikipedia.org/wiki/CANopen
+.. _python-can: https://python-can.readthedocs.org/en/stable/

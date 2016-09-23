@@ -16,6 +16,9 @@ and SDO Block download/upload. The SDO block transfer is a newer addition to
 standard, which allows large amounts of data to be transferred with slightly
 less protocol overhead.
 
+.. note::
+    SDO block transfers are not yet supported.
+
 The COB-IDs of the respective SDO transfer messages from client to server and
 server to client can be set in the object dictionary. Up to 128 SDO servers can
 be set up in the object dictionary at addresses 0x1200 - 0x127F. Similarly, the
@@ -38,8 +41,8 @@ Start by creating a network and a node::
     node = network.add_node(1, 'od.eds')
     network.connect()
 
-SDO objects can be accessed using the .sdo member which works like a Python
-dictionary. Indexes and subindexes can be identified by name or number.
+SDO objects can be accessed using the ``.sdo`` member which works like a Python
+dictionary. Indexes and subindexes can be identified by either name or number.
 The code below only creates objects, no messages are sent or received yet::
 
     # Complex records
@@ -65,10 +68,9 @@ or ``.bits`` attributes::
     command_all.bits[3] = 1
 
     # Read and write physical values scaled by a factor (if supported by OD)
-    command_speed.phys = 105.3
     print("The actual speed is %f rpm" % actual_speed.phys)
 
-    # Iterate over complex arrays (or records)
+    # Iterate over arrays or records
     for error in error_log:
         print("Error 0x%X was found in the log" % error.raw)
 
