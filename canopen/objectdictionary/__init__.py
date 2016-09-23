@@ -97,25 +97,27 @@ class Array(collections.Sequence):
         self.parent = None
         self.index = index
         self.name = name
-        self.variable = None
+        self.length = 255
+        self.last_subindex = Variable(
+            "Number of entries", index, 0)
+        self.last_subindex.data_type = UNSIGNED8
+        self.last_subindex.parent = self
+        self.template = None
 
     def __getitem__(self, subindex):
-        if subindex == 0:
-            var = Variable("Number of Entries", self.index, 0)
-            var.data_type = UNSIGNED8
-        elif 0 < subindex < 256:
+        if subindex == 0 or subindex == self.last_subindex.name:
+            return self.last_subindex
+        elif isinstance(subindex, int) and 0 < subindex < 256:
             var = Variable("%s [%d]" % (self.name, subindex), self.index, subindex)
             for attr in ("data_type", "unit", "factor", "min", "max",
                          "access_type", "value_descriptions"):
-                var.__dict__[attr] = self.variable.__dict__[attr]
+                var.__dict__[attr] = self.template.__dict__[attr]
+            return var
         else:
             raise IndexError("Subindex must be 0 - 255")
 
-        var.parent = self
-        return var
-
     def __len__(self):
-        return 256
+        return self.length
 
 
 class Variable(object):

@@ -29,11 +29,13 @@ def import_eds(filename):
                 od.add_object(var)
             elif object_type == ARR and eds.has_option(section, "CompactSubObj"):
                 arr = objectdictionary.Array(name, index)
-                arr.variable = build_variable(eds, section, index, 1)
+                arr.template = build_variable(eds, section, index, 1)
+                arr.length = int(eds.get(section, "CompactSubObj"), 0)
                 od.add_object(arr)
             elif object_type == ARR:
                 arr = objectdictionary.Array(name, index)
-                arr.variable = build_variable(eds, section + "sub1", index, 1)
+                arr.last_subindex = build_variable(eds, section + "sub0", index, 0)
+                arr.template = build_variable(eds, section + "sub1", index, 1)
                 od.add_object(arr)
             elif object_type == RECORD:
                 record = objectdictionary.Record(name, index)
