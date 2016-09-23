@@ -125,7 +125,7 @@ class TestArray(unittest.TestCase):
 
     def test_subindexes(self):
         array = od.Array("Test Array", 0x1000)
-        array.variable = od.Variable("Test Variable", 0x1000, 1)
+        array.template = od.Variable("Test Variable", 0x1000, 1)
         subindexes = [var.subindex for var in array]
         self.assertSequenceEqual(subindexes, range(0, 256))
 

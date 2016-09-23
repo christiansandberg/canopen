@@ -109,6 +109,7 @@ class Array(collections.Sequence):
             return self.last_subindex
         elif isinstance(subindex, int) and 0 < subindex < 256:
             var = Variable("%s [%d]" % (self.name, subindex), self.index, subindex)
+            var.parent = self
             for attr in ("data_type", "unit", "factor", "min", "max",
                          "access_type", "value_descriptions"):
                 var.__dict__[attr] = self.template.__dict__[attr]
