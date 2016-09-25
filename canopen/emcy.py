@@ -45,6 +45,7 @@ class EmcyConsumer(object):
         else:
             entry = EmcyError(code, register, data, timestamp)
             self.log.append(entry)
+            self.active.append(entry)
 
 
 class EmcyError(Exception):
