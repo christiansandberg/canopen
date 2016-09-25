@@ -1,0 +1,1370 @@
+
+; This EDS file was created by the CANopen Design Tool 2.2.9.
+; port GmbH Halle/Saale Germany, http://www.port.de, mailto:service@port.de
+
+[FileInfo]
+FileName=cog.eds
+FileVersion=1
+FileRevision=0
+EDSVersion=4.0
+Description=CANopen Gateway
+CreationTime=11:35AM
+CreationDate=10-16-2006
+CreatedBy=
+ModificationTime=01:19PM
+ModificationDate=05-23-2008
+ModifiedBy=
+
+[DeviceInfo]
+VendorName=Animatics Corporation
+VendorNumber=0x0621
+ProductName=cog
+ProductNumber=1
+RevisionNumber=0x0
+OrderCode=
+BaudRate_10=0
+BaudRate_20=1
+BaudRate_50=1
+BaudRate_125=1
+BaudRate_250=1
+BaudRate_500=1
+BaudRate_800=1
+BaudRate_1000=1
+DynamicChannelsSupported=0
+GroupMessaging=0
+LSS_Supported=1
+Granularity=0
+SimpleBootUpSlave=1
+SimpleBootUpMaster=0
+NrOfRXPDO=0
+NrOfTXPDO=5
+
+[Comments]
+Lines=0
+
+[DummyUsage]
+Dummy0001=0
+Dummy0002=0
+Dummy0003=0
+Dummy0004=0
+Dummy0005=0
+Dummy0006=0
+Dummy0007=0
+
+[MandatoryObjects]
+SupportedObjects=3
+1=0x1000
+2=0x1001
+3=0x1018
+
+[OptionalObjects]
+SupportedObjects=56
+1=0x1008
+2=0x1009
+3=0x100A
+4=0x1010
+5=0x1011
+6=0x1017
+7=0x1800
+8=0x1801
+9=0x1802
+10=0x1803
+11=0x1806
+12=0x1A00
+13=0x1A01
+14=0x1A02
+15=0x1A03
+16=0x1A06
+17=0x6040
+18=0x6041
+19=0x605A
+20=0x605D
+21=0x6060
+22=0x6061
+23=0x6063
+24=0x6065
+25=0x606C
+26=0x6071
+27=0x6072
+28=0x6073
+29=0x607A
+30=0x607C
+31=0x607D
+32=0x607E
+33=0x607F
+34=0x6081
+35=0x6083
+36=0x6085
+37=0x608F
+38=0x6098
+39=0x6099
+40=0x609A
+41=0x60F4
+42=0x60FB
+43=0x60FD
+44=0x60FE
+45=0x60FF
+46=0x6401
+47=0x6402
+48=0x6403
+49=0x6404
+50=0x6405
+51=0x6502
+52=0x6503
+53=0x6504
+54=0x6505
+55=0x6510
+56=0x67FF
+
+[ManufacturerObjects]
+SupportedObjects=14
+1=0x2000
+2=0x2001
+3=0x2100
+4=0x2200
+5=0x2201
+6=0x2202
+7=0x2300
+8=0x2301
+9=0x2302
+10=0x2303
+11=0x2304
+12=0x2305
+13=0x2306
+14=0x2307
+
+[1000]
+ParameterName=Device Type
+ObjectType=0x07
+DataType=0x0007
+AccessType=const
+DefaultValue=0x00020192
+PDOMapping=0
+
+[1001]
+ParameterName=Error Register
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x00
+PDOMapping=0
+
+[1008]
+ParameterName=Manufacturer Device Name
+ObjectType=0x07
+DataType=0x0009
+AccessType=const
+PDOMapping=0
+
+[1009]
+ParameterName=Manufacturer Hardware Version
+ObjectType=0x07
+DataType=0x0009
+AccessType=const
+PDOMapping=0
+
+[100A]
+ParameterName=Manufacturer Software Version
+ObjectType=0x07
+DataType=0x0009
+AccessType=const
+PDOMapping=0
+
+[1010]
+SubNumber=4
+ParameterName=Store Parameter Field
+ObjectType=0x08
+
+[1010sub0]
+ParameterName=Number of Entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x03
+PDOMapping=0
+
+[1010sub1]
+ParameterName=Save all Parameters
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+PDOMapping=0
+
+[1010sub2]
+ParameterName=Save Communication Parameters
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+PDOMapping=0
+
+[1010sub3]
+ParameterName=Save Application Parameters
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+PDOMapping=0
+
+[1011]
+SubNumber=4
+ParameterName=Restore Default Parameters
+ObjectType=0x08
+
+[1011sub0]
+ParameterName=Number of Entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x03
+PDOMapping=0
+
+[1011sub1]
+ParameterName=Restore all Default Parameters
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+PDOMapping=0
+
+[1011sub2]
+ParameterName=Restore Communication Default Parameters
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+PDOMapping=0
+
+[1011sub3]
+ParameterName=Restore Application Default Parameters
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+PDOMapping=0
+
+[1017]
+ParameterName=Producer Heartbeat Time
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+DefaultValue=0x0
+PDOMapping=0
+
+[1018]
+SubNumber=5
+ParameterName=Identity Object
+ObjectType=0x09
+
+[1018sub0]
+ParameterName=number of entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x4
+PDOMapping=0
+
+[1018sub1]
+ParameterName=Vendor Id
+ObjectType=0x07
+DataType=0x0007
+AccessType=ro
+PDOMapping=0
+
+[1018sub2]
+ParameterName=Product Code
+ObjectType=0x07
+DataType=0x0007
+AccessType=ro
+DefaultValue=1
+PDOMapping=0
+
+[1018sub3]
+ParameterName=Revision number
+ObjectType=0x07
+DataType=0x0007
+AccessType=ro
+PDOMapping=0
+
+[1018sub4]
+ParameterName=Serial number
+ObjectType=0x07
+DataType=0x0007
+AccessType=ro
+PDOMapping=0
+
+[1800]
+SubNumber=6
+ParameterName=Transmit PDO Communication Parameter 1
+ObjectType=0x09
+
+[1800sub0]
+ParameterName=Number of Entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x05
+PDOMapping=0
+
+[1800sub1]
+ParameterName=COB-ID
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+DefaultValue=$NODEID+0x180
+PDOMapping=0
+
+[1800sub2]
+ParameterName=Transmission Type
+ObjectType=0x07
+DataType=0x0005
+AccessType=rw
+DefaultValue=0xFF
+PDOMapping=0
+
+[1800sub3]
+ParameterName=Inhibit Time
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+DefaultValue=0x0
+PDOMapping=0
+
+[1800sub4]
+ParameterName=Compatibility Entry
+ObjectType=0x07
+DataType=0x0005
+AccessType=rw
+DefaultValue=0x00
+PDOMapping=0
+
+[1800sub5]
+ParameterName=Event Timer
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+DefaultValue=0x0
+PDOMapping=0
+
+[1801]
+SubNumber=6
+ParameterName=Transmit PDO Communication Parameter 2
+ObjectType=0x09
+
+[1801sub0]
+ParameterName=Number of Entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x05
+PDOMapping=0
+
+[1801sub1]
+ParameterName=COB-ID
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+DefaultValue=$NODEID+0x280
+PDOMapping=0
+
+[1801sub2]
+ParameterName=Transmission Type
+ObjectType=0x07
+DataType=0x0005
+AccessType=rw
+DefaultValue=0xFF
+PDOMapping=0
+
+[1801sub3]
+ParameterName=Inhibit Time
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+DefaultValue=0x0
+PDOMapping=0
+
+[1801sub4]
+ParameterName=Compatibility Entry
+ObjectType=0x07
+DataType=0x0005
+AccessType=rw
+DefaultValue=0x00
+PDOMapping=0
+
+[1801sub5]
+ParameterName=Event Timer
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+DefaultValue=0x0
+PDOMapping=0
+
+[1802]
+SubNumber=6
+ParameterName=Transmit PDO Communication Parameter 3
+ObjectType=0x09
+
+[1802sub0]
+ParameterName=Number of Entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x05
+PDOMapping=0
+
+[1802sub1]
+ParameterName=COB-ID
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+DefaultValue=$NODEID+0x380
+PDOMapping=0
+
+[1802sub2]
+ParameterName=Transmission Type
+ObjectType=0x07
+DataType=0x0005
+AccessType=rw
+DefaultValue=0xFF
+PDOMapping=0
+
+[1802sub3]
+ParameterName=Inhibit Time
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+DefaultValue=0x0
+PDOMapping=0
+
+[1802sub4]
+ParameterName=Compatibility Entry
+ObjectType=0x07
+DataType=0x0005
+AccessType=rw
+DefaultValue=0x00
+PDOMapping=0
+
+[1802sub5]
+ParameterName=Event Timer
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+DefaultValue=0x0
+PDOMapping=0
+
+[1803]
+SubNumber=6
+ParameterName=Transmit PDO Communication Parameter 4
+ObjectType=0x09
+
+[1803sub0]
+ParameterName=Number of Entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x05
+PDOMapping=0
+
+[1803sub1]
+ParameterName=COB-ID
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+DefaultValue=$NODEID+0x480
+PDOMapping=0
+
+[1803sub2]
+ParameterName=Transmission Type
+ObjectType=0x07
+DataType=0x0005
+AccessType=rw
+DefaultValue=0xFF
+PDOMapping=0
+
+[1803sub3]
+ParameterName=Inhibit Time
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+DefaultValue=0x0
+PDOMapping=0
+
+[1803sub4]
+ParameterName=Compatibility Entry
+ObjectType=0x07
+DataType=0x0005
+AccessType=rw
+DefaultValue=0x00
+PDOMapping=0
+
+[1803sub5]
+ParameterName=Event Timer
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+DefaultValue=0x0
+PDOMapping=0
+
+[1806]
+SubNumber=6
+ParameterName=Transmit PDO Communication Parameter 7
+ObjectType=0x09
+
+[1806sub0]
+ParameterName=Number of Entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x05
+PDOMapping=0
+
+[1806sub1]
+ParameterName=COB-ID
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+DefaultValue=0x0
+PDOMapping=0
+
+[1806sub2]
+ParameterName=Transmission Type
+ObjectType=0x07
+DataType=0x0005
+AccessType=rw
+DefaultValue=0xFF
+PDOMapping=0
+
+[1806sub3]
+ParameterName=Inhibit Time
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+DefaultValue=0x0
+PDOMapping=0
+
+[1806sub4]
+ParameterName=Compatibility Entry
+ObjectType=0x07
+DataType=0x0005
+AccessType=rw
+DefaultValue=0x00
+PDOMapping=0
+
+[1806sub5]
+ParameterName=Event Timer
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+DefaultValue=0x0
+PDOMapping=0
+
+[1A00]
+SubNumber=2
+ParameterName=TPDO Mapping Parameter 1
+ObjectType=0x09
+
+[1A00sub0]
+ParameterName=Number of Entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x01
+PDOMapping=0
+
+[1A00sub1]
+ParameterName=StatusWord
+ObjectType=0x07
+DataType=0x0007
+AccessType=ro
+DefaultValue=0x60410010
+PDOMapping=0
+
+[1A01]
+SubNumber=3
+ParameterName=TPDO Mapping Parameter 2
+ObjectType=0x09
+
+[1A01sub0]
+ParameterName=Number of Entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x2
+PDOMapping=0
+
+[1A01sub1]
+ParameterName=StatusWord
+ObjectType=0x07
+DataType=0x0007
+AccessType=ro
+DefaultValue=0x60410010
+PDOMapping=0
+
+[1A01sub2]
+ParameterName=Modes of Operation Display
+ObjectType=0x07
+DataType=0x0007
+AccessType=ro
+DefaultValue=0x60610008
+PDOMapping=0
+
+[1A02]
+SubNumber=3
+ParameterName=TPDO Mapping Parameter 3
+ObjectType=0x09
+
+[1A02sub0]
+ParameterName=Number of Entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x02
+PDOMapping=0
+
+[1A02sub1]
+ParameterName=StatusWord
+ObjectType=0x07
+DataType=0x0007
+AccessType=ro
+DefaultValue=0x60410010
+PDOMapping=0
+
+[1A02sub2]
+ParameterName=Position Actual Value
+ObjectType=0x07
+DataType=0x0007
+AccessType=ro
+DefaultValue=0x60630020
+PDOMapping=0
+
+[1A03]
+SubNumber=3
+ParameterName=TPDO Mapping Parameter 4
+ObjectType=0x09
+
+[1A03sub0]
+ParameterName=Number of Entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x2
+PDOMapping=0
+
+[1A03sub1]
+ParameterName=StatusWord
+ObjectType=0x07
+DataType=0x0007
+AccessType=ro
+DefaultValue=0x60410010
+PDOMapping=0
+
+[1A03sub2]
+ParameterName=Velocity Actual Value
+ObjectType=0x07
+DataType=0x0007
+AccessType=ro
+DefaultValue=0x606C0020
+PDOMapping=0
+
+[1A06]
+SubNumber=3
+ParameterName=TPDO Mapping Parameter 7
+ObjectType=0x09
+
+[1A06sub0]
+ParameterName=Number of Entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x02
+PDOMapping=0
+
+[1A06sub1]
+ParameterName=StatusWord
+ObjectType=0x07
+DataType=0x0007
+AccessType=ro
+DefaultValue=0x60410010
+PDOMapping=0
+
+[1A06sub2]
+ParameterName=Digital Inputs
+ObjectType=0x07
+DataType=0x0007
+AccessType=ro
+DefaultValue=0x60FD0020
+PDOMapping=0
+
+[2000]
+ParameterName=NodeId
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0xFF
+PDOMapping=0
+
+[2001]
+ParameterName=BitRate
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x4
+PDOMapping=0
+
+[2100]
+ParameterName=Port Configuration
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+DefaultValue=0x00
+PDOMapping=0
+
+[2200]
+SubNumber=5
+ParameterName=Poll List
+ObjectType=0x08
+
+[2200sub0]
+ParameterName=number of entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x04
+PDOMapping=0
+
+[2200sub1]
+ParameterName=poll list entry #1
+ObjectType=0x07
+DataType=0x0004
+AccessType=rw
+DefaultValue=-1
+PDOMapping=0
+
+[2200sub2]
+ParameterName=poll list entry #2
+ObjectType=0x07
+DataType=0x0004
+AccessType=rw
+DefaultValue=-1
+PDOMapping=0
+
+[2200sub3]
+ParameterName=poll list entry #3
+ObjectType=0x07
+DataType=0x0004
+AccessType=rw
+DefaultValue=-1
+PDOMapping=0
+
+[2200sub4]
+ParameterName=poll list entry #4
+ObjectType=0x07
+DataType=0x0004
+AccessType=rw
+DefaultValue=-1
+PDOMapping=0
+
+[2201]
+SubNumber=3
+ParameterName=User Variable
+ObjectType=0x08
+
+[2201sub0]
+ParameterName=number of entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x02
+PDOMapping=0
+
+[2201sub1]
+ParameterName=User Array Index
+ObjectType=0x07
+DataType=0x0004
+AccessType=rw
+DefaultValue=0x0
+PDOMapping=0
+
+[2201sub2]
+ParameterName=User Array Value
+ObjectType=0x07
+DataType=0x0004
+AccessType=rw
+PDOMapping=0
+
+[2202]
+ParameterName=Set Actual Position
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+PDOMapping=0
+
+[2300]
+ParameterName=Bus Voltage
+ObjectType=0x07
+DataType=0x0006
+AccessType=ro
+PDOMapping=0
+
+[2301]
+ParameterName=RMS Current
+ObjectType=0x07
+DataType=0x0006
+AccessType=ro
+PDOMapping=0
+
+[2302]
+ParameterName=Internal Temperature
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+PDOMapping=0
+
+[2303]
+ParameterName=Internal Clock
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+PDOMapping=0
+
+[2304]
+ParameterName=Motor Status
+ObjectType=0x07
+DataType=0x0006
+AccessType=ro
+PDOMapping=0
+
+[2305]
+ParameterName=Motor Control
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+PDOMapping=0
+
+[2306]
+ParameterName=Motor Subroutine Index
+ObjectType=0x07
+DataType=0x0003
+AccessType=rw
+PDOMapping=0
+
+[2307]
+ParameterName=Sample Period
+ObjectType=0x07
+DataType=0x0006
+AccessType=ro
+PDOMapping=0
+
+[6040]
+ParameterName=Controlword
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+PDOMapping=1
+
+[6041]
+ParameterName=Statusword
+ObjectType=0x07
+DataType=0x0006
+AccessType=ro
+PDOMapping=1
+
+[605A]
+ParameterName=Quick Stop Option Code
+ObjectType=0x07
+DataType=0x0003
+AccessType=rw
+DefaultValue=0x0002
+PDOMapping=0
+
+[605D]
+ParameterName=Halt Option Code
+ObjectType=0x07
+DataType=0x0003
+AccessType=rw
+DefaultValue=0x0001
+PDOMapping=0
+
+[6060]
+ParameterName=Modes of Operation
+ObjectType=0x07
+DataType=0x0002
+AccessType=rw
+PDOMapping=0
+
+[6061]
+ParameterName=Modes of Operation Display
+ObjectType=0x07
+DataType=0x0002
+AccessType=ro
+PDOMapping=1
+
+[6063]
+ParameterName=Position Actual Value
+ObjectType=0x07
+DataType=0x0004
+AccessType=ro
+PDOMapping=1
+
+[6065]
+ParameterName=Following Error Window
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+PDOMapping=0
+
+[606C]
+ParameterName=Velocity Actual Value
+ObjectType=0x07
+DataType=0x0004
+AccessType=ro
+PDOMapping=1
+
+[6071]
+ParameterName=Target Torque
+ObjectType=0x07
+DataType=0x0003
+AccessType=rw
+DefaultValue=0x0000
+PDOMapping=1
+
+[6072]
+ParameterName=Max Torque
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+DefaultValue=0x0000
+PDOMapping=0
+
+[6073]
+ParameterName=Max Current
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+DefaultValue=0x0000
+PDOMapping=0
+
+[607A]
+ParameterName=Target Position
+ObjectType=0x07
+DataType=0x0004
+AccessType=rw
+PDOMapping=1
+
+[607C]
+ParameterName=Home Offset
+ObjectType=0x07
+DataType=0x0004
+AccessType=rw
+DefaultValue=0x00000000
+PDOMapping=0
+
+[607D]
+SubNumber=3
+ParameterName=Software Position Limit
+ObjectType=0x08
+
+[607Dsub0]
+ParameterName=Number of Entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x00000002
+PDOMapping=0
+
+[607Dsub1]
+ParameterName=Min Software Position Limit
+ObjectType=0x07
+DataType=0x0004
+AccessType=rw
+DefaultValue=0x80000000
+PDOMapping=0
+
+[607Dsub2]
+ParameterName=Max Software Position Limit
+ObjectType=0x07
+DataType=0x0004
+AccessType=rw
+DefaultValue=0x7FFFFFFF
+PDOMapping=0
+
+[607E]
+ParameterName=Polarity
+ObjectType=0x07
+DataType=0x0005
+AccessType=rw
+DefaultValue=0x00
+PDOMapping=0
+
+[607F]
+ParameterName=Max Profile Velocity
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+PDOMapping=0
+
+[6081]
+ParameterName=Profile Velocity in pp-mode
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+PDOMapping=0
+
+[6083]
+ParameterName=Profile Acceleration
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+PDOMapping=0
+
+[6085]
+ParameterName=Quick Stop Deceleration
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+PDOMapping=0
+
+[608F]
+SubNumber=3
+ParameterName=Position Encoder Resolution
+ObjectType=0x08
+
+[608Fsub0]
+ParameterName=Number of Entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x00000002
+PDOMapping=0
+
+[608Fsub1]
+ParameterName=Encoder Increments
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+DefaultValue=0x00000001
+PDOMapping=0
+
+[608Fsub2]
+ParameterName=Motor Revolutions
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+DefaultValue=0x00000001
+PDOMapping=0
+
+[6098]
+ParameterName=Homing Method
+ObjectType=0x07
+DataType=0x0002
+AccessType=rw
+DefaultValue=0x00
+PDOMapping=0
+
+[6099]
+SubNumber=3
+ParameterName=Homing Speeds
+ObjectType=0x08
+
+[6099sub0]
+ParameterName=Number of Entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x00000002
+PDOMapping=0
+
+[6099sub1]
+ParameterName=Fast Homing Speed
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+DefaultValue=0x00000000
+PDOMapping=0
+
+[6099sub2]
+ParameterName=Slow Homing Speed
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+DefaultValue=0x00000000
+PDOMapping=0
+
+[609A]
+ParameterName=Homing Acceleration
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+PDOMapping=0
+
+[60F4]
+ParameterName=Following Error Actual Value
+ObjectType=0x07
+DataType=0x0004
+AccessType=ro
+PDOMapping=0
+
+[60FB]
+SubNumber=9
+ParameterName=Position Control Parameter Set
+ObjectType=0x09
+
+[60FBsub0]
+ParameterName=Number of Entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+PDOMapping=0
+
+[60FBsub1]
+ParameterName=KP, Proportional Gain
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+PDOMapping=0
+
+[60FBsub2]
+ParameterName=KI, Integral Gain
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+PDOMapping=0
+
+[60FBsub3]
+ParameterName=KL, Integral Limit
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+PDOMapping=0
+
+[60FBsub4]
+ParameterName=KD, Derivative Gain
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+PDOMapping=0
+
+[60FBsub5]
+ParameterName=KS, Derivative Damping Sample Rate
+ObjectType=0x07
+DataType=0x0005
+AccessType=rw
+PDOMapping=0
+
+[60FBsub6]
+ParameterName=KV, Velocity Feedforward Gain
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+PDOMapping=0
+
+[60FBsub7]
+ParameterName=KA, Acceleration Feedforward Gain
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+PDOMapping=0
+
+[60FBsub8]
+ParameterName=KG, Gravitational Offset
+ObjectType=0x07
+DataType=0x0004
+AccessType=rw
+PDOMapping=0
+
+[60FD]
+ParameterName=Digital Inputs
+ObjectType=0x07
+DataType=0x0007
+AccessType=ro
+DefaultValue=0x00000000
+PDOMapping=1
+
+[60FE]
+SubNumber=2
+ParameterName=Digital Outputs
+ObjectType=0x08
+
+[60FEsub0]
+ParameterName=Number of Entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+PDOMapping=0
+
+[60FEsub1]
+ParameterName=Physical Outputs
+ObjectType=0x07
+DataType=0x0007
+AccessType=rw
+DefaultValue=0x00000000
+PDOMapping=1
+
+[60FF]
+ParameterName=Target Velocity
+ObjectType=0x07
+DataType=0x0004
+AccessType=rw
+PDOMapping=1
+
+[6401]
+SubNumber=8
+ParameterName=Read Analog Input 16 Bit
+ObjectType=0x08
+
+[6401sub0]
+ParameterName=Number of Elements
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x7
+PDOMapping=0
+
+[6401sub1]
+ParameterName=16-Bit analog Input 1
+ObjectType=0x07
+DataType=0x0003
+AccessType=ro
+DefaultValue=0x0000
+PDOMapping=1
+
+[6401sub2]
+ParameterName=16-Bit analog Input 2
+ObjectType=0x07
+DataType=0x0003
+AccessType=ro
+DefaultValue=0x0000
+PDOMapping=1
+
+[6401sub3]
+ParameterName=16-Bit analog Input 3
+ObjectType=0x07
+DataType=0x0003
+AccessType=ro
+DefaultValue=0x0000
+PDOMapping=1
+
+[6401sub4]
+ParameterName=16-Bit analog Input 4
+ObjectType=0x07
+DataType=0x0003
+AccessType=ro
+DefaultValue=0x0000
+PDOMapping=1
+
+[6401sub5]
+ParameterName=16-Bit analog Input 5
+ObjectType=0x07
+DataType=0x0003
+AccessType=ro
+DefaultValue=0x0000
+PDOMapping=1
+
+[6401sub6]
+ParameterName=16-Bit analog Input 6
+ObjectType=0x07
+DataType=0x0003
+AccessType=ro
+DefaultValue=0x0000
+PDOMapping=1
+
+[6401sub7]
+ParameterName=16-Bit analog Input 7
+ObjectType=0x07
+DataType=0x0003
+AccessType=ro
+DefaultValue=0x0000
+PDOMapping=1
+
+[6402]
+ParameterName=Motor Type
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+DefaultValue=0x000A
+PDOMapping=0
+
+[6403]
+ParameterName=Motor Catalogue Number
+ObjectType=0x07
+DataType=0x0009
+AccessType=rw
+DefaultValue=0x0
+PDOMapping=0
+
+[6404]
+ParameterName=Motor Manufacturer
+ObjectType=0x07
+DataType=0x0009
+AccessType=ro
+DefaultValue=Animatics Corporation
+PDOMapping=0
+
+[6405]
+ParameterName=Http Motor Catalog Address
+ObjectType=0x07
+DataType=0x0009
+AccessType=ro
+DefaultValue=www.animatics.com
+PDOMapping=0
+
+[6502]
+ParameterName=Supported Drive Modes
+ObjectType=0x07
+DataType=0x0007
+AccessType=ro
+PDOMapping=0
+
+[6503]
+ParameterName=Drive Catalog Number
+ObjectType=0x07
+DataType=0x0009
+AccessType=rw
+PDOMapping=0
+
+[6504]
+ParameterName=Drive Manufacturer
+ObjectType=0x07
+DataType=0x0009
+AccessType=ro
+DefaultValue=Animatics Corporation
+PDOMapping=0
+
+[6505]
+ParameterName=Http Drive Catalog Address
+ObjectType=0x07
+DataType=0x0009
+AccessType=ro
+DefaultValue=www.animatics.com
+PDOMapping=0
+
+[6510]
+SubNumber=3
+ParameterName=Drive Data
+ObjectType=0x09
+
+[6510sub0]
+ParameterName=Number of Entries
+ObjectType=0x07
+DataType=0x0005
+AccessType=ro
+PDOMapping=0
+
+[6510sub1]
+ParameterName=RMS time before shutdown
+ObjectType=0x07
+DataType=0x0006
+AccessType=rw
+DefaultValue=0x2EE0
+PDOMapping=0
+
+[6510sub2]
+ParameterName=Internal Temperature Limit
+ObjectType=0x07
+DataType=0x0005
+AccessType=rw
+DefaultValue=0x46
+PDOMapping=0
+
+[67FF]
+ParameterName=Single Device Type
+ObjectType=0x07
+DataType=0x0007
+AccessType=ro
+PDOMapping=0
+

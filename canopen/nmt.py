@@ -38,10 +38,15 @@ COMMAND_TO_STATE = {
 
 
 class NmtMaster(object):
+    """
+    Can set the state of the node it controls using NMT commands and monitor
+    the current state using the heartbeat protocol.
+    """
 
     def __init__(self, parent):
         self._state = 0
         self._state_received = False
+        #: Timestamp of last heartbeat message
         self.timestamp = 0
         self.state_change = threading.Condition()
         self.parent = parent
@@ -54,6 +59,7 @@ class NmtMaster(object):
             self.state_change.notify_all()
 
     def send_command(self, code):
+        """Send an NMT command code to the node."""
         logger.info("Sending NMT command 0x%X to node %d", code, self.parent.id)
         self.parent.network.send_message(0, [code, self.parent.id])
         if code in COMMAND_TO_STATE:
@@ -62,6 +68,19 @@ class NmtMaster(object):
 
     @property
     def state(self):
+        """Attribute to get or set current state as a string.
+
+        Can be one of:
+
+        - INIT
+        - PRE OPERATIONAL
+        - STOPPED
+        - OPERATIONAL
+        - SLEEP
+        - STANDBY
+        - RESET (for setting only)
+        - RESET COMMUNICATION (for setting only)
+        """
         if self._state in NMT_STATES:
             return NMT_STATES[self._state]
         else:

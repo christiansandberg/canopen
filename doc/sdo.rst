@@ -78,7 +78,7 @@ or ``.bits`` attributes::
 API
 ---
 
-.. autoclass:: canopen.sdo.SdoNode
+.. autoclass:: canopen.sdo.SdoClient
     :members:
 
 .. autoclass:: canopen.sdo.Variable

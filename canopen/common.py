@@ -8,8 +8,7 @@ class Variable(object):
 
     def __init__(self, od):
         self.od = od
-        #: Bits as a dictionary
-        self.bits = Bits(self)
+        self._bits = Bits(self)
 
     def get_data(self):
         raise NotImplementedError()
@@ -19,7 +18,7 @@ class Variable(object):
 
     @property
     def data(self):
-        """Bytes."""
+        """Byte representation of the object (:class:`bytes`)."""
         if self.od.access_type == "wo":
             logger.warning("Variable is write only")
         return self.get_data()
@@ -32,6 +31,27 @@ class Variable(object):
 
     @property
     def raw(self):
+        """Raw representation of the object.
+        
+        This table lists the translations between object dictionary data types
+        and Python native data types.
+
+        +---------------------------+----------------------------+
+        | Data type                 | Python type                |
+        +===========================+============================+
+        | UNSIGNEDxx                | :class:`int`               |
+        +---------------------------+                            |
+        | INTEGERxx                 |                            |
+        +---------------------------+----------------------------+
+        | BOOLEAN                   | :class:`bool`              |
+        +---------------------------+----------------------------+
+        | REALxx                    | :class:`float`             |
+        +---------------------------+----------------------------+
+        | VISIBLE_STRING            | :class:`str`               |
+        |                           +----------------------------+
+        |                           | ``unicode`` (Python 2)     |
+        +---------------------------+----------------------------+
+        """
         value = self.od.decode_raw(self.data)
         text = "Value of %s (0x%X:%d) is %s" % (
             self.od.name, self.od.index,
@@ -50,6 +70,12 @@ class Variable(object):
 
     @property
     def phys(self):
+        """Physical value scaled with some factor (defaults to 1).
+
+        On object dictionaries that support specifying a factor, this can be
+        either a :class:`float` or an :class:`int`.
+        Strings will be passed as is.
+        """
         value = self.od.decode_phys(self.data)
         logger.debug("Value of %s (0x%X:%d) is %s %s",
                      self.od.name, self.od.index,
@@ -65,6 +91,7 @@ class Variable(object):
 
     @property
     def desc(self):
+        """Converts to and from a description of the value as a string."""
         value = self.od.decode_desc(self.data)
         logger.debug("Description of %s (0x%X:%d) is %s",
                      self.od.name, self.od.index,
@@ -77,6 +104,11 @@ class Variable(object):
                      self.od.name, self.od.index,
                      self.od.subindex, desc)
         self.data = self.od.encode_desc(desc)
+
+    @property
+    def bits(self):
+        """Access bits using integers, slices, or bit descriptions."""
+        return self._bits
 
 
 class Bits(object):

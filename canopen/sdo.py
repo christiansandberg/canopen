@@ -30,8 +30,10 @@ SIZE_SPECIFIED = 0x1
 
 
 class SdoClient(collections.Mapping):
+    """Handles communication with an SDO server."""
 
     def __init__(self, parent, node_id):
+        #: Node ID
         self.id = node_id
         self.parent = parent
         self.response = None
@@ -66,6 +68,21 @@ class SdoClient(collections.Mapping):
             return self.response
 
     def upload(self, index, subindex):
+        """May be called to manually make a read operation.
+
+        :param int index:
+            Index of object to read.
+        :param int subindex:
+            Sub-index of object to read.
+
+        :return: A data object.
+        :rtype: bytes
+
+        :raises canopen.SdoCommunicationError:
+            On unexpected response or timeout.
+        :raises canopen.SdoAbortedError:
+            When node responds with an error.
+        """
         request = SDO_STRUCT.pack(REQUEST_UPLOAD, index, subindex, b'')
         response = self.send_request(request)
         res_command, res_index, res_subindex, res_data = SDO_STRUCT.unpack(response)
@@ -108,6 +125,20 @@ class SdoClient(collections.Mapping):
         return res_data[:length] if length is not None else res_data
 
     def download(self, index, subindex, data):
+        """May be called to manually make a write operation.
+
+        :param int index:
+            Index of object to write.
+        :param int subindex:
+            Sub-index of object to write.
+        :param bytes data:
+            Data to be written.
+
+        :raises canopen.SdoCommunicationError:
+            On unexpected response or timeout.
+        :raises canopen.SdoAbortedError:
+            When node responds with an error.
+        """
         length = len(data)
         command = REQUEST_DOWNLOAD | SIZE_SPECIFIED
 
@@ -196,6 +227,7 @@ class Array(collections.Mapping):
 
 
 class Variable(common.Variable):
+    """Access object dictionary variable values using SDO protocol."""
 
     def __init__(self, sdo_node, od):
         self.sdo_node = sdo_node

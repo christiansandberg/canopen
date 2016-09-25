@@ -21,3 +21,20 @@ indicating the node status. The heartbeat consumer reads these messages.
 CANopen devices are required to make the transition from the state Initializing
 to Pre-operational automatically during bootup. When this transition is made,
 a single heartbeat message is sent to the bus. This is the bootup protocol.
+
+
+Examples
+--------
+
+Access the NMT functionality using the :attr:`canopen.Node.nmt` attribute.
+Changing state can be done using the `.state` attribute::
+
+    node.nmt.state = 'OPERATIONAL'
+
+
+API
+---
+
+.. autoclass:: canopen.nmt.NmtMaster
+    :members:
+

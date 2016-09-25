@@ -26,6 +26,14 @@ FLOAT_TYPES = (REAL32, REAL64)
 
 
 def import_od(filename):
+    """Parse an EDS or EPF file.
+
+    :param str filename:
+        Path to object dictionary file.
+
+    :return:
+        A :class:`canopen.ObjectDictionary` object.
+    """
     if filename.endswith(".eds"):
         from . import eds
         return eds.import_eds(filename)
@@ -35,18 +43,19 @@ def import_od(filename):
 
 
 class ObjectDictionary(collections.Mapping):
+    """Representation of the object dictionary as a Python dictionary."""
 
     def __init__(self):
         self.indexes = collections.OrderedDict()
         self.names = collections.OrderedDict()
+        #: Default bitrate if specified by file
         self.bitrate = None
 
     def __getitem__(self, index):
-        """Get Object Dictionary index."""
+        """Get object from object dictionary by name or index."""
         return self.names.get(index) or self.indexes[index]
 
     def __iter__(self):
-        """Iterates over all Object Dictionary indexes."""
         return iter(self.names)
 
     def __len__(self):
@@ -56,14 +65,26 @@ class ObjectDictionary(collections.Mapping):
         return index in self.names or index in self.indexes
 
     def add_object(self, obj):
+        """Add object to the object dictionary.
+
+        :param obj:
+            Should be either one of
+            :class:`canopen.objectdictionary.Variable`,
+            :class:`canopen.objectdictionary.Record`, or
+            :class:`canopen.objectdictionary.Array`.
+        """
         obj.parent = self
         self.indexes[obj.index] = obj
         self.names[obj.name] = obj
 
 
 class Record(collections.Mapping):
+    """Groups multiple :class:`canopen.objectdictionary.Variable` objects using
+    subindexes.
+    """
 
     def __init__(self, name, index):
+        #: The :class:`canopen.ObjectDictionary` owning the record.
         self.parent = None
         self.index = index
         self.name = name
@@ -86,22 +107,31 @@ class Record(collections.Mapping):
         return self.index == other.index
 
     def add_member(self, variable):
+        """Adds a :class:`canopen.objectdictionary.Variable` to the record."""
         variable.parent = self
         self.subindexes[variable.subindex] = variable
         self.names[variable.name] = variable
 
 
 class Array(collections.Sequence):
+    """An array of :class:`canopen.objectdictionary.Variable` objects using
+    subindexes.
+    
+    Actual length of array must be read from the node using SDO.
+    """
 
     def __init__(self, name, index):
+        #: The :class:`canopen.ObjectDictionary` owning the array.
         self.parent = None
         self.index = index
         self.name = name
         self.length = 255
+        #: Variable to read to get length of array
         self.last_subindex = Variable(
             "Number of entries", index, 0)
         self.last_subindex.data_type = UNSIGNED8
         self.last_subindex.parent = self
+        #: Each variable will be based on this with unique subindexes
         self.template = None
 
     def __getitem__(self, subindex):
@@ -122,7 +152,7 @@ class Array(collections.Sequence):
 
 
 class Variable(object):
-    """Object Dictionary VAR."""
+    """Simple variable."""
 
     STRUCT_TYPES = {
         BOOLEAN: struct.Struct("?"),
@@ -139,16 +169,29 @@ class Variable(object):
     }
 
     def __init__(self, name, index, subindex=0):
+        #: The :class:`canopen.ObjectDictionary`,
+        #: :class:`canopen.objectdictionary.Record` or
+        #: :class:`canopen.objectdictionary.Array` owning the variable
         self.parent = None
+        #: 16-bit address of the object in the dictionary
         self.index = index
+        #: 8-bit sub-index of the object in the dictionary
         self.subindex = subindex
+        #: String representation of the variable
         self.name = name
+        #: Data type according to the standard as an :class:`int`
         self.data_type = UNSIGNED32
+        #: Access type, should be "rw", "ro", "wo", or "const"
         self.access_type = "rw"
+        #: Physical unit
         self.unit = ""
+        #: Factor between physical unit and integer value
         self.factor = 1
+        #: Minimum allowed value
         self.min = None
+        #: Maximum allowed value
         self.max = None
+        #: Dictionary of value descriptions
         self.value_descriptions = {}
         self.bit_definitions = {}
 

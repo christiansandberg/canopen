@@ -1,9 +1,13 @@
-Network (CAN bus)
+Network and nodes
 =================
 
 The :class:`canopen.Network` represents a collection of nodes connected to the
 same CAN bus. This handles the sending and receiving of messages and dispatches
 messages to the nodes it knows about.
+
+Each node is represented using the :class:`canopen.Node` class. It is usually
+associated with an object dictionary and each service has its own attribute
+owned by this node.
 
 
 Examples
@@ -42,5 +46,25 @@ API
 
 .. autoclass:: canopen.Network
     :members:
+
+.. autoclass:: canopen.Node
+    :members:
+
+    .. py:attribute:: sdo
+
+       The :class:`canopen.sdo.SdoClient` associated with the node.
+
+    .. py:attribute:: pdo
+
+       The :class:`canopen.pdo.PdoNode` associated with the node.
+
+    .. py:attribute:: nmt
+
+       The :class:`canopen.nmt.NmtMaster` associated with the node.
+
+    .. py:attribute:: emcy
+
+       The :class:`canopen.emcy.EmcyConsumer` associated with the node.
+
 
 .. _python-can: https://python-can.readthedocs.org/en/stable/

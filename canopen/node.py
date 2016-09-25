@@ -11,10 +11,21 @@ HEARTBEAT = 0x700
 
 
 class Node(object):
+    """A CANopen slave node.
+
+    :param int node_id:
+        Node ID
+    :param object_dictionary:
+        Object dictionary as either a path to a file or an object.
+    :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary` 
+    """
 
     def __init__(self, node_id=1, object_dictionary=None):
+        #: Node ID
         self.id = node_id
+        #: :class:`canopen.Network` owning the node
         self.network = None
+        #: :class:`canopen.ObjectDictionary` associated with the node
         self.object_dictionary = objectdictionary.ObjectDictionary()
         self.service_callbacks = {}
         self.message_callbacks = []
@@ -42,6 +53,12 @@ class Node(object):
         self.sdo.id = node_id
 
     def set_object_dictionary(self, object_dictionary):
+        """Sets the object dictionary for the node.
+
+        :param object_dictionary:
+            Object dictionary as either a path to a file or an object.
+        :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary`
+        """ 
         assert object_dictionary, "An Object Dictionary file has not been specified"
         if not isinstance(object_dictionary, objectdictionary.ObjectDictionary):
             object_dictionary = objectdictionary.import_od(object_dictionary)

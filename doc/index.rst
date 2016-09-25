@@ -29,7 +29,7 @@ Easiest way to install is to use pip_::
    :maxdepth: 2
 
    network
-   node
+   od
    nmt
    sdo
    pdo
