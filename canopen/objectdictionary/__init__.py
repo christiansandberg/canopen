@@ -25,7 +25,7 @@ INTEGER_TYPES = SIGNED_TYPES + UNSIGNED_TYPES
 FLOAT_TYPES = (REAL32, REAL64)
 
 
-def import_any(filename):
+def import_od(filename):
     if filename.endswith(".eds"):
         from . import eds
         return eds.import_eds(filename)

@@ -29,7 +29,7 @@ EXPEDITED = 0x2
 SIZE_SPECIFIED = 0x1
 
 
-class SdoNode(collections.Mapping):
+class SdoClient(collections.Mapping):
 
     def __init__(self, parent, node_id):
         self.id = node_id
@@ -159,12 +159,12 @@ class SdoNode(collections.Mapping):
 
 class Record(collections.Mapping):
 
-    def __init__(self, node, od):
-        self.node = node
+    def __init__(self, sdo_node, od):
+        self.sdo_node = sdo_node
         self.od = od
 
     def __getitem__(self, subindex):
-        return Variable(self.node, self.od[subindex])
+        return Variable(self.sdo_node, self.od[subindex])
 
     def __iter__(self):
         return iter(self.od)
@@ -178,12 +178,12 @@ class Record(collections.Mapping):
 
 class Array(collections.Mapping):
 
-    def __init__(self, node, od):
-        self.node = node
+    def __init__(self, sdo_node, od):
+        self.sdo_node = sdo_node
         self.od = od
 
     def __getitem__(self, subindex):
-        return Variable(self.node, self.od[subindex])
+        return Variable(self.sdo_node, self.od[subindex])
 
     def __iter__(self):
         return iter(range(1, len(self) + 1))

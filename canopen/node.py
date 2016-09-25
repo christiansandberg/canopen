@@ -1,6 +1,6 @@
-from .sdo import SdoNode
-from .nmt import NmtNode
-from .emcy import EmcyNode
+from .sdo import SdoClient
+from .nmt import NmtMaster
+from .emcy import EmcyConsumer
 from .pdo import PdoNode
 from . import objectdictionary
 
@@ -22,16 +22,16 @@ class Node(object):
         if object_dictionary:
             self.set_object_dictionary(object_dictionary)
 
-        self.sdo = SdoNode(self, node_id)
+        self.sdo = SdoClient(self, node_id)
         self.register_service(SDO_RESPONSE, self.sdo.on_response)
 
         self.pdo = PdoNode(self)
         self.add_callback(self.pdo.on_message)
 
-        self.nmt = NmtNode(self)
+        self.nmt = NmtMaster(self)
         self.register_service(HEARTBEAT, self.nmt.on_heartbeat)
 
-        self.emcy = EmcyNode()
+        self.emcy = EmcyConsumer()
         self.register_service(EMCY, self.emcy.on_emcy)
 
     def add_callback(self, callback):
@@ -44,7 +44,7 @@ class Node(object):
     def set_object_dictionary(self, object_dictionary):
         assert object_dictionary, "An Object Dictionary file has not been specified"
         if not isinstance(object_dictionary, objectdictionary.ObjectDictionary):
-            object_dictionary = objectdictionary.import_any(object_dictionary)
+            object_dictionary = objectdictionary.import_od(object_dictionary)
         self.object_dictionary = object_dictionary
 
     def set_sdo_channel(self, node_id):

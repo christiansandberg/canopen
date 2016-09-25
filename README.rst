@@ -1,9 +1,41 @@
+CANopen for Python
+==================
+
 A Python implementation of the CANopen_ standard.
-The application will act as a master.
+
+
+Features
+--------
+
+* NMT master
+* SDO client
+* PDO producer/consumer
+* SYNC producer
+* EMCY consumer
+
+
+Installation
+------------
+
+Install from PyPI_ using pip::
+
+    $ pip install canopen
+
+
+Documentation
+-------------
+
+Documentation can be found on Read the Docs:
+
+http://canopen.readthedocs.io/
+
+It can also be generated locally using Sphinx_::
+
+    $ python setup.py build_sphinx
 
 
 Hardware support
-================
+----------------
 
 This library support multiple hardware and drivers through the python-can_ package.
 At the time of writing this includes:
@@ -18,7 +50,7 @@ It is also possible to integrate this library with a custom backend.
 
 
 Examples
-========
+--------
 
 Here are some quick examples:
 
@@ -39,7 +71,7 @@ Here are some quick examples:
     # (see https://python-can.readthedocs.io/en/latest/bus.html).
     network.connect(channel=0, bustype='kvaser', bitrate=250000)
 
-    # Read a variable using .raw
+    # Read a variable using SDO
     device_name = network[6].sdo['ManufacturerDeviceName'].raw
     vendor_id = network[6].sdo[0x1018][1].raw
 
@@ -61,7 +93,7 @@ Here are some quick examples:
 
 
 TODO
-====
+----
 
 There are a lot of things that still needs implementing and fixing.
 Pull requests are most welcome!
@@ -73,5 +105,7 @@ Pull requests are most welcome!
 * XDD support
 
 
+.. _PyPI: https://pypi.python.org/pypi/canopen
 .. _CANopen: https://en.wikipedia.org/wiki/CANopen
 .. _python-can: https://python-can.readthedocs.org/en/stable/
+.. _Sphinx: http://www.sphinx-doc.org/

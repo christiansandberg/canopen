@@ -8,6 +8,7 @@ class Variable(object):
 
     def __init__(self, od):
         self.od = od
+        #: Bits as a dictionary
         self.bits = Bits(self)
 
     def get_data(self):
@@ -18,6 +19,7 @@ class Variable(object):
 
     @property
     def data(self):
+        """Bytes."""
         if self.od.access_type == "wo":
             logger.warning("Variable is write only")
         return self.get_data()

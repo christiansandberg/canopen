@@ -83,6 +83,7 @@ API
 
 .. autoclass:: canopen.sdo.Variable
     :members:
+    :inherited-members:
 
 .. autoclass:: canopen.sdo.Record
     :members:

@@ -28,6 +28,7 @@ class Network(collections.Mapping):
         self.notifier = None
         self.nodes = []
         self.send_lock = threading.Lock()
+        #: The SYNC producer
         self.sync = SyncProducer(self)
         # NMT to all nodes
         #self.nmt = NmtNode(0)
@@ -36,7 +37,7 @@ class Network(collections.Mapping):
         """Connect to CAN bus using python-can.
 
         Arguments are passed directly to :class:`can.BusABC`. Typically these
-        include:
+        may include:
 
         :param channel:
             Backend specific channel for the CAN interface.
@@ -46,6 +47,9 @@ class Network(collections.Mapping):
 
         :param int bitrate:
             Bitrate in bit/s.
+
+        :raises:
+            :class:`can.CanError`
         """
         # If bitrate has not been specified, try to find one node where bitrate
         # has been specified
@@ -76,7 +80,7 @@ class Network(collections.Mapping):
         :param object_dictionary:
             Can be either a string for specifying the path to an
             Object Dictionary file or a
-            :class:`canopen.objectdictionary.ObjectDictionary` object.
+            :class:`canopen.ObjectDictionary` object.
 
         :return:
             The :class:`canopen.Node` object that was added.
@@ -88,6 +92,17 @@ class Network(collections.Mapping):
         return node
 
     def send_message(self, can_id, data):
+        """Send a message to the network.
+
+        This method may be overridden in a subclass if you need to integrate
+        this library with a custom backend.
+
+        :param int can_id:
+            CAN-ID of the message (always 11-bit)
+        
+        :param bytes data:
+            Data to be transmitted.
+        """
         assert self.bus, "Not connected to CAN bus"
         msg = can.Message(extended_id=False,
                           arbitration_id=can_id,

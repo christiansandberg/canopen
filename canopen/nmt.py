@@ -37,7 +37,7 @@ COMMAND_TO_STATE = {
 }
 
 
-class NmtNode(object):
+class NmtMaster(object):
 
     def __init__(self, parent):
         self._state = 0

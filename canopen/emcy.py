@@ -26,49 +26,49 @@ DESCRIPTIONS = [
 ]
 
 
-class EmcyNode(object):
+class EmcyConsumer(object):
 
     def __init__(self):
+        #: Log of all received EMCYs for this node
         self.log = []
+        #: Only active EMCYs. Will be cleared on Error Reset
+        self.active = []
 
     def on_emcy(self, can_id, data, timestamp):
         if can_id == 0x80:
+            # This is a SYNC message
             return
         code, register, data = EMCY_STRUCT.unpack(data)
         if code & 0xFF == 0:
-            entry = ErrorReset(code, register, data, timestamp)
+            # Error reset
+            self.active = []
         else:
             entry = EmcyError(code, register, data, timestamp)
-        self.log.append(entry)
-
-
-class ErrorReset(object):
-
-    def __init__(self, code, register, data, timestamp):
-        self.code = code
-        self.register = register
-        self.data = data
-        self.timestamp = timestamp
+            self.log.append(entry)
 
 
 class EmcyError(Exception):
+    """EMCY exception."""
 
     def __init__(self, code, register, data, timestamp):
+        #: EMCY code
         self.code = code
+        #: Error register
         self.register = register
+        #: Vendor specific data
         self.data = data
+        #: Timestamp of message
         self.timestamp = timestamp
 
-    @property
-    def desc(self):
+    def get_desc(self):
         for code, mask, description in DESCRIPTIONS:
             if self.code & mask == code:
                 return description
-        return None
+        return ""
 
     def __str__(self):
         text = "Code 0x{:04X}".format(self.code)
-        description = self.desc
+        description = self.get_desc()
         if description:
             text = text + ", " + description
         return text
