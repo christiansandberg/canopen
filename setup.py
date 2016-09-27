@@ -20,7 +20,7 @@ setup(
         "Intended Audience :: Developers",
         "Topic :: Scientific/Engineering"
     ],
-    install_requires=["python-can", "canmatrix"],
+    install_requires=["python-can~=1.5.2", "canmatrix"],
 
     # Tests can be run using `python setup.py test`
     test_suite="nose.collector",
