@@ -281,7 +281,7 @@ class Variable(common.Variable):
 
     def get_data(self):
         byte_offset = self.offset // 8
-        return self.msg.data[byte_offset:byte_offset+len(self.od)]
+        return self.msg.data[byte_offset:byte_offset+len(self.od)//8]
 
     def set_data(self, data):
         byte_offset = self.offset // 8
