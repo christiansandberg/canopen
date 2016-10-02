@@ -99,7 +99,7 @@ class Network(collections.Mapping):
 
         :param int can_id:
             CAN-ID of the message (always 11-bit)
-        
+
         :param bytes data:
             Data to be transmitted.
         """

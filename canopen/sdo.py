@@ -85,7 +85,8 @@ class SdoClient(collections.Mapping):
         """
         request = SDO_STRUCT.pack(REQUEST_UPLOAD, index, subindex, b'')
         response = self.send_request(request)
-        res_command, res_index, res_subindex, res_data = SDO_STRUCT.unpack(response)
+        res_command, res_index, res_subindex, res_data = SDO_STRUCT.unpack(
+            response)
 
         if res_command & 0xE0 != RESPONSE_UPLOAD:
             raise SdoCommunicationError("Unexpected response")
@@ -161,8 +162,8 @@ class SdoClient(collections.Mapping):
             request = bytearray(8)
             request[0] = REQUEST_SEGMENT_DOWNLOAD
             for pos in range(0, length, 7):
-                request[1:8] = data[pos:pos+7]
-                if pos+7 >= length:
+                request[1:8] = data[pos:pos + 7]
+                if pos + 7 >= length:
                     request[0] |= 1
                 response = self.send_request(request.ljust(8, b'\x00'))
                 request[0] ^= 0x10
@@ -255,11 +256,11 @@ class SdoAbortedError(SdoError):
         0x06010000: "Unsupported access to an object",
         0x06010001: "Attempt to read a write only object",
         0x06010002: "Attempt to write a read only object",
-        0x06020000:	"Object does not exist",
-        0x06040042:	"PDO length exceeded",
+        0x06020000: "Object does not exist",
+        0x06040042: "PDO length exceeded",
         0x06060000: "Access failed due to a hardware error",
         0x06070010: "Data type and length code do not match",
-        0x06090011:	"Subindex does not exist",
+        0x06090011: "Subindex does not exist",
         0x06090030: "Value range of parameter exceeded",
         0x060A0023: "Resource not available",
         0x08000000: "General error",

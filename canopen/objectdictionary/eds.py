@@ -34,7 +34,8 @@ def import_eds(filename):
                 od.add_object(arr)
             elif object_type == ARR:
                 arr = objectdictionary.Array(name, index)
-                arr.last_subindex = build_variable(eds, section + "sub0", index, 0)
+                arr.last_subindex = build_variable(
+                    eds, section + "sub0", index, 0)
                 arr.template = build_variable(eds, section + "sub1", index, 1)
                 od.add_object(arr)
             elif object_type == RECORD:

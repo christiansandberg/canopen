@@ -56,7 +56,7 @@ class PdoNode(object):
 
     def export(self, filename):
         """Export current configuration to a database file.
-        
+
         :param str filename:
             Filename to save to (e.g. DBC, DBF, ARXML, KCD etc)
         """
@@ -106,7 +106,7 @@ class Maps(collections.Mapping):
         self.com_offset = com_offset
         self.maps = {}
         for map_no in range(32):
-            self.maps[map_no+1] = Message(
+            self.maps[map_no + 1] = Message(
                 pdo_node, com_offset + map_no, map_offset + map_no)
 
     def __getitem__(self, key):
@@ -248,7 +248,7 @@ class Message(object):
 
     def add_variable(self, index, subindex=0):
         """Add a variable from object dictionary as the next entry.
-        
+
         :param index: Index of variable as name or number
         :param subindex: Sub-index of variable as name or number
         :type index: :class:`str` or :class:`int`
@@ -272,7 +272,7 @@ class Message(object):
 
     def start(self, period=None):
         """Start periodic transmission of message in a background thread.
-        
+
         :param float period: Transmission period in seconds
         """
         if period is not None:
@@ -283,7 +283,8 @@ class Message(object):
 
         if not self.transmit_thread or not self.transmit_thread.is_alive():
             self.stop_event.clear()
-            self.transmit_thread = threading.Thread(target=self._periodic_transmit)
+            self.transmit_thread = threading.Thread(
+                target=self._periodic_transmit)
             self.transmit_thread.daemon = True
             self.transmit_thread.start()
 
@@ -314,7 +315,7 @@ class Message(object):
 
 
 class Variable(common.Variable):
-    """One object dictionary variable mapped to a PDO.""" 
+    """One object dictionary variable mapped to a PDO."""
 
     def __init__(self, od):
         self.msg = None
@@ -328,9 +329,9 @@ class Variable(common.Variable):
 
     def get_data(self):
         byte_offset = self.offset // 8
-        return self.msg.data[byte_offset:byte_offset+len(self.od)//8]
+        return self.msg.data[byte_offset:byte_offset + len(self.od) // 8]
 
     def set_data(self, data):
         byte_offset = self.offset // 8
         logger.debug("Updating %s in message 0x%X", self.name, self.msg.cob_id)
-        self.msg.data[byte_offset:byte_offset+len(data)] = data
+        self.msg.data[byte_offset:byte_offset + len(data)] = data

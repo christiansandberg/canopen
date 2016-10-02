@@ -17,7 +17,7 @@ class Node(object):
         Node ID
     :param object_dictionary:
         Object dictionary as either a path to a file or an object.
-    :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary` 
+    :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary`
     """
 
     def __init__(self, node_id=1, object_dictionary=None):
@@ -58,9 +58,10 @@ class Node(object):
         :param object_dictionary:
             Object dictionary as either a path to a file or an object.
         :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary`
-        """ 
+        """
         assert object_dictionary, "An Object Dictionary file has not been specified"
-        if not isinstance(object_dictionary, objectdictionary.ObjectDictionary):
+        if not isinstance(object_dictionary,
+                          objectdictionary.ObjectDictionary):
             object_dictionary = objectdictionary.import_od(object_dictionary)
         self.object_dictionary = object_dictionary
 

@@ -116,7 +116,7 @@ class Record(collections.Mapping):
 class Array(collections.Sequence):
     """An array of :class:`canopen.objectdictionary.Variable` objects using
     subindexes.
-    
+
     Actual length of array must be read from the node using SDO.
     """
 
@@ -138,7 +138,8 @@ class Array(collections.Sequence):
         if subindex == 0 or subindex == self.last_subindex.name:
             return self.last_subindex
         elif isinstance(subindex, int) and 0 < subindex < 256:
-            var = Variable("%s [%d]" % (self.name, subindex), self.index, subindex)
+            var = Variable(
+                "%s [%d]" % (self.name, subindex), self.index, subindex)
             var.parent = self
             for attr in ("data_type", "unit", "factor", "min", "max",
                          "access_type", "value_descriptions"):
@@ -218,7 +219,8 @@ class Variable(object):
             try:
                 value, = self.STRUCT_TYPES[self.data_type].unpack(data)
             except struct.error:
-                raise ObjectDictionaryError("Mismatch between expected and actual data size")
+                raise ObjectDictionaryError(
+                    "Mismatch between expected and actual data size")
         return value
 
     def encode_raw(self, value):
@@ -228,9 +230,13 @@ class Variable(object):
             if self.data_type in INTEGER_TYPES:
                 value = int(value)
             if self.min is not None and value < self.min:
-                logger.warning("Value %d is less than min value %d", value, self.min)
+                logger.warning(
+                    "Value %d is less than min value %d", value, self.min)
             if self.max is not None and value > self.max:
-                logger.warning("Value %d is greater than max value %d", value, self.max)
+                logger.warning(
+                    "Value %d is greater than max value %d",
+                    value,
+                    self.max)
             try:
                 return self.STRUCT_TYPES[self.data_type].pack(value)
             except struct.error:
@@ -257,7 +263,8 @@ class Variable(object):
         if not self.value_descriptions:
             raise ObjectDictionaryError("No value descriptions exist")
         elif value not in self.value_descriptions:
-            raise ObjectDictionaryError("No value description exists for %d" % value)
+            raise ObjectDictionaryError(
+                "No value description exists for %d" % value)
         else:
             return self.value_descriptions[value]
 

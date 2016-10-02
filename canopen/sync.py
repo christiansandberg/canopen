@@ -23,7 +23,8 @@ class SyncProducer(object):
 
         if not self.transmit_thread or not self.transmit_thread.is_alive():
             self.stop_event.clear()
-            self.transmit_thread = threading.Thread(target=self._periodic_transmit)
+            self.transmit_thread = threading.Thread(
+                target=self._periodic_transmit)
             self.transmit_thread.daemon = True
             self.transmit_thread.start()
 

@@ -60,7 +60,10 @@ class NmtMaster(object):
 
     def send_command(self, code):
         """Send an NMT command code to the node."""
-        logger.info("Sending NMT command 0x%X to node %d", code, self.parent.id)
+        logger.info(
+            "Sending NMT command 0x%X to node %d",
+            code,
+            self.parent.id)
         self.parent.network.send_message(0, [code, self.parent.id])
         if code in COMMAND_TO_STATE:
             self._state = COMMAND_TO_STATE[code]

@@ -32,7 +32,7 @@ class Variable(object):
     @property
     def raw(self):
         """Raw representation of the object.
-        
+
         This table lists the translations between object dictionary data types
         and Python native data types.
 
@@ -127,7 +127,7 @@ class Bits(object):
 
     def __getitem__(self, key):
         return self.variable.od.decode_bits(self.variable.data,
-            self._get_bits(key))
+                                            self._get_bits(key))
 
     def __setitem__(self, key, value):
         self.variable.data = self.variable.od.encode_bits(
