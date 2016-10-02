@@ -3,6 +3,7 @@ from canopen import objectdictionary
 
 
 DATA_TYPES = {
+    "BOOLEAN": objectdictionary.BOOLEAN,
     "INTEGER8": objectdictionary.INTEGER8,
     "INTEGER16": objectdictionary.INTEGER16,
     "INTEGER32": objectdictionary.INTEGER32,

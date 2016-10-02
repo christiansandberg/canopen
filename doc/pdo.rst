@@ -23,3 +23,57 @@ TPDO that contains data you need by sending an empty TPDO with the RTR flag
 With RPDOs you can, for example, start two devices simultaneously.
 You only need to map the same RPDO into two or more different devices and make
 sure those RPDOs are mapped with the same COB-ID.
+
+
+Examples
+--------
+
+A :class:`canopen.Node` has a ``.pdo`` attribute that can be used to interact
+with the node using PDOs. This is in turn divided in a ``.tx`` and a ``.rx``
+attribute which can be subindexed to specify which message to use (first map
+starts at 1, not 0)::
+
+    # Read current PDO configuration
+    node.pdo.read()
+
+    # Do some changes
+    node.pdo.tx[4].clear()
+    node.pdo.tx[4].add_variable('ApplicationStatus', 'StatusAll')
+    node.pdo.tx[4].add_variable('ApplicationStatus', 'ActualSpeed')
+    node.pdo.tx[4].trans_type = 1
+    node.pdo.tx[4].enabled = True
+
+    node.pdo.rx[4].clear()
+    node.pdo.rx[4].add_variable('ApplicationCommands', 'CommandAll')
+    node.pdo.rx[4].add_variable('ApplicationCommands', 'CommandSpeed')
+    node.pdo.rx[4].enabled = True
+
+    # Save new configuration (node must be in pre-operational)
+    node.pdo.save()
+
+    # Start RxPDO4 with an interval of 100 ms
+    node.pdo.rx[4].start(0.1)
+    node.nmt.state = 'OPERATIONAL'
+
+    # Wait for the TxPDO to be received and then read a value from it
+    node.pdo.tx[4].wait_for_reception()
+    speed = node.pdo.tx[4]['ApplicationStatus.ActualSpeed'].phys
+
+    node.pdo.rx[4].stop()
+
+
+API
+---
+
+.. autoclass:: canopen.pdo.PdoNode
+   :members:
+
+.. autoclass:: canopen.pdo.Maps
+   :members:
+
+.. autoclass:: canopen.pdo.Message
+   :members:
+
+.. autoclass:: canopen.pdo.Variable
+   :members:
+   :inherited-members:

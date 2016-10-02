@@ -49,10 +49,10 @@ At the time of writing this includes:
 It is also possible to integrate this library with a custom backend.
 
 
-Examples
---------
+Quick Start
+-----------
 
-Here are some quick examples:
+Here are some quick examples of what you can do:
 
 
 .. code-block:: python
@@ -63,7 +63,7 @@ Here are some quick examples:
     network = canopen.Network()
 
     # Add some nodes with corresponding Object Dictionaries
-    network.add_node(6, '/path/to/object_dictionary.eds')
+    node = network.add_node(6, '/path/to/object_dictionary.eds')
     network.add_node(7, '/path/to/object_dictionary.eds')
 
     # Connect to the CAN bus
@@ -72,23 +72,24 @@ Here are some quick examples:
     network.connect(channel=0, bustype='kvaser', bitrate=250000)
 
     # Read a variable using SDO
-    device_name = network[6].sdo['ManufacturerDeviceName'].raw
-    vendor_id = network[6].sdo[0x1018][1].raw
+    device_name = node.sdo['ManufacturerDeviceName'].raw
+    vendor_id = node.sdo[0x1018][1].raw
 
-    # .phys takes factor into consideration (if supported)
-    network[6].sdo['ApplicationCommands']['CommandSpeed'].phys = 1502.3
-
-    # Accessing value descriptions as strings (if supported)
-    network[6].sdo['ApplicationCommands']['RequestedControlMode'].desc = 'Speed Mode'
-
-    # Accessing individual bits
-    network[6].sdo['ApplicationCommands']['CommandAll'].bits[2:3] = 2
+    # Read PDO configuration from node
+    node.pdo.read()
+    # Transmit SYNC every 100 ms
+    network.sync.start(0.1)
 
     # Change state to operational (NMT start)
     network[6].nmt.state = 'OPERATIONAL'
     network[7].nmt.state = 'OPERATIONAL'
 
+    # Read a value from Tx PDO 1
+    node.pdo.tx[1].wait_for_reception()
+    speed = node.pdo.tx[1]['ApplicationStatus.ActualSpeed'].phys
+
     # Disconnect from CAN bus
+    network.sync.stop()
     network.disconnect()
 
 

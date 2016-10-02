@@ -32,15 +32,6 @@ receiving and 0x580 + node ID for transmitting.
 Examples
 --------
 
-Start by creating a network and a node::
-
-    import canopen
-
-    network = canopen.Network()
-    # Talk to node ID 1
-    node = network.add_node(1, 'od.eds')
-    network.connect()
-
 SDO objects can be accessed using the ``.sdo`` member which works like a Python
 dictionary. Indexes and subindexes can be identified by either name or number.
 The code below only creates objects, no messages are sent or received yet::
@@ -71,7 +62,7 @@ or ``.bits`` attributes::
     print("The actual speed is %f rpm" % actual_speed.phys)
 
     # Iterate over arrays or records
-    for error in error_log:
+    for error in error_log.values():
         print("Error 0x%X was found in the log" % error.raw)
 
 
