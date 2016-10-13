@@ -242,8 +242,7 @@ class Variable(object):
             except struct.error:
                 raise ValueError("Value does not fit in specified type")
 
-    def decode_phys(self, data):
-        value = self.decode_raw(data)
+    def decode_phys(self, value):
         try:
             value *= self.factor
         except TypeError:
@@ -256,10 +255,9 @@ class Variable(object):
             value = int(round(value))
         except TypeError:
             pass
-        return self.encode_raw(value)
+        return value
 
-    def decode_desc(self, data):
-        value = self.decode_raw(data)
+    def decode_desc(self, value):
         if not self.value_descriptions:
             raise ObjectDictionaryError("No value descriptions exist")
         elif value not in self.value_descriptions:
@@ -274,34 +272,33 @@ class Variable(object):
         else:
             for value, description in self.value_descriptions.items():
                 if description == desc:
-                    return self.encode_raw(value)
+                    return value
         valid_values = ", ".join(self.value_descriptions.values())
         error_text = "No value corresponds to '%s'. Valid values are: %s"
         raise ValueError(error_text % (desc, valid_values))
 
-    def decode_bits(self, data, bits):
+    def decode_bits(self, value, bits):
         try:
             bits = self.bit_definitions[bits]
         except (TypeError, KeyError):
             pass
-        value = self.decode_raw(data)
         mask = 0
         for bit in bits:
             mask |= 1 << bit
         return (value & mask) >> min(bits)
 
-    def encode_bits(self, data, bits, value):
+    def encode_bits(self, original_value, bits, bit_value):
         try:
             bits = self.bit_definitions[bits]
         except (TypeError, KeyError):
             pass
-        temp = self.decode_raw(data)
+        temp = original_value
         mask = 0
         for bit in bits:
             mask |= 1 << bit
         temp &= ~mask
-        temp |= value << min(bits)
-        return self.encode_raw(temp)
+        temp |= bit_value << min(bits)
+        return temp
 
 
 class ObjectDictionaryError(Exception):

@@ -11,10 +11,10 @@ class Variable(object):
         self._bits = Bits(self)
 
     def get_data(self):
-        raise NotImplementedError()
+        raise NotImplementedError("Variable is not readable")
 
     def set_data(self, data):
-        raise NotImplementedError()
+        raise NotImplementedError("Variable is not writable")
 
     @property
     def data(self):
@@ -76,34 +76,25 @@ class Variable(object):
         either a :class:`float` or an :class:`int`.
         Strings will be passed as is.
         """
-        value = self.od.decode_phys(self.data)
-        logger.debug("Value of %s (0x%X:%d) is %s %s",
-                     self.od.name, self.od.index,
-                     self.od.subindex, value, self.od.unit)
+        value = self.od.decode_phys(self.raw)
+        if self.od.unit:
+            logger.debug("Physical value is %s %s", value, self.od.unit)
         return value
 
     @phys.setter
     def phys(self, value):
-        logger.debug("Writing %s (0x%X:%d) = %s",
-                     self.od.name, self.od.index,
-                     self.od.subindex, value)
-        self.data = self.od.encode_phys(value)
+        self.raw = self.od.encode_phys(value)
 
     @property
     def desc(self):
         """Converts to and from a description of the value as a string."""
-        value = self.od.decode_desc(self.data)
-        logger.debug("Description of %s (0x%X:%d) is %s",
-                     self.od.name, self.od.index,
-                     self.od.subindex, value)
+        value = self.od.decode_desc(self.raw)
+        logger.debug("Description is '%s'", value)
         return value
 
     @desc.setter
     def desc(self, desc):
-        logger.debug("Setting description of %s (0x%X:%d) to %s",
-                     self.od.name, self.od.index,
-                     self.od.subindex, desc)
-        self.data = self.od.encode_desc(desc)
+        self.raw = self.od.encode_desc(desc)
 
     @property
     def bits(self):
@@ -126,9 +117,9 @@ class Bits(object):
         return bits
 
     def __getitem__(self, key):
-        return self.variable.od.decode_bits(self.variable.data,
+        return self.variable.od.decode_bits(self.variable.raw,
                                             self._get_bits(key))
 
     def __setitem__(self, key, value):
-        self.variable.data = self.variable.od.encode_bits(
-            self.variable.data, self._get_bits(key), value)
+        self.variable.raw = self.variable.od.encode_bits(
+            self.variable.raw, self._get_bits(key), value)

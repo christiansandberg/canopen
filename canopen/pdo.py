@@ -3,6 +3,7 @@ import threading
 import math
 import collections
 import logging
+import binascii
 
 from . import objectdictionary
 from . import common
@@ -311,7 +312,8 @@ class Message(object):
         while not self.stop_event.is_set():
             start = time.time()
             self.transmit()
-            time.sleep(self.period - (time.time() - start))
+            time_left = self.period - (time.time() - start)
+            time.sleep(max(time_left, 0.0))
 
 
 class Variable(common.Variable):
@@ -333,5 +335,6 @@ class Variable(common.Variable):
 
     def set_data(self, data):
         byte_offset = self.offset // 8
-        logger.debug("Updating %s in message 0x%X", self.name, self.msg.cob_id)
+        logger.debug("Updating %s to %s in message 0x%X",
+            self.name, binascii.hexlify(data), self.msg.cob_id)
         self.msg.data[byte_offset:byte_offset + len(data)] = data

@@ -11,6 +11,7 @@ class SyncProducer(object):
         self.stop_event = threading.Event()
 
     def transmit(self):
+        """Send out a SYNC message once."""
         self.network.send_message(0x80, [])
 
     def start(self, period=None):
@@ -29,6 +30,7 @@ class SyncProducer(object):
             self.transmit_thread.start()
 
     def stop(self):
+        """Stop periodic transmission of SYNC message."""
         self.stop_event.set()
         if self.transmit_thread:
             self.transmit_thread.join(2)
@@ -38,4 +40,5 @@ class SyncProducer(object):
         while not self.stop_event.is_set():
             start = time.time()
             self.transmit()
-            time.sleep(self.period - (time.time() - start))
+            time_left = self.period - (time.time() - start)
+            time.sleep(max(time_left, 0.0))

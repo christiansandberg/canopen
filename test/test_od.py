@@ -66,8 +66,8 @@ class TestAlternativeRepresentations(unittest.TestCase):
         var.data_type = od.INTEGER16
         var.factor = 0.1
 
-        self.assertAlmostEqual(var.decode_phys(b"\x80\x00"), 12.8)
-        self.assertEqual(var.encode_phys(-0.1), b"\xff\xff")
+        self.assertAlmostEqual(var.decode_phys(128), 12.8)
+        self.assertEqual(var.encode_phys(-0.1), -1)
 
     def test_desc(self):
         var = od.Variable("Test UNSIGNED8", 0x1000)
@@ -76,9 +76,9 @@ class TestAlternativeRepresentations(unittest.TestCase):
         var.add_value_description(1, "Value 1")
         var.add_value_description(3, "Value 3")
 
-        self.assertEqual(var.decode_desc(b"\x00"), "Value 0")
-        self.assertEqual(var.decode_desc(b"\x03"), "Value 3")
-        self.assertEqual(var.encode_desc("Value 1"), b"\x01")
+        self.assertEqual(var.decode_desc(0), "Value 0")
+        self.assertEqual(var.decode_desc(3), "Value 3")
+        self.assertEqual(var.encode_desc("Value 1"), 1)
 
     def test_bits(self):
         var = od.Variable("Test UNSIGNED8", 0x1000)
@@ -86,12 +86,12 @@ class TestAlternativeRepresentations(unittest.TestCase):
         var.add_bit_definition("BIT 0", [0])
         var.add_bit_definition("BIT 2 and 3", [2, 3])
 
-        self.assertEqual(var.decode_bits(b"\x01", "BIT 0"), 1)
-        self.assertEqual(var.decode_bits(b"\x01", [1]), 0)
-        self.assertEqual(var.decode_bits(b"\x0f", [0, 1, 2, 3]), 15)
-        self.assertEqual(var.decode_bits(b"\x08", "BIT 2 and 3"), 2)
-        self.assertEqual(var.encode_bits(b"\x0f", [1], 0), b"\x0d")
-        self.assertEqual(var.encode_bits(b"\x00", "BIT 0", 1), b"\x01")
+        self.assertEqual(var.decode_bits(1, "BIT 0"), 1)
+        self.assertEqual(var.decode_bits(1, [1]), 0)
+        self.assertEqual(var.decode_bits(0xf, [0, 1, 2, 3]), 15)
+        self.assertEqual(var.decode_bits(8, "BIT 2 and 3"), 2)
+        self.assertEqual(var.encode_bits(0xf, [1], 0), 0xd)
+        self.assertEqual(var.encode_bits(0, "BIT 0", 1), 1)
 
 
 class TestObjectDictionary(unittest.TestCase):
