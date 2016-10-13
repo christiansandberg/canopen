@@ -23,6 +23,7 @@ SIGNED_TYPES = (INTEGER8, INTEGER16, INTEGER32, INTEGER64)
 UNSIGNED_TYPES = (BOOLEAN, UNSIGNED8, UNSIGNED16, UNSIGNED32, UNSIGNED64)
 INTEGER_TYPES = SIGNED_TYPES + UNSIGNED_TYPES
 FLOAT_TYPES = (REAL32, REAL64)
+STRING_TYPES = (VIS_STR)
 
 
 def import_od(filename):
@@ -206,6 +207,9 @@ class Variable(object):
         else:
             return 8
 
+    def is_string(self):
+        return self.data_type in STRING_TYPES
+
     def add_value_description(self, value, descr):
         self.value_descriptions[value] = descr
 
@@ -213,7 +217,7 @@ class Variable(object):
         self.bit_definitions[name] = bits
 
     def decode_raw(self, data):
-        if self.data_type == VIS_STR:
+        if self.is_string():
             value = data.decode("ascii")
         else:
             try:
@@ -224,7 +228,7 @@ class Variable(object):
         return value
 
     def encode_raw(self, value):
-        if self.data_type == VIS_STR:
+        if self.is_string():
             return value.encode("ascii")
         else:
             if self.data_type in INTEGER_TYPES:
@@ -243,18 +247,14 @@ class Variable(object):
                 raise ValueError("Value does not fit in specified type")
 
     def decode_phys(self, value):
-        try:
+        if not self.is_string():
             value *= self.factor
-        except TypeError:
-            pass
         return value
 
     def encode_phys(self, value):
-        try:
+        if not self.is_string():
             value /= self.factor
             value = int(round(value))
-        except TypeError:
-            pass
         return value
 
     def decode_desc(self, value):

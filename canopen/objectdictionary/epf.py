@@ -60,8 +60,8 @@ def build_variable(par_tree):
     data_type = par_tree.get("DataType")
 
     par = objectdictionary.Variable(name, index, subindex)
-    factor = float(par_tree.get("Factor", 1.0))
-    par.factor = int(factor) if factor.is_integer() else factor
+    factor = par_tree.get("Factor", "1")
+    par.factor = int(factor) if factor.isdigit() else float(factor)
     unit = par_tree.get("Unit")
     if unit and unit != "-":
         par.unit = unit
