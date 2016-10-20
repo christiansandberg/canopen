@@ -62,7 +62,7 @@ class PdoNode(object):
             Filename to save to (e.g. DBC, DBF, ARXML, KCD etc)
         """
         from canmatrix import canmatrix
-        from canmatrix import exportdbc
+        from canmatrix import formats
 
         db = canmatrix.CanMatrix()
         for pdo_maps in (self.rx, self.tx):
@@ -70,9 +70,9 @@ class PdoNode(object):
                 if pdo_map.cob_id is None:
                     continue
                 direction = "Tx" if pdo_map.cob_id & 0x80 else "Rx"
-                frame = canmatrix.Frame("%sPDO_0x%X" % (direction, pdo_map.cob_id),
-                                        Id=pdo_map.cob_id,
-                                        extended=0)
+                map_id = pdo_map.cob_id >> 8
+                name = "%sPDO%d_node%d" % (direction, map_id, self.parent.id)
+                frame = canmatrix.Frame(name, Id=pdo_map.cob_id, extended=0)
                 for var in pdo_map.map:
                     is_signed = var.od.data_type in objectdictionary.SIGNED_TYPES
                     is_float = var.od.data_type in objectdictionary.FLOAT_TYPES
@@ -95,8 +95,8 @@ class PdoNode(object):
                         signal.addValues(value, desc)
                     frame.addSignal(signal)
                 frame.calcDLC()
-                db._fl.addFrame(frame)
-        exportdbc.exportDbc(db, filename)
+                db.frames.addFrame(frame)
+        formats.dumpp({"": db}, filename)
 
 
 class Maps(collections.Mapping):

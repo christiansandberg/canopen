@@ -21,6 +21,13 @@ Install from PyPI_ using pip::
 
     $ pip install canopen
 
+If you want to be able to change the code while using it, clone it then install
+it in `develop mode`_::
+
+    $ git clone git@github.com:christiansandberg/canopen.git
+    $ cd canopen
+    $ pip install -e .
+
 
 Documentation
 -------------
@@ -29,7 +36,7 @@ Documentation can be found on Read the Docs:
 
 http://canopen.readthedocs.io/
 
-It can also be generated locally using Sphinx_::
+It can also be generated from a local clone using Sphinx_::
 
     $ python setup.py build_sphinx
 
@@ -37,14 +44,14 @@ It can also be generated locally using Sphinx_::
 Hardware support
 ----------------
 
-This library support multiple hardware and drivers through the python-can_ package.
+This library supports multiple hardware and drivers through the python-can_ package.
 At the time of writing this includes:
 
+* SocketCAN on Linux
 * Kvaser
 * Peak CAN
 * IXXAT
 * USB2CAN
-* Anything supported by socketcan on Linux
 
 It is also possible to integrate this library with a custom backend.
 
@@ -101,6 +108,7 @@ Pull requests are most welcome!
 
 * Documentation (docs + API)
 * Unit tests
+* Period transmit using BCM
 * SDO block transfer
 * TIME
 * XDD support
@@ -110,3 +118,4 @@ Pull requests are most welcome!
 .. _CANopen: https://en.wikipedia.org/wiki/CANopen
 .. _python-can: https://python-can.readthedocs.org/en/stable/
 .. _Sphinx: http://www.sphinx-doc.org/
+.. _develop mode: https://packaging.python.org/distributing/#working-in-development-mode
