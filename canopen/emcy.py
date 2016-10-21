@@ -1,5 +1,7 @@
 import struct
 import logging
+import threading
+import time
 
 
 logger = logging.getLogger(__name__)
@@ -33,6 +35,7 @@ class EmcyConsumer(object):
         self.log = []
         #: Only active EMCYs. Will be cleared on Error Reset
         self.active = []
+        self.emcy_received = threading.Condition()
 
     def on_emcy(self, can_id, data, timestamp):
         if can_id == 0x80:
@@ -44,8 +47,43 @@ class EmcyConsumer(object):
             self.active = []
         else:
             entry = EmcyError(code, register, data, timestamp)
-            self.log.append(entry)
-            self.active.append(entry)
+            print("EMCY received for node %d: %s" % (can_id & 0x7F, entry))
+            with self.emcy_received:
+                self.log.append(entry)
+                self.active.append(entry)
+                self.emcy_received.notify_all()
+
+    def reset(self):
+        """Reset log and active lists."""
+        self.log = []
+        self.active = []
+
+    def wait(self, emcy_code=None, timeout=10):
+        """Wait for a new EMCY to arrive.
+
+        :param int emcy_code: EMCY code to wait for
+        :param float timeout: Max time in seconds to wait
+
+        :return: The EMCY exception object or None if timeout
+        :rtype: canopen.emcy.EmcyError
+        """
+        end_time = time.time() + timeout
+        while True:
+            with self.emcy_received:
+                prev_log_size = len(self.log)
+                self.emcy_received.wait(timeout)
+                if len(self.log) == prev_log_size:
+                    # Resumed due to timeout
+                    return None
+                # Get last logged EMCY
+                emcy = self.log[-1]
+                logger.info("Got %s", emcy)
+                if time.time() > end_time:
+                    # No valid EMCY received on time
+                    return None
+                if emcy_code is None or emcy.code == emcy_code:
+                    # This is the one we're interested in
+                    return emcy
 
 
 class EmcyError(Exception):
