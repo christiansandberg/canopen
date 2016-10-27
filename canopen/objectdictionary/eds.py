@@ -18,7 +18,7 @@ def import_eds(filename):
 
     for section in eds.sections():
         # Match indexes
-        match = re.match(r"^[0-9A-F]{4}$", section)
+        match = re.match(r"^[0-9A-Fa-f]{4}$", section)
         if match is not None:
             index = int(section, 16)
             name = eds.get(section, "ParameterName")
@@ -45,7 +45,7 @@ def import_eds(filename):
             continue
 
         # Match subindexes
-        match = re.match(r"^([0-9A-F]{4})sub([0-9A-F]+)$", section)
+        match = re.match(r"^([0-9A-Fa-f]{4})sub([0-9A-Fa-f]+)$", section)
         if match is not None:
             index = int(match.group(1), 16)
             subindex = int(match.group(2), 16)
