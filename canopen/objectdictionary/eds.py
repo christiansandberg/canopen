@@ -61,9 +61,15 @@ def build_variable(eds, section, index, subindex=0):
     name = eds.get(section, "ParameterName")
     var = objectdictionary.Variable(name, index, subindex)
     var.data_type = int(eds.get(section, "DataType"), 0)
-    var.access_type = eds.get(section, "AccessType")
+    var.access_type = eds.get(section, "AccessType").lower()
     if eds.has_option(section, "LowLimit"):
-        var.min = int(eds.get(section, "LowLimit"), 0)
+        try:
+            var.min = int(eds.get(section, "LowLimit"), 0)
+        except ValueError:
+            pass
     if eds.has_option(section, "HighLimit"):
-        var.max = int(eds.get(section, "HighLimit"), 0)
+        try:
+            var.max = int(eds.get(section, "HighLimit"), 0)
+        except ValueError:
+            pass
     return var
