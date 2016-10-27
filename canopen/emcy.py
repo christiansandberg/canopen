@@ -47,7 +47,7 @@ class EmcyConsumer(object):
             self.active = []
         else:
             entry = EmcyError(code, register, data, timestamp)
-            print("EMCY received for node %d: %s" % (can_id & 0x7F, entry))
+            #print("EMCY received for node %d: %s" % (can_id & 0x7F, entry))
             with self.emcy_received:
                 self.log.append(entry)
                 self.active.append(entry)

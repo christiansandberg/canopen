@@ -94,8 +94,8 @@ class NmtMaster(object):
         if new_state in NMT_COMMANDS:
             code = NMT_COMMANDS[new_state]
         else:
-            raise KeyError("'%s' is an invalid state. Must be one of %s." %
-                           (new_state, ", ".join(NMT_COMMANDS)))
+            raise ValueError("'%s' is an invalid state. Must be one of %s." %
+                             (new_state, ", ".join(NMT_COMMANDS)))
 
         self.send_command(code)
 

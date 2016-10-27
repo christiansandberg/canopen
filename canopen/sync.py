@@ -32,9 +32,7 @@ class SyncProducer(object):
     def stop(self):
         """Stop periodic transmission of SYNC message."""
         self.stop_event.set()
-        if self.transmit_thread:
-            self.transmit_thread.join(2)
-            self.transmit_thread = None
+        self.transmit_thread = None
 
     def _periodic_transmit(self):
         while not self.stop_event.is_set():

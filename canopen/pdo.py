@@ -292,9 +292,7 @@ class Message(object):
     def stop(self):
         """Stop transmission."""
         self.stop_event.set()
-        if self.transmit_thread:
-            self.transmit_thread.join(2)
-            self.transmit_thread = None
+        self.transmit_thread = None
 
     def wait_for_reception(self, timeout=10):
         """Wait for the next transmit PDO.
