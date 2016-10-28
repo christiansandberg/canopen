@@ -296,6 +296,16 @@ class Message(object):
         self.stop_event.set()
         self.transmit_thread = None
 
+    def remote_request(self, timeout=10):
+        """Send a remote request for the transmit PDO.
+
+        :param float timeout: Max time to wait for response in seconds after sending the remote request.
+        :return: Timestamp of message received or None if timeout.
+        :rtype: float
+        """
+        self.pdo_node.parent.network.send_message(self.cob_id, None, remote=True)
+        self.wait_for_reception(timeout)
+
     def wait_for_reception(self, timeout=10):
         """Wait for the next transmit PDO.
 
