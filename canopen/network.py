@@ -157,7 +157,7 @@ class MessageDispatcher(Listener):
         self.network = network
 
     def on_message_received(self, msg):
-        if msg.id_type or msg.is_error_frame or msg.is_remote_frame:
+        if msg.is_extended_id or msg.is_error_frame or msg.is_remote_frame:
             return
 
         self.network.put_message(msg.arbitration_id, msg.data, msg.timestamp)
