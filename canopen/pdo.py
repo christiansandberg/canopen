@@ -235,7 +235,7 @@ class Message(object):
             com_record[2].raw = self.trans_type
 
         if self.map is not None:
-            map_record[0].raw = len(self.map)
+            map_record[0].raw = 0
             subindex = 1
             for var in self.map:
                 logger.info("Writing %s (0x%X:%d) to PDO map",
@@ -244,6 +244,7 @@ class Message(object):
                                             var.od.subindex << 8 |
                                             len(var.od))
                 subindex += 1
+            map_record[0].raw = len(self.map)
             self._update_data_size()
         if self.enabled:
             logger.info("Enabling PDO")
