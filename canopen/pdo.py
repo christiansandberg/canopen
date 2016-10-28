@@ -202,6 +202,8 @@ class Message(object):
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
+            if size == 0:
+                continue
             var = self._get_variable(index, subindex)
             assert size == len(var.od), "Size mismatch"
             var.offset = offset
