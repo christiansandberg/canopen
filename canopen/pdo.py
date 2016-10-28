@@ -135,6 +135,8 @@ class Message(object):
         self.enabled = False
         #: COB-ID for this PDO
         self.cob_id = None
+        #: Is the remote transmit request (RTR) allowed for this PDO
+        self.rtr_allowed = True
         #: Transmission type (1-255)
         self.trans_type = None
         #: List of variables mapped to this PDO
@@ -190,6 +192,8 @@ class Message(object):
         logger.info("COB-ID is 0x%X", self.cob_id)
         self.enabled = cob_id & 0x80000000 == 0
         logger.info("PDO is %s", "enabled" if self.enabled else "disabled")
+        self.rtr_allowed = cob_id & (1<<30) == 0
+        logger.info("RTR is %s", "allowed" if self.rtr_allowed else "not allowed")
         self.trans_type = com_record[2].raw
         logger.info("Transmission type is %d", self.trans_type)
 
@@ -296,15 +300,12 @@ class Message(object):
         self.stop_event.set()
         self.transmit_thread = None
 
-    def remote_request(self, timeout=10):
-        """Send a remote request for the transmit PDO.
-
-        :param float timeout: Max time to wait for response in seconds after sending the remote request.
-        :return: Timestamp of message received or None if timeout.
-        :rtype: float
+    def remote_request(self):
+        """Send a remote request for the transmit PDO. 
+        Silently ignore if not allowed.
         """
-        self.pdo_node.parent.network.send_message(self.cob_id, None, remote=True)
-        self.wait_for_reception(timeout)
+        if self.enabled and self.rtr_allowed:
+            self.pdo_node.parent.network.send_message(self.cob_id, None, remote=True)
 
     def wait_for_reception(self, timeout=10):
         """Wait for the next transmit PDO.
