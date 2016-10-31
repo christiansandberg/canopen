@@ -93,7 +93,7 @@ class Network(collections.Mapping):
         self.nodes.append(node)
         return node
 
-    def send_message(self, can_id, data):
+    def send_message(self, can_id, data, remote=False):
         """Send a raw CAN message to the network.
 
         This method may be overridden in a subclass if you need to integrate
@@ -104,6 +104,8 @@ class Network(collections.Mapping):
             CAN-ID of the message (always 11-bit)
         :param data:
             Data to be transmitted (anything that can be converted to bytes)
+        :param remote:
+            Set to True to send remote frame
 
         :raises can.CanError:
             When the message fails to be transmitted
@@ -111,7 +113,8 @@ class Network(collections.Mapping):
         assert self.bus, "Not connected to CAN bus"
         msg = can.Message(extended_id=False,
                           arbitration_id=can_id,
-                          data=data)
+                          data=data,
+                          is_remote_frame=remote)
         with self.send_lock:
             self.bus.send(msg)
 
