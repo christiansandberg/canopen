@@ -6,12 +6,12 @@ logger = logging.getLogger(__name__)
 
 
 NMT_STATES = {
-    0: 'INIT',
+    0: 'INITIALISING',
     4: 'STOPPED',
     5: 'OPERATIONAL',
     80: 'SLEEP',
     96: 'STANDBY',
-    127: 'PRE OPERATIONAL'
+    127: 'PRE-OPERATIONAL'
 }
 
 
@@ -20,8 +20,8 @@ NMT_COMMANDS = {
     'STOPPED': 2,
     'SLEEP': 80,
     'STANDBY': 96,
-    'PRE OPERATIONAL': 128,
-    'INIT': 129,
+    'PRE-OPERATIONAL': 128,
+    'INITIALISING': 129,
     'RESET': 129,
     'RESET COMMUNICATION': 130
 }
@@ -33,6 +33,7 @@ COMMAND_TO_STATE = {
     80: 80,
     96: 96,
     128: 127,
+    129: 0,
     130: 0
 }
 
@@ -45,21 +46,30 @@ class NmtMaster(object):
 
     def __init__(self, parent):
         self._state = 0
-        self._state_received = False
+        self._state_received = None
         #: Timestamp of last heartbeat message
-        self.timestamp = 0
-        self.state_change = threading.Condition()
+        self.timestamp = None
+        self.state_update = threading.Condition()
         self.parent = parent
 
     def on_heartbeat(self, can_id, data, timestamp):
-        self.timestamp = timestamp
-        with self.state_change:
-            self._state = data[0]
-            self._state_received = True
-            self.state_change.notify_all()
+        with self.state_update:
+            self.timestamp = timestamp
+            new_state = data[0]
+            if new_state == 0:
+                # Boot-up, will go to PRE-OPERATIONAL automatically
+                self._state = 127
+            else:
+                self._state = new_state
+            self._state_received = new_state
+            self.state_update.notify_all()
 
     def send_command(self, code):
-        """Send an NMT command code to the node."""
+        """Send an NMT command code to the node.
+
+        :param int code:
+            NMT command code.
+        """
         logger.info(
             "Sending NMT command 0x%X to node %d",
             code,
@@ -71,18 +81,18 @@ class NmtMaster(object):
 
     @property
     def state(self):
-        """Attribute to get or set current state as a string.
+        """Attribute to get or set node's state as a string.
 
         Can be one of:
 
-        - INIT
-        - PRE OPERATIONAL
-        - STOPPED
-        - OPERATIONAL
-        - SLEEP
-        - STANDBY
-        - RESET (for setting only)
-        - RESET COMMUNICATION (for setting only)
+        - 'INITIALISING'
+        - 'PRE-OPERATIONAL'
+        - 'STOPPED'
+        - 'OPERATIONAL'
+        - 'SLEEP'
+        - 'STANDBY'
+        - 'RESET'
+        - 'RESET COMMUNICATION'
         """
         if self._state in NMT_STATES:
             return NMT_STATES[self._state]
@@ -99,13 +109,23 @@ class NmtMaster(object):
 
         self.send_command(code)
 
-    def wait_for_state_change(self, timeout=10):
-        with self.state_change:
-            self._state_received = False
-            self.state_change.wait(timeout)
-        if not self._state_received:
+    def wait_for_heartbeat(self, timeout=10):
+        """Wait until a heartbeat message is received."""
+        with self.state_update:
+            self._state_received = None
+            self.state_update.wait(timeout)
+        if self._state_received is None:
             raise NmtError("No boot-up or heartbeat received")
         return self.state
+
+    def wait_for_bootup(self):
+        """Wait until a boot-up message is received."""
+        while True:
+            with self.state_update:
+                self._state_received = None
+                self.state_update.wait(timeout)
+            if self._state_received == 0:
+                break
 
 
 class NmtError(Exception):

@@ -36,7 +36,7 @@ starts at 1, not 0)::
     # Read current PDO configuration
     node.pdo.read()
 
-    # Do some changes
+    # Do some changes to TxPDO4 and RxPDO4
     node.pdo.tx[4].clear()
     node.pdo.tx[4].add_variable('ApplicationStatus', 'StatusAll')
     node.pdo.tx[4].add_variable('ApplicationStatus', 'ActualSpeed')
@@ -49,17 +49,27 @@ starts at 1, not 0)::
     node.pdo.rx[4].enabled = True
 
     # Save new configuration (node must be in pre-operational)
+    node.nmt.state = 'PRE OPERATIONAL'
     node.pdo.save()
 
+    # Start SYNC message with a period of 10 ms
+    network.sync.start(0.01)
+
     # Start RxPDO4 with an interval of 100 ms
+    node.pdo.rx[4]['ApplicationCommands.CommandSpeed'].phys = 1000
     node.pdo.rx[4].start(0.1)
     node.nmt.state = 'OPERATIONAL'
 
-    # Wait for the TxPDO to be received and then read a value from it
-    node.pdo.tx[4].wait_for_reception()
-    speed = node.pdo.tx[4]['ApplicationStatus.ActualSpeed'].phys
+    # Read 50 values of speed and save to a file
+    with open('output.txt', 'w') as f:
+        for i in range(50):
+            node.pdo.tx[4].wait_for_reception()
+            speed = node.pdo.tx[4]['ApplicationStatus.ActualSpeed'].phys
+            f.write('%s\n' % speed)
 
+    # Stop transmission of RxPDO and SYNC
     node.pdo.rx[4].stop()
+    network.sync.stop()
 
 
 API
