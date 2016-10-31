@@ -53,8 +53,8 @@ class TestDataConversions(unittest.TestCase):
         self.assertEqual(var.encode_raw(-2), b"\xfe\xff\xff\xff")
 
     def test_visible_string(self):
-        var = od.Variable("Test VIS_STR", 0x1000)
-        var.data_type = od.VIS_STR
+        var = od.Variable("Test VISIBLE_STRING", 0x1000)
+        var.data_type = od.VISIBLE_STRING
         self.assertEqual(var.decode_raw(b"abcdefg"), "abcdefg")
         self.assertEqual(var.encode_raw("testing"), b"testing")
 

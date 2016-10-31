@@ -11,7 +11,7 @@ DATA_TYPES = {
     "UNSIGNED16": objectdictionary.UNSIGNED16,
     "UNSIGNED32": objectdictionary.UNSIGNED32,
     "REAL32": objectdictionary.REAL32,
-    "VISIBLE_STRING": objectdictionary.VIS_STR
+    "VISIBLE_STRING": objectdictionary.VISIBLE_STRING
 }
 
 

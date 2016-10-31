@@ -6,24 +6,26 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-BOOLEAN = 1
-INTEGER8 = 2
-INTEGER16 = 3
-INTEGER32 = 4
-UNSIGNED8 = 5
-UNSIGNED16 = 6
-UNSIGNED32 = 7
-REAL32 = 8
-VIS_STR = 9
-REAL64 = 17
-INTEGER64 = 21
-UNSIGNED64 = 27
+BOOLEAN = 0x1
+INTEGER8 = 0x2
+INTEGER16 = 0x3
+INTEGER32 = 0x4
+UNSIGNED8 = 0x5
+UNSIGNED16 = 0x6
+UNSIGNED32 = 0x7
+REAL32 = 0x8
+VISIBLE_STRING = 0x9
+OCTET_STRING = 0xA
+UNICODE_STRING = 0xB
+DOMAIN = 0xF
+REAL64 = 0x11
+INTEGER64 = 0x15
+UNSIGNED64 = 0x1B
 
 SIGNED_TYPES = (INTEGER8, INTEGER16, INTEGER32, INTEGER64)
 UNSIGNED_TYPES = (BOOLEAN, UNSIGNED8, UNSIGNED16, UNSIGNED32, UNSIGNED64)
 INTEGER_TYPES = SIGNED_TYPES + UNSIGNED_TYPES
 FLOAT_TYPES = (REAL32, REAL64)
-STRING_TYPES = (VIS_STR, )
 
 
 def import_od(filename):
@@ -207,9 +209,6 @@ class Variable(object):
         else:
             return 8
 
-    def is_string(self):
-        return self.data_type in STRING_TYPES
-
     def add_value_description(self, value, descr):
         self.value_descriptions[value] = descr
 
@@ -217,20 +216,31 @@ class Variable(object):
         self.bit_definitions[name] = bits
 
     def decode_raw(self, data):
-        if self.is_string():
-            value = data.decode("ascii")
-        else:
+        if self.data_type == VISIBLE_STRING:
+            return data.decode("ascii")
+        elif self.data_type == UNICODE_STRING:
+            # Is this correct?
+            return data.decode("utf_16_le")
+        elif self.data_type in self.STRUCT_TYPES:
             try:
                 value, = self.STRUCT_TYPES[self.data_type].unpack(data)
+                return value
             except struct.error:
                 raise ObjectDictionaryError(
                     "Mismatch between expected and actual data size")
-        return value
+        else:
+            # Just return the data as is
+            return data
 
     def encode_raw(self, value):
-        if self.is_string():
+        if isinstance(value, bytes):
+            return value
+        elif self.data_type == VISIBLE_STRING:
             return value.encode("ascii")
-        else:
+        elif self.data_type == UNICODE_STRING:
+            # Is this correct?
+            return value.encode("utf_16_le")
+        elif self.data_type in self.STRUCT_TYPES:
             if self.data_type in INTEGER_TYPES:
                 value = int(value)
             if self.min is not None and value < self.min:
@@ -245,14 +255,18 @@ class Variable(object):
                 return self.STRUCT_TYPES[self.data_type].pack(value)
             except struct.error:
                 raise ValueError("Value does not fit in specified type")
+        else:
+            raise TypeError(
+                "Do not know how to encode %r to data type %Xh" % (
+                    value, self.data_type))
 
     def decode_phys(self, value):
-        if not self.is_string():
+        if self.data_type in INTEGER_TYPES:
             value *= self.factor
         return value
 
     def encode_phys(self, value):
-        if not self.is_string():
+        if self.data_type in INTEGER_TYPES:
             value /= self.factor
             value = int(round(value))
         return value
