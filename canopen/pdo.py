@@ -69,10 +69,9 @@ class PdoNode(object):
             for pdo_map in pdo_maps.values():
                 if pdo_map.cob_id is None:
                     continue
-                direction = "Tx" if pdo_map.cob_id & 0x80 else "Rx"
-                map_id = pdo_map.cob_id >> 8
-                name = "%sPDO%d_node%d" % (direction, map_id, self.parent.id)
-                frame = canmatrix.Frame(name, Id=pdo_map.cob_id, extended=0)
+                frame = canmatrix.Frame(pdo_map.name,
+                                        Id=pdo_map.cob_id,
+                                        extended=0)
                 for var in pdo_map.map:
                     is_signed = var.od.data_type in objectdictionary.SIGNED_TYPES
                     is_float = var.od.data_type in objectdictionary.FLOAT_TYPES
@@ -137,7 +136,7 @@ class Message(object):
         self.cob_id = None
         #: Is the remote transmit request (RTR) allowed for this PDO
         self.rtr_allowed = True
-        #: Transmission type (1-255)
+        #: Transmission type (0-255)
         self.trans_type = None
         #: List of variables mapped to this PDO
         self.map = None
@@ -182,6 +181,19 @@ class Message(object):
 
     def _update_data_size(self):
         self.data = bytearray(int(math.ceil(self._get_total_size() / 8.0)))
+
+    @property
+    def name(self):
+        """A descriptive name of the PDO.
+
+        Examples:
+        - TxPDO1_node4
+        - RxPDO4_node1
+        """
+        direction = "Tx" if self.cob_id & 0x80 else "Rx"
+        map_id = self.cob_id >> 8
+        node_id = self.cob_id & 0x7F
+        return "%sPDO%d_node%d" % (direction, map_id, node_id)
 
     def read(self):
         com_record = self.pdo_node.parent.sdo[self.com_index]
@@ -302,7 +314,7 @@ class Message(object):
         self.transmit_thread = None
 
     def remote_request(self):
-        """Send a remote request for the transmit PDO. 
+        """Send a remote request for the transmit PDO.
         Silently ignore if not allowed.
         """
         if self.enabled and self.rtr_allowed:

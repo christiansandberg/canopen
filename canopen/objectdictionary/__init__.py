@@ -23,9 +23,10 @@ INTEGER64 = 0x15
 UNSIGNED64 = 0x1B
 
 SIGNED_TYPES = (INTEGER8, INTEGER16, INTEGER32, INTEGER64)
-UNSIGNED_TYPES = (BOOLEAN, UNSIGNED8, UNSIGNED16, UNSIGNED32, UNSIGNED64)
+UNSIGNED_TYPES = (UNSIGNED8, UNSIGNED16, UNSIGNED32, UNSIGNED64)
 INTEGER_TYPES = SIGNED_TYPES + UNSIGNED_TYPES
 FLOAT_TYPES = (REAL32, REAL64)
+NUMBER_TYPES = INTEGER_TYPES + FLOAT_TYPES
 
 
 def import_od(filename):
@@ -243,14 +244,15 @@ class Variable(object):
         elif self.data_type in self.STRUCT_TYPES:
             if self.data_type in INTEGER_TYPES:
                 value = int(value)
-            if self.min is not None and value < self.min:
-                logger.warning(
-                    "Value %d is less than min value %d", value, self.min)
-            if self.max is not None and value > self.max:
-                logger.warning(
-                    "Value %d is greater than max value %d",
-                    value,
-                    self.max)
+            if self.data_type in NUMBER_TYPES:
+                if self.min is not None and value < self.min:
+                    logger.warning(
+                        "Value %d is less than min value %d", value, self.min)
+                if self.max is not None and value > self.max:
+                    logger.warning(
+                        "Value %d is greater than max value %d",
+                        value,
+                        self.max)
             try:
                 return self.STRUCT_TYPES[self.data_type].pack(value)
             except struct.error:
