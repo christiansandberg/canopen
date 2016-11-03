@@ -164,8 +164,12 @@ class SdoClient(collections.Mapping):
             for pos in range(0, length, 7):
                 request[1:8] = data[pos:pos + 7]
                 if pos + 7 >= length:
+                    # No more data after this message
                     request[0] |= 1
+                # Specify number of bytes in that do not contain segment data
+                request[0] |= (8 - len(request)) << 1
                 response = self.send_request(request.ljust(8, b'\x00'))
+                # Toggle bit for next request
                 request[0] ^= 0x10
                 if response[0] & 0xE0 != RESPONSE_SEGMENT_DOWNLOAD:
                     raise SdoCommunicationError("Unexpected response")
