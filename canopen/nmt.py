@@ -44,13 +44,14 @@ class NmtMaster(object):
     the current state using the heartbeat protocol.
     """
 
-    def __init__(self, parent):
+    def __init__(self, network, node_id):
+        self.id = node_id
+        self.network = network
         self._state = 0
         self._state_received = None
         #: Timestamp of last heartbeat message
         self.timestamp = None
         self.state_update = threading.Condition()
-        self.parent = parent
 
     def on_heartbeat(self, can_id, data, timestamp):
         with self.state_update:
@@ -64,6 +65,12 @@ class NmtMaster(object):
             self._state_received = new_state
             self.state_update.notify_all()
 
+    def on_nmt_command(self, can_id, data, timestamp):
+        code = data[0]
+        if code in COMMAND_TO_STATE:
+            self._state = COMMAND_TO_STATE[code]
+            logger.info("Changing NMT state to %s", self.state)
+
     def send_command(self, code):
         """Send an NMT command code to the node.
 
@@ -71,10 +78,8 @@ class NmtMaster(object):
             NMT command code.
         """
         logger.info(
-            "Sending NMT command 0x%X to node %d",
-            code,
-            self.parent.id)
-        self.parent.network.send_message(0, [code, self.parent.id])
+            "Sending NMT command 0x%X to node %d", code, self.id)
+        self.network.send_message(0, [code, self.id])
         if code in COMMAND_TO_STATE:
             self._state = COMMAND_TO_STATE[code]
             logger.info("Changing NMT state to %s", self.state)

@@ -32,32 +32,32 @@ SIZE_SPECIFIED = 0x1
 class SdoClient(collections.Mapping):
     """Handles communication with an SDO server."""
 
-    def __init__(self, parent, node_id):
+    def __init__(self, network, node_id, od):
         #: Node ID
         self.id = node_id
-        self.parent = parent
+        self.network = network
+        self.od = od
         self.response = None
         self.response_received = threading.Condition()
 
     def on_response(self, can_id, data, timestamp):
-        if can_id == 0x580 + self.id:
-            with self.response_received:
-                self.response = data
-                self.response_received.notify_all()
+        with self.response_received:
+            self.response = data
+            self.response_received.notify_all()
 
     def send_request(self, sdo_request):
-        retries = 5
-        while retries:
+        retires_left = 5
+        while retires_left:
             # Wait for node to respond
             with self.response_received:
-                self.parent.network.send_message(0x600 + self.id, sdo_request)
+                self.network.send_message(0x600 + self.id, sdo_request)
                 self.response = None
                 self.response_received.wait(0.5)
 
             if self.response is None:
-                retries -= 1
+                retires_left -= 1
             else:
-                retries = 0
+                retires_left = 0
 
         if self.response is None:
             raise SdoCommunicationError("No SDO response received")
@@ -113,12 +113,12 @@ class SdoClient(collections.Mapping):
 
             request = bytearray(8)
             request[0] = REQUEST_SEGMENT_UPLOAD
-            res_data = b''
+            res_data = bytearray()
             while True:
                 response = self.send_request(request)
                 if response[0] & 0xE0 != RESPONSE_SEGMENT_UPLOAD:
                     raise SdoCommunicationError("Unexpected response")
-                res_data += response[1:8]
+                res_data.extend(response[1:8])
                 request[0] ^= 0x10
                 if response[0] & 1:
                     break
@@ -175,7 +175,7 @@ class SdoClient(collections.Mapping):
                     raise SdoCommunicationError("Unexpected response")
 
     def __getitem__(self, index):
-        entry = self.parent.object_dictionary[index]
+        entry = self.od[index]
         if isinstance(entry, objectdictionary.Variable):
             return Variable(self, entry)
         elif isinstance(entry, objectdictionary.Record):
@@ -184,13 +184,13 @@ class SdoClient(collections.Mapping):
             return Array(self, entry)
 
     def __iter__(self):
-        return iter(self.parent.object_dictionary)
+        return iter(self.od)
 
     def __len__(self):
-        return len(self.parent.object_dictionary)
+        return len(self.od)
 
     def __contains__(self, key):
-        return key in self.parent.object_dictionary
+        return key in self.od
 
 
 class Record(collections.Mapping):

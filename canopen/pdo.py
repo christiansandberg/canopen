@@ -9,24 +9,21 @@ from . import objectdictionary
 from . import common
 
 
+PDO_NOT_VALID = 1 << 31
+RTR_NOT_ALLOWED = 1 << 30
+
+
 logger = logging.getLogger(__name__)
 
 
 class PdoNode(object):
     """Represents a slave unit."""
 
-    def __init__(self, parent):
-        self.parent = parent
+    def __init__(self, network, od):
+        self.network = network
+        self.od = od
         self.rx = Maps(0x1400, 0x1600, self)
         self.tx = Maps(0x1800, 0x1A00, self)
-
-    def on_message(self, can_id, data, timestamp):
-        for pdo_map in self.tx.values():
-            if pdo_map.cob_id == can_id:
-                with pdo_map.receive_condition:
-                    pdo_map.data = data
-                    pdo_map.timestamp = timestamp
-                    pdo_map.receive_condition.notify_all()
 
     def get_by_name(self, name):
         """Finds a map entry matching ``name``.
@@ -102,35 +99,33 @@ class Maps(collections.Mapping):
     """A collection of transmit or receive maps."""
 
     def __init__(self, com_offset, map_offset, pdo_node):
-        self.pdo_node = pdo_node
-        self.com_offset = com_offset
         self.maps = {}
-        for map_no in range(32):
+        map_no = 0
+        while com_offset + map_no in pdo_node.od:
             self.maps[map_no + 1] = Message(
-                pdo_node, com_offset + map_no, map_offset + map_no)
+                pdo_node,
+                pdo_node.od[com_offset + map_no],
+                pdo_node.od[map_offset + map_no])
+            map_no += 1
 
     def __getitem__(self, key):
         return self.maps[key]
 
     def __iter__(self):
-        return iter(range(1, len(self) + 1))
+        return iter(self.maps)
 
     def __len__(self):
-        for i in range(32):
-            index = self.com_offset + i
-            if index not in self.pdo_node.parent.object_dictionary:
-                return i
-        return 32
+        return len(self.maps)
 
 
 class Message(object):
     """One message which can have up to 8 bytes of variables mapped."""
 
-    def __init__(self, pdo_node, com_index, map_index):
+    def __init__(self, pdo_node, com_record, map_array):
         self.pdo_node = pdo_node
-        self.com_index = com_index
-        self.map_index = map_index
-        #: If this map is used or not
+        self.com_record = com_record
+        self.map_array = map_array
+        #: If this map is valid
         self.enabled = False
         #: COB-ID for this PDO
         self.cob_id = None
@@ -172,7 +167,7 @@ class Message(object):
         return size
 
     def _get_variable(self, index, subindex):
-        obj = self.pdo_node.parent.object_dictionary[index]
+        obj = self.pdo_node.od[index]
         if isinstance(obj, (objectdictionary.Record, objectdictionary.Array)):
             obj = obj[subindex]
         var = Variable(obj)
@@ -195,23 +190,27 @@ class Message(object):
         node_id = self.cob_id & 0x7F
         return "%sPDO%d_node%d" % (direction, map_id, node_id)
 
-    def read(self):
-        com_record = self.pdo_node.parent.sdo[self.com_index]
-        map_record = self.pdo_node.parent.sdo[self.map_index]
+    def on_message(self, can_id, data, timestamp):
+        if can_id == self.cob_id:
+            with self.receive_condition:
+                self.data = data
+                self.timestamp = timestamp
+                self.receive_condition.notify_all()
 
-        cob_id = com_record[1].raw
+    def read(self):
+        cob_id = self.com_record[1].raw
         self.cob_id = cob_id & 0x7FF
         logger.info("COB-ID is 0x%X", self.cob_id)
-        self.enabled = cob_id & 0x80000000 == 0
+        self.enabled = cob_id & PDO_NOT_VALID == 0
         logger.info("PDO is %s", "enabled" if self.enabled else "disabled")
-        self.rtr_allowed = cob_id & (1<<30) == 0
+        self.rtr_allowed = cob_id & RTR_NOT_ALLOWED == 0
         logger.info("RTR is %s", "allowed" if self.rtr_allowed else "not allowed")
-        self.trans_type = com_record[2].raw
+        self.trans_type = self.com_record[2].raw
         logger.info("Transmission type is %d", self.trans_type)
 
         self.map = []
         offset = 0
-        for entry in map_record.values():
+        for entry in self.map_array.values():
             if entry.od.subindex == 0:
                 continue
             value = entry.raw
@@ -229,38 +228,40 @@ class Message(object):
             offset += size
         self._update_data_size()
 
-    def save(self):
-        com_record = self.pdo_node.parent.sdo[self.com_index]
-        map_record = self.pdo_node.parent.sdo[self.map_index]
+        if self.enabled:
+            self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
-        cob_id = com_record[1].raw
+    def save(self):
+        cob_id = self.com_record[1].raw
         if self.cob_id is None:
             self.cob_id = cob_id & 0x7FF
         if self.enabled is None:
             # Need to check if the PDO is enabled or not
-            self.enabled = cob_id & 0x80000000 == 0
+            self.enabled = cob_id & PDO_NOT_VALID == 0
         logger.info("Setting COB-ID 0x%X and temporarily disabling PDO",
                     self.cob_id)
-        com_record[1].raw = self.cob_id | 0x80000000
+        self.com_record[1].raw = self.cob_id | PDO_NOT_VALID
         if self.trans_type is not None:
             logger.info("Setting transmission type to %d", self.trans_type)
-            com_record[2].raw = self.trans_type
+            self.com_record[2].raw = self.trans_type
 
         if self.map is not None:
-            map_record[0].raw = 0
+            self.map_array[0].raw = 0
             subindex = 1
             for var in self.map:
                 logger.info("Writing %s (0x%X:%d) to PDO map",
                             var.name, var.od.index, var.od.subindex)
-                map_record[subindex].raw = (var.od.index << 16 |
-                                            var.od.subindex << 8 |
-                                            len(var.od))
+                self.map_array[subindex].raw = (var.od.index << 16 |
+                                                var.od.subindex << 8 |
+                                                len(var.od))
                 subindex += 1
-            map_record[0].raw = len(self.map)
+            self.map_array[0].raw = len(self.map)
             self._update_data_size()
+
         if self.enabled:
             logger.info("Enabling PDO")
-            com_record[1].raw = self.cob_id
+            self.com_record[1].raw = self.cob_id
+            self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
     def clear(self):
         """Clear all variables from this map."""
@@ -288,7 +289,7 @@ class Message(object):
 
     def transmit(self):
         """Transmit the message once."""
-        self.pdo_node.parent.network.send_message(self.cob_id, self.data)
+        self.pdo_node.network.send_message(self.cob_id, self.data)
 
     def start(self, period=None):
         """Start periodic transmission of message in a background thread.
@@ -304,6 +305,7 @@ class Message(object):
         if not self.transmit_thread or not self.transmit_thread.is_alive():
             self.stop_event.clear()
             self.transmit_thread = threading.Thread(
+                name="Thread for " + self.name,
                 target=self._periodic_transmit)
             self.transmit_thread.daemon = True
             self.transmit_thread.start()
@@ -318,7 +320,7 @@ class Message(object):
         Silently ignore if not allowed.
         """
         if self.enabled and self.rtr_allowed:
-            self.pdo_node.parent.network.send_message(self.cob_id, None, remote=True)
+            self.pdo_node.network.send_message(self.cob_id, None, remote=True)
 
     def wait_for_reception(self, timeout=10):
         """Wait for the next transmit PDO.

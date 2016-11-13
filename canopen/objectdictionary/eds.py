@@ -11,7 +11,7 @@ ARR = 8
 RECORD = 9
 
 
-def import_eds(filename):
+def import_eds(filename, node_id):
     od = objectdictionary.ObjectDictionary()
     eds = ConfigParser()
     eds.read(filename)

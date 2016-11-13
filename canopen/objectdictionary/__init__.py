@@ -29,7 +29,7 @@ FLOAT_TYPES = (REAL32, REAL64)
 NUMBER_TYPES = INTEGER_TYPES + FLOAT_TYPES
 
 
-def import_od(filename):
+def import_od(filename, node_id=None):
     """Parse an EDS or EPF file.
 
     :param str filename:
@@ -40,7 +40,7 @@ def import_od(filename):
     """
     if filename.endswith(".eds"):
         from . import eds
-        return eds.import_eds(filename)
+        return eds.import_eds(filename, node_id)
     elif filename.endswith(".epf"):
         from . import epf
         return epf.import_epf(filename)

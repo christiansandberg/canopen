@@ -5,73 +5,38 @@ from .pdo import PdoNode
 from . import objectdictionary
 
 
-EMCY = 0x80
-SDO_RESPONSE = 0x580
-HEARTBEAT = 0x700
-
-
 class Node(object):
-    """A CANopen slave node.
+    """A CANopen slave node."""
 
-    :param int node_id:
-        Node ID
-    :param object_dictionary:
-        Object dictionary as either a path to a file or an object.
-    :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary`
-    """
-
-    def __init__(self, node_id=1, object_dictionary=None):
-        #: Node ID
-        self.id = node_id
-        #: :class:`canopen.Network` owning the node
-        self.network = None
-        #: :class:`canopen.ObjectDictionary` associated with the node
-        self.object_dictionary = objectdictionary.ObjectDictionary()
-        self.service_callbacks = {}
-        self.message_callbacks = []
-
-        if object_dictionary:
-            self.set_object_dictionary(object_dictionary)
-
-        self.sdo = SdoClient(self, node_id)
-        self.register_service(SDO_RESPONSE, self.sdo.on_response)
-
-        self.pdo = PdoNode(self)
-        self.add_callback(self.pdo.on_message)
-
-        self.nmt = NmtMaster(self)
-        self.register_service(HEARTBEAT, self.nmt.on_heartbeat)
-
-        self.emcy = EmcyConsumer()
-        self.register_service(EMCY, self.emcy.on_emcy)
-
-    def add_callback(self, callback):
-        self.message_callbacks.append(callback)
-
-    def set_node_id(self, node_id):
-        self.id = node_id
-        self.sdo.id = node_id
-
-    def set_object_dictionary(self, object_dictionary):
-        """Sets the object dictionary for the node.
-
+    def __init__(self, node_id, object_dictionary, network):
+        """
+        :param int node_id:
+            Node ID
         :param object_dictionary:
             Object dictionary as either a path to a file or an object.
         :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary`
         """
-        assert object_dictionary, "An Object Dictionary file has not been specified"
+        #: Node ID
+        self.id = node_id
+        #: :class:`canopen.Network` owning the node
+        self.network = network
+
         if not isinstance(object_dictionary,
                           objectdictionary.ObjectDictionary):
-            object_dictionary = objectdictionary.import_od(object_dictionary)
+            object_dictionary = objectdictionary.import_od(
+                object_dictionary, node_id)
+        #: :class:`canopen.ObjectDictionary` associated with the node
         self.object_dictionary = object_dictionary
 
-    def set_sdo_channel(self, node_id):
-        self.sdo.id = node_id
+        self.sdo = SdoClient(network, node_id, object_dictionary)
+        network.subscribe(0x580 + node_id, self.sdo.on_response)
 
-    def register_service(self, cob_id, callback):
-        self.service_callbacks[cob_id] = callback
+        self.pdo = PdoNode(network, object_dictionary)
 
-    def on_message(self, can_id, data, timestamp):
-        fn_code = can_id & 0x780
-        if fn_code in self.service_callbacks:
-            self.service_callbacks[fn_code](can_id, data, timestamp)
+        self.nmt = NmtMaster(network, node_id)
+        network.subscribe(0x700 + node_id, self.nmt.on_heartbeat)
+        network.subscribe(0x0 + node_id, self.nmt.on_nmt_command)
+        network.subscribe(0x0, self.nmt.on_nmt_command)
+
+        self.emcy = EmcyConsumer()
+        network.subscribe(0x80 + node_id, self.emcy.on_emcy)

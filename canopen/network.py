@@ -24,14 +24,21 @@ class Network(collections.Mapping):
         #: A python-can :class:`can.BusABC` instance which is set after
         #: :meth:`canopen.Network.connect` is called
         self.bus = None
-        self.listeners = [MessageDispatcher(self)]
+        self.listeners = [MessageListener(self)]
         self.notifier = None
-        self.nodes = []
+        self.nodes = {}
+        self.subscribers = {}
         self.send_lock = threading.Lock()
         #: The SYNC producer
         self.sync = SyncProducer(self)
         # NMT to all nodes
-        #self.nmt = NmtNode(0)
+        self.nmt = NmtNode(self, 0)
+
+    def subscribe(self, can_id, callback):
+        self.subscribers.setdefault(can_id, []).append(callback)
+
+    def unsubscribe(self, can_id, subscriber):
+        self.subscribers[can_id].remove(subscriber)
 
     def connect(self, *args, **kwargs):
         """Connect to CAN bus using python-can.
@@ -52,7 +59,7 @@ class Network(collections.Mapping):
         # If bitrate has not been specified, try to find one node where bitrate
         # has been specified
         if "bitrate" not in kwargs:
-            for node in self.nodes:
+            for node in self.nodes.values():
                 if node.object_dictionary.bitrate:
                     kwargs["bitrate"] = node.object_dictionary.bitrate
                     break
@@ -67,10 +74,6 @@ class Network(collections.Mapping):
         """
         self.notifier.stop()
         self.bus.shutdown()
-
-    def add_listener(self, listener):
-        """Add any :class:`can.Listener` object to the network.""" 
-        self.listeners.append(listener)
 
     def add_node(self, node, object_dictionary=None):
         """Add a node to the network.
@@ -88,9 +91,8 @@ class Network(collections.Mapping):
         :rtype: canopen.Node
         """
         if isinstance(node, int):
-            node = Node(node, object_dictionary)
-        node.network = self
-        self.nodes.append(node)
+            node = Node(node, object_dictionary, self)
+        self.nodes[node.id] = node
         return node
 
     def send_message(self, can_id, data, remote=False):
@@ -104,7 +106,7 @@ class Network(collections.Mapping):
             CAN-ID of the message (always 11-bit)
         :param data:
             Data to be transmitted (anything that can be converted to bytes)
-        :param remote:
+        :param bool remote:
             Set to True to send remote frame
 
         :raises can.CanError:
@@ -118,7 +120,7 @@ class Network(collections.Mapping):
         with self.send_lock:
             self.bus.send(msg)
 
-    def put_message(self, can_id, data, timestamp):
+    def notify(self, can_id, data, timestamp):
         """Feed incoming message to this library.
 
         If a custom interface is used, this function must be called for each
@@ -131,33 +133,27 @@ class Network(collections.Mapping):
         :param float timestamp:
             Timestamp of the message, preferably as a Unix timestamp
         """
-        node_id = can_id & 0x7F
-        for node in self.nodes:
-            if node.id == node_id or node_id == 0:
-                node.on_message(can_id, data, timestamp)
-            for callback in node.message_callbacks:
-                callback(can_id, data, timestamp)
+        for callback in self.subscribers.get(can_id, []):
+            callback(can_id, data, timestamp)
 
     def __getitem__(self, node_id):
-        for node in self.nodes:
-            if node.id == node_id:
-                return node
+        return self.nodes[node_id]
 
     def __iter__(self):
-        return (node.id for node in self.nodes)
+        return iter(self.nodes)
 
     def __len__(self):
         return len(self.nodes)
 
 
-class MessageDispatcher(Listener):
+class MessageListener(Listener):
     """Listens for messages on CAN bus and feeds them to a Network instance."""
 
     def __init__(self, network):
         self.network = network
 
     def on_message_received(self, msg):
-        if msg.is_extended_id or msg.is_error_frame or msg.is_remote_frame:
+        if msg.is_error_frame or msg.is_remote_frame:
             return
 
-        self.network.put_message(msg.arbitration_id, msg.data, msg.timestamp)
+        self.network.notify(msg.arbitration_id, msg.data, msg.timestamp)
