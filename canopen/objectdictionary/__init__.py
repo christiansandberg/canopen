@@ -44,6 +44,8 @@ def import_od(filename, node_id=None):
     elif filename.endswith(".epf"):
         from . import epf
         return epf.import_epf(filename)
+    else:
+        raise NotImplementedError("No support for this format")
 
 
 class ObjectDictionary(collections.Mapping):

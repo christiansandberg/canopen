@@ -1,5 +1,6 @@
 import threading
 import logging
+import struct
 
 
 logger = logging.getLogger(__name__)
@@ -56,7 +57,7 @@ class NmtMaster(object):
     def on_heartbeat(self, can_id, data, timestamp):
         with self.state_update:
             self.timestamp = timestamp
-            new_state = data[0]
+            new_state, = struct.unpack("B", data)
             if new_state == 0:
                 # Boot-up, will go to PRE-OPERATIONAL automatically
                 self._state = 127
@@ -66,8 +67,8 @@ class NmtMaster(object):
             self.state_update.notify_all()
 
     def on_nmt_command(self, can_id, data, timestamp):
-        code = data[0]
-        if code in COMMAND_TO_STATE:
+        code, node_id = struct.unpack("BB", data)
+        if (node_id == self.id or node_id == 0) and code in COMMAND_TO_STATE:
             self._state = COMMAND_TO_STATE[code]
             logger.info("Changing NMT state to %s", self.state)
 

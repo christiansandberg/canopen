@@ -1,0 +1,70 @@
+import os
+import unittest
+import canopen
+import can
+
+
+EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
+
+
+class TestSDO(unittest.TestCase):
+    """
+    Test SDO traffic by example. Most are taken from
+    http://www.canopensolutions.com/english/about_canopen/device_configuration_canopen.shtml
+    """
+
+    def _send_message(self, can_id, data, remote=False):
+        """Will be used instead of the usual Network.send_message method.
+
+        Checks that the message data is according to expected and answers
+        with the provided data.
+        """
+        self.assertSequenceEqual(data, self.data.pop(0))
+        self.assertEqual(can_id, 0x602)
+        self.network.notify(0x582, bytearray(self.data.pop(0)), 0.0)
+
+    def setUp(self):
+        network = canopen.Network()
+        network.send_message = self._send_message
+        network.add_node(2, EDS_PATH)
+        self.network = network
+
+    def test_expedited_upload(self):
+        self.data = [
+            b'\x40\x18\x10\x01\x00\x00\x00\x00',
+            b'\x43\x18\x10\x01\x04\x00\x00\x00'
+        ]
+        vendor_id = self.network[2].sdo[0x1018][1].raw
+        self.assertEqual(vendor_id, 4)
+
+    def test_expedited_download(self):
+        self.data = [
+            b'\x2b\x17\x10\x00\xa0\x0f\x00\x00',
+            b'\x60\x17\x10\x00\x00\x00\x00\x00'
+        ]
+        self.network[2].sdo[0x1017].raw = 4000
+
+    def test_segmented_upload(self):
+        self.data = [
+            b'\x40\x08\x10\x00\x00\x00\x00\x00',
+            b'\x41\x08\x10\x00\x1A\x00\x00\x00',
+            b'\x60\x00\x00\x00\x00\x00\x00\x00',
+            b'\x00\x54\x69\x6E\x79\x20\x4E\x6F',
+            b'\x70\x00\x00\x00\x00\x00\x00\x00',
+            b'\x10\x64\x65\x20\x2D\x20\x4D\x65',
+            b'\x60\x00\x00\x00\x00\x00\x00\x00',
+            b'\x00\x67\x61\x20\x44\x6F\x6D\x61',
+            b'\x70\x00\x00\x00\x00\x00\x00\x00',
+            b'\x15\x69\x6E\x73\x20\x21\x00\x00'
+        ]
+        device_name = self.network[2].sdo[0x1008].raw
+        self.assertEqual(device_name, "Tiny Node - Mega Domains !")
+
+    def test_abort(self):
+        self.data = [
+            b'\x40\x18\x10\x01\x00\x00\x00\x00',
+            b'\x80\x18\x10\x01\x11\x00\x09\x06'
+        ]
+        with self.assertRaises(canopen.SdoAbortedError) as cm:
+            vendor_id = self.network[2].sdo[0x1018][1].raw
+        self.assertEqual(cm.exception.code, 0x06090011)

@@ -6,16 +6,16 @@ from . import objectdictionary
 
 
 class Node(object):
-    """A CANopen slave node."""
+    """A CANopen slave node.
+
+    :param int node_id:
+        Node ID
+    :param object_dictionary:
+        Object dictionary as either a path to a file or an object.
+    :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary`
+    """
 
     def __init__(self, node_id, object_dictionary, network):
-        """
-        :param int node_id:
-            Node ID
-        :param object_dictionary:
-            Object dictionary as either a path to a file or an object.
-        :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary`
-        """
         #: Node ID
         self.id = node_id
         #: :class:`canopen.Network` owning the node
@@ -35,7 +35,6 @@ class Node(object):
 
         self.nmt = NmtMaster(network, node_id)
         network.subscribe(0x700 + node_id, self.nmt.on_heartbeat)
-        network.subscribe(0x0 + node_id, self.nmt.on_nmt_command)
         network.subscribe(0x0, self.nmt.on_nmt_command)
 
         self.emcy = EmcyConsumer()

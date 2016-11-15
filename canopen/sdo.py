@@ -50,8 +50,8 @@ class SdoClient(collections.Mapping):
         while retires_left:
             # Wait for node to respond
             with self.response_received:
-                self.network.send_message(0x600 + self.id, sdo_request)
                 self.response = None
+                self.network.send_message(0x600 + self.id, sdo_request)
                 self.response_received.wait(0.5)
 
             if self.response is None:
@@ -76,7 +76,7 @@ class SdoClient(collections.Mapping):
             Sub-index of object to read.
 
         :return: A data object.
-        :rtype: bytes
+        :rtype: bytearray
 
         :raises canopen.SdoCommunicationError:
             On unexpected response or timeout.
@@ -118,12 +118,15 @@ class SdoClient(collections.Mapping):
                 response = self.send_request(request)
                 if response[0] & 0xE0 != RESPONSE_SEGMENT_UPLOAD:
                     raise SdoCommunicationError("Unexpected response")
-                res_data.extend(response[1:8])
-                request[0] ^= 0x10
-                if response[0] & 1:
+                last_byte = 8 - ((response[0] >> 1) & 0x7)
+                res_data.extend(response[1:last_byte])
+                if response[0] & 0x1:
                     break
+                request[0] ^= 0x10
 
-        return res_data[:length] if length is not None else res_data
+        if length is not None and len(res_data) != length:
+            res_data = res_data[:length]
+        return res_data
 
     def download(self, index, subindex, data):
         """May be called to manually make a write operation.

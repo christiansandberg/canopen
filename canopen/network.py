@@ -12,6 +12,7 @@ except ImportError:
 
 from .node import Node
 from .sync import SyncProducer
+from .nmt import NmtMaster
 
 
 logger = logging.getLogger(__name__)
@@ -32,13 +33,13 @@ class Network(collections.Mapping):
         #: The SYNC producer
         self.sync = SyncProducer(self)
         # NMT to all nodes
-        self.nmt = NmtNode(self, 0)
+        self.nmt = NmtMaster(self, 0)
 
     def subscribe(self, can_id, callback):
         self.subscribers.setdefault(can_id, []).append(callback)
 
-    def unsubscribe(self, can_id, subscriber):
-        self.subscribers[can_id].remove(subscriber)
+    def unsubscribe(self, can_id, callback):
+        self.subscribers[can_id].remove(callback)
 
     def connect(self, *args, **kwargs):
         """Connect to CAN bus using python-can.
