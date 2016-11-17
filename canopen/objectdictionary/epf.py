@@ -39,8 +39,9 @@ def import_epf(filename):
         elif len(parameters) == 2 and parameters[1].get("ObjectType") == "ARRAY":
             # Array
             arr = objectdictionary.Array(name, index)
-            arr.last_subindex = build_variable(parameters[0])
-            arr.template = build_variable(parameters[1])
+            for par_tree in parameters:
+                var = build_variable(par_tree)
+                arr.add_member(var)
             od.add_object(arr)
         else:
             # Complex record

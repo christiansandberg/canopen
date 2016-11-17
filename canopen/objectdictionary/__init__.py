@@ -27,10 +27,11 @@ UNSIGNED_TYPES = (UNSIGNED8, UNSIGNED16, UNSIGNED32, UNSIGNED64)
 INTEGER_TYPES = SIGNED_TYPES + UNSIGNED_TYPES
 FLOAT_TYPES = (REAL32, REAL64)
 NUMBER_TYPES = INTEGER_TYPES + FLOAT_TYPES
+DATA_TYPES = (VISIBLE_STRING, OCTET_STRING, UNICODE_STRING, DOMAIN)
 
 
 def import_od(filename):
-    """Parse an EDS or EPF file.
+    """Parse an EDS, DCF, or EPF file.
 
     :param str filename:
         Path to object dictionary file.
@@ -38,10 +39,11 @@ def import_od(filename):
     :return:
         A :class:`canopen.ObjectDictionary` object.
     """
-    if filename.endswith(".eds"):
+    suffix = filename[filename.rfind("."):]
+    if suffix in (".eds", ".dcf"):
         from . import eds
         return eds.import_eds(filename)
-    elif filename.endswith(".epf"):
+    elif suffix == ".epf":
         from . import epf
         return epf.import_epf(filename)
 
@@ -50,20 +52,22 @@ class ObjectDictionary(collections.Mapping):
     """Representation of the object dictionary as a Python dictionary."""
 
     def __init__(self):
-        self.indexes = collections.OrderedDict()
-        self.names = collections.OrderedDict()
+        self.indexes = {}
+        self.names = {}
         #: Default bitrate if specified by file
         self.bitrate = None
+        #: Node ID if specified by file
+        self.node_id = None
 
     def __getitem__(self, index):
         """Get object from object dictionary by name or index."""
         return self.names.get(index) or self.indexes[index]
 
     def __iter__(self):
-        return iter(self.names)
+        return iter(sorted(self.indexes))
 
     def __len__(self):
-        return len(self.names)
+        return len(self.indexes)
 
     def __contains__(self, index):
         return index in self.names or index in self.indexes
@@ -92,17 +96,17 @@ class Record(collections.Mapping):
         self.parent = None
         self.index = index
         self.name = name
-        self.subindexes = collections.OrderedDict()
-        self.names = collections.OrderedDict()
+        self.subindexes = {}
+        self.names = {}
 
     def __getitem__(self, subindex):
         return self.names.get(subindex) or self.subindexes[subindex]
 
     def __len__(self):
-        return len(self.names)
+        return len(self.subindexes)
 
     def __iter__(self):
-        return iter(self.names)
+        return iter(sorted(self.subindexes))
 
     def __contains__(self, subindex):
         return subindex in self.names or subindex in self.subindexes
@@ -117,43 +121,31 @@ class Record(collections.Mapping):
         self.names[variable.name] = variable
 
 
-class Array(collections.Sequence):
+class Array(Record):
     """An array of :class:`canopen.objectdictionary.Variable` objects using
     subindexes.
 
     Actual length of array must be read from the node using SDO.
     """
 
-    def __init__(self, name, index):
-        #: The :class:`canopen.ObjectDictionary` owning the array.
-        self.parent = None
-        self.index = index
-        self.name = name
-        self.length = 255
-        #: Variable to read to get length of array
-        self.last_subindex = Variable(
-            "Number of entries", index, 0)
-        self.last_subindex.data_type = UNSIGNED8
-        self.last_subindex.parent = self
-        #: Each variable will be based on this with unique subindexes
-        self.template = None
-
     def __getitem__(self, subindex):
-        if subindex == 0 or subindex == self.last_subindex.name:
-            return self.last_subindex
+        var = self.names.get(subindex) or self.subindexes.get(subindex)
+        if var is not None:
+            # This subindex is defined
+            pass
         elif isinstance(subindex, int) and 0 < subindex < 256:
-            var = Variable(
-                "%s [%d]" % (self.name, subindex), self.index, subindex)
+            # Create a new variable based on first array item
+            template = self.subindexes[1]
+            name = "%s_%x" % (template.name, subindex)
+            var = Variable(name, self.index, subindex)
             var.parent = self
             for attr in ("data_type", "unit", "factor", "min", "max",
-                         "access_type", "value_descriptions"):
-                var.__dict__[attr] = self.template.__dict__[attr]
-            return var
+                         "access_type", "value_descriptions",
+                         "bit_definitions"):
+                var.__dict__[attr] = template.__dict__[attr]
         else:
-            raise IndexError("Subindex must be 0 - 255")
-
-    def __len__(self):
-        return self.length
+            raise KeyError("Could not find subindex %r" % subindex)
+        return var
 
 
 class Variable(object):
@@ -234,7 +226,7 @@ class Variable(object):
             return data
 
     def encode_raw(self, value):
-        if isinstance(value, bytes):
+        if isinstance(value, (bytes, bytearray)):
             return value
         elif self.data_type == VISIBLE_STRING:
             return value.encode("ascii")
