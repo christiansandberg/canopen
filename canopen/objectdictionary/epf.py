@@ -67,7 +67,8 @@ def build_variable(par_tree):
     unit = par_tree.get("Unit")
     if unit and unit != "-":
         par.unit = unit
-    par.data_type = DATA_TYPES[data_type]
+    if data_type in DATA_TYPES:
+        par.data_type = DATA_TYPES[data_type]
     par.access_type = par_tree.get("AccessType", "rw")
     try:
         par.min = int(par_tree.get("MinimumValue"))
