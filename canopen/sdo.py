@@ -65,7 +65,7 @@ class SdoClient(collections.Mapping):
             abort_code, = struct.unpack("<L", self.response[4:8])
             raise SdoAbortedError(abort_code)
         else:
-            return self.response
+            return self.response.ljust(8, b"\x00")
 
     def upload(self, index, subindex):
         """May be called to manually make a read operation.
