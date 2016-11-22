@@ -5,8 +5,7 @@ import collections
 import logging
 import binascii
 
-import can
-
+from .network import CanError
 from . import objectdictionary
 from . import common
 
@@ -339,7 +338,7 @@ class Message(object):
             start = time.time()
             try:
                 self.transmit()
-            except can.CanError as error:
+            except CanError as error:
                 print(str(error))
             time_left = self.period - (time.time() - start)
             time.sleep(max(time_left, 0.0))

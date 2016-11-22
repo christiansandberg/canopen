@@ -1,7 +1,7 @@
 import time
 import threading
 
-import can
+from .network import CanError
 
 
 class SyncProducer(object):
@@ -41,7 +41,7 @@ class SyncProducer(object):
             start = time.time()
             try:
                 self.transmit()
-            except can.CanError as error:
+            except CanError as error:
                 print(str(error))
             time_left = self.period - (time.time() - start)
             time.sleep(max(time_left, 0.0))

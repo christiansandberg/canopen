@@ -5,10 +5,12 @@ import threading
 try:
     import can
     from can import Listener
+    from can import CanError
 except ImportError:
     # Do not fail if python-can is not installed
     can = None
     Listener = object
+    CanError = Exception
 
 from .node import Node
 from .sync import SyncProducer
@@ -62,14 +64,14 @@ class Network(collections.Mapping):
 
     def disconnect(self):
         """Disconnect from the CAN bus.
-        
+
         Must be overridden in a subclass if a custom interface is used.
         """
         self.notifier.stop()
         self.bus.shutdown()
 
     def add_listener(self, listener):
-        """Add any :class:`can.Listener` object to the network.""" 
+        """Add any :class:`can.Listener` object to the network."""
         self.listeners.append(listener)
 
     def add_node(self, node, object_dictionary=None):
