@@ -1,6 +1,8 @@
 import time
 import threading
 
+import can
+
 
 class SyncProducer(object):
 
@@ -37,6 +39,9 @@ class SyncProducer(object):
     def _periodic_transmit(self):
         while not self.stop_event.is_set():
             start = time.time()
-            self.transmit()
+            try:
+                self.transmit()
+            except can.CanError as error:
+                print(str(error))
             time_left = self.period - (time.time() - start)
             time.sleep(max(time_left, 0.0))
