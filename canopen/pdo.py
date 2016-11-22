@@ -5,6 +5,7 @@ import collections
 import logging
 import binascii
 
+from .network import CanError
 from . import objectdictionary
 from . import common
 
@@ -337,7 +338,10 @@ class Message(object):
     def _periodic_transmit(self):
         while not self.stop_event.is_set():
             start = time.time()
-            self.transmit()
+            try:
+                self.transmit()
+            except CanError as error:
+                print(str(error))
             time_left = self.period - (time.time() - start)
             time.sleep(max(time_left, 0.0))
 

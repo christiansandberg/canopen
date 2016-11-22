@@ -10,8 +10,8 @@ from . import common
 logger = logging.getLogger(__name__)
 
 
-# Command, index, subindex, data
-SDO_STRUCT = struct.Struct("<BHB4s")
+# Command, index, subindex
+SDO_STRUCT = struct.Struct("<BHB")
 
 
 REQUEST_SEGMENT_DOWNLOAD = 0 << 5
@@ -83,10 +83,11 @@ class SdoClient(collections.Mapping):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        request = SDO_STRUCT.pack(REQUEST_UPLOAD, index, subindex, b'')
+        request = SDO_STRUCT.pack(REQUEST_UPLOAD, index, subindex)
+        request += b"\x00\x00\x00\x00"
         response = self.send_request(request)
-        res_command, res_index, res_subindex, res_data = SDO_STRUCT.unpack(
-            response)
+        res_command, res_index, res_subindex = SDO_STRUCT.unpack(response[0:4])
+        res_data = response[4:]
 
         if res_command & 0xE0 != RESPONSE_UPLOAD:
             raise SdoCommunicationError("Unexpected response")
@@ -150,14 +151,15 @@ class SdoClient(collections.Mapping):
             # Expedited download
             command |= EXPEDITED
             command |= (4 - length) << 2
-            request = SDO_STRUCT.pack(command, index, subindex, data)
+            request = SDO_STRUCT.pack(command, index, subindex)
+            request += data.ljust(4, b"\x00")
             response = self.send_request(request)
             if response[0] != RESPONSE_DOWNLOAD:
                 raise SdoCommunicationError("Unexpected response")
         else:
             # Segmented download
-            length_data = struct.pack("<L", length)
-            request = SDO_STRUCT.pack(command, index, subindex, length_data)
+            request = SDO_STRUCT.pack(command, index, subindex)
+            request += struct.pack("<L", length)
             response = self.send_request(request)
             if response[0] != RESPONSE_DOWNLOAD:
                 raise SdoCommunicationError("Unexpected response")
