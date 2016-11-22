@@ -38,7 +38,7 @@ class TestEDS(unittest.TestCase):
         self.assertEqual(array.index, 0x1003)
         self.assertEqual(array.name, 'Pre-defined error field')
         var = array[5]
-        self.assertEqual(var.name, 'Pre-defined error field [5]')
+        self.assertEqual(var.name, 'Pre-defined error field_5')
         self.assertEqual(var.index, 0x1003)
         self.assertEqual(var.subindex, 5)
         self.assertEqual(var.data_type, canopen.objectdictionary.UNSIGNED32)
