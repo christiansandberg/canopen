@@ -16,6 +16,10 @@ def import_eds(filename, node_id):
     eds = ConfigParser()
     eds.read(filename)
 
+    if eds.has_section("DeviceComissioning"):
+        od.bitrate = int(eds.get("DeviceComissioning", "Baudrate")) * 1000
+        od.node_id = int(eds.get("DeviceComissioning", "NodeID"))
+
     for section in eds.sections():
         # Match indexes
         match = re.match(r"^[0-9A-Fa-f]{4}$", section)
@@ -29,14 +33,14 @@ def import_eds(filename, node_id):
                 od.add_object(var)
             elif object_type == ARR and eds.has_option(section, "CompactSubObj"):
                 arr = objectdictionary.Array(name, index)
-                arr.template = build_variable(eds, section, index, 1)
-                arr.length = int(eds.get(section, "CompactSubObj"), 0)
+                last_subindex = objectdictionary.Variable(
+                    "Number of entries", index, 0)
+                last_subindex.data_type = objectdictionary.UNSIGNED8
+                arr.add_member(last_subindex)
+                arr.add_member(build_variable(eds, section, index, 1))
                 od.add_object(arr)
             elif object_type == ARR:
                 arr = objectdictionary.Array(name, index)
-                arr.last_subindex = build_variable(
-                    eds, section + "sub0", index, 0)
-                arr.template = build_variable(eds, section + "sub1", index, 1)
                 od.add_object(arr)
             elif object_type == RECORD:
                 record = objectdictionary.Record(name, index)
@@ -50,7 +54,8 @@ def import_eds(filename, node_id):
             index = int(match.group(1), 16)
             subindex = int(match.group(2), 16)
             entry = od[index]
-            if isinstance(entry, objectdictionary.Record):
+            if isinstance(entry, (objectdictionary.Record,
+                                  objectdictionary.Array)):
                 var = build_variable(eds, section, index, subindex)
                 entry.add_member(var)
 

@@ -62,7 +62,7 @@ class Variable(object):
         written as :class:`bytes`.
         """
         value = self.od.decode_raw(self.data)
-        text = "Value of %s (0x%X:%d) is %s" % (
+        text = "Value of %s (0x%X:%d) is %r" % (
             self.od.name, self.od.index,
             self.od.subindex, value)
         if value in self.od.value_descriptions:
@@ -72,7 +72,7 @@ class Variable(object):
 
     @raw.setter
     def raw(self, value):
-        logger.debug("Writing %s (0x%X:%d) = %s",
+        logger.debug("Writing %s (0x%X:%d) = %r",
                      self.od.name, self.od.index,
                      self.od.subindex, value)
         self.data = self.od.encode_raw(value)

@@ -11,7 +11,8 @@ DATA_TYPES = {
     "UNSIGNED16": objectdictionary.UNSIGNED16,
     "UNSIGNED32": objectdictionary.UNSIGNED32,
     "REAL32": objectdictionary.REAL32,
-    "VISIBLE_STRING": objectdictionary.VISIBLE_STRING
+    "VISIBLE_STRING": objectdictionary.VISIBLE_STRING,
+    "DOMAIN": objectdictionary.DOMAIN
 }
 
 
@@ -39,8 +40,9 @@ def import_epf(filename):
         elif len(parameters) == 2 and parameters[1].get("ObjectType") == "ARRAY":
             # Array
             arr = objectdictionary.Array(name, index)
-            arr.last_subindex = build_variable(parameters[0])
-            arr.template = build_variable(parameters[1])
+            for par_tree in parameters:
+                var = build_variable(par_tree)
+                arr.add_member(var)
             od.add_object(arr)
         else:
             # Complex record
@@ -65,7 +67,8 @@ def build_variable(par_tree):
     unit = par_tree.get("Unit")
     if unit and unit != "-":
         par.unit = unit
-    par.data_type = DATA_TYPES[data_type]
+    if data_type in DATA_TYPES:
+        par.data_type = DATA_TYPES[data_type]
     par.access_type = par_tree.get("AccessType", "rw")
     try:
         par.min = int(par_tree.get("MinimumValue"))

@@ -116,6 +116,7 @@ class TestObjectDictionary(unittest.TestCase):
     def test_add_array(self):
         test_od = od.ObjectDictionary()
         array = od.Array("Test Array", 0x1002)
+        array.add_member(od.Variable("Last subindex", 0x1002, 0))
         test_od.add_object(array)
         self.assertEqual(test_od["Test Array"], array)
         self.assertEqual(test_od[0x1002], array)
@@ -125,11 +126,12 @@ class TestArray(unittest.TestCase):
 
     def test_subindexes(self):
         array = od.Array("Test Array", 0x1000)
-        array.template = od.Variable("Test Variable", 0x1000, 1)
-        subindexes = [var.subindex for var in array]
-        self.assertSequenceEqual(subindexes, range(0, 256))
-
-    def test_nof_entries(self):
-        array = od.Array("Test Array", 0x1000)
-        self.assertEqual(array[0].data_type, od.UNSIGNED8)
-        self.assertEqual(array[0].subindex, 0)
+        last_subindex = od.Variable("Last subindex", 0x1000, 0)
+        last_subindex.data_type = od.UNSIGNED8
+        array.add_member(last_subindex)
+        array.add_member(od.Variable("Test Variable", 0x1000, 1))
+        array.add_member(od.Variable("Test Variable 2", 0x1000, 2))
+        self.assertEqual(array[0].name, "Last subindex")
+        self.assertEqual(array[1].name, "Test Variable")
+        self.assertEqual(array[2].name, "Test Variable 2")
+        self.assertEqual(array[3].name, "Test Variable_3")
