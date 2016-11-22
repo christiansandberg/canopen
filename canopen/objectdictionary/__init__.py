@@ -177,7 +177,7 @@ class Variable(object):
         #: String representation of the variable
         self.name = name
         #: Data type according to the standard as an :class:`int`
-        self.data_type = UNSIGNED32
+        self.data_type = None
         #: Access type, should be "rw", "ro", "wo", or "const"
         self.access_type = "rw"
         #: Physical unit
@@ -249,6 +249,8 @@ class Variable(object):
                 return self.STRUCT_TYPES[self.data_type].pack(value)
             except struct.error:
                 raise ValueError("Value does not fit in specified type")
+        elif self.data_type is None:
+            raise ObjectDictionaryError("Data type has not been specified")
         else:
             raise TypeError(
                 "Do not know how to encode %r to data type %Xh" % (
