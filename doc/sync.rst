@@ -11,3 +11,10 @@ sensor devices may arrange to sample process variables and that actuator devices
 may apply their actuation in a coordinated fashion.
 
 The identifier of the Sync Object is available at index 1005h.
+
+
+API
+---
+
+.. autoclass:: canopen.sync.SyncProducer
+    :members:

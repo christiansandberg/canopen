@@ -16,16 +16,13 @@ class Node(object):
     """
 
     def __init__(self, node_id, object_dictionary, network):
-        #: Node ID
         self.id = node_id
-        #: :class:`canopen.Network` owning the node
         self.network = network
 
         if not isinstance(object_dictionary,
                           objectdictionary.ObjectDictionary):
             object_dictionary = objectdictionary.import_od(
                 object_dictionary, node_id)
-        #: :class:`canopen.ObjectDictionary` associated with the node
         self.object_dictionary = object_dictionary
 
         self.sdo = SdoClient(network, node_id, object_dictionary)

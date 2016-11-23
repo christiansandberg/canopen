@@ -5,6 +5,7 @@ from .network import CanError
 
 
 class SyncProducer(object):
+    """Transmits a SYNC message (0x80) periodically."""
 
     def __init__(self, network):
         self.network = network
@@ -17,7 +18,11 @@ class SyncProducer(object):
         self.network.send_message(0x80, [])
 
     def start(self, period=None):
-        """Start periodic transmission of SYNC message in a background thread."""
+        """Start periodic transmission of SYNC message in a background thread.
+        
+        :param float period:
+            Period of SYNC message in seconds.
+        """
         if period is not None:
             self.period = period
 

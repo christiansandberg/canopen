@@ -45,10 +45,40 @@ API
 ---
 
 .. autoclass:: canopen.Network
-    :members:
+   :members:
+
+   .. py:attribute:: nmt
+
+      The broadcast :class:`canopen.nmt.NmtMaster` which will affect all nodes.
+
+   .. py:attribute:: sync
+
+      The :class:`canopen.sync.SyncProducer` for this network.
+
+   .. describe:: network[node_id]
+
+      Return the :class:`canopen.Node` for the specified node ID.
+
+   .. describe:: iter(network)
+
+      Return an iterator over the handled node IDs.
+
+   .. describe:: node_id in network
+
+      Return ``True`` if the node ID exists is handled by this network.
+
+   .. method:: values()
+
+      Return a list of :class:`canopen.Node` handled by this network.
+
 
 .. autoclass:: canopen.Node
     :members:
+
+    .. py:attribute:: id
+
+       The node id (1 - 127). Changing this after initializing the object
+       will not have any effect.
 
     .. py:attribute:: sdo
 
@@ -65,6 +95,14 @@ API
     .. py:attribute:: emcy
 
        The :class:`canopen.emcy.EmcyConsumer` associated with the node.
+
+    .. py:attribute:: object_dictionary
+
+       The :class:`canopen.ObjectDictionary` associated with the node
+
+    .. py:attribute:: network
+
+       The :class:`canopen.Network` owning the node
 
 
 .. _python-can: https://python-can.readthedocs.org/en/stable/

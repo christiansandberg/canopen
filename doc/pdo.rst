@@ -78,11 +78,48 @@ API
 .. autoclass:: canopen.pdo.PdoNode
    :members:
 
+   .. py:attribute:: rx
+
+      The :class:`canopen.pdo.Maps` object representing the receive PDO maps.
+
+   .. py:attribute:: tx
+
+      The :class:`canopen.pdo.Maps` object representing the transmit PDO maps.
+
+
 .. autoclass:: canopen.pdo.Maps
    :members:
 
+   .. describe:: maps[no]
+
+      Return the :class:`canopen.pdo.Message` for the specified map number.
+      First map starts at 1.
+
+   .. describe:: iter(maps)
+
+      Return an iterator of the available map numbers.
+
+   .. describe:: len(maps)
+
+      Return the number of supported maps.
+
+
 .. autoclass:: canopen.pdo.Message
    :members:
+
+   .. describe:: map[name]
+
+      Return the :class:`canopen.pdo.Variable` for the variable specified as
+      ``"Group.Variable"`` or ``"Variable"``.
+
+   .. describe:: iter(map)
+
+      Return an iterator of the variable names in the map.
+
+   .. describe:: len(map)
+
+      Return the number of variables in the map.
+
 
 .. autoclass:: canopen.pdo.Variable
    :members:

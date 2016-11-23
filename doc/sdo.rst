@@ -72,15 +72,91 @@ API
 .. autoclass:: canopen.sdo.SdoClient
     :members:
 
+    .. describe:: c[index]
+
+       Return the SDO object for the specified index (as int) or name
+       (as string).
+
+    .. describe:: iter(c)
+
+       Return an iterator over the indexes from the object dictionary.
+
+    .. describe:: index in c
+
+       Return ``True`` if the index (as int) or name (as string) exists in
+       the object dictionary.
+
+    .. describe:: len(c)
+
+       Return the number of indexes in the object dictionary.
+
+    .. method:: values()
+
+       Return a list of objects (records, arrays and variables).
+
+
 .. autoclass:: canopen.sdo.Variable
     :members:
     :inherited-members:
 
+
 .. autoclass:: canopen.sdo.Record
     :members:
 
+    .. describe:: record[subindex]
+
+       Return the :class:`canopen.sdo.Variable` for the specified subindex
+       (as int) or name (as string).
+
+    .. describe:: iter(record)
+
+       Return an iterator over the subindexes from the record.
+
+    .. describe:: subindex in record
+
+       Return ``True`` if the subindex (as int) or name (as string) exists in
+       the record.
+
+    .. describe:: len(record)
+
+       Return the number of subindexes in the record.
+
+    .. method:: values()
+
+       Return a list of :class:`canopen.sdo.Variable` in the record.
+
+
 .. autoclass:: canopen.sdo.Array
     :members:
+
+    .. describe:: array[subindex]
+
+       Return the :class:`canopen.sdo.Variable` for the specified subindex
+       (as int) or name (as string).
+
+    .. describe:: iter(array)
+
+       Return an iterator over the subindexes from the array.
+       This will make a SDO read operation on subindex 0 in order to get the
+       actual length of the array.
+
+    .. describe:: subindex in array
+
+       Return ``True`` if the subindex (as int) or name (as string) exists in
+       the array.
+       This will make a SDO read operation on subindex 0 in order to get the
+       actual length of the array.
+
+    .. describe:: len(array)
+
+       Return the length of the array.
+       This will make a SDO read operation on subindex 0.
+
+    .. method:: values()
+
+       Return a list of :class:`canopen.sdo.Variable` in the array.
+       This will make a SDO read operation on subindex 0 in order to get the
+       actual length of the array.
 
 
 Exceptions

@@ -53,9 +53,9 @@ class Variable(object):
         | UNICODE_STRING            | :class:`str` /             |
         |                           | ``unicode`` (Python 2)     |
         +---------------------------+----------------------------+
-        | OCTET_STRING              | :class:`bytes`             |
+        | OCTET_STRING              | :class:`bytearray`         |
         +---------------------------+----------------------------+
-        | DOMAIN                    | :class:`bytes`             |
+        | DOMAIN                    | :class:`bytearray`         |
         +---------------------------+----------------------------+
 
         Data types that this library does not handle yet must be read and
@@ -83,7 +83,7 @@ class Variable(object):
 
         On object dictionaries that support specifying a factor, this can be
         either a :class:`float` or an :class:`int`.
-        Strings will be passed as is.
+        Non integers will be passed as is.
         """
         value = self.od.decode_phys(self.raw)
         if self.od.unit:

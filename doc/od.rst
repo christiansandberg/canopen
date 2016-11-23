@@ -57,14 +57,79 @@ API
 .. autoclass:: canopen.ObjectDictionary
    :members:
 
+   .. describe:: od[index]
+
+      Return the object for the specified index (as int) or name
+      (as string).
+
+   .. describe:: iter(od)
+
+      Return an iterator over the indexes from the object dictionary.
+
+   .. describe:: index in od
+
+      Return ``True`` if the index (as int) or name (as string) exists in
+      the object dictionary.
+
+   .. describe:: len(od)
+
+      Return the number of objects in the object dictionary.
+
+   .. method:: values()
+
+      Return a list of objects (records, arrays and variables).
+
+
 .. autoclass:: canopen.objectdictionary.Variable
    :members:
+
+   .. describe:: var == other
+
+      Return ``True`` if the variables have the same index and subindex.
+
 
 .. autoclass:: canopen.objectdictionary.Record
    :members:
 
+   .. describe:: record[subindex]
+
+      Return the :class:`canopen.objectdictionary.Variable` for the specified
+      subindex (as int) or name (as string).
+
+   .. describe:: iter(record)
+
+      Return an iterator over the subindexes from the record.
+
+   .. describe:: subindex in record
+
+      Return ``True`` if the subindex (as int) or name (as string) exists in
+      the record.
+
+   .. describe:: len(record)
+
+      Return the number of subindexes in the record.
+
+   .. describe:: record == other
+
+      Return ``True`` if the records have the same index.
+
+   .. method:: values()
+
+      Return a list of :class:`canopen.objectdictionary.Variable` in the record.
+
+
 .. autoclass:: canopen.objectdictionary.Array
    :members:
+
+   .. describe:: array[subindex]
+
+      Return the :class:`canopen.objectdictionary.Variable` for the specified
+      subindex (as int) or name (as string).
+      This will work for all subindexes between 1 and 255. If the requested
+      subindex has not been specified in the object dictionary, it will be
+      created dynamically from the first subindex and suffixing the name with
+      an underscore + the subindex in hex format.
+
 
 Exceptions
 ~~~~~~~~~~

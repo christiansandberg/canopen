@@ -27,20 +27,28 @@ class Network(collections.Mapping):
         #: A python-can :class:`can.BusABC` instance which is set after
         #: :meth:`canopen.Network.connect` is called
         self.bus = None
+        #: List of :class:`can.Listener` objects.
+        #: Includes at least MessageListener.
         self.listeners = [MessageListener(self)]
         self.notifier = None
         self.nodes = {}
         self.subscribers = {}
         self.send_lock = threading.Lock()
-        #: The SYNC producer
         self.sync = SyncProducer(self)
-        # NMT to all nodes
         self.nmt = NmtMaster(self, 0)
 
     def subscribe(self, can_id, callback):
+        """Listen for messages with a specific CAN ID.
+
+        :param int can_id:
+            The CAN ID to listen for.
+        :param callback:
+            Function to call when message is received.
+        """
         self.subscribers.setdefault(can_id, []).append(callback)
 
     def unsubscribe(self, can_id, callback):
+        """Stop listening for message."""
         self.subscribers[can_id].remove(callback)
 
     def connect(self, *args, **kwargs):
@@ -77,6 +85,7 @@ class Network(collections.Mapping):
         """
         self.notifier.stop()
         self.bus.shutdown()
+        self.bus = None
 
     def add_node(self, node, object_dictionary=None):
         """Add a node to the network.
@@ -131,7 +140,7 @@ class Network(collections.Mapping):
 
         :param int can_id:
             CAN-ID of the message (always 11-bit)
-        :param bytes data:
+        :param bytearray data:
             Data part of the message (0 - 8 bytes)
         :param float timestamp:
             Timestamp of the message, preferably as a Unix timestamp
