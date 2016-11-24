@@ -24,7 +24,7 @@ Install from PyPI_ using pip::
 If you want to be able to change the code while using it, clone it then install
 it in `develop mode`_::
 
-    $ git clone git@github.com:christiansandberg/canopen.git
+    $ git clone https://github.com/christiansandberg/canopen.git
     $ cd canopen
     $ pip install -e .
 
