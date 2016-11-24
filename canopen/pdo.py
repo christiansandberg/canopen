@@ -172,7 +172,7 @@ class Message(object):
         return size
 
     def _get_variable(self, index, subindex):
-        obj = self.pdo_node.od[index]
+        obj = self.pdo_node.sdo_client.od[index]
         if isinstance(obj, (objectdictionary.Record, objectdictionary.Array)):
             obj = obj[subindex]
         var = Variable(obj)

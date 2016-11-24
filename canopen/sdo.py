@@ -183,10 +183,10 @@ class SdoClient(collections.Mapping):
         entry = self.od[index]
         if isinstance(entry, objectdictionary.Variable):
             return Variable(self, entry)
-        elif isinstance(entry, objectdictionary.Record):
-            return Record(self, entry)
         elif isinstance(entry, objectdictionary.Array):
             return Array(self, entry)
+        elif isinstance(entry, objectdictionary.Record):
+            return Record(self, entry)
 
     def __iter__(self):
         return iter(self.od)

@@ -29,7 +29,7 @@ class Node(object):
         self.sdo = SdoClient(network, node_id, object_dictionary)
         network.subscribe(0x580 + node_id, self.sdo.on_response)
 
-        self.pdo = PdoNode(network, object_dictionary)
+        self.pdo = PdoNode(network, self.sdo)
 
         self.nmt = NmtMaster(network, node_id)
         network.subscribe(0x700 + node_id, self.nmt.on_heartbeat)
