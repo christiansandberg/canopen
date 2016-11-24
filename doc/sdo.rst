@@ -175,9 +175,6 @@ API
        actual length of the array.
 
 
-Exceptions
-~~~~~~~~~~
-
 .. autoexception:: canopen.SdoAbortedError
     :members:
 

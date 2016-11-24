@@ -136,8 +136,5 @@ API
       an underscore + the subindex in hex format.
 
 
-Exceptions
-~~~~~~~~~~
-
 .. autoexception:: canopen.ObjectDictionaryError
    :members:

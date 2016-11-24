@@ -15,7 +15,18 @@ the device profiles.
 Examples
 --------
 
+To list the currently active emergencies for a particular node, one can use the
+``.active`` attribute which is a list of :class:`canopen.emcy.EmcyError`
+objects::
 
+    active_codes = [emcy.code for emcy in node.emcy.active]
+    all_codes = [emcy.code for emcy in node.emcy.log]
+
+The :class:`canopen.emcy.EmcyError` objects are actually exceptions so that they
+can be easily raised if that's what you want::
+
+    if node.emcy.active:
+        raise node.emcy.active[-1]
 
 
 API
