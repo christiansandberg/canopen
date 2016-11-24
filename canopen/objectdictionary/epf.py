@@ -1,5 +1,9 @@
 import xml.etree.ElementTree as etree
+import logging
 from canopen import objectdictionary
+
+
+logger = logging.getLogger(__name__)
 
 
 DATA_TYPES = {
@@ -36,6 +40,8 @@ def import_epf(filename):
         if len(parameters) == 1:
             # Simple variable
             var = build_variable(parameters[0])
+            # Use top level index name instead
+            var.name = name
             od.add_object(var)
         elif len(parameters) == 2 and parameters[1].get("ObjectType") == "ARRAY":
             # Array
@@ -69,6 +75,8 @@ def build_variable(par_tree):
         par.unit = unit
     if data_type in DATA_TYPES:
         par.data_type = DATA_TYPES[data_type]
+    else:
+        logger.warning("Don't know how to handle data type %s", data_type)
     par.access_type = par_tree.get("AccessType", "rw")
     try:
         par.min = int(par_tree.get("MinimumValue"))

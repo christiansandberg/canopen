@@ -39,7 +39,7 @@ def import_od(filename, node_id=None):
     :return:
         A :class:`canopen.ObjectDictionary` object.
     """
-    suffix = filename[filename.rfind("."):]
+    suffix = filename[filename.rfind("."):].lower()
     if suffix in (".eds", ".dcf"):
         from . import eds
         return eds.import_eds(filename, node_id)
