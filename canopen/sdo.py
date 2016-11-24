@@ -32,10 +32,10 @@ SIZE_SPECIFIED = 0x1
 class SdoClient(collections.Mapping):
     """Handles communication with an SDO server."""
 
-    def __init__(self, network, node_id, od):
+    def __init__(self, node_id, od):
         #: Node ID
         self.id = node_id
-        self.network = network
+        self.network = None
         self.od = od
         self.response = None
         self.response_received = threading.Condition()

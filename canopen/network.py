@@ -35,7 +35,8 @@ class Network(collections.Mapping):
         self.subscribers = {}
         self.send_lock = threading.Lock()
         self.sync = SyncProducer(self)
-        self.nmt = NmtMaster(self, 0)
+        self.nmt = NmtMaster(0)
+        self.nmt.network = self
 
     def subscribe(self, can_id, callback):
         """Listen for messages with a specific CAN ID.
@@ -103,8 +104,9 @@ class Network(collections.Mapping):
         :rtype: canopen.Node
         """
         if isinstance(node, int):
-            node = Node(node, object_dictionary, self)
+            node = Node(node, object_dictionary)
         self.nodes[node.id] = node
+        node.associate_network(self)
         return node
 
     def send_message(self, can_id, data, remote=False):

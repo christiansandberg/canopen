@@ -45,9 +45,9 @@ class NmtMaster(object):
     the current state using the heartbeat protocol.
     """
 
-    def __init__(self, network, node_id):
+    def __init__(self, node_id):
         self.id = node_id
-        self.network = network
+        self.network = None
         self._state = 0
         self._state_received = None
         #: Timestamp of last heartbeat message

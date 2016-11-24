@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 class PdoNode(object):
     """Represents a slave unit."""
 
-    def __init__(self, network, sdo_client):
-        self.network = network
+    def __init__(self, sdo_client):
+        self.network = None
         self.sdo_client = sdo_client
         self.rx = Maps(0x1400, 0x1600, self)
         self.tx = Maps(0x1800, 0x1A00, self)
