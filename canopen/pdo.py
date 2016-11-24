@@ -20,9 +20,9 @@ logger = logging.getLogger(__name__)
 class PdoNode(object):
     """Represents a slave unit."""
 
-    def __init__(self, network, od):
+    def __init__(self, network, sdo_client):
         self.network = network
-        self.od = od
+        self.sdo_client = sdo_client
         self.rx = Maps(0x1400, 0x1600, self)
         self.tx = Maps(0x1800, 0x1A00, self)
 
@@ -106,11 +106,11 @@ class Maps(collections.Mapping):
     def __init__(self, com_offset, map_offset, pdo_node):
         self.maps = {}
         map_no = 0
-        while com_offset + map_no in pdo_node.od:
+        while com_offset + map_no in pdo_node.sdo_client:
             self.maps[map_no + 1] = Message(
                 pdo_node,
-                pdo_node.od[com_offset + map_no],
-                pdo_node.od[map_offset + map_no])
+                pdo_node.sdo_client[com_offset + map_no],
+                pdo_node.sdo_client[map_offset + map_no])
             map_no += 1
 
     def __getitem__(self, key):
