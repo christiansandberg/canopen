@@ -1,6 +1,7 @@
 import threading
 import logging
 import struct
+import time
 
 
 logger = logging.getLogger(__name__)
@@ -124,15 +125,19 @@ class NmtMaster(object):
             raise NmtError("No boot-up or heartbeat received")
         return self.state
 
-    def wait_for_bootup(self):
+    def wait_for_bootup(self, timeout=10):
         """Wait until a boot-up message is received."""
+        end_time = time.time() + timeout
         while True:
+            now = time.time()
             with self.state_update:
                 self._state_received = None
-                self.state_update.wait(timeout)
+                self.state_update.wait(end_time - now + 0.1)
+            if now > end_time:
+                raise NmtError("Timeout waiting for boot-up message")
             if self._state_received == 0:
                 break
 
 
 class NmtError(Exception):
-    pass
+    """Some NMT operation failed."""

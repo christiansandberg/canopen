@@ -130,5 +130,10 @@ class Bits(object):
                                             self._get_bits(key))
 
     def __setitem__(self, key, value):
-        self.variable.raw = self.variable.od.encode_bits(
-            self.variable.raw, self._get_bits(key), value)
+        prev_value = self.variable.raw
+        new_value = self.variable.od.encode_bits(
+            prev_value, self._get_bits(key), value)
+        if new_value != prev_value:
+            self.variable.raw = new_value
+        else:
+            logger.info("Variable does not need updating")

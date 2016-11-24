@@ -26,7 +26,7 @@ Easiest way to install is to use pip_::
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    network
    od

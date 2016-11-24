@@ -48,3 +48,5 @@ API
 .. autoclass:: canopen.nmt.NmtMaster
     :members:
 
+.. autoexception:: canopen.nmt.NmtError
+    :members:
