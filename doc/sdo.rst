@@ -72,6 +72,10 @@ API
 .. autoclass:: canopen.sdo.SdoClient
     :members:
 
+    .. py:attribute:: od
+
+       The :class:`canopen.ObjectDictionary` associated with this object.
+
     .. describe:: c[index]
 
        Return the SDO object for the specified index (as int) or name
@@ -99,9 +103,17 @@ API
     :members:
     :inherited-members:
 
+    .. py:attribute:: od
+
+       The :class:`canopen.objectdictionary.Variable` associated with this object.
+
 
 .. autoclass:: canopen.sdo.Record
     :members:
+
+    .. py:attribute:: od
+
+       The :class:`canopen.objectdictionary.Record` associated with this object.
 
     .. describe:: record[subindex]
 
@@ -128,6 +140,10 @@ API
 
 .. autoclass:: canopen.sdo.Array
     :members:
+
+    .. py:attribute:: od
+
+       The :class:`canopen.objectdictionary.Array` associated with this object.
 
     .. describe:: array[subindex]
 

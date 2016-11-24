@@ -27,7 +27,8 @@ The currently supported file formats for specifying a node's object dictionary
 are:
 
 * EDS (standardized INI-file like format)
-* EPF (proprietary XML-format used by Inmotion Technologies) 
+* DCF (same as EDS with bitrate and node ID specified)
+* EPF (proprietary XML-format used by Inmotion Technologies)
 
 
 Examples
@@ -82,6 +83,10 @@ API
 
 .. autoclass:: canopen.objectdictionary.Variable
    :members:
+
+   .. describe:: len(var)
+
+      Return the length of the variable data type in number of bits.
 
    .. describe:: var == other
 

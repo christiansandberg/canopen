@@ -58,6 +58,9 @@ class PdoNode(object):
 
         :param str filename:
             Filename to save to (e.g. DBC, DBF, ARXML, KCD etc)
+
+        :return: The CanMatrix object created
+        :rtype: canmatrix.canmatrix.CanMatrix
         """
         from canmatrix import canmatrix
         from canmatrix import formats
@@ -94,6 +97,7 @@ class PdoNode(object):
                 frame.calcDLC()
                 db.frames.addFrame(frame)
         formats.dumpp({"": db}, filename)
+        return db
 
 
 class Maps(collections.Mapping):
@@ -183,8 +187,8 @@ class Message(object):
         """A descriptive name of the PDO.
 
         Examples:
-        - TxPDO1_node4
-        - RxPDO4_node1
+         * TxPDO1_node4
+         * RxPDO4_node1
         """
         direction = "Tx" if self.cob_id & 0x80 else "Rx"
         map_id = self.cob_id >> 8
@@ -199,6 +203,7 @@ class Message(object):
                 self.receive_condition.notify_all()
 
     def read(self):
+        """Read PDO configuration for this map using SDO."""
         cob_id = self.com_record[1].raw
         self.cob_id = cob_id & 0x7FF
         logger.info("COB-ID is 0x%X", self.cob_id)
@@ -233,6 +238,7 @@ class Message(object):
             self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
     def save(self):
+        """Save PDO configuration for this map using SDO."""
         cob_id = self.com_record[1].raw
         if self.cob_id is None:
             self.cob_id = cob_id & 0x7FF
@@ -366,5 +372,5 @@ class Variable(common.Variable):
     def set_data(self, data):
         byte_offset = self.offset // 8
         logger.debug("Updating %s to %s in message 0x%X",
-            self.name, binascii.hexlify(data), self.msg.cob_id)
+                     self.name, binascii.hexlify(data), self.msg.cob_id)
         self.msg.data[byte_offset:byte_offset + len(data)] = data

@@ -34,7 +34,7 @@ Documentation
 
 Documentation can be found on Read the Docs:
 
-http://canopen.readthedocs.io/
+http://canopen.readthedocs.io/en/stable/
 
 It can also be generated from a local clone using Sphinx_::
 

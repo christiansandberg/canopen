@@ -18,7 +18,7 @@ class Variable(object):
 
     @property
     def data(self):
-        """Byte representation of the object (:class:`bytes`)."""
+        """Byte representation of the object as a :class:`bytearray`."""
         if self.od.access_type == "wo":
             logger.warning("Variable is write only")
         return self.get_data()

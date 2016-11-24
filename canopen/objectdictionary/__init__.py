@@ -144,7 +144,8 @@ class Array(Record):
             for attr in ("data_type", "unit", "factor", "min", "max",
                          "access_type", "value_descriptions",
                          "bit_definitions"):
-                var.__dict__[attr] = template.__dict__[attr]
+                if attr in template.__dict__:
+                    var.__dict__[attr] = template.__dict__[attr]
         else:
             raise KeyError("Could not find subindex %r" % subindex)
         return var
@@ -167,6 +168,19 @@ class Variable(object):
         REAL64: struct.Struct("<d")
     }
 
+    #: Physical unit
+    unit = ""
+    #: Factor between physical unit and integer value
+    factor = 1
+    #: Minimum allowed value
+    min = None
+     #: Maximum allowed value
+    max = None
+    #: Data type according to the standard as an :class:`int`
+    data_type = None
+    #: Access type, should be "rw", "ro", "wo", or "const"
+    access_type = "rw"
+
     def __init__(self, name, index, subindex=0):
         #: The :class:`canopen.ObjectDictionary`,
         #: :class:`canopen.objectdictionary.Record` or
@@ -178,18 +192,6 @@ class Variable(object):
         self.subindex = subindex
         #: String representation of the variable
         self.name = name
-        #: Data type according to the standard as an :class:`int`
-        self.data_type = None
-        #: Access type, should be "rw", "ro", "wo", or "const"
-        self.access_type = "rw"
-        #: Physical unit
-        self.unit = ""
-        #: Factor between physical unit and integer value
-        self.factor = 1
-        #: Minimum allowed value
-        self.min = None
-        #: Maximum allowed value
-        self.max = None
         #: Dictionary of value descriptions
         self.value_descriptions = {}
         self.bit_definitions = {}
@@ -205,9 +207,19 @@ class Variable(object):
             return 8
 
     def add_value_description(self, value, descr):
+        """Associate a value with a string description.
+
+        :param int value: Value to describe
+        :param str desc: Description of value
+        """
         self.value_descriptions[value] = descr
 
     def add_bit_definition(self, name, bits):
+        """Associate bit(s) with a string description.
+
+        :param str name: Name of bit(s)
+        :param list bits: List of bits as integers
+        """
         self.bit_definitions[name] = bits
 
     def decode_raw(self, data):
@@ -315,4 +327,3 @@ class Variable(object):
 
 class ObjectDictionaryError(Exception):
     """Unsupported operation with the current Object Dictionary."""
-    pass

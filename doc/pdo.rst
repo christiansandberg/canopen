@@ -49,7 +49,7 @@ starts at 1, not 0)::
     node.pdo.rx[4].enabled = True
 
     # Save new configuration (node must be in pre-operational)
-    node.nmt.state = 'PRE OPERATIONAL'
+    node.nmt.state = 'PRE-OPERATIONAL'
     node.pdo.save()
 
     # Start SYNC message with a period of 10 ms
@@ -124,3 +124,7 @@ API
 .. autoclass:: canopen.pdo.Variable
    :members:
    :inherited-members:
+
+   .. py:attribute:: od
+
+      The :class:`canopen.objectdictionary.Variable` associated with this object.

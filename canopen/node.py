@@ -9,14 +9,13 @@ class Node(object):
     """A CANopen slave node.
 
     :param int node_id:
-        Node ID
+        Node ID (set to None or 0 if specified by object dictionary)
     :param object_dictionary:
         Object dictionary as either a path to a file or an object.
     :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary`
     """
 
     def __init__(self, node_id, object_dictionary, network):
-        self.id = node_id
         self.network = network
 
         if not isinstance(object_dictionary,
@@ -24,6 +23,8 @@ class Node(object):
             object_dictionary = objectdictionary.import_od(
                 object_dictionary, node_id)
         self.object_dictionary = object_dictionary
+
+        self.id = node_id or self.object_dictionary.node_id
 
         self.sdo = SdoClient(network, node_id, object_dictionary)
         network.subscribe(0x580 + node_id, self.sdo.on_response)
