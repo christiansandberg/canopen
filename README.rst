@@ -52,11 +52,12 @@ At the time of writing this includes:
 * Peak CAN
 * IXXAT
 * USB2CAN
+* NI-CAN
 
 It is also possible to integrate this library with a custom backend.
 
 
-Quick Start
+Quick start
 -----------
 
 Here are some quick examples of what you can do:
@@ -79,8 +80,11 @@ Here are some quick examples of what you can do:
     network.connect(channel=0, bustype='kvaser', bitrate=250000)
 
     # Read a variable using SDO
-    device_name = node.sdo['ManufacturerDeviceName'].raw
+    device_name = node.sdo['Manufacturer device name'].raw
     vendor_id = node.sdo[0x1018][1].raw
+
+    # Write a variable using SDO
+    node.sdo['Producer heartbeat time'].raw = 1000
 
     # Read PDO configuration from node
     node.pdo.read()
