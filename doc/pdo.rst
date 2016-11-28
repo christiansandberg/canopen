@@ -92,7 +92,7 @@ API
 
    .. describe:: maps[no]
 
-      Return the :class:`canopen.pdo.Message` for the specified map number.
+      Return the :class:`canopen.pdo.Map` for the specified map number.
       First map starts at 1.
 
    .. describe:: iter(maps)
@@ -104,17 +104,17 @@ API
       Return the number of supported maps.
 
 
-.. autoclass:: canopen.pdo.Message
+.. autoclass:: canopen.pdo.Map
    :members:
 
    .. describe:: map[name]
 
       Return the :class:`canopen.pdo.Variable` for the variable specified as
-      ``"Group.Variable"`` or ``"Variable"``.
+      ``"Group.Variable"`` or ``"Variable"`` or as a position starting at 0.
 
    .. describe:: iter(map)
 
-      Return an iterator of the variable names in the map.
+      Return an iterator of the :class:`canopen.pdo.Variable` entries in the map.
 
    .. describe:: len(map)
 

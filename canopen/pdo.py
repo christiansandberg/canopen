@@ -107,7 +107,7 @@ class Maps(collections.Mapping):
         self.maps = {}
         map_no = 0
         while com_offset + map_no in pdo_node.sdo_client:
-            self.maps[map_no + 1] = Message(
+            self.maps[map_no + 1] = Map(
                 pdo_node,
                 pdo_node.sdo_client[com_offset + map_no],
                 pdo_node.sdo_client[map_offset + map_no])
@@ -123,7 +123,7 @@ class Maps(collections.Mapping):
         return len(self.maps)
 
 
-class Message(object):
+class Map(object):
     """One message which can have up to 8 bytes of variables mapped."""
 
     def __init__(self, pdo_node, com_record, map_array):
@@ -154,10 +154,13 @@ class Message(object):
         if isinstance(key, int):
             return self.map[key]
         else:
+            valid_values = []
             for var in self.map:
+                valid_values.append(var.name)
                 if var.name == key:
                     return var
-        raise KeyError("%s not found in map", key)
+        raise KeyError("%s not found in map. Valid entries are %s" % (
+            key, ", ".join(valid_values)))
 
     def __iter__(self):
         return iter(self.map)
