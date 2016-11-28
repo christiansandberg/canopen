@@ -54,7 +54,7 @@ class ObjectDictionary(collections.Mapping):
     """Representation of the object dictionary as a Python dictionary."""
 
     def __init__(self):
-        self.indexes = {}
+        self.indices = {}
         self.names = {}
         #: Default bitrate if specified by file
         self.bitrate = None
@@ -63,16 +63,16 @@ class ObjectDictionary(collections.Mapping):
 
     def __getitem__(self, index):
         """Get object from object dictionary by name or index."""
-        return self.names.get(index) or self.indexes[index]
+        return self.names.get(index) or self.indices[index]
 
     def __iter__(self):
-        return iter(sorted(self.indexes))
+        return iter(sorted(self.indices))
 
     def __len__(self):
-        return len(self.indexes)
+        return len(self.indices)
 
     def __contains__(self, index):
-        return index in self.names or index in self.indexes
+        return index in self.names or index in self.indices
 
     def add_object(self, obj):
         """Add object to the object dictionary.
@@ -84,13 +84,13 @@ class ObjectDictionary(collections.Mapping):
             :class:`canopen.objectdictionary.Array`.
         """
         obj.parent = self
-        self.indexes[obj.index] = obj
+        self.indices[obj.index] = obj
         self.names[obj.name] = obj
 
 
 class Record(collections.Mapping):
     """Groups multiple :class:`canopen.objectdictionary.Variable` objects using
-    subindexes.
+    subindices.
     """
 
     def __init__(self, name, index):
@@ -98,20 +98,20 @@ class Record(collections.Mapping):
         self.parent = None
         self.index = index
         self.name = name
-        self.subindexes = {}
+        self.subindices = {}
         self.names = {}
 
     def __getitem__(self, subindex):
-        return self.names.get(subindex) or self.subindexes[subindex]
+        return self.names.get(subindex) or self.subindices[subindex]
 
     def __len__(self):
-        return len(self.subindexes)
+        return len(self.subindices)
 
     def __iter__(self):
-        return iter(sorted(self.subindexes))
+        return iter(sorted(self.subindices))
 
     def __contains__(self, subindex):
-        return subindex in self.names or subindex in self.subindexes
+        return subindex in self.names or subindex in self.subindices
 
     def __eq__(self, other):
         return self.index == other.index
@@ -119,25 +119,33 @@ class Record(collections.Mapping):
     def add_member(self, variable):
         """Adds a :class:`canopen.objectdictionary.Variable` to the record."""
         variable.parent = self
-        self.subindexes[variable.subindex] = variable
+        self.subindices[variable.subindex] = variable
         self.names[variable.name] = variable
 
 
-class Array(Record):
+class Array(collections.Mapping):
     """An array of :class:`canopen.objectdictionary.Variable` objects using
-    subindexes.
+    subindices.
 
     Actual length of array must be read from the node using SDO.
     """
 
+    def __init__(self, name, index):
+        #: The :class:`canopen.ObjectDictionary` owning the record.
+        self.parent = None
+        self.index = index
+        self.name = name
+        self.subindices = {}
+        self.names = {}
+
     def __getitem__(self, subindex):
-        var = self.names.get(subindex) or self.subindexes.get(subindex)
+        var = self.names.get(subindex) or self.subindices.get(subindex)
         if var is not None:
             # This subindex is defined
             pass
         elif isinstance(subindex, int) and 0 < subindex < 256:
             # Create a new variable based on first array item
-            template = self.subindexes[1]
+            template = self.subindices[1]
             name = "%s_%x" % (template.name, subindex)
             var = Variable(name, self.index, subindex)
             var.parent = self
@@ -149,6 +157,29 @@ class Array(Record):
         else:
             raise KeyError("Could not find subindex %r" % subindex)
         return var
+
+    def __len__(self):
+        return len(self.subindices)
+
+    def __iter__(self):
+        return iter(sorted(self.subindices))
+
+    def __contains__(self, subindex):
+        try:
+            self[subindex]
+        except KeyError:
+            return False
+        else:
+            return True
+
+    def __eq__(self, other):
+        return self.index == other.index
+
+    def add_member(self, variable):
+        """Adds a :class:`canopen.objectdictionary.Variable` to the record."""
+        variable.parent = self
+        self.subindices[variable.subindex] = variable
+        self.names[variable.name] = variable
 
 
 class Variable(object):
