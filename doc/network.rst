@@ -67,6 +67,10 @@ API
 
       Return ``True`` if the node ID exists is handled by this network.
 
+   .. describe:: del network[node_id]
+
+      Delete the node ID from the network.
+
    .. method:: values()
 
       Return a list of :class:`canopen.Node` handled by this network.

@@ -20,7 +20,7 @@ from .nmt import NmtMaster
 logger = logging.getLogger(__name__)
 
 
-class Network(collections.Mapping):
+class Network(collections.MutableMapping):
     """Representation of one CAN bus containing one or more nodes."""
 
     def __init__(self):
@@ -46,7 +46,9 @@ class Network(collections.Mapping):
         :param callback:
             Function to call when message is received.
         """
-        self.subscribers.setdefault(can_id, []).append(callback)
+        self.subscribers.setdefault(can_id, [])
+        if callback not in self.subscribers[can_id]:
+            self.subscribers[can_id].append(callback)
 
     def unsubscribe(self, can_id, callback):
         """Stop listening for message."""
@@ -154,6 +156,15 @@ class Network(collections.Mapping):
 
     def __getitem__(self, node_id):
         return self.nodes[node_id]
+
+    def __setitem__(self, node_id, node):
+        assert node_id == node.id
+        self.nodes[node_id] = node
+        node.associate_network(self)
+
+    def __delitem__(self, node_id):
+        self.nodes[node_id].remove_network()
+        del self.nodes[node_id]
 
     def __iter__(self):
         return iter(self.nodes)

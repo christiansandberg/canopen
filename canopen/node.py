@@ -40,3 +40,13 @@ class Node(object):
         network.subscribe(0x700 + self.id, self.nmt.on_heartbeat)
         network.subscribe(0x0, self.nmt.on_nmt_command)
         network.subscribe(0x80 + self.id, self.emcy.on_emcy)
+
+    def remove_network(self):
+        self.network.unsubscribe(0x580 + self.id, self.sdo.on_response)
+        self.network.unsubscribe(0x700 + self.id, self.nmt.on_heartbeat)
+        self.network.unsubscribe(0x0, self.nmt.on_nmt_command)
+        self.network.unsubscribe(0x80 + self.id, self.emcy.on_emcy)
+        self.network = None
+        self.sdo.network = None
+        self.pdo.network = None
+        self.nmt.network = None
