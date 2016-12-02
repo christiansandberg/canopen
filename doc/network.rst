@@ -84,6 +84,10 @@ API
        The node id (1 - 127). Changing this after initializing the object
        will not have any effect.
 
+    .. py:attribute:: name
+
+       A descriptive name of the node.
+
     .. py:attribute:: sdo
 
        The :class:`canopen.sdo.SdoClient` associated with the node.
@@ -107,6 +111,10 @@ API
     .. py:attribute:: network
 
        The :class:`canopen.Network` owning the node
+
+
+.. autoclass:: canopen.network.MessageListener
+   :members:
 
 
 .. _python-can: https://python-can.readthedocs.org/en/stable/

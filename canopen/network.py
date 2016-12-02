@@ -174,7 +174,11 @@ class Network(collections.MutableMapping):
 
 
 class MessageListener(Listener):
-    """Listens for messages on CAN bus and feeds them to a Network instance."""
+    """Listens for messages on CAN bus and feeds them to a Network instance.
+
+    :param canopen.Network network:
+        The network to notify on new messages.
+    """
 
     def __init__(self, network):
         self.network = network

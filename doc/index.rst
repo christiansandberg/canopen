@@ -35,6 +35,7 @@ Easiest way to install is to use pip_::
    pdo
    sync
    emcy
+   integration
 
 
 .. _CANopen: https://en.wikipedia.org/wiki/CANopen
