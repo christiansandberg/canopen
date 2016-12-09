@@ -143,7 +143,7 @@ class Map(object):
         #: Current message data
         self.data = bytearray()
         #: Timestamp of last received message
-        self.timestamp = None
+        self.timestamp = 0
         #: Period of receive message transmission in seconds
         self.period = None
         self.transmit_thread = None
@@ -202,6 +202,7 @@ class Map(object):
         if can_id == self.cob_id:
             with self.receive_condition:
                 self.data = data
+                self.period = timestamp - self.timestamp
                 self.timestamp = timestamp
                 self.receive_condition.notify_all()
 
