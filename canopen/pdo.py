@@ -149,6 +149,7 @@ class Map(object):
         self.transmit_thread = None
         self.receive_condition = threading.Condition()
         self.stop_event = threading.Event()
+        self.is_received = False
 
     def __getitem__(self, key):
         if isinstance(key, int):
@@ -201,6 +202,7 @@ class Map(object):
     def on_message(self, can_id, data, timestamp):
         if can_id == self.cob_id:
             with self.receive_condition:
+                self.is_received = True
                 self.data = data
                 self.period = timestamp - self.timestamp
                 self.timestamp = timestamp
@@ -341,9 +343,9 @@ class Map(object):
         :rtype: float
         """
         with self.receive_condition:
-            self.timestamp = None
+            self.is_received = False
             self.receive_condition.wait(timeout)
-        return self.timestamp
+        return self.timestamp if self.is_received else None
 
     def _periodic_transmit(self):
         while not self.stop_event.is_set():
