@@ -25,6 +25,7 @@ class PdoNode(object):
             if pdo_map.cob_id == can_id:
                 with pdo_map.receive_condition:
                     pdo_map.data = data
+                    pdo_map.period = timestamp - pdo_map.timestamp
                     pdo_map.timestamp = timestamp
                     pdo_map.receive_condition.notify_all()
 
@@ -144,7 +145,7 @@ class Message(object):
         #: Current message data
         self.data = bytearray()
         #: Timestamp of last received message
-        self.timestamp = None
+        self.timestamp = 0
         #: Period of receive message transmission in seconds
         self.period = None
         self.transmit_thread = None
@@ -301,7 +302,7 @@ class Message(object):
         self.transmit_thread = None
 
     def remote_request(self):
-        """Send a remote request for the transmit PDO. 
+        """Send a remote request for the transmit PDO.
         Silently ignore if not allowed.
         """
         if self.enabled and self.rtr_allowed:
