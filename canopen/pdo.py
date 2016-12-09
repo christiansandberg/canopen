@@ -24,6 +24,7 @@ class PdoNode(object):
         for pdo_map in self.tx.values():
             if pdo_map.cob_id == can_id:
                 with pdo_map.receive_condition:
+                    pdo_map.is_received = True
                     pdo_map.data = data
                     pdo_map.period = timestamp - pdo_map.timestamp
                     pdo_map.timestamp = timestamp
@@ -151,6 +152,7 @@ class Message(object):
         self.transmit_thread = None
         self.receive_condition = threading.Condition()
         self.stop_event = threading.Event()
+        self.is_received = False
 
     def __getitem__(self, key):
         if isinstance(key, int):
@@ -316,9 +318,9 @@ class Message(object):
         :rtype: float
         """
         with self.receive_condition:
-            self.timestamp = None
+            self.is_received = False
             self.receive_condition.wait(timeout)
-        return self.timestamp
+        return self.timestamp if self.is_received else None
 
     def _periodic_transmit(self):
         while not self.stop_event.is_set():
