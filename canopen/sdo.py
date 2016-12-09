@@ -35,7 +35,7 @@ class SdoClient(collections.Mapping):
     #: Max time in seconds to wait for response from server
     RESPONSE_TIMEOUT = 0.5
 
-    #: Max number of request retries before rasing error
+    #: Max number of request retries before raising error
     MAX_RETRIES = 5
 
     def __init__(self, node_id, od):
@@ -52,8 +52,8 @@ class SdoClient(collections.Mapping):
             self.response_received.notify_all()
 
     def send_request(self, sdo_request):
-        retires_left = self.MAX_RETRIES
-        while retires_left:
+        retries_left = self.MAX_RETRIES
+        while retries_left:
             # Wait for node to respond
             with self.response_received:
                 self.response = None
@@ -61,9 +61,9 @@ class SdoClient(collections.Mapping):
                 self.response_received.wait(self.RESPONSE_TIMEOUT)
 
             if self.response is None:
-                retires_left -= 1
+                retries_left -= 1
             else:
-                retires_left = 0
+                retries_left = 0
 
         if self.response is None:
             raise SdoCommunicationError("No SDO response received")
