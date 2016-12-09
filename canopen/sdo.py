@@ -32,6 +32,12 @@ SIZE_SPECIFIED = 0x1
 class SdoClient(collections.Mapping):
     """Handles communication with an SDO server."""
 
+    #: Max time in seconds to wait for response from server
+    RESPONSE_TIMEOUT = 0.5
+
+    #: Max number of request retries before rasing error
+    MAX_RETRIES = 5
+
     def __init__(self, node_id, od):
         #: Node ID
         self.id = node_id
@@ -46,13 +52,13 @@ class SdoClient(collections.Mapping):
             self.response_received.notify_all()
 
     def send_request(self, sdo_request):
-        retires_left = 5
+        retires_left = self.MAX_RETRIES
         while retires_left:
             # Wait for node to respond
             with self.response_received:
                 self.response = None
                 self.network.send_message(0x600 + self.id, sdo_request)
-                self.response_received.wait(0.5)
+                self.response_received.wait(self.RESPONSE_TIMEOUT)
 
             if self.response is None:
                 retires_left -= 1
