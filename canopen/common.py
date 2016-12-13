@@ -18,7 +18,7 @@ class Variable(object):
 
     @property
     def data(self):
-        """Byte representation of the object as a :class:`bytearray`."""
+        """Byte representation of the object as :class:`bytes`."""
         if self.od.access_type == "wo":
             logger.warning("Variable is write only")
         return self.get_data()
@@ -53,9 +53,9 @@ class Variable(object):
         | UNICODE_STRING            | :class:`str` /             |
         |                           | ``unicode`` (Python 2)     |
         +---------------------------+----------------------------+
-        | OCTET_STRING              | :class:`bytearray`         |
+        | OCTET_STRING              | :class:`bytes`             |
         +---------------------------+----------------------------+
-        | DOMAIN                    | :class:`bytearray`         |
+        | DOMAIN                    | :class:`bytes`             |
         +---------------------------+----------------------------+
 
         Data types that this library does not handle yet must be read and

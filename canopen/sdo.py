@@ -2,6 +2,7 @@ import collections
 import struct
 import logging
 import threading
+import io
 
 from . import objectdictionary
 from . import common
@@ -89,51 +90,7 @@ class SdoClient(collections.Mapping):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        request = SDO_STRUCT.pack(REQUEST_UPLOAD, index, subindex)
-        request += b"\x00\x00\x00\x00"
-        response = self.send_request(request)
-        res_command, res_index, res_subindex = SDO_STRUCT.unpack(response[0:4])
-        res_data = response[4:]
-
-        if res_command & 0xE0 != RESPONSE_UPLOAD:
-            raise SdoCommunicationError("Unexpected response")
-
-        # Check that the message is for us
-        if res_index != index or res_subindex != subindex:
-            raise SdoCommunicationError((
-                "Node returned a value for 0x{:X}:{:d} instead, "
-                "maybe there is another SDO master communicating "
-                "on the same SDO channel?").format(res_index, res_subindex))
-
-        expedited = res_command & EXPEDITED
-        size_specified = res_command & SIZE_SPECIFIED
-
-        length = None
-
-        if expedited and size_specified:
-            # Expedited upload
-            length = 4 - ((res_command >> 2) & 0x3)
-        elif not expedited:
-            # Segmented upload
-            if size_specified:
-                length, = struct.unpack("<L", res_data)
-
-            request = bytearray(8)
-            request[0] = REQUEST_SEGMENT_UPLOAD
-            res_data = bytearray()
-            while True:
-                response = self.send_request(request)
-                if response[0] & 0xE0 != RESPONSE_SEGMENT_UPLOAD:
-                    raise SdoCommunicationError("Unexpected response")
-                last_byte = 8 - ((response[0] >> 1) & 0x7)
-                res_data.extend(response[1:last_byte])
-                if response[0] & 0x1:
-                    break
-                request[0] ^= 0x10
-
-        if length is not None and len(res_data) != length:
-            res_data = res_data[:length]
-        return res_data
+        return ReadableStream(self, index, subindex).read()
 
     def download(self, index, subindex, data):
         """May be called to manually make a write operation.
@@ -254,6 +211,116 @@ class Variable(common.Variable):
 
     def set_data(self, data):
         self.sdo_node.download(self.od.index, self.od.subindex, data)
+
+    def open(self, mode="rb", encoding="ascii", buffering=112):
+        """Open a file like object.
+
+        :param str mode:
+            ========= ==========================================================
+            Character Meaning
+            --------- ----------------------------------------------------------
+            'r'       open for reading (default)
+            'w'       open for writing
+            'b'       binary mode (default)
+            't'       text mode
+            ========= ==========================================================
+        :param str encoding:
+            The str name of the encoding used to decode or encode the file.
+            This will only be used in text mode.
+        :param int buffering:
+            An optional integer used to set the buffering policy. Pass 0 to
+            switch buffering off (only allowed in binary mode), 1 to select line
+            buffering (only usable in text mode), and an integer > 1 to indicate
+            the size in bytes of a fixed-size chunk buffer.
+
+        :returns: A file like object.
+        """
+        if "r" in mode:
+            raw_stream = ReadableStream(self.sdo_node,
+                                        self.od.index,
+                                        self.od.subindex)
+        if buffering == 0:
+            return raw_stream
+        # Line buffering is not supported by BufferedReader
+        buffer_size = buffering if buffering > 1 else io.DEFAULT_BUFFER_SIZE
+        if "r" in mode:
+            buffered_stream = io.BufferedReader(raw_stream, buffer_size=buffer_size)
+        if "b" not in mode:
+            # Text mode
+            line_buffering = buffering == 1
+            return io.TextIOWrapper(buffered_stream, encoding,
+                                    line_buffering=line_buffering)
+        return buffered_stream
+
+
+class ReadableStream(io.RawIOBase):
+    """File like object for reading from a variable."""
+
+    def __init__(self, sdo_client, index, subindex=0):
+        self._started = False
+        self._done = False
+        self.sdo_client = sdo_client
+        self.index = index
+        self.subindex = subindex
+        self.command = REQUEST_SEGMENT_UPLOAD
+
+    def init_upload(self):
+        request = SDO_STRUCT.pack(REQUEST_UPLOAD, self.index, self.subindex)
+        request += b"\x00\x00\x00\x00"
+        response = self.sdo_client.send_request(request)
+        res_command, res_index, res_subindex = SDO_STRUCT.unpack(response[0:4])
+        res_data = response[4:]
+
+        if res_command & 0xE0 != RESPONSE_UPLOAD:
+            raise SdoCommunicationError("Unexpected response")
+
+        # Check that the message is for us
+        if res_index != self.index or res_subindex != self.subindex:
+            raise SdoCommunicationError((
+                "Node returned a value for 0x{:X}:{:d} instead, "
+                "maybe there is another SDO master communicating "
+                "on the same SDO channel?").format(res_index, res_subindex))
+
+        self._started = True
+
+        if res_command & EXPEDITED:
+            # Expedited upload
+            size = 4
+            if res_command & SIZE_SPECIFIED:
+                size = 4 - ((res_command >> 2) & 0x3)
+            return res_data[:size]
+
+        return None
+
+    def read(self, size=-1):
+        if self._done:
+            return b""
+        if not self._started:
+            expedited_data = self.init_upload()
+            if expedited_data is not None:
+                self._done = True
+                return bytes(expedited_data)
+        if size is None or size < 0:
+            return self.readall()
+
+        request = bytearray(8)
+        request[0] = self.command
+        response = self.sdo_client.send_request(request)
+        if response[0] & 0xE0 != RESPONSE_SEGMENT_UPLOAD:
+            raise SdoCommunicationError("Unexpected response")
+        last_byte = 8 - ((response[0] >> 1) & 0x7)
+        if response[0] & 0x1:
+            self._done = True
+        self.command ^= 0x10
+        return bytes(response[1:last_byte])
+
+    def readinto(self, b):
+        data = self.read()
+        b[:len(data)] = data
+        return len(data)
+
+    def readable(self):
+        return True
 
 
 class SdoError(Exception):
