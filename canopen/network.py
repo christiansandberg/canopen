@@ -27,9 +27,11 @@ class Network(collections.MutableMapping):
         #: A python-can :class:`can.BusABC` instance which is set after
         #: :meth:`canopen.Network.connect` is called
         self.bus = None
+        #: A :class:`~canopen.network.NodeScanner` for detecting nodes
+        self.scanner = NodeScanner(self)
         #: List of :class:`can.Listener` objects.
         #: Includes at least MessageListener.
-        self.listeners = [MessageListener(self)]
+        self.listeners = [MessageListener(self), self.scanner]
         self.notifier = None
         self.nodes = {}
         self.subscribers = {}
@@ -188,3 +190,47 @@ class MessageListener(Listener):
             return
 
         self.network.notify(msg.arbitration_id, msg.data, msg.timestamp)
+
+
+class NodeScanner(Listener):
+    """Observes which nodes are present on the bus.
+
+    Listens for the following messages:
+     - Heartbeat (0x700)
+     - SDO response (0x580)
+     - TxPDO (0x180, 0x280, 0x380, 0x480)
+     - EMCY (0x80)
+
+    :param canopen.Network network:
+        The network to use when doing active searching.
+    """
+
+    #: Activate or deactivate scanning
+    active = True
+
+    SERVICES = (0x700, 0x580, 0x180, 0x280, 0x380, 0x480, 0x80)
+
+    def __init__(self, network=None):
+        self.network = network
+        #: A :class:`list` of nodes discovered
+        self.nodes = []
+
+    def on_message_received(self, msg):
+        if not self.active and (msg.is_error_frame or msg.is_remote_frame or
+                                msg.is_extended_id):
+            return
+        service = msg.arbitration_id & 0x780
+        node_id = msg.arbitration_id & 0x7F
+        if node_id not in self.nodes and node_id != 0 and service in self.SERVICES:
+            self.nodes.append(node_id)
+
+    def reset(self):
+        """Clear list of found nodes."""
+        self.nodes = []
+
+    def search(self, limit=127):
+        """Search for nodes by sending SDO requests to all node IDs."""
+        assert self.network is not None, "A Network is required to do active scanning"
+        sdo_req = b"\x40\x00\x10\x00\x00\x00\x00\x00"
+        for node_id in range(1, limit + 1):
+            self.network.send_message(0x600 + node_id, sdo_req)

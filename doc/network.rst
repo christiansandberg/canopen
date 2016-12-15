@@ -114,6 +114,12 @@ API
 
 
 .. autoclass:: canopen.network.MessageListener
+   :show-inheritance:
+   :members:
+
+
+.. autoclass:: canopen.network.NodeScanner
+   :show-inheritance:
    :members:
 
 
