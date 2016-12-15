@@ -15,6 +15,7 @@ except ImportError:
 from .node import Node
 from .sync import SyncProducer
 from .nmt import NmtMaster
+from .objectdictionary.eds import import_from_node
 
 
 logger = logging.getLogger(__name__)
@@ -108,6 +109,9 @@ class Network(collections.MutableMapping):
         :rtype: canopen.Node
         """
         if isinstance(node, int):
+            if object_dictionary is None:
+                logger.info("Trying to read EDS from node %d", node)
+                object_dictionary = import_from_node(node, self)
             node = Node(node, object_dictionary)
         self.nodes[node.id] = node
         node.associate_network(self)
