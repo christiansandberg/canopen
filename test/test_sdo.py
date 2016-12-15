@@ -1,7 +1,6 @@
 import os
 import unittest
 import canopen
-import can
 
 
 EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
@@ -21,12 +20,13 @@ class TestSDO(unittest.TestCase):
         """
         self.assertSequenceEqual(data, self.data.pop(0))
         self.assertEqual(can_id, 0x602)
-        self.network.notify(0x582, bytearray(self.data.pop(0)), 0.0)
+        self.network.notify(0x582, self.data.pop(0), 0.0)
 
     def setUp(self):
         network = canopen.Network()
         network.send_message = self._send_message
-        network.add_node(2, EDS_PATH)
+        node = network.add_node(2, EDS_PATH)
+        node.sdo.RESPONSE_TIMEOUT = 0.01
         self.network = network
 
     def test_expedited_upload(self):
@@ -36,6 +36,14 @@ class TestSDO(unittest.TestCase):
         ]
         vendor_id = self.network[2].sdo[0x1018][1].raw
         self.assertEqual(vendor_id, 4)
+
+        # UNSIGNED8 without padded data part (see issue #5)
+        self.data = [
+            b'\x40\x00\x14\x02\x00\x00\x00\x00',
+            b'\x4f\x00\x14\x02\xfe'
+        ]
+        trans_type = self.network[2].sdo[0x1400]['Transmission type RPDO 1'].raw
+        self.assertEqual(trans_type, 254)
 
     def test_expedited_download(self):
         self.data = [
