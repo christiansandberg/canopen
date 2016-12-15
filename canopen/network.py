@@ -216,8 +216,8 @@ class NodeScanner(Listener):
         self.nodes = []
 
     def on_message_received(self, msg):
-        if not self.active and (msg.is_error_frame or msg.is_remote_frame or
-                                msg.is_extended_id):
+        if (not self.active or msg.is_error_frame or msg.is_remote_frame or
+                msg.is_extended_id):
             return
         service = msg.arbitration_id & 0x780
         node_id = msg.arbitration_id & 0x7F
