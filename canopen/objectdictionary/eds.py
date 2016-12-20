@@ -1,9 +1,11 @@
 import re
+import io
 try:
     from configparser import ConfigParser
 except ImportError:
     from ConfigParser import RawConfigParser as ConfigParser
 from canopen import objectdictionary
+from canopen.sdo import SdoClient, ReadableStream
 
 
 VAR = 7
@@ -12,9 +14,37 @@ RECORD = 9
 
 
 def import_eds(filename, node_id):
-    od = objectdictionary.ObjectDictionary()
     eds = ConfigParser()
     eds.read(filename)
+    return _convert_eds(eds, node_id)
+
+
+def import_from_node(node_id, network):
+    # Create temporary SDO client
+    sdo_client = SdoClient(node_id, None)
+    sdo_client.network = network
+    # Subscribe to SDO responses
+    network.subscribe(0x580 + node_id, sdo_client.on_response)
+    # Create file like object for Store EDS variable
+    try:
+        eds_fp = ReadableStream(sdo_client, 0x1021)
+        eds_fp = io.BufferedReader(eds_fp)
+        eds_fp = io.TextIOWrapper(eds_fp, "ascii")
+        # Create config parser
+        eds = ConfigParser()
+        eds.readfp(eds_fp)
+        od = _convert_eds(eds, node_id)
+    except Exception as e:
+        logger.error("No object dictionary could be loaded for node %d: %s",
+                     node_id, e)
+        od = objectdictionary.ObjectDictionary()
+    finally:
+        network.unsubscribe(0x580 + node_id, sdo_client.on_response)
+    return od
+
+
+def _convert_eds(eds, node_id):
+    od = objectdictionary.ObjectDictionary()
 
     if eds.has_section("DeviceComissioning"):
         od.bitrate = int(eds.get("DeviceComissioning", "Baudrate")) * 1000

@@ -175,8 +175,15 @@ API
        actual length of the array.
 
 
+.. autoclass:: canopen.sdo.ReadableStream
+    :show-inheritance:
+    :members: read, readinto, readall, readline, readlines
+
+
 .. autoexception:: canopen.SdoAbortedError
+    :show-inheritance:
     :members:
 
 .. autoexception:: canopen.SdoCommunicationError
+    :show-inheritance:
     :members:
