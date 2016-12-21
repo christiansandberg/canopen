@@ -67,12 +67,6 @@ class NmtMaster(object):
             self._state_received = new_state
             self.state_update.notify_all()
 
-    def on_nmt_command(self, can_id, data, timestamp):
-        code, node_id = struct.unpack("BB", data)
-        if (node_id == self.id or node_id == 0) and code in COMMAND_TO_STATE:
-            self._state = COMMAND_TO_STATE[code]
-            logger.info("Changing NMT state to %s", self.state)
-
     def send_command(self, code):
         """Send an NMT command code to the node.
 

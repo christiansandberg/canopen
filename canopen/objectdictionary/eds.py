@@ -1,11 +1,15 @@
 import re
 import io
+import logging
 try:
     from configparser import ConfigParser
 except ImportError:
     from ConfigParser import RawConfigParser as ConfigParser
 from canopen import objectdictionary
 from canopen.sdo import SdoClient, ReadableStream
+
+
+logger = logging.getLogger(__name__)
 
 
 VAR = 7
@@ -39,7 +43,7 @@ def import_from_node(node_id, network):
                      node_id, e)
         od = objectdictionary.ObjectDictionary()
     finally:
-        network.unsubscribe(0x580 + node_id, sdo_client.on_response)
+        network.unsubscribe(0x580 + node_id)
     return od
 
 
