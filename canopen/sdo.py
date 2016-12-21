@@ -344,7 +344,7 @@ class ReadableStream(io.RawIOBase):
         Read bytes into a pre-allocated, writable bytes-like object b,
         and return the number of bytes read.
         """
-        data = self.read()
+        data = self.read(7)
         b[:len(data)] = data
         return len(data)
 
