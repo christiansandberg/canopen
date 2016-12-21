@@ -2,6 +2,8 @@ CANopen for Python
 ==================
 
 A Python implementation of the CANopen_ standard.
+The aim of the project is to support the most common parts of the DS-301
+standard for a master node wrapped in a Pythonic interface.
 
 
 Features
@@ -110,9 +112,8 @@ TODO
 There are a lot of things that still needs implementing and fixing.
 Pull requests are most welcome!
 
-* Documentation (docs + API)
-* Unit tests
-* Period transmit using BCM
+* More unit test coverage
+* Period transmits using python-can cyclic API
 * SDO block transfer
 * TIME
 * XDD support
