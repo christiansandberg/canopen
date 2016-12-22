@@ -93,13 +93,15 @@ class SdoClient(collections.Mapping):
         """
         return ReadableStream(self, index, subindex).read()
 
-    def download(self, index, subindex, data):
+    def download(self, index, subindex, data_type, data):
         """May be called to manually make a write operation.
 
         :param int index:
             Index of object to write.
         :param int subindex:
             Sub-index of object to write.
+        :param int data_type
+            Data type of object to write
         :param bytes data:
             Data to be written.
 
@@ -111,7 +113,7 @@ class SdoClient(collections.Mapping):
         length = len(data)
         command = REQUEST_DOWNLOAD | SIZE_SPECIFIED
 
-        if length <= 4:
+        if data_type != objectdictionary.DOMAIN and length <= 4:
             # Expedited download
             command |= EXPEDITED
             command |= (4 - length) << 2
@@ -217,7 +219,7 @@ class Variable(common.Variable):
         return self.sdo_node.upload(self.od.index, self.od.subindex)
 
     def set_data(self, data):
-        self.sdo_node.download(self.od.index, self.od.subindex, data)
+        self.sdo_node.download(self.od.index, self.od.subindex, self.od.data_type, data)
 
     def open(self, mode="rb", encoding="ascii", buffering=112):
         """Open the data stream as a file like object.
