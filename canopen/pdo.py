@@ -146,6 +146,7 @@ class Map(object):
         self.timestamp = 0
         #: Period of receive message transmission in seconds
         self.period = None
+        self.callbacks = []
         self.transmit_thread = None
         self.receive_condition = threading.Condition()
         self.stop_event = threading.Event()
@@ -207,6 +208,17 @@ class Map(object):
                 self.period = timestamp - self.timestamp
                 self.timestamp = timestamp
                 self.receive_condition.notify_all()
+                for callback in self.callbacks:
+                    callback(self)
+
+    def add_callback(self, callback):
+        """Add a callback which will be called on receive or transmit.
+
+        :param callback:
+            The function to call which must take one argument of a
+            :class:`~canopen.pdo.Map`.
+        """
+        self.callbacks.append(callback)
 
     def read(self):
         """Read PDO configuration for this map using SDO."""
@@ -302,6 +314,8 @@ class Map(object):
 
     def transmit(self):
         """Transmit the message once."""
+        for callback in self.callbacks:
+            callback(self)
         self.pdo_node.network.send_message(self.cob_id, self.data)
 
     def start(self, period=None):

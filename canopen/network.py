@@ -24,10 +24,14 @@ logger = logging.getLogger(__name__)
 class Network(collections.MutableMapping):
     """Representation of one CAN bus containing one or more nodes."""
 
-    def __init__(self):
+    def __init__(self, bus=None):
+        """
+        :param can.BusABC bus:
+            A python-can bus instance to re-use.
+        """
         #: A python-can :class:`can.BusABC` instance which is set after
         #: :meth:`canopen.Network.connect` is called
-        self.bus = None
+        self.bus = bus
         #: A :class:`~canopen.network.NodeScanner` for detecting nodes
         self.scanner = NodeScanner(self)
         #: List of :class:`can.Listener` objects.
@@ -82,6 +86,9 @@ class Network(collections.MutableMapping):
                 if node.object_dictionary.bitrate:
                     kwargs["bitrate"] = node.object_dictionary.bitrate
                     break
+        # Try to filter out only 11-bit IDs
+        kwargs.setdefault("can_filters",
+                          [{"can_id": 0, "can_mask": 0x1FFFF800}])
         self.bus = can.interface.Bus(*args, **kwargs)
         logger.info("Connected to '%s'", self.bus.channel_info)
         self.notifier = can.Notifier(self.bus, self.listeners, 1)
