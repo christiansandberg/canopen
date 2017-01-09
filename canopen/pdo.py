@@ -213,11 +213,14 @@ class Map(object):
         """
         direction = "Tx" if self.cob_id & 0x80 else "Rx"
         map_id = self.cob_id >> 8
+        if direction == "Rx":
+            map_id -= 1
         node_id = self.cob_id & 0x7F
         return "%sPDO%d_node%d" % (direction, map_id, node_id)
 
     def on_message(self, can_id, data, timestamp):
-        if can_id == self.cob_id:
+        is_transmitting = self.transmit_thread and self.transmit_thread.is_alive()
+        if can_id == self.cob_id and not is_transmitting:
             with self.receive_condition:
                 self.is_received = True
                 self.data = data
@@ -344,6 +347,7 @@ class Map(object):
 
         if not self.period:
             raise ValueError("A valid transmission period has not been given")
+        logger.info("Starting %s with a period of %s seconds", self.name, self.period)
 
         if not self.transmit_thread or not self.transmit_thread.is_alive():
             self.stop_event.clear()
