@@ -66,10 +66,10 @@ class SdoClient(collections.Mapping):
             else:
                 retries_left = 0
 
-        res_command, = struct.unpack("B", self.response[0:1])
         if self.response is None:
             raise SdoCommunicationError("No SDO response received")
-        elif res_command == RESPONSE_ABORTED:
+        res_command, = struct.unpack("B", self.response[0:1])
+        if res_command == RESPONSE_ABORTED:
             abort_code, = struct.unpack("<L", self.response[4:8])
             raise SdoAbortedError(abort_code)
         else:
@@ -93,7 +93,7 @@ class SdoClient(collections.Mapping):
         """
         return ReadableStream(self, index, subindex).read()
 
-    def download(self, index, subindex, data, data_type = None):
+    def download(self, index, subindex, data, force_segment=False):
         """May be called to manually make a write operation.
 
         :param int index:
@@ -102,8 +102,8 @@ class SdoClient(collections.Mapping):
             Sub-index of object to write.
         :param bytes data:
             Data to be written.
-        :param int data_type
-            Data type of object to write
+        :param bool force_segment
+            Force use of segmented transfer regardless of data size.
 
         :raises canopen.SdoCommunicationError:
             On unexpected response or timeout.
@@ -113,7 +113,7 @@ class SdoClient(collections.Mapping):
         length = len(data)
         command = REQUEST_DOWNLOAD | SIZE_SPECIFIED
 
-        if (data_type is None or data_type != objectdictionary.DOMAIN) and length <= 4:
+        if not force_segment and length <= 4:
             # Expedited download
             command |= EXPEDITED
             command |= (4 - length) << 2
@@ -219,7 +219,8 @@ class Variable(common.Variable):
         return self.sdo_node.upload(self.od.index, self.od.subindex)
 
     def set_data(self, data):
-        self.sdo_node.download(self.od.index, self.od.subindex, data, self.od.data_type)
+        force_segment = self.od.data_type == objectdictionary.DOMAIN
+        self.sdo_node.download(self.od.index, self.od.subindex, data, force_segment)
 
     def open(self, mode="rb", encoding="ascii", buffering=112):
         """Open the data stream as a file like object.
