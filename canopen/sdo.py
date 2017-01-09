@@ -102,7 +102,7 @@ class SdoClient(collections.Mapping):
             Sub-index of object to write.
         :param bytes data:
             Data to be written.
-        :param bool force_segment
+        :param bool force_segment:
             Force use of segmented transfer regardless of data size.
 
         :raises canopen.SdoCommunicationError:
