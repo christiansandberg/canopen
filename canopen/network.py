@@ -98,6 +98,8 @@ class Network(collections.MutableMapping):
 
         Must be overridden in a subclass if a custom interface is used.
         """
+        for node in self.nodes.values():
+            node.pdo.stop()
         self.notifier.stop()
         self.bus.shutdown()
         self.bus = None

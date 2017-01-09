@@ -111,6 +111,10 @@ class PdoNode(object):
         formats.dumpp({"": db}, filename)
         return db
 
+    def stop(self):
+        """Stop transmission of all Rx PDOs."""
+        for pdo_map in self.rx:
+            pdo_map.stop()
 
 class Maps(collections.Mapping):
     """A collection of transmit or receive maps."""
@@ -344,7 +348,7 @@ class Map(object):
         if not self.transmit_thread or not self.transmit_thread.is_alive():
             self.stop_event.clear()
             self.transmit_thread = threading.Thread(
-                name="Thread for " + self.name,
+                name=self.name,
                 target=self._periodic_transmit)
             self.transmit_thread.daemon = True
             self.transmit_thread.start()
