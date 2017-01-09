@@ -1,3 +1,4 @@
+import sys
 import time
 import threading
 import math
@@ -12,6 +13,17 @@ from . import common
 
 PDO_NOT_VALID = 1 << 31
 RTR_NOT_ALLOWED = 1 << 30
+
+
+if hasattr(time, "perf_counter"):
+    # Choose time.perf_counter if available
+    timer = time.perf_counter
+elif sys.platform == "win32":
+    # On Windows, the best timer is time.clock
+    timer = time.clock
+else:
+    # On most other platforms the best timer is time.time
+    timer = time.time
 
 
 logger = logging.getLogger(__name__)
@@ -363,13 +375,14 @@ class Map(object):
 
     def _periodic_transmit(self):
         while not self.stop_event.is_set():
-            start = time.time()
+            start = timer()
             try:
                 self.transmit()
             except CanError as error:
                 print(str(error))
-            time_left = self.period - (time.time() - start)
-            time.sleep(max(time_left, 0.0))
+            time_left = self.period - (timer() - start)
+            if time_left > 0:
+                time.sleep(time_left)
 
 
 class Variable(common.Variable):
