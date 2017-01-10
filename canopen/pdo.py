@@ -113,7 +113,7 @@ class PdoNode(object):
 
     def stop(self):
         """Stop transmission of all Rx PDOs."""
-        for pdo_map in self.rx:
+        for pdo_map in self.rx.values():
             pdo_map.stop()
 
 class Maps(collections.Mapping):
