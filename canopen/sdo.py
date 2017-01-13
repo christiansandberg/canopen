@@ -34,10 +34,10 @@ class SdoClient(collections.Mapping):
     """Handles communication with an SDO server."""
 
     #: Max time in seconds to wait for response from server
-    RESPONSE_TIMEOUT = 0.5
+    RESPONSE_TIMEOUT = 0.3
 
     #: Max number of request retries before raising error
-    MAX_RETRIES = 5
+    MAX_RETRIES = 3
 
     def __init__(self, node_id, od):
         #: Node ID
@@ -222,6 +222,45 @@ class Variable(common.Variable):
         force_segment = self.od.data_type == objectdictionary.DOMAIN
         self.sdo_node.download(self.od.index, self.od.subindex, data, force_segment)
 
+    def read(self, fmt="raw"):
+        """Alternative way of reading using a function instead of attributes.
+
+        May be useful for asynchronous reading.
+
+        :param str fmt:
+            How to return the value
+             - 'raw'
+             - 'phys'
+             - 'desc'
+
+        :returns:
+            The value of the variable.
+        """
+        if fmt == "raw":
+            return self.raw
+        elif fmt == "phys":
+            return self.phys
+        elif fmt == "desc":
+            return self.desc
+
+    def write(self, value, fmt="raw"):
+        """Alternative way of writing using a function instead of attributes.
+
+        May be useful for asynchronous writing.
+
+        :param str fmt:
+            How to write the value
+             - 'raw'
+             - 'phys'
+             - 'desc'
+        """
+        if fmt == "raw":
+            self.raw = value
+        elif fmt == "phys":
+            self.phys = value
+        elif fmt == "desc":
+            self.desc = value
+
     def open(self, mode="rb", encoding="ascii", buffering=112):
         """Open the data stream as a file like object.
 
@@ -286,11 +325,12 @@ class ReadableStream(io.RawIOBase):
         self.sdo_client = sdo_client
         self.command = REQUEST_SEGMENT_UPLOAD
 
+        logger.debug("Reading 0x%X:%d from node %d", index, subindex, sdo_client.id)
         request = SDO_STRUCT.pack(REQUEST_UPLOAD, index, subindex)
         request += b"\x00\x00\x00\x00"
         response = sdo_client.send_request(request)
         res_command, res_index, res_subindex = SDO_STRUCT.unpack(response[0:4])
-        res_data = response[4:]
+        res_data = response[4:8]
 
         if res_command & 0xE0 != RESPONSE_UPLOAD:
             raise SdoCommunicationError("Unexpected response 0x%02X" % res_command)
@@ -312,6 +352,9 @@ class ReadableStream(io.RawIOBase):
             self.exp_data = res_data[:self.size]
         elif res_command & SIZE_SPECIFIED:
             self.size, = struct.unpack("<L", res_data)
+            logger.debug("Using segmented transfer of %d bytes", self.size)
+        else:
+            logger.debug("Using segmented transfer")
 
     def read(self, size=-1):
         """Read one segment which may be up to 7 bytes.
