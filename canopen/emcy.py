@@ -17,6 +17,7 @@ class EmcyConsumer(object):
         self.log = []
         #: Only active EMCYs. Will be cleared on Error Reset
         self.active = []
+        self.callbacks = []
         self.emcy_received = threading.Condition()
 
     def on_emcy(self, can_id, data, timestamp):
@@ -24,6 +25,8 @@ class EmcyConsumer(object):
         if code & 0xFF == 0:
             # Error reset
             self.active = []
+            for callback in self.callbacks:
+                callback(None)
         else:
             entry = EmcyError(code, register, data, timestamp)
             #print("EMCY received for node %d: %s" % (can_id & 0x7F, entry))
@@ -31,6 +34,18 @@ class EmcyConsumer(object):
                 self.log.append(entry)
                 self.active.append(entry)
                 self.emcy_received.notify_all()
+            for callback in self.callbacks:
+                callback(entry)
+
+    def add_callback(self, callback):
+        """Get notified on EMCY messages from this node.
+
+        :param callback:
+            Callable which must take one argument of an
+            :class:`~canopen.emcy.EmcyError` instance or ``None`` if an
+            error reset is received.
+        """
+        self.callbacks.append(callback)
 
     def reset(self):
         """Reset log and active lists."""

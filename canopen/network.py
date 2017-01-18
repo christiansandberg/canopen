@@ -203,7 +203,11 @@ class MessageListener(Listener):
         if msg.is_error_frame or msg.is_remote_frame:
             return
 
-        self.network.notify(msg.arbitration_id, msg.data, msg.timestamp)
+        try:
+            self.network.notify(msg.arbitration_id, msg.data, msg.timestamp)
+        except Exception as e:
+            # Exceptions in any callbaks should not affect CAN processing
+            logger.error(str(e))
 
 
 class NodeScanner(Listener):
