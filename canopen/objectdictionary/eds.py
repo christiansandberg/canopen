@@ -101,6 +101,13 @@ def build_variable(eds, section, index, subindex=0):
     var = objectdictionary.Variable(name, index, subindex)
     var.data_type = int(eds.get(section, "DataType"), 0)
     var.access_type = eds.get(section, "AccessType").lower()
+    if var.data_type > 0x1B:
+        # The object dictionary editor from CANFestival creates an optional object if min max values are used
+        # This optional object is then placed in the eds under the section [A0] (start point, iterates for more)
+        # The eds.get function gives us 0x00A0 now convert to String without hex representation and upper case
+        # The sub2 part is then the section where the type parameter stands
+        var.data_type = int(eds.get("%Xsub1" % var.data_type, "DataType"), 0)
+
     if eds.has_option(section, "LowLimit"):
         try:
             var.min = int(eds.get(section, "LowLimit"), 0)
