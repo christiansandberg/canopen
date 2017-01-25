@@ -30,22 +30,31 @@ NUMBER_TYPES = INTEGER_TYPES + FLOAT_TYPES
 DATA_TYPES = (VISIBLE_STRING, OCTET_STRING, UNICODE_STRING, DOMAIN)
 
 
-def import_od(filename, node_id=None):
+def import_od(source, node_id=None):
     """Parse an EDS, DCF, or EPF file.
 
-    :param str filename:
-        Path to object dictionary file.
+    :param source:
+        Path to object dictionary file or a file like object or an EPF XML tree.
 
     :return:
         A :class:`canopen.ObjectDictionary` object.
     """
+    if hasattr(source, "read"):
+        # File like object
+        filename = source.name
+    if hasattr(source, "tag"):
+        # XML tree, probably from an EPF file
+        filename = "od.epf"
+    else:
+        # Path to file
+        filename = source
     suffix = filename[filename.rfind("."):].lower()
     if suffix in (".eds", ".dcf"):
         from . import eds
-        return eds.import_eds(filename, node_id)
+        return eds.import_eds(source, node_id)
     elif suffix == ".epf":
         from . import epf
-        return epf.import_epf(filename)
+        return epf.import_epf(source)
     else:
         raise NotImplementedError("No support for this format")
 
@@ -225,6 +234,7 @@ class Variable(object):
         self.name = name
         #: Dictionary of value descriptions
         self.value_descriptions = {}
+        #: Dictionary of bitfield definitions
         self.bit_definitions = {}
 
     def __eq__(self, other):

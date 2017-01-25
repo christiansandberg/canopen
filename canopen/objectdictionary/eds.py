@@ -17,39 +17,13 @@ ARR = 8
 RECORD = 9
 
 
-def import_eds(filename, node_id):
+def import_eds(source, node_id):
     eds = ConfigParser()
-    eds.read(filename)
-    return _convert_eds(eds, node_id)
-
-
-def import_from_node(node_id, network):
-    # Create temporary SDO client
-    sdo_client = SdoClient(node_id, None)
-    sdo_client.network = network
-    # Subscribe to SDO responses
-    network.subscribe(0x580 + node_id, sdo_client.on_response)
-    # Create file like object for Store EDS variable
-    try:
-        eds_fp = ReadableStream(sdo_client, 0x1021)
-        eds_fp = io.BufferedReader(eds_fp)
-        eds_fp = io.TextIOWrapper(eds_fp, "ascii")
-        # Create config parser
-        eds = ConfigParser()
-        eds.readfp(eds_fp)
-        od = _convert_eds(eds, node_id)
-    except Exception as e:
-        logger.error("No object dictionary could be loaded for node %d: %s",
-                     node_id, e)
-        od = objectdictionary.ObjectDictionary()
-    finally:
-        network.unsubscribe(0x580 + node_id)
-    return od
-
-
-def _convert_eds(eds, node_id):
+    if hasattr(source, "read"):
+        eds.readfp(source)
+    else:
+        eds.read(source)
     od = objectdictionary.ObjectDictionary()
-
     if eds.has_section("DeviceComissioning"):
         od.bitrate = int(eds.get("DeviceComissioning", "Baudrate")) * 1000
         od.node_id = int(eds.get("DeviceComissioning", "NodeID"))
@@ -93,6 +67,27 @@ def _convert_eds(eds, node_id):
                 var = build_variable(eds, section, index, subindex)
                 entry.add_member(var)
 
+    return od
+
+
+def import_from_node(node_id, network):
+    # Create temporary SDO client
+    sdo_client = SdoClient(node_id, None)
+    sdo_client.network = network
+    # Subscribe to SDO responses
+    network.subscribe(0x580 + node_id, sdo_client.on_response)
+    # Create file like object for Store EDS variable
+    try:
+        eds_fp = ReadableStream(sdo_client, 0x1021)
+        eds_fp = io.BufferedReader(eds_fp)
+        eds_fp = io.TextIOWrapper(eds_fp, "ascii")
+        od = import_eds(eds_fp, node_id)
+    except Exception as e:
+        logger.error("No object dictionary could be loaded for node %d: %s",
+                     node_id, e)
+        od = objectdictionary.ObjectDictionary()
+    finally:
+        network.unsubscribe(0x580 + node_id)
     return od
 
 

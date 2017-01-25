@@ -11,7 +11,8 @@ class Node(object):
     :param int node_id:
         Node ID (set to None or 0 if specified by object dictionary)
     :param object_dictionary:
-        Object dictionary as either a path to a file or an object.
+        Object dictionary as either a path to a file, an ``ObjectDictionary``
+        or a file like object.
     :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary`
     """
 
