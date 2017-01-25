@@ -1,4 +1,5 @@
 import logging
+import collections
 
 
 logger = logging.getLogger(__name__)
@@ -8,7 +9,6 @@ class Variable(object):
 
     def __init__(self, od):
         self.od = od
-        self._bits = Bits(self)
 
     def get_data(self):
         raise NotImplementedError("Variable is not readable")
@@ -108,13 +108,14 @@ class Variable(object):
     @property
     def bits(self):
         """Access bits using integers, slices, or bit descriptions."""
-        return self._bits
+        return Bits(self)
 
 
-class Bits(object):
+class Bits(collections.Mapping):
 
     def __init__(self, variable):
         self.variable = variable
+        self.read()
 
     def _get_bits(self, key):
         if isinstance(key, slice):
@@ -126,14 +127,21 @@ class Bits(object):
         return bits
 
     def __getitem__(self, key):
-        return self.variable.od.decode_bits(self.variable.raw,
-                                            self._get_bits(key))
+        return self.variable.od.decode_bits(self.raw, self._get_bits(key))
 
     def __setitem__(self, key, value):
-        prev_value = self.variable.raw
-        new_value = self.variable.od.encode_bits(
-            prev_value, self._get_bits(key), value)
-        if new_value != prev_value:
-            self.variable.raw = new_value
-        else:
-            logger.info("Variable does not need updating")
+        self.raw = self.variable.od.encode_bits(
+            self.raw, self._get_bits(key), value)
+        self.write()
+
+    def __iter__(self):
+        return iter(self.variable.od.bit_definitions)
+
+    def __len__(self):
+        return len(self.variable.od.bit_definitions)
+
+    def read(self):
+        self.raw = self.variable.raw
+
+    def write(self):
+        self.variable.raw = self.raw
