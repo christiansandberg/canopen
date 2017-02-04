@@ -14,6 +14,7 @@ except ImportError:
 
 from .node import Node
 from .sync import SyncProducer
+from .time import TimeProducer
 from .nmt import NmtMaster
 from .objectdictionary.eds import import_from_node
 
@@ -42,6 +43,7 @@ class Network(collections.MutableMapping):
         self.subscribers = {}
         self.send_lock = threading.Lock()
         self.sync = SyncProducer(self)
+        self.time = TimeProducer(self)
         self.nmt = NmtMaster(0)
         self.nmt.network = self
 
