@@ -57,7 +57,7 @@ API
 
    .. py:attribute:: time
 
-      The :class:`canopen.time.TimeProducer` for this network.
+      The :class:`canopen.timestamp.TimeProducer` for this network.
 
    .. describe:: network[node_id]
 

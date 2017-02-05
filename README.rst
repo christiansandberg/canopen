@@ -14,6 +14,7 @@ Features
 * PDO producer/consumer
 * SYNC producer
 * EMCY consumer
+* TIME producer
 
 
 Installation

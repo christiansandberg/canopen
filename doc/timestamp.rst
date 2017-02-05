@@ -9,5 +9,5 @@ length 48 (6 bytes).
 API
 ---
 
-.. autoclass:: canopen.time.TimeProducer
+.. autoclass:: canopen.timestamp.TimeProducer
     :members:

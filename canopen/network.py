@@ -14,7 +14,7 @@ except ImportError:
 
 from .node import Node
 from .sync import SyncProducer
-from .time import TimeProducer
+from .timestamp import TimeProducer
 from .nmt import NmtMaster
 from .objectdictionary.eds import import_from_node
 

@@ -7,7 +7,7 @@ class TestTime(unittest.TestCase):
     def test_time_producer(self):
         network = canopen.Network()
         network.connect(bustype="virtual")
-        producer = canopen.time.TimeProducer(network)
+        producer = canopen.timestamp.TimeProducer(network)
         producer.transmit(1486236238)
         msg = network.bus.recv(1)
         self.assertEqual(msg.arbitration_id, 0x100)
