@@ -89,6 +89,9 @@ def build_variable(par_tree):
     unit = par_tree.get("Unit")
     if unit and unit != "-":
         par.unit = unit
+    description = par_tree.find("Description")
+    if description is not None:
+        par.description = description.text
     if data_type in DATA_TYPES:
         par.data_type = DATA_TYPES[data_type]
     else:
@@ -100,6 +103,10 @@ def build_variable(par_tree):
         pass
     try:
         par.max = int(par_tree.get("MaximumValue"))
+    except (ValueError, TypeError):
+        pass
+    try:
+        par.default = int(par_tree.get("DefaultValue"))
     except (ValueError, TypeError):
         pass
 

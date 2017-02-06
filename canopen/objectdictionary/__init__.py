@@ -214,12 +214,16 @@ class Variable(object):
     factor = 1
     #: Minimum allowed value
     min = None
-     #: Maximum allowed value
+    #: Maximum allowed value
     max = None
+    #: Default value at start-up
+    default = None
     #: Data type according to the standard as an :class:`int`
     data_type = None
     #: Access type, should be "rw", "ro", "wo", or "const"
     access_type = "rw"
+    #: Description of variable
+    description = ""
 
     def __init__(self, name, index, subindex=0):
         #: The :class:`canopen.ObjectDictionary`,

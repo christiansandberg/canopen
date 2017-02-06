@@ -113,4 +113,9 @@ def build_variable(eds, section, index, subindex=0):
             var.max = int(eds.get(section, "HighLimit"), 0)
         except ValueError:
             pass
+    if eds.has_option(section, "DefaultValue"):
+        try:
+            var.default = int(eds.get(section, "DefaultValue"), 0)
+        except ValueError:
+            pass
     return var
