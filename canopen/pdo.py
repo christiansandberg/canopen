@@ -121,13 +121,12 @@ class Maps(collections.Mapping):
 
     def __init__(self, com_offset, map_offset, pdo_node):
         self.maps = {}
-        map_no = 0
-        while com_offset + map_no in pdo_node.sdo_client:
-            self.maps[map_no + 1] = Map(
-                pdo_node,
-                pdo_node.sdo_client[com_offset + map_no],
-                pdo_node.sdo_client[map_offset + map_no])
-            map_no += 1
+        for map_no in range(32):
+            if com_offset + map_no in pdo_node.sdo_client:
+                self.maps[map_no + 1] = Map(
+                    pdo_node,
+                    pdo_node.sdo_client[com_offset + map_no],
+                    pdo_node.sdo_client[map_offset + map_no])
 
     def __getitem__(self, key):
         return self.maps[key]
