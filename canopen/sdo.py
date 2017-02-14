@@ -34,7 +34,7 @@ class SdoClient(collections.Mapping):
     """Handles communication with an SDO server."""
 
     #: Max time in seconds to wait for response from server
-    RESPONSE_TIMEOUT = 0.3
+    RESPONSE_TIMEOUT = 0.1
 
     #: Max number of request retries before raising error
     MAX_RETRIES = 3
@@ -49,7 +49,7 @@ class SdoClient(collections.Mapping):
 
     def on_response(self, can_id, data, timestamp):
         with self.response_received:
-            self.response = data
+            self.response = bytes(data)
             self.response_received.notify_all()
 
     def send_request(self, sdo_request):
@@ -64,10 +64,12 @@ class SdoClient(collections.Mapping):
             if self.response is None:
                 retries_left -= 1
             else:
-                retries_left = 0
+                break
 
         if self.response is None:
             raise SdoCommunicationError("No SDO response received")
+        if retries_left != self.MAX_RETRIES:
+            logger.warning("There were some issues while communicating with the node")
         res_command, = struct.unpack("B", self.response[0:1])
         if res_command == RESPONSE_ABORTED:
             abort_code, = struct.unpack("<L", self.response[4:8])
@@ -369,7 +371,7 @@ class ReadableStream(io.RawIOBase):
             return b""
         if self.exp_data is not None:
             self._done = True
-            return bytes(self.exp_data)
+            return self.exp_data
         if size is None or size < 0:
             return self.readall()
 
@@ -383,7 +385,7 @@ class ReadableStream(io.RawIOBase):
         if res_command & 0x1:
             self._done = True
         self.command ^= 0x10
-        return bytes(response[1:last_byte])
+        return response[1:last_byte]
 
     def readinto(self, b):
         """
