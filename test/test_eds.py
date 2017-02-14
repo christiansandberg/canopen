@@ -21,11 +21,13 @@ class TestEDS(unittest.TestCase):
 
     def test_variable(self):
         var = self.od['Producer heartbeat time']
+        self.assertIsInstance(var, canopen.objectdictionary.Variable)
         self.assertEqual(var.index, 0x1017)
         self.assertEqual(var.subindex, 0)
         self.assertEqual(var.name, 'Producer heartbeat time')
         self.assertEqual(var.data_type, canopen.objectdictionary.UNSIGNED16)
         self.assertEqual(var.access_type, 'rw')
+        self.assertEqual(var.default, 0)
 
     def test_record(self):
         record = self.od['Identity object']
@@ -34,6 +36,7 @@ class TestEDS(unittest.TestCase):
         self.assertEqual(record.index, 0x1018)
         self.assertEqual(record.name, 'Identity object')
         var = record['Vendor-ID']
+        self.assertIsInstance(var, canopen.objectdictionary.Variable)
         self.assertEqual(var.name, 'Vendor-ID')
         self.assertEqual(var.index, 0x1018)
         self.assertEqual(var.subindex, 1)
@@ -46,6 +49,7 @@ class TestEDS(unittest.TestCase):
         self.assertEqual(array.index, 0x1003)
         self.assertEqual(array.name, 'Pre-defined error field')
         var = array[5]
+        self.assertIsInstance(var, canopen.objectdictionary.Variable)
         self.assertEqual(var.name, 'Pre-defined error field_5')
         self.assertEqual(var.index, 0x1003)
         self.assertEqual(var.subindex, 5)

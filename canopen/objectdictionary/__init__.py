@@ -1,33 +1,13 @@
+"""
+Object Dictionary module
+"""
 import struct
 import collections
 import logging
 
+from .datatypes import *
 
 logger = logging.getLogger(__name__)
-
-
-BOOLEAN = 0x1
-INTEGER8 = 0x2
-INTEGER16 = 0x3
-INTEGER32 = 0x4
-UNSIGNED8 = 0x5
-UNSIGNED16 = 0x6
-UNSIGNED32 = 0x7
-REAL32 = 0x8
-VISIBLE_STRING = 0x9
-OCTET_STRING = 0xA
-UNICODE_STRING = 0xB
-DOMAIN = 0xF
-REAL64 = 0x11
-INTEGER64 = 0x15
-UNSIGNED64 = 0x1B
-
-SIGNED_TYPES = (INTEGER8, INTEGER16, INTEGER32, INTEGER64)
-UNSIGNED_TYPES = (UNSIGNED8, UNSIGNED16, UNSIGNED32, UNSIGNED64)
-INTEGER_TYPES = SIGNED_TYPES + UNSIGNED_TYPES
-FLOAT_TYPES = (REAL32, REAL64)
-NUMBER_TYPES = INTEGER_TYPES + FLOAT_TYPES
-DATA_TYPES = (VISIBLE_STRING, OCTET_STRING, UNICODE_STRING, DOMAIN)
 
 
 def import_od(source, node_id=None):
@@ -37,7 +17,8 @@ def import_od(source, node_id=None):
         Path to object dictionary file or a file like object or an EPF XML tree.
 
     :return:
-        A :class:`canopen.ObjectDictionary` object.
+        An Object Dictionary instance.
+    :rtype: canopen.ObjectDictionary
     """
     if hasattr(source, "read"):
         # File like object
@@ -92,9 +73,9 @@ class ObjectDictionary(collections.Mapping):
 
         :param obj:
             Should be either one of
-            :class:`canopen.objectdictionary.Variable`,
-            :class:`canopen.objectdictionary.Record`, or
-            :class:`canopen.objectdictionary.Array`.
+            :class:`~canopen.objectdictionary.Variable`,
+            :class:`~canopen.objectdictionary.Record`, or
+            :class:`~canopen.objectdictionary.Array`.
         """
         obj.parent = self
         self.indices[obj.index] = obj
@@ -102,7 +83,7 @@ class ObjectDictionary(collections.Mapping):
 
 
 class Record(collections.Mapping):
-    """Groups multiple :class:`canopen.objectdictionary.Variable` objects using
+    """Groups multiple :class:`~canopen.objectdictionary.Variable` objects using
     subindices.
     """
 
@@ -110,9 +91,11 @@ class Record(collections.Mapping):
     description = ""
 
     def __init__(self, name, index):
-        #: The :class:`canopen.ObjectDictionary` owning the record.
+        #: The :class:`~canopen.ObjectDictionary` owning the record.
         self.parent = None
+        #: 16-bit address of the record
         self.index = index
+        #: Name of record
         self.name = name
         self.subindices = {}
         self.names = {}
@@ -136,14 +119,14 @@ class Record(collections.Mapping):
         return self.index == other.index
 
     def add_member(self, variable):
-        """Adds a :class:`canopen.objectdictionary.Variable` to the record."""
+        """Adds a :class:`~canopen.objectdictionary.Variable` to the record."""
         variable.parent = self
         self.subindices[variable.subindex] = variable
         self.names[variable.name] = variable
 
 
 class Array(collections.Mapping):
-    """An array of :class:`canopen.objectdictionary.Variable` objects using
+    """An array of :class:`~canopen.objectdictionary.Variable` objects using
     subindices.
 
     Actual length of array must be read from the node using SDO.
@@ -153,9 +136,11 @@ class Array(collections.Mapping):
     description = ""
 
     def __init__(self, name, index):
-        #: The :class:`canopen.ObjectDictionary` owning the record.
+        #: The :class:`~canopen.ObjectDictionary` owning the record.
         self.parent = None
+        #: 16-bit address of the array
         self.index = index
+        #: Name of array
         self.name = name
         self.subindices = {}
         self.names = {}
@@ -171,8 +156,8 @@ class Array(collections.Mapping):
             name = "%s_%x" % (template.name, subindex)
             var = Variable(name, self.index, subindex)
             var.parent = self
-            for attr in ("data_type", "unit", "factor", "min", "max",
-                         "access_type", "value_descriptions",
+            for attr in ("data_type", "unit", "factor", "min", "max", "default",
+                         "access_type", "description", "value_descriptions",
                          "bit_definitions"):
                 if attr in template.__dict__:
                     var.__dict__[attr] = template.__dict__[attr]
@@ -186,19 +171,11 @@ class Array(collections.Mapping):
     def __iter__(self):
         return iter(sorted(self.subindices))
 
-    def __contains__(self, subindex):
-        try:
-            self[subindex]
-        except KeyError:
-            return False
-        else:
-            return True
-
     def __eq__(self, other):
         return self.index == other.index
 
     def add_member(self, variable):
-        """Adds a :class:`canopen.objectdictionary.Variable` to the record."""
+        """Adds a :class:`~canopen.objectdictionary.Variable` to the record."""
         variable.parent = self
         self.subindices[variable.subindex] = variable
         self.names[variable.name] = variable
@@ -239,9 +216,9 @@ class Variable(object):
     description = ""
 
     def __init__(self, name, index, subindex=0):
-        #: The :class:`canopen.ObjectDictionary`,
-        #: :class:`canopen.objectdictionary.Record` or
-        #: :class:`canopen.objectdictionary.Array` owning the variable
+        #: The :class:`~canopen.ObjectDictionary`,
+        #: :class:`~canopen.objectdictionary.Record` or
+        #: :class:`~canopen.objectdictionary.Array` owning the variable
         self.parent = None
         #: 16-bit address of the object in the dictionary
         self.index = index

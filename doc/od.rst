@@ -53,8 +53,6 @@ You can access the objects using either index/subindex or names::
 API
 ---
 
-.. autofunction:: canopen.import_od
-
 .. autoclass:: canopen.ObjectDictionary
    :members:
 
@@ -98,7 +96,7 @@ API
 
    .. describe:: record[subindex]
 
-      Return the :class:`canopen.objectdictionary.Variable` for the specified
+      Return the :class:`~canopen.objectdictionary.Variable` for the specified
       subindex (as int) or name (as string).
 
    .. describe:: iter(record)
@@ -120,7 +118,7 @@ API
 
    .. method:: values()
 
-      Return a list of :class:`canopen.objectdictionary.Variable` in the record.
+      Return a list of :class:`~canopen.objectdictionary.Variable` in the record.
 
 
 .. autoclass:: canopen.objectdictionary.Array
@@ -128,7 +126,7 @@ API
 
    .. describe:: array[subindex]
 
-      Return the :class:`canopen.objectdictionary.Variable` for the specified
+      Return the :class:`~canopen.objectdictionary.Variable` for the specified
       subindex (as int) or name (as string).
       This will work for all subindexes between 1 and 255. If the requested
       subindex has not been specified in the object dictionary, it will be
@@ -138,3 +136,35 @@ API
 
 .. autoexception:: canopen.ObjectDictionaryError
    :members:
+
+
+Constants
+~~~~~~~~~
+
+.. py:data:: canopen.objectdictionary.UNSIGNED8
+.. py:data:: canopen.objectdictionary.UNSIGNED16
+.. py:data:: canopen.objectdictionary.UNSIGNED32
+.. py:data:: canopen.objectdictionary.UNSIGNED64
+
+.. py:data:: canopen.objectdictionary.INTEGER8
+.. py:data:: canopen.objectdictionary.INTEGER16
+.. py:data:: canopen.objectdictionary.INTEGER32
+.. py:data:: canopen.objectdictionary.INTEGER64
+
+.. py:data:: canopen.objectdictionary.BOOLEAN
+
+.. py:data:: canopen.objectdictionary.REAL32
+.. py:data:: canopen.objectdictionary.REAL64
+
+.. py:data:: canopen.objectdictionary.VISIBLE_STRING
+.. py:data:: canopen.objectdictionary.OCTET_STRING
+.. py:data:: canopen.objectdictionary.UNICODE_STRING
+.. py:data:: canopen.objectdictionary.DOMAIN
+
+
+.. py:data:: canopen.objectdictionary.SIGNED_TYPES
+.. py:data:: canopen.objectdictionary.UNSIGNED_TYPES
+.. py:data:: canopen.objectdictionary.INTEGER_TYPES
+.. py:data:: canopen.objectdictionary.FLOAT_TYPES
+.. py:data:: canopen.objectdictionary.NUMBER_TYPES
+.. py:data:: canopen.objectdictionary.DATA_TYPES
