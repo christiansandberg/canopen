@@ -106,6 +106,9 @@ class Record(collections.Mapping):
     subindices.
     """
 
+    #: Description for the whole record
+    description = ""
+
     def __init__(self, name, index):
         #: The :class:`canopen.ObjectDictionary` owning the record.
         self.parent = None
@@ -145,6 +148,9 @@ class Array(collections.Mapping):
 
     Actual length of array must be read from the node using SDO.
     """
+
+    #: Description for the whole array
+    description = ""
 
     def __init__(self, name, index):
         #: The :class:`canopen.ObjectDictionary` owning the record.

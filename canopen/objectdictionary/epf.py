@@ -65,6 +65,9 @@ def import_epf(epf):
             for par_tree in parameters:
                 var = build_variable(par_tree)
                 arr.add_member(var)
+            description = group_tree.find("Description")
+            if description is not None:
+                arr.description = description.text
             od.add_object(arr)
         else:
             # Complex record
@@ -72,6 +75,9 @@ def import_epf(epf):
             for par_tree in parameters:
                 var = build_variable(par_tree)
                 record.add_member(var)
+            description = group_tree.find("Description")
+            if description is not None:
+                record.description = description.text
             od.add_object(record)
 
     return od
