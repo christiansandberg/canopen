@@ -11,6 +11,14 @@ class TestEDS(unittest.TestCase):
     def setUp(self):
         self.od = canopen.import_od(EDS_PATH, 2)
 
+    def test_load_nonexisting_file(self):
+        with self.assertRaises(IOError):
+            canopen.import_od('/path/to/wrong_file.eds')
+
+    def test_load_file_object(self):
+        od = canopen.import_od(open(EDS_PATH))
+        self.assertTrue(len(od) > 0)
+
     def test_variable(self):
         var = self.od['Producer heartbeat time']
         self.assertEqual(var.index, 0x1017)

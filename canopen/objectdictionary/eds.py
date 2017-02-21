@@ -20,9 +20,11 @@ RECORD = 9
 def import_eds(source, node_id):
     eds = ConfigParser()
     if hasattr(source, "read"):
-        eds.readfp(source)
+        fp = source
     else:
-        eds.read(source)
+        fp = open(source)
+    eds.readfp(fp)
+    fp.close()
     od = objectdictionary.ObjectDictionary()
     if eds.has_section("DeviceComissioning"):
         od.bitrate = int(eds.get("DeviceComissioning", "Baudrate")) * 1000

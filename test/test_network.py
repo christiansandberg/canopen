@@ -5,7 +5,7 @@ import canopen
 import can
 
 
-EDS_PATH = os.path.join(os.path.dirname(__file__), 'test.eds')
+EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
 
 
 class TestNetwork(unittest.TestCase):

@@ -42,7 +42,7 @@ def import_od(source, node_id=None):
     if hasattr(source, "read"):
         # File like object
         filename = source.name
-    if hasattr(source, "tag"):
+    elif hasattr(source, "tag"):
         # XML tree, probably from an EPF file
         filename = "od.epf"
     else:
@@ -72,7 +72,11 @@ class ObjectDictionary(collections.Mapping):
 
     def __getitem__(self, index):
         """Get object from object dictionary by name or index."""
-        return self.names.get(index) or self.indices[index]
+        item = self.names.get(index) or self.indices.get(index)
+        if item is None:
+            name = "0x%X" % index if isinstance(index, int) else index
+            raise KeyError("%s was not found in Object Dictionary" % name)
+        return item
 
     def __iter__(self):
         return iter(sorted(self.indices))
@@ -111,7 +115,10 @@ class Record(collections.Mapping):
         self.names = {}
 
     def __getitem__(self, subindex):
-        return self.names.get(subindex) or self.subindices[subindex]
+        item = self.names.get(subindex) or self.subindices.get(subindex)
+        if item is None:
+            raise KeyError("Subindex %s was not found" % subindex)
+        return item
 
     def __len__(self):
         return len(self.subindices)
