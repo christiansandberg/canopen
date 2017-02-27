@@ -36,6 +36,7 @@ Easiest way to install is to use pip_::
    sync
    emcy
    integration
+   profiles
 
 
 .. _CANopen: https://en.wikipedia.org/wiki/CANopen
