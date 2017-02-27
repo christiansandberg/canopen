@@ -84,20 +84,12 @@ class PowerStateEngine(object):
     def on_PDO1_callback(mapobject):
         # this function receives a map object.
         # this map object is then used for changing the
-        # Node402.PowerstateEngine._state
-        #
-        # I would have preferred to retrieve the statusword by means of the
-        # register as to make this ParameterName string (vendor) agnostic like:
-        # statusword = mapobject.pdo_node.tx[1][0x6041].raw
-        #
-        # Since I haven't found a way to do this the ParameterName is first
-        # retrieved from the OD, and used for extracting the data in the Map.
-        description = mapobject.pdo_node.node.object_dictionary[0x6041].name
-        statusword = mapobject.pdo_node.tx[1][description].raw
+        # Node402.PowerstateEngine._state by reading the statusword
+        # The TPDO1 is defined in setup_402_state_engine
+        statusword = mapobject[0].raw
         for key, value in POWER_STATES_402.iteritems():
     		# check if the value after applying the bitmask (value[0])
-    		# corresponds with the corresponding value to determine
-    		# the current status
+    		# corresponds with the value[1] to determine the current status
             bitmaskvalue = statusword & value[0]
             if bitmaskvalue == value[1]:
                 mapobject.pdo_node.node.powerstate_402._state = key
