@@ -39,9 +39,17 @@ class SdoClient(collections.Mapping):
     #: Max number of request retries before raising error
     MAX_RETRIES = 3
 
-    def __init__(self, node_id, od):
-        #: Node ID
-        self.id = node_id
+    def __init__(self, rx_cobid, tx_cobid, od):
+        """
+        :param int rx_cobid:
+            COB-ID that the server receives on (usually 0x600 + node ID)
+        :param int tx_cobid:
+            COB-ID that the server responds with (usually 0x580 + node ID)
+        :param canopen.ObjectDictionary od:
+            Object Dictionary to use for communication
+        """
+        self.rx_cobid = rx_cobid
+        self.tx_cobid = tx_cobid
         self.network = None
         self.od = od
         self.response = None
@@ -58,7 +66,7 @@ class SdoClient(collections.Mapping):
             # Wait for node to respond
             with self.response_received:
                 self.response = None
-                self.network.send_message(0x600 + self.id, sdo_request)
+                self.network.send_message(self.rx_cobid, sdo_request)
                 self.response_received.wait(self.RESPONSE_TIMEOUT)
 
             if self.response is None:
@@ -327,7 +335,8 @@ class ReadableStream(io.RawIOBase):
         self.sdo_client = sdo_client
         self.command = REQUEST_SEGMENT_UPLOAD
 
-        logger.debug("Reading 0x%X:%d from node %d", index, subindex, sdo_client.id)
+        logger.debug("Reading 0x%X:%d from node %d", index, subindex,
+                     sdo_client.rx_cobid - 0x600)
         request = SDO_STRUCT.pack(REQUEST_UPLOAD, index, subindex)
         request += b"\x00\x00\x00\x00"
         response = sdo_client.send_request(request)
