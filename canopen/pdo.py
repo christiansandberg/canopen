@@ -32,9 +32,9 @@ logger = logging.getLogger(__name__)
 class PdoNode(object):
     """Represents a slave unit."""
 
-    def __init__(self, sdo_client):
+    def __init__(self, node):
         self.network = None
-        self.sdo_client = sdo_client
+        self.node = node
         self.rx = Maps(0x1400, 0x1600, self)
         self.tx = Maps(0x1800, 0x1A00, self)
 
@@ -122,11 +122,11 @@ class Maps(collections.Mapping):
     def __init__(self, com_offset, map_offset, pdo_node):
         self.maps = {}
         for map_no in range(32):
-            if com_offset + map_no in pdo_node.sdo_client:
+            if com_offset + map_no in pdo_node.node.object_dictionary:
                 self.maps[map_no + 1] = Map(
                     pdo_node,
-                    pdo_node.sdo_client[com_offset + map_no],
-                    pdo_node.sdo_client[map_offset + map_no])
+                    pdo_node.node.sdo[com_offset + map_no],
+                    pdo_node.node.sdo[map_offset + map_no])
 
     def __getitem__(self, key):
         return self.maps[key]
@@ -192,7 +192,7 @@ class Map(object):
         return size
 
     def _get_variable(self, index, subindex):
-        obj = self.pdo_node.sdo_client.od[index]
+        obj = self.pdo_node.node.object_dictionary[index]
         if isinstance(obj, (objectdictionary.Record, objectdictionary.Array)):
             obj = obj[subindex]
         var = Variable(obj)
@@ -230,7 +230,7 @@ class Map(object):
                     callback(self)
 
     def add_callback(self, callback):
-        """Add a callback which will be called on receive or transmit.
+        """Add a callback which will be called on receive.
 
         :param callback:
             The function to call which must take one argument of a
@@ -332,8 +332,6 @@ class Map(object):
 
     def transmit(self):
         """Transmit the message once."""
-        for callback in self.callbacks:
-            callback(self)
         self.pdo_node.network.send_message(self.cob_id, self.data)
 
     def start(self, period=None):
