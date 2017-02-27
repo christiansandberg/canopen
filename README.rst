@@ -9,6 +9,7 @@ standard for a master node wrapped in a Pythonic interface.
 Features
 --------
 
+* Object Dictionary from EDS
 * NMT master
 * SDO client
 * PDO producer/consumer

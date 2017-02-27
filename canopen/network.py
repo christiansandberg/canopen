@@ -104,7 +104,7 @@ class Network(collections.MutableMapping):
         self.bus.shutdown()
         self.bus = None
 
-    def add_node(self, node, object_dictionary=None):
+    def add_node(self, node, object_dictionary=None, upload_eds=False):
         """Add a node to the network.
 
         :param node:
@@ -114,13 +114,15 @@ class Network(collections.MutableMapping):
             Can be either a string for specifying the path to an
             Object Dictionary file or a
             :class:`canopen.ObjectDictionary` object.
+        :param bool upload_eds:
+            Set ``True`` if EDS file should be uploaded from 0x1021.
 
         :return:
             The Node object that was added.
         :rtype: canopen.Node
         """
         if isinstance(node, int):
-            if object_dictionary is None:
+            if upload_eds:
                 logger.info("Trying to read EDS from node %d", node)
                 object_dictionary = import_from_node(node, self)
             node = Node(node, object_dictionary)

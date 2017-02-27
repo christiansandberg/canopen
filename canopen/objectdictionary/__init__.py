@@ -20,6 +20,8 @@ def import_od(source, node_id=None):
         An Object Dictionary instance.
     :rtype: canopen.ObjectDictionary
     """
+    if source is None:
+        return ObjectDictionary()
     if hasattr(source, "read"):
         # File like object
         filename = source.name

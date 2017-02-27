@@ -87,7 +87,7 @@ def import_from_node(node_id, network):
     except Exception as e:
         logger.error("No object dictionary could be loaded for node %d: %s",
                      node_id, e)
-        od = objectdictionary.ObjectDictionary()
+        od = None
     finally:
         network.unsubscribe(0x580 + node_id)
     return od
