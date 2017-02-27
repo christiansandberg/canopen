@@ -46,12 +46,12 @@ class Node402(Node):
 
     def __init__(self, node_id, object_dictionary):
         super(Node402, self).__init__(node_id, object_dictionary)
-        self.powerstate_402 = PowerStateEngine(self)
+        self.powerstate_402 = PowerStateMachine(self)
         self.powerstate_402.network = self.network
 
-    def setup_402_state_engine(self):
+    def setup_402_state_machine(self):
         # setup TPDO1 for this node
-        # TPDO1 will transmit the statusword of the 402 power state engine
+        # TPDO1 will transmit the statusword of the 402 control state machine
         # first read the current PDO setup and only change TPDO1
         print(self.nmt.state)
         self.nmt.state = 'PRE-OPERATIONAL'
@@ -66,9 +66,9 @@ class Node402(Node):
         self.pdo.tx[1].save()
         self.nmt.state = 'OPERATIONAL'
 
-class PowerStateEngine(object):
-    """A CANopen CiA 402 Power State engine. Listens to state changes
-    of the DS402 Power State engine by means of TPDO 1 Statusword.
+class PowerStateMachine(object):
+    """A CANopen CiA 402 Power State machine. Listens to state changes
+    of the DS402 Power State machine by means of TPDO 1 Statusword.
 
     - Controlword 0x6040 causes transitions
     - Statusword 0x6041 gives the current state
@@ -84,8 +84,8 @@ class PowerStateEngine(object):
     def on_PDO1_callback(mapobject):
         # this function receives a map object.
         # this map object is then used for changing the
-        # Node402.PowerstateEngine._state by reading the statusword
-        # The TPDO1 is defined in setup_402_state_engine
+        # Node402.PowerstateMachine._state by reading the statusword
+        # The TPDO1 is defined in setup_402_state_machine
         statusword = mapobject[0].raw
         for key, value in POWER_STATES_402.iteritems():
     		# check if the value after applying the bitmask (value[0])
