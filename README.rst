@@ -17,6 +17,7 @@ Features
 * PDO producer/consumer
 * SYNC producer
 * EMCY consumer
+* TIME producer
 
 
 Installation
@@ -118,7 +119,6 @@ Pull requests are most welcome!
 * More unit test coverage
 * Period transmits using python-can cyclic API
 * SDO block transfer
-* TIME
 * XDD support
 
 

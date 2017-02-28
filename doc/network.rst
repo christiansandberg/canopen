@@ -65,6 +65,10 @@ API
 
       The :class:`canopen.sync.SyncProducer` for this network.
 
+   .. py:attribute:: time
+
+      The :class:`canopen.timestamp.TimeProducer` for this network.
+
    .. describe:: network[node_id]
 
       Return the :class:`canopen.Node` for the specified node ID.
