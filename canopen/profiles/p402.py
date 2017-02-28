@@ -119,10 +119,7 @@ class PowerStateMachine(object):
         - 'QUICK STOP ACTIVE'
 
         """
-        if self._state in POWER_STATES_402.values():
-            return POWER_STATES_402[self._state]
-        else:
-            return self._state
+        return self._state
 
     @state.setter
     def state(self, new_state):
