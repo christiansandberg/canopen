@@ -94,7 +94,10 @@ class PdoNode(object):
                         min_value *= var.od.factor
                     if max_value is not None:
                         max_value *= var.od.factor
-                    signal = canmatrix.Signal(var.name.replace(".", "_"),
+                    name = var.name
+                    name = name.replace(" ", "_")
+                    name = name.replace(".", "_")
+                    signal = canmatrix.Signal(name,
                                               startBit=var.offset,
                                               signalSize=len(var.od),
                                               is_signed=is_signed,

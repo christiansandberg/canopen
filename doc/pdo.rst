@@ -67,6 +67,13 @@ starts at 1, not 0)::
             speed = node.pdo.tx[4]['ApplicationStatus.ActualSpeed'].phys
             f.write('%s\n' % speed)
 
+    # Using a callback to asynchronously receive values
+    def print_speed(message):
+        print(message['ApplicationStatus.ActualSpeed'].phys)
+
+    node.pdo.tx[4].add_callback(print_speed)
+    time.sleep(5)
+
     # Stop transmission of RxPDO and SYNC
     node.pdo.rx[4].stop()
     network.sync.stop()

@@ -5,6 +5,8 @@ A Python implementation of the CANopen_ standard.
 The aim of the project is to support the most common parts of the DS-301
 standard for a master node wrapped in a Pythonic interface.
 
+The library supports Python 2.7 and 3.3+ and runs on Windows, Linux and Mac.
+
 
 Features
 --------
