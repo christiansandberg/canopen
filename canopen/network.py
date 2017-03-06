@@ -89,8 +89,8 @@ class Network(collections.MutableMapping):
                     kwargs["bitrate"] = node.object_dictionary.bitrate
                     break
         # Try to filter out only 11-bit IDs
-        kwargs.setdefault("can_filters",
-                          [{"can_id": 0, "can_mask": 0x1FFFF800}])
+        #kwargs.setdefault("can_filters",
+        #                  [{"can_id": 0, "can_mask": 0x1FFFF800}])
         self.bus = can.interface.Bus(*args, **kwargs)
         logger.info("Connected to '%s'", self.bus.channel_info)
         self.notifier = can.Notifier(self.bus, self.listeners, 1)
