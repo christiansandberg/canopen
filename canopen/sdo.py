@@ -34,10 +34,10 @@ class SdoClient(collections.Mapping):
     """Handles communication with an SDO server."""
 
     #: Max time in seconds to wait for response from server
-    RESPONSE_TIMEOUT = 0.1
+    RESPONSE_TIMEOUT = 0.3
 
     #: Max number of request retries before raising error
-    MAX_RETRIES = 3
+    MAX_RETRIES = 1
 
     def __init__(self, rx_cobid, tx_cobid, od):
         """
