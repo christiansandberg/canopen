@@ -28,6 +28,7 @@ RESPONSE_ABORTED = 4 << 5
 
 EXPEDITED = 0x2
 SIZE_SPECIFIED = 0x1
+NO_MORE_DATA = 0x1
 
 
 class SdoClient(collections.Mapping):
@@ -101,7 +102,8 @@ class SdoClient(collections.Mapping):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        return ReadableStream(self, index, subindex).read()
+        with ReadableStream(self, index, subindex) as fp:
+            return fp.read()
 
     def download(self, index, subindex, data, force_segment=False):
         """May be called to manually make a write operation.
@@ -120,46 +122,9 @@ class SdoClient(collections.Mapping):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        length = len(data)
-        command = REQUEST_DOWNLOAD | SIZE_SPECIFIED
-
-        if not force_segment and length <= 4:
-            # Expedited download
-            command |= EXPEDITED
-            command |= (4 - length) << 2
-            request = SDO_STRUCT.pack(command, index, subindex)
-            request += data.ljust(4, b"\x00")
-            response = self.send_request(request)
-            res_command, = struct.unpack("B", response[0:1])
-            if res_command != RESPONSE_DOWNLOAD:
-                raise SdoCommunicationError(
-                    "Unexpected response 0x%02X" % res_command)
-        else:
-            # Segmented download
-            request = SDO_STRUCT.pack(command, index, subindex)
-            request += struct.pack("<L", length)
-            response = self.send_request(request)
-            res_command, = struct.unpack("B", response[0:1])
-            if res_command != RESPONSE_DOWNLOAD:
-                raise SdoCommunicationError(
-                    "Unexpected response 0x%02X" % res_command)
-
-            request = bytearray(8)
-            request[0] = REQUEST_SEGMENT_DOWNLOAD
-            for pos in range(0, length, 7):
-                request[1:8] = data[pos:pos + 7]
-                if pos + 7 >= length:
-                    # No more data after this message
-                    request[0] |= 1
-                # Specify number of bytes in that do not contain segment data
-                request[0] |= (8 - len(request)) << 1
-                response = self.send_request(request.ljust(8, b'\x00'))
-                res_command, = struct.unpack("B", response[0:1])
-                # Toggle bit for next request
-                request[0] ^= 0x10
-                if res_command & 0xE0 != RESPONSE_SEGMENT_DOWNLOAD:
-                    raise SdoCommunicationError(
-                        "Unexpected response 0x%02X" % res_command)
+        raw_stream = WritableStream(self, index, subindex, len(data), force_segment)
+        with io.BufferedWriter(raw_stream, 7) as fp:
+            fp.write(data)
 
     def __getitem__(self, index):
         entry = self.od[index]
@@ -279,6 +244,7 @@ class Variable(common.Variable):
             Character Meaning
             --------- ----------------------------------------------------------
             'r'       open for reading (default)
+            'w'       open for writing
             'b'       binary mode (default)
             't'       text mode
             ========= ==========================================================
@@ -292,22 +258,20 @@ class Variable(common.Variable):
             the size in bytes of a fixed-size chunk buffer.
 
         :returns:
-            A file like object which will be a :class:`canopen.sdo.ReadableStream`
-            for binary unbuffered reading, :class:`io.BufferedReader` for binary
-            buffered reading, or :class:`io.TextIOWrapper` in text mode.
+            A file like object.
         """
         if "r" in mode:
-            raw_stream = ReadableStream(self.sdo_node,
-                                        self.od.index,
-                                        self.od.subindex)
+            RawStreamCls = ReadableStream
+            BufferedStreamCls = io.BufferedReader
         if "w" in mode:
-            raise NotImplementedError("Writing as a file is not supported yet")
+            RawStreamCls = WritableStream
+            BufferedStreamCls = io.BufferedWriter
+        raw_stream = RawStreamCls(self.sdo_node, self.od.index, self.od.subindex)
         if buffering == 0:
             return raw_stream
         # Line buffering is not supported by BufferedReader
         buffer_size = buffering if buffering > 1 else io.DEFAULT_BUFFER_SIZE
-        if "r" in mode:
-            buffered_stream = io.BufferedReader(raw_stream, buffer_size=buffer_size)
+        buffered_stream = BufferedStreamCls(raw_stream, buffer_size=buffer_size)
         if "b" not in mode:
             # Text mode
             line_buffering = buffering == 1
@@ -391,7 +355,7 @@ class ReadableStream(io.RawIOBase):
         if res_command & 0xE0 != RESPONSE_SEGMENT_UPLOAD:
             raise SdoCommunicationError("Unexpected response 0x%02X" % res_command)
         last_byte = 8 - ((res_command >> 1) & 0x7)
-        if res_command & 0x1:
+        if res_command & NO_MORE_DATA:
             self._done = True
         self.command ^= 0x10
         return response[1:last_byte]
@@ -406,6 +370,106 @@ class ReadableStream(io.RawIOBase):
         return len(data)
 
     def readable(self):
+        return True
+
+
+class WritableStream(io.RawIOBase):
+    """File like object for writing to a variable."""
+
+    def __init__(self, sdo_client, index, subindex=0, size=None, force_segment=False):
+        """
+        :param canopen.sdo.SdoClient sdo_client:
+            The SDO client to use for communication.
+        :param int index:
+            Object dictionary index to read from.
+        :param int subindex:
+            Object dictionary sub-index to read from.
+        :param int size:
+            Size of data in number of bytes if known in advance.
+        :param bool force_segment:
+            Force use of segmented transfer regardless of size.
+        """
+        self.sdo_client = sdo_client
+        self.size = size
+        self.pos = 0
+        self.toggle = 0
+        self.exp_header = None
+
+        if size is None or size > 4 or force_segment:
+            # Initiate segmented download
+            command = REQUEST_DOWNLOAD
+            if size is not None:
+                command |= SIZE_SPECIFIED
+                size_data = struct.pack("<L", size)
+            else:
+                size_data = b"\x00\x00\x00\x00"
+            request = SDO_STRUCT.pack(command, index, subindex) + size_data
+            response = sdo_client.send_request(request)
+            res_command, = struct.unpack("B", response[0:1])
+            if res_command != RESPONSE_DOWNLOAD:
+                raise SdoCommunicationError(
+                    "Unexpected response 0x%02X" % res_command)
+        else:
+            # Expedited download
+            # Prepare header (first 4 bytes in CAN message)
+            command = REQUEST_DOWNLOAD | EXPEDITED | SIZE_SPECIFIED
+            command |= (4 - size) << 2
+            self.exp_header = SDO_STRUCT.pack(command, index, subindex)
+
+    def write(self, b):
+        """
+        Write the given bytes-like object, b, to the SDO server, and return the
+        number of bytes written. This will be at most 7 bytes.
+        """
+        if self.exp_header is not None:
+            # Expedited download
+            request = self.exp_header + b
+            bytes_sent = len(b)
+            expected_response = RESPONSE_DOWNLOAD
+        else:
+            request = bytearray(8)
+            command = REQUEST_SEGMENT_DOWNLOAD
+            # Add toggle bit
+            command |= self.toggle
+            self.toggle ^= 0x10
+            # Can send up to 7 bytes at a time
+            bytes_sent = min(len(b), 7)
+            request[1:8] = b[0:bytes_sent]
+            if self.size is not None and self.pos + bytes_sent >= self.size:
+                # No more data after this message
+                command |= NO_MORE_DATA
+            # Specify number of bytes that do not contain segment data
+            command |= (7 - bytes_sent) << 1
+            request[0] = command
+            expected_response = RESPONSE_SEGMENT_DOWNLOAD
+        response = self.sdo_client.send_request(request.ljust(8, b"\x00"))
+        res_command, = struct.unpack("B", response[0:1])
+        if res_command & 0xE0 != expected_response:
+            raise SdoCommunicationError(
+                "Unexpected response 0x%02X (expected 0x%02X)" % (
+                    res_command, expected_response))
+        # Advance position
+        self.pos += bytes_sent
+        if self.size is not None and self.pos > self.size:
+            raise ValueError("Expected data size exceeded")
+        return bytes_sent
+
+    def close(self):
+        """Closes the stream.
+
+        This is only needed if the size has not been specified in which case an
+        empty segmented SDO message is sent saying there is no more data.
+        """
+        super(WritableStream, self).close()
+        if self.size is None:
+            command = REQUEST_SEGMENT_DOWNLOAD | NO_MORE_DATA
+            command |= self.toggle
+            command |= 7 << 1
+            request = bytearray(8)
+            request[0] = command
+            self.sdo_client.send_request(request)
+
+    def writable(self):
         return True
 
 

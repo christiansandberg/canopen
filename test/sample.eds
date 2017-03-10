@@ -780,3 +780,14 @@ DataType=7
 AccessType=RW
 PDOMapping=0
 DefaultValue=0
+
+[ManufacturerObjects]
+SupportedObjects=0
+1=0x2000
+
+[2000]
+ParameterName=Writable string
+ObjectType=0x7
+DataType=0x0009
+AccessType=rw
+PDOMapping=0

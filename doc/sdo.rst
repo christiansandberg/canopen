@@ -179,6 +179,10 @@ API
     :show-inheritance:
     :members: read, readinto, readall, readline, readlines
 
+.. autoclass:: canopen.sdo.WritableStream
+    :show-inheritance:
+    :members: write, close
+
 
 .. autoexception:: canopen.SdoAbortedError
     :show-inheritance:
