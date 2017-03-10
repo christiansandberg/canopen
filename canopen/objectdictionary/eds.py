@@ -23,7 +23,12 @@ def import_eds(source, node_id):
         fp = source
     else:
         fp = open(source)
-    eds.readfp(fp)
+    try:
+        # Python 3
+        eds.read_file(fp)
+    except AttributeError:
+        # Python 2
+        eds.readfp(fp)
     fp.close()
     od = objectdictionary.ObjectDictionary()
     if eds.has_section("DeviceComissioning"):
