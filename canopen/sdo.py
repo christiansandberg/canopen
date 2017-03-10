@@ -423,7 +423,7 @@ class WritableStream(io.RawIOBase):
         """
         if self.exp_header is not None:
             # Expedited download
-            request = self.exp_header + b
+            request = bytearray(self.exp_header) + b
             bytes_sent = len(b)
             expected_response = RESPONSE_DOWNLOAD
         else:
