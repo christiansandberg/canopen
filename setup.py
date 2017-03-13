@@ -15,7 +15,7 @@ setup(
     license="MIT",
     platforms=["any"],
     classifiers=[
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
         "License :: OSI Approved :: MIT License",
         "Intended Audience :: Developers",
         "Topic :: Scientific/Engineering"
