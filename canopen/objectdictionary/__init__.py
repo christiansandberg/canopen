@@ -42,7 +42,7 @@ def import_od(source, node_id=None):
         raise NotImplementedError("No support for this format")
 
 
-class ObjectDictionary(collections.Mapping):
+class ObjectDictionary(collections.MutableMapping):
     """Representation of the object dictionary as a Python dictionary."""
 
     def __init__(self):
@@ -60,6 +60,15 @@ class ObjectDictionary(collections.Mapping):
             name = "0x%X" % index if isinstance(index, int) else index
             raise KeyError("%s was not found in Object Dictionary" % name)
         return item
+
+    def __setitem__(self, index, obj):
+        assert index == obj.index or index == obj.name
+        self.add_object(obj)
+
+    def __delitem__(self, index):
+        obj = self[index]
+        del self.indices[obj.index]
+        del self.names[obj.name]
 
     def __iter__(self):
         return iter(sorted(self.indices))
@@ -84,7 +93,7 @@ class ObjectDictionary(collections.Mapping):
         self.names[obj.name] = obj
 
 
-class Record(collections.Mapping):
+class Record(collections.MutableMapping):
     """Groups multiple :class:`~canopen.objectdictionary.Variable` objects using
     subindices.
     """
@@ -107,6 +116,15 @@ class Record(collections.Mapping):
         if item is None:
             raise KeyError("Subindex %s was not found" % subindex)
         return item
+
+    def __setitem__(self, subindex, var):
+        assert subindex == var.subindex
+        self.add_member(var)
+
+    def __delitem__(self, subindex):
+        var = self[subindex]
+        del self.subindices[var.subindex]
+        del self.names[var.name]
 
     def __len__(self):
         return len(self.subindices)
