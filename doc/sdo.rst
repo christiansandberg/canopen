@@ -65,6 +65,25 @@ or ``.bits`` attributes::
     for error in error_log.values():
         print("Error 0x%X was found in the log" % error.raw)
 
+It is also possible to read and write to variables that are not in the Object
+Dictionary, but only using raw bytes::
+
+    device_type_data = node.sdo.upload(0x1000, 0)
+    node.sdo.download(0x1017, 0, b'\x00\x00')
+
+Variables can be opened as readable or writable file objects which can be useful
+when dealing with large amounts of data::
+
+    # Open the Store EDS variable as a file like object
+    infile = node.sdo[0x1021].open('r', encoding='ascii')
+    # Open a file for writing to
+    outfile = open('out.eds', 'w', encoding='ascii')
+    # Iteratively read lines from node and write to file
+    outfile.writelines(infile)
+    # Clean-up
+    infile.close()
+    outfile.close()
+
 
 API
 ---
