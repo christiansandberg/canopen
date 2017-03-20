@@ -29,6 +29,7 @@ RESPONSE_ABORTED = 4 << 5
 EXPEDITED = 0x2
 SIZE_SPECIFIED = 0x1
 NO_MORE_DATA = 0x1
+TOGGLE_BIT = 0x10
 
 
 class SdoClient(collections.Mapping):
@@ -87,7 +88,7 @@ class SdoClient(collections.Mapping):
             return self.response
 
     def upload(self, index, subindex):
-        """May be called to manually make a read operation.
+        """May be called to make a read operation without an Object Dictionary.
 
         :param int index:
             Index of object to read.
@@ -106,7 +107,7 @@ class SdoClient(collections.Mapping):
             return fp.read()
 
     def download(self, index, subindex, data, force_segment=False):
-        """May be called to manually make a write operation.
+        """May be called to make a write operation without an Object Dictionary.
 
         :param int index:
             Index of object to write.
@@ -297,7 +298,7 @@ class ReadableStream(io.RawIOBase):
         """
         self._done = False
         self.sdo_client = sdo_client
-        self.command = REQUEST_SEGMENT_UPLOAD
+        self._toggle = 0
 
         logger.debug("Reading 0x%X:%d from node %d", index, subindex,
                      sdo_client.rx_cobid - 0x600)
@@ -348,8 +349,10 @@ class ReadableStream(io.RawIOBase):
         if size is None or size < 0:
             return self.readall()
 
+        command = REQUEST_SEGMENT_UPLOAD
+        command |= self._toggle
         request = bytearray(8)
-        request[0] = self.command
+        request[0] = command
         response = self.sdo_client.send_request(request)
         res_command, = struct.unpack("B", response[0:1])
         if res_command & 0xE0 != RESPONSE_SEGMENT_UPLOAD:
@@ -357,7 +360,7 @@ class ReadableStream(io.RawIOBase):
         last_byte = 8 - ((res_command >> 1) & 0x7)
         if res_command & NO_MORE_DATA:
             self._done = True
-        self.command ^= 0x10
+        self._toggle ^= TOGGLE_BIT
         return response[1:last_byte]
 
     def readinto(self, b):
@@ -392,8 +395,9 @@ class WritableStream(io.RawIOBase):
         self.sdo_client = sdo_client
         self.size = size
         self.pos = 0
-        self.toggle = 0
-        self.exp_header = None
+        self._toggle = 0
+        self._exp_header = None
+        self._done = False
 
         if size is None or size > 4 or force_segment:
             # Initiate segmented download
@@ -414,30 +418,37 @@ class WritableStream(io.RawIOBase):
             # Prepare header (first 4 bytes in CAN message)
             command = REQUEST_DOWNLOAD | EXPEDITED | SIZE_SPECIFIED
             command |= (4 - size) << 2
-            self.exp_header = SDO_STRUCT.pack(command, index, subindex)
+            self._exp_header = SDO_STRUCT.pack(command, index, subindex)
 
     def write(self, b):
         """
         Write the given bytes-like object, b, to the SDO server, and return the
         number of bytes written. This will be at most 7 bytes.
         """
-        if self.exp_header is not None:
+        if self._exp_header is not None:
             # Expedited download
-            request = bytearray(self.exp_header) + b
+            if len(b) < self.size:
+                # Not enough data provided
+                return 0
+            # Expedited download
+            request = bytearray(self._exp_header) + b
             bytes_sent = len(b)
             expected_response = RESPONSE_DOWNLOAD
+            self._done = True
         else:
+            # Segmented download
             request = bytearray(8)
             command = REQUEST_SEGMENT_DOWNLOAD
             # Add toggle bit
-            command |= self.toggle
-            self.toggle ^= 0x10
+            command |= self._toggle
+            self._toggle ^= TOGGLE_BIT
             # Can send up to 7 bytes at a time
             bytes_sent = min(len(b), 7)
             request[1:8] = b[0:bytes_sent]
             if self.size is not None and self.pos + bytes_sent >= self.size:
                 # No more data after this message
                 command |= NO_MORE_DATA
+                self._done = True
             # Specify number of bytes that do not contain segment data
             command |= (7 - bytes_sent) << 1
             request[0] = command
@@ -457,13 +468,13 @@ class WritableStream(io.RawIOBase):
     def close(self):
         """Closes the stream.
 
-        This is only needed if the size has not been specified in which case an
-        empty segmented SDO message is sent saying there is no more data.
+        An empty segmented SDO message may be sent saying there is no more data.
         """
         super(WritableStream, self).close()
-        if self.size is None:
+        if not self._done:
             command = REQUEST_SEGMENT_DOWNLOAD | NO_MORE_DATA
-            command |= self.toggle
+            command |= self._toggle
+            # No data in this message
             command |= 7 << 1
             request = bytearray(8)
             request[0] = command
