@@ -2,6 +2,10 @@ from setuptools import setup, find_packages
 
 exec(open('canopen/version.py').read())
 
+description = open("README.rst").read()
+# Change links to stable documentation
+description = description.replace("/latest/", "/stable/")
+
 setup(
     name="canopen",
     url="https://github.com/christiansandberg/canopen",
@@ -11,7 +15,7 @@ setup(
     author_email="christiansandberg@me.com",
     description="CANopen stack implementation",
     keywords="CAN CANopen",
-    long_description=open("README.rst").read(),
+    long_description=description,
     license="MIT",
     platforms=["any"],
     classifiers=[

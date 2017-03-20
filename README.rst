@@ -2,7 +2,7 @@ CANopen for Python
 ==================
 
 A Python implementation of the CANopen_ standard.
-The aim of the project is to support the most common parts of the DS-301
+The aim of the project is to support the most common parts of the CiA 301
 standard for a master node wrapped in a Pythonic interface.
 
 The library supports Python 2.7 and 3.3+ and runs on Windows, Linux and Mac.
@@ -27,6 +27,10 @@ Install from PyPI_ using pip::
 
     $ pip install canopen
 
+Install from latest master on GitHub::
+
+    $ pip install https://github.com/christiansandberg/canopen/archive/master.zip
+
 If you want to be able to change the code while using it, clone it then install
 it in `develop mode`_::
 
@@ -40,7 +44,7 @@ Documentation
 
 Documentation can be found on Read the Docs:
 
-http://canopen.readthedocs.io/en/stable/
+http://canopen.readthedocs.io/en/latest/
 
 It can also be generated from a local clone using Sphinx_::
 
@@ -98,8 +102,7 @@ Here are some quick examples of what you can do:
     network.sync.start(0.1)
 
     # Change state to operational (NMT start)
-    network[6].nmt.state = 'OPERATIONAL'
-    network[7].nmt.state = 'OPERATIONAL'
+    node.nmt.state = 'OPERATIONAL'
 
     # Read a value from Tx PDO 1
     node.pdo.tx[1].wait_for_reception()
