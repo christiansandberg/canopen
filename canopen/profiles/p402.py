@@ -33,6 +33,22 @@ COMMAND_TO_POWER_STATE = {
     0x02: 'QUICK STOP ACTIVE'
 }
 
+HOMING_COMMANDS = {
+    'BEGIN HOMING'          : 0x1F,
+    'END HOMING'            : 0x0F
+}
+
+# bit numbers of Statusword
+STATUSWORD_BITS = {
+    'VOLTAGE ENALED'        : 4,
+    'WARNING'               : 7,
+    'MANUFACTURER SPECIFIC' : 8,
+    'REMOTE'                : 9,
+    'TARGET REACHED'        : 10,
+    'INTERNAL LIMIT ACTIVE' : 11,
+    'HOMING COMPLETE'       : 12
+}
+
 class Node402(Node):
     """A CANopen CiA 402 profile slave node.
 
@@ -78,6 +94,7 @@ class PowerStateMachine(object):
     def __init__(self, node):
         self.id = node.id
         self.node = node
+        self._homing_state = None
         self._state = 'NOT READY TO SWITCH ON'
 
     @staticmethod
@@ -93,6 +110,12 @@ class PowerStateMachine(object):
             bitmaskvalue = statusword & value[0]
             if bitmaskvalue == value[1]:
                 mapobject.pdo_node.node.powerstate_402._state = key
+        # check for homing status, bit 12
+        bitmaskvalue = statusword & (1 << (STATUSWORD_BITS['HOMING COMPLETE']))
+        if bitmaskvalue == 1 << (STATUSWORD_BITS['HOMING COMPLETE']):
+            mapobject.pdo_node.node.powerstate_402._homing_state = 'HOMED'
+        else:
+            mapobject.pdo_node.node.powerstate_402._homing_state = 'NOT HOMED'
 
     @property
     def state(self):
@@ -130,4 +153,23 @@ class PowerStateMachine(object):
                              (new_state, ", ".join(POWER_STATE_COMMANDS)))
         # send the control word in a manufacturer agnostic way
         # by not using the EDS ParameterName but the register number
+        self.node.sdo[0x6040].raw = code
+
+    @property
+    def homing_state(self):
+        return self._homing_state
+
+    @homing_state.setter
+    def homing_state(self, new_homing_state):
+        if ((new_homing_state in HOMING_COMMANDS) and
+            (self._state == 'OPERATION ENABLED' )):
+            code = HOMING_COMMANDS[new_homing_state]
+        else:
+            if new_homing_state in HOMING_COMMANDS:
+                raise ValueError("'%s' is an invalid state to start homing." %
+                        (self._state))
+            else:
+                raise ValueError("'%s' is an invalid command. Must be one of %s." %
+                        (new_homing_state, ", ".join(HOMING_COMMANDS)))
+        # start homing
         self.node.sdo[0x6040].raw = code
