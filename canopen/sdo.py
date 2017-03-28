@@ -124,8 +124,9 @@ class SdoClient(collections.Mapping):
             When node responds with an error.
         """
         raw_stream = WritableStream(self, index, subindex, len(data), force_segment)
-        with io.BufferedWriter(raw_stream, 7) as fp:
-            fp.write(data)
+        fp = io.BufferedWriter(raw_stream, 7)
+        fp.write(data)
+        fp.close()
 
     def __getitem__(self, index):
         entry = self.od[index]
@@ -323,9 +324,9 @@ class ReadableStream(io.RawIOBase):
             # Expedited upload
             if res_command & SIZE_SPECIFIED:
                 self.size = 4 - ((res_command >> 2) & 0x3)
+                self.exp_data = res_data[:self.size]
             else:
-                self.size = 4
-            self.exp_data = res_data[:self.size]
+                self.exp_data = res_data
         elif res_command & SIZE_SPECIFIED:
             self.size, = struct.unpack("<L", res_data)
             logger.debug("Using segmented transfer of %d bytes", self.size)
@@ -431,7 +432,9 @@ class WritableStream(io.RawIOBase):
                 # Not enough data provided
                 return 0
             # Expedited download
-            request = bytearray(self._exp_header) + b
+            if isinstance(b, memoryview):
+                b = b.tobytes()
+            request = self._exp_header + b.ljust(4, b"\x00")
             bytes_sent = len(b)
             expected_response = RESPONSE_DOWNLOAD
             self._done = True
@@ -444,7 +447,7 @@ class WritableStream(io.RawIOBase):
             self._toggle ^= TOGGLE_BIT
             # Can send up to 7 bytes at a time
             bytes_sent = min(len(b), 7)
-            request[1:8] = b[0:bytes_sent]
+            request[1:bytes_sent + 1] = b[0:bytes_sent]
             if self.size is not None and self.pos + bytes_sent >= self.size:
                 # No more data after this message
                 command |= NO_MORE_DATA
@@ -453,7 +456,7 @@ class WritableStream(io.RawIOBase):
             command |= (7 - bytes_sent) << 1
             request[0] = command
             expected_response = RESPONSE_SEGMENT_DOWNLOAD
-        response = self.sdo_client.send_request(request.ljust(8, b"\x00"))
+        response = self.sdo_client.send_request(request)
         res_command, = struct.unpack("B", response[0:1])
         if res_command & 0xE0 != expected_response:
             raise SdoCommunicationError(
@@ -471,7 +474,8 @@ class WritableStream(io.RawIOBase):
         An empty segmented SDO message may be sent saying there is no more data.
         """
         super(WritableStream, self).close()
-        if not self._done:
+        if not self._done and not self._exp_header:
+            # Segmented download not finished
             command = REQUEST_SEGMENT_DOWNLOAD | NO_MORE_DATA
             command |= self._toggle
             # No data in this message
@@ -479,6 +483,7 @@ class WritableStream(io.RawIOBase):
             request = bytearray(8)
             request[0] = command
             self.sdo_client.send_request(request)
+            self._done = True
 
     def writable(self):
         return True
