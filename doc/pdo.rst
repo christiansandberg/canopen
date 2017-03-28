@@ -51,6 +51,8 @@ starts at 1, not 0)::
     # Save new configuration (node must be in pre-operational)
     node.nmt.state = 'PRE-OPERATIONAL'
     node.pdo.save()
+    # Export a database file of PDO configuration
+    node.pdo.export('database.dbc')
 
     # Start SYNC message with a period of 10 ms
     network.sync.start(0.01)
