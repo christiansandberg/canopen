@@ -1,8 +1,11 @@
 import collections
 import struct
 import logging
-import threading
 import io
+try:
+    import queue
+except ImportError:
+    import Queue as queue
 
 from . import objectdictionary
 from . import common
@@ -54,38 +57,38 @@ class SdoClient(collections.Mapping):
         self.tx_cobid = tx_cobid
         self.network = None
         self.od = od
-        self.response = None
-        self.response_received = threading.Condition()
+        self.responses = queue.Queue()
 
     def on_response(self, can_id, data, timestamp):
-        with self.response_received:
-            self.response = bytes(data)
-            self.response_received.notify_all()
+        self.responses.put(bytes(data))
 
     def send_request(self, sdo_request):
         retries_left = self.MAX_RETRIES
+        response = None
+        if not self.responses.empty():
+            logger.warning("There were unexpected messages in the queue")
+            self.responses = queue.Queue()
         while retries_left:
             # Wait for node to respond
-            with self.response_received:
-                self.response = None
-                self.network.send_message(self.rx_cobid, sdo_request)
-                self.response_received.wait(self.RESPONSE_TIMEOUT)
-
-            if self.response is None:
+            self.network.send_message(self.rx_cobid, sdo_request)
+            try:
+                response = self.responses.get(
+                    block=True, timeout=self.RESPONSE_TIMEOUT)
+            except queue.Empty:
                 retries_left -= 1
             else:
                 break
 
-        if self.response is None:
+        if not response:
             raise SdoCommunicationError("No SDO response received")
-        if retries_left != self.MAX_RETRIES:
+        if retries_left < self.MAX_RETRIES:
             logger.warning("There were some issues while communicating with the node")
-        res_command, = struct.unpack("B", self.response[0:1])
+        res_command, = struct.unpack("B", response[0:1])
         if res_command == RESPONSE_ABORTED:
-            abort_code, = struct.unpack("<L", self.response[4:8])
+            abort_code, = struct.unpack("<L", response[4:8])
             raise SdoAbortedError(abort_code)
         else:
-            return self.response
+            return response
 
     def upload(self, index, subindex):
         """May be called to make a read operation without an Object Dictionary.
@@ -426,15 +429,16 @@ class WritableStream(io.RawIOBase):
         Write the given bytes-like object, b, to the SDO server, and return the
         number of bytes written. This will be at most 7 bytes.
         """
+        if self._done:
+            raise RuntimeError("All expected data has already been transmitted")
         if self._exp_header is not None:
             # Expedited download
             if len(b) < self.size:
                 # Not enough data provided
                 return 0
-            # Expedited download
-            if isinstance(b, memoryview):
-                b = b.tobytes()
-            request = self._exp_header + b.ljust(4, b"\x00")
+            assert len(b) <= 4, "More data received than expected"
+            data = b.tobytes() if isinstance(b, memoryview) else b
+            request = self._exp_header + data.ljust(4, b"\x00")
             bytes_sent = len(b)
             expected_response = RESPONSE_DOWNLOAD
             self._done = True
@@ -464,8 +468,6 @@ class WritableStream(io.RawIOBase):
                     res_command, expected_response))
         # Advance position
         self.pos += bytes_sent
-        if self.size is not None and self.pos > self.size:
-            raise ValueError("Expected data size exceeded")
         return bytes_sent
 
     def close(self):
