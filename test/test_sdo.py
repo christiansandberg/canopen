@@ -18,7 +18,7 @@ class TestSDO(unittest.TestCase):
         Checks that the message data is according to expected and answers
         with the provided data.
         """
-        print("%r" % data)
+        #print("%r" % data)
         self.assertSequenceEqual(data, self.data.pop(0))
         self.assertEqual(can_id, 0x602)
         self.network.notify(0x582, self.data.pop(0), 0.0)

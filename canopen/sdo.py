@@ -66,7 +66,7 @@ class SdoClient(collections.Mapping):
         retries_left = self.MAX_RETRIES
         response = None
         if not self.responses.empty():
-            logger.warning("There were unexpected messages in the queue")
+            #logger.warning("There were unexpected messages in the queue")
             self.responses = queue.Queue()
         while retries_left:
             # Wait for node to respond
@@ -361,6 +361,8 @@ class ReadableStream(io.RawIOBase):
         res_command, = struct.unpack("B", response[0:1])
         if res_command & 0xE0 != RESPONSE_SEGMENT_UPLOAD:
             raise SdoCommunicationError("Unexpected response 0x%02X" % res_command)
+        if res_command & TOGGLE_BIT != self._toggle:
+            raise SdoCommunicationError("Toggle bit mismatch")
         last_byte = 8 - ((res_command >> 1) & 0x7)
         if res_command & NO_MORE_DATA:
             self._done = True
@@ -439,8 +441,12 @@ class WritableStream(io.RawIOBase):
             assert len(b) <= 4, "More data received than expected"
             data = b.tobytes() if isinstance(b, memoryview) else b
             request = self._exp_header + data.ljust(4, b"\x00")
+            response = self.sdo_client.send_request(request)
+            res_command, = struct.unpack("B", response[0:1])
+            if res_command & 0xE0 != RESPONSE_DOWNLOAD:
+                raise SdoCommunicationError(
+                    "Unexpected response 0x%02X" % res_command)
             bytes_sent = len(b)
-            expected_response = RESPONSE_DOWNLOAD
             self._done = True
         else:
             # Segmented download
@@ -451,7 +457,6 @@ class WritableStream(io.RawIOBase):
             self._toggle ^= TOGGLE_BIT
             # Can send up to 7 bytes at a time
             bytes_sent = min(len(b), 7)
-            request[1:bytes_sent + 1] = b[0:bytes_sent]
             if self.size is not None and self.pos + bytes_sent >= self.size:
                 # No more data after this message
                 command |= NO_MORE_DATA
@@ -459,13 +464,12 @@ class WritableStream(io.RawIOBase):
             # Specify number of bytes that do not contain segment data
             command |= (7 - bytes_sent) << 1
             request[0] = command
-            expected_response = RESPONSE_SEGMENT_DOWNLOAD
-        response = self.sdo_client.send_request(request)
-        res_command, = struct.unpack("B", response[0:1])
-        if res_command & 0xE0 != expected_response:
-            raise SdoCommunicationError(
-                "Unexpected response 0x%02X (expected 0x%02X)" % (
-                    res_command, expected_response))
+            request[1:bytes_sent + 1] = b[0:bytes_sent]
+            response = self.sdo_client.send_request(request)
+            res_command, = struct.unpack("B", response[0:1])
+            if res_command & 0xE0 != RESPONSE_SEGMENT_DOWNLOAD:
+                raise SdoCommunicationError(
+                    "Unexpected response 0x%02X (expected 0x%02X)" % res_command)
         # Advance position
         self.pos += bytes_sent
         return bytes_sent
