@@ -63,6 +63,7 @@ At the time of writing this includes:
 * IXXAT
 * USB2CAN
 * NI-CAN
+* neoVI
 
 It is also possible to integrate this library with a custom backend.
 
@@ -85,9 +86,13 @@ Here are some quick examples of what you can do:
     network.add_node(7, '/path/to/object_dictionary.eds')
 
     # Connect to the CAN bus
-    # Arguments are passed to a python-can bus
+    # Arguments are passed to python-can's can.interface.Bus() constructor
     # (see https://python-can.readthedocs.io/en/latest/bus.html).
-    network.connect(channel=0, bustype='kvaser', bitrate=250000)
+    network.connect(bustype='socketcan', channel='can0')
+    # network.connect(bustype='kvaser', channel=0, bitrate=250000)
+    # network.connect(bustype='pcan', channel='PCAN_USBBUS1', bitrate=250000)
+    # network.connect(bustype='ixxat', channel=0, bitrate=250000)
+    # network.connect(bustype='nican', channel='CAN0', bitrate=250000)
 
     # Read a variable using SDO
     device_name = node.sdo['Manufacturer device name'].raw
