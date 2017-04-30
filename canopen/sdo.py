@@ -576,7 +576,7 @@ class BlockDownloadStream(io.RawIOBase):
                 "Node returned a value for 0x{:X}:{:d} instead, "
                 "maybe there is another SDO client communicating "
                 "on the same SDO channel?").format(res_index, res_subindex))
-        self._blksize = struct.unpack_from("B", response, 4)
+        self._blksize, = struct.unpack_from("B", response, 4)
 
     def write(self, b):
         """
