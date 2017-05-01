@@ -579,6 +579,8 @@ class BlockDownloadStream(io.RawIOBase):
                 "on the same SDO channel?").format(res_index, res_subindex))
         self._blksize, = struct.unpack_from("B", response, 4)
         logger.debug("Server requested a block size of %d", self._blksize)
+        if res_command & CRC_SUPPORTED:
+            logger.debug("The server supports CRC verification")
 
     def write(self, b):
         """
@@ -656,6 +658,8 @@ class BlockDownloadStream(io.RawIOBase):
 
     def close(self):
         """Closes the stream."""
+        if self.closed:
+            return
         super(BlockDownloadStream, self).close()
         if not self._done:
             # Send an empty sequence with end flag
@@ -671,8 +675,8 @@ class BlockDownloadStream(io.RawIOBase):
         response = self.sdo_client.request_response(request)
         res_command, = struct.unpack_from("B", response)
         if not res_command & END_BLOCK_DOWNLOAD:
-            raise SdoCommunicationError("SDO block download unsuccessful")
-        logger.info("Block transfer successful")
+            raise SdoCommunicationError("Block download unsuccessful")
+        logger.info("Block download successful")
 
     def writable(self):
         return True
