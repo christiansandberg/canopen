@@ -558,10 +558,11 @@ class BlockDownloadStream(io.RawIOBase):
         self._seqno = 0
         self._crc = 0
         self._last_bytes_sent = 0
-        self._unconsumed = bytearray()
         command = REQUEST_BLOCK_DOWNLOAD | CRC_SUPPORTED
         request = bytearray(8)
+        logger.info("Initiating block download for 0x%X:%d", index, subindex)
         if size is not None:
+            logger.debug("Expected size of data is %d bytes", size)
             command |= BLOCK_SIZE_SPECIFIED
             struct.pack_into("<L", request, 4, size)
         SDO_STRUCT.pack_into(request, 0, command, index, subindex)
@@ -577,48 +578,68 @@ class BlockDownloadStream(io.RawIOBase):
                 "maybe there is another SDO client communicating "
                 "on the same SDO channel?").format(res_index, res_subindex))
         self._blksize, = struct.unpack_from("B", response, 4)
+        logger.debug("Server requested a block size of %d", self._blksize)
 
     def write(self, b):
         """
         Write the given bytes-like object, b, to the SDO server, and return the
         number of bytes written. This will be at most 7 bytes.
+
+        :param bytes b:
+            Data to be transmitted.
+
+        :returns:
+            Number of bytes successfully sent or ``None`` if length of data is
+            less than 7 bytes and the total size has not been reached yet.
         """
         if self._done:
             raise RuntimeError("All expected data has already been transmitted")
+        # Can send up to 7 bytes at a time
+        data = b[0:7]
+        if self.size is not None and self.pos + len(data) >= self.size:
+            # This is the last data to be transmitted based on expected size
+            self.send(data, end=True)
+        elif len(data) < 7:
+            # We can't send less than 7 bytes in the middle of a transmission
+            return None
+        else:
+            self.send(data)
+        return len(data)
+
+    def send(self, b, end=False):
+        """Send up to 7 bytes of data.
+
+        :param bytes b:
+            0 - 7 bytes of data to transmit.
+        :param bool end:
+            If this is the last data.
+        """
+        assert len(b) <= 7
         self._seqno += 1
         command = self._seqno
-        # Can send up to 7 bytes at a time
-        bytes_sent = min(len(b), 7)
-        data = b[0:bytes_sent]
-        if self._unconsumed:
-            # There were uncomsumed data from last time
-            data = self._unconsumed + data[0:7 - len(self._unconsumed)]
-            self._unconsumed = bytearray()
-        # Save how many bytes this message contains if this should be the last
-        self._last_bytes_sent = bytes_sent
-        self.pos += bytes_sent
-        if self.size is not None and self.pos >= self.size:
-            # No more blocks after this message
+        if end:
             command |= NO_MORE_BLOCKS
             self._done = True
-            # Change expected number of ACK:ed sequences
+            # Change expected ACK:ed sequence
             self._blksize = self._seqno
-        elif bytes_sent < 7:
-            # We can't send less than 7 bytes in the middle of a transmission
-            # Save this data for next transmission
-            self._unconsumed = bytearray(data)
-        # Calculate CRC
-        self._crc = binascii.crc_hqx(data, self._crc)
+            # Save how many bytes this message contains since this is the last
+            self._last_bytes_sent = len(b)
         request = bytearray(8)
         request[0] = command
-        request[1:bytes_sent + 1] = data
+        request[1:len(b) + 1] = b
         self.sdo_client.send_request(request)
-        if self._seqno >= self._blksize or self._done:
+        self.pos += len(b)
+        # Calculate CRC
+        self._crc = binascii.crc_hqx(b, self._crc)
+        if self._seqno >= self._blksize:
             # End of this block, wait for ACK
             self._block_ack()
-        return bytes_sent
+
+    def tell(self):
+        return self.pos
 
     def _block_ack(self):
+        logger.debug("Waiting for acknowledgement of last block...")
         response = self.sdo_client.read_response()
         res_command, ackseq, blksize = struct.unpack_from("BBB", response)
         if res_command & 0xE0 != RESPONSE_BLOCK_DOWNLOAD:
@@ -628,6 +649,8 @@ class BlockDownloadStream(io.RawIOBase):
             raise SdoCommunicationError(
                 ("%d of %d sequences were received. "
                  "Retransmission is not supported yet.") % (ackseq, self._blksize))
+        logger.debug("All %d sequences were received successfully", ackseq)
+        logger.debug("Server requested a block size of %d", blksize)
         self._blksize = blksize
         self._seqno = 0
 
@@ -635,16 +658,8 @@ class BlockDownloadStream(io.RawIOBase):
         """Closes the stream."""
         super(BlockDownloadStream, self).close()
         if not self._done:
-            # This might happen if size is unknown or an error occurred
-            self._seqno += 1
-            request = bytearray(8)
-            request[0] = self._seqno | NO_MORE_BLOCKS
-            request[1:len(self._unconsumed) + 1] = self._unconsumed
-            self.sdo_client.send_request(request)
-            self._done = True
-            self._last_bytes_sent = len(self._unconsumed)
-            self._blksize = self._seqno
-            self._block_ack()
+            # Send an empty sequence with end flag
+            self.send(b"", end=True)
         command = REQUEST_BLOCK_DOWNLOAD | END_BLOCK_DOWNLOAD
         # Specify number of bytes in last message that did not contain data
         command |= (7 - self._last_bytes_sent) << 2
@@ -652,10 +667,12 @@ class BlockDownloadStream(io.RawIOBase):
         request[0] = command
         # Add CRC
         struct.pack_into("<H", request, 1, self._crc)
+        logger.debug("Ending block transfer...")
         response = self.sdo_client.request_response(request)
         res_command, = struct.unpack_from("B", response)
         if not res_command & END_BLOCK_DOWNLOAD:
             raise SdoCommunicationError("SDO block download unsuccessful")
+        logger.info("Block transfer successful")
 
     def writable(self):
         return True
@@ -672,7 +689,9 @@ class SdoAbortedError(SdoError):
         0x05030000: "SDO toggle bit error",
         0x05040000: "Timeout of transfer communication detected",
         0x05040001: "Unknown SDO command specified",
+        0x05040002: "Invalid block size",
         0x05040003: "Invalid sequence number",
+        0x05040004: "CRC error",
         0x06010000: "Unsupported access to an object",
         0x06010001: "Attempt to read a write only object",
         0x06010002: "Attempt to write a read only object",
