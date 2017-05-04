@@ -107,6 +107,24 @@ class TestSDO(unittest.TestCase):
         fp.write(data)
         fp.close()
 
+    def test_block_upload(self):
+        self.data = [
+            (TX, b'\xa4\x08\x10\x00\x7f\x00\x00\x00'),
+            (RX, b'\xc6\x08\x10\x00\x1a\x00\x00\x00'),
+            (TX, b'\xa3\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x01\x54\x69\x6e\x79\x20\x4e\x6f'),
+            (RX, b'\x02\x64\x65\x20\x2d\x20\x4d\x65'),
+            (RX, b'\x03\x67\x61\x20\x44\x6f\x6d\x61'),
+            (RX, b'\x84\x69\x6e\x73\x20\x21\x00\x00'),
+            (TX, b'\xa2\x04\x7f\x00\x00\x00\x00\x00'),
+            (RX, b'\xc9\x40\xe1\x00\x00\x00\x00\x00'),
+            (TX, b'\xa1\x00\x00\x00\x00\x00\x00\x00')
+        ]
+        fp = self.network[2].sdo[0x1008].open('r', block_transfer=True)
+        data = fp.read()
+        fp.close()
+        self.assertEqual(data, 'Tiny Node - Mega Domains !')
+
     def test_writable_file(self):
         self.data = [
             (TX, b'\x20\x00\x20\x00\x00\x00\x00\x00'),
