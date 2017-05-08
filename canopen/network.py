@@ -16,6 +16,7 @@ from .node import Node
 from .sync import SyncProducer
 from .timestamp import TimeProducer
 from .nmt import NmtMaster
+from .lss import LssMaster
 from .objectdictionary.eds import import_from_node
 
 
@@ -35,9 +36,11 @@ class Network(collections.MutableMapping):
         self.bus = bus
         #: A :class:`~canopen.network.NodeScanner` for detecting nodes
         self.scanner = NodeScanner(self)
+        self.lss = LssMaster()
+        self.lss.network = self
         #: List of :class:`can.Listener` objects.
         #: Includes at least MessageListener.
-        self.listeners = [MessageListener(self), self.scanner]
+        self.listeners = [MessageListener(self), self.scanner, self.lss]
         self.notifier = None
         self.nodes = {}
         self.subscribers = {}
@@ -256,3 +259,4 @@ class NodeScanner(Listener):
         sdo_req = b"\x40\x00\x10\x00\x00\x00\x00\x00"
         for node_id in range(1, limit + 1):
             self.network.send_message(0x600 + node_id, sdo_req)
+
