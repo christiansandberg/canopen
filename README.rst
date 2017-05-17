@@ -126,7 +126,6 @@ Pull requests are most welcome!
 
 * More unit test coverage
 * Period transmits using python-can cyclic API
-* SDO block transfer
 * XDD support
 
 
