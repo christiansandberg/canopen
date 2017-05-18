@@ -16,6 +16,7 @@ from .node import Node
 from .sync import SyncProducer
 from .timestamp import TimeProducer
 from .nmt import NmtMaster
+from .lss import LssMaster
 from .objectdictionary.eds import import_from_node
 
 
@@ -46,6 +47,11 @@ class Network(collections.MutableMapping):
         self.time = TimeProducer(self)
         self.nmt = NmtMaster(0)
         self.nmt.network = self
+
+        self.lss = LssMaster()
+        self.lss.network = self
+        self.subscribe(self.lss.LSS_RX_COBID, self.lss.on_message_received)
+
 
     def subscribe(self, can_id, callback):
         """Listen for messages with a specific CAN ID.
@@ -256,3 +262,4 @@ class NodeScanner(Listener):
         sdo_req = b"\x40\x00\x10\x00\x00\x00\x00\x00"
         for node_id in range(1, limit + 1):
             self.network.send_message(0x600 + node_id, sdo_req)
+
