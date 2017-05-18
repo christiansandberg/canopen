@@ -1,62 +1,65 @@
-import threading
 import logging
 import struct
 import time
 
 try:
-    import can
-    from can import Listener
-    from can import CanError
+    import queue
 except ImportError:
-    # Do not fail if python-can is not installed
-    can = None
-    Listener = object
+    import Queue as queue
+
 
 logger = logging.getLogger(__name__)
 
-SWITCH_MODE_GLOBAL =    0x04
-CONFIGURE_NODE_ID =     0x11
-CONFIGURE_BIT_TIMING =  0x13
-STORE_CONFIGURATION =   0x17
-INQUIRE_NODE_ID =       0x5E
+SWITCH_MODE_GLOBAL = 0x04
+CONFIGURE_NODE_ID = 0x11
+CONFIGURE_BIT_TIMING = 0x13
+STORE_CONFIGURATION = 0x17
+INQUIRE_NODE_ID = 0x5E
 
-ERROR_NONE =            0
-ERROR_INADMISSIBLE =    1
+ERROR_NONE = 0
+ERROR_INADMISSIBLE = 1
 
-ERROR_STORE_NONE =              0
-ERROR_STORE_NOT_SUPPORTED =     1
-ERROR_STORE_ACCESS_PROBLEM =    2
+ERROR_STORE_NONE = 0
+ERROR_STORE_NOT_SUPPORTED = 1
+ERROR_STORE_ACCESS_PROBLEM = 2
 
-ERROR_VENDOR_SPECIFIC =         0xff
+ERROR_VENDOR_SPECIFIC = 0xff
 
-LSS_TX_COBID = 0x7E5
-LSS_RX_COBID = 0x7E4
 
-class LssMaster(Listener):
+class LssMaster(object):
     """The Master of Layer Setting Services"""
 
-    NORMAL_MODE =           0x00
-    CONFIGURATION_MODE =    0x01
+    LSS_TX_COBID = 0x7E5
+    LSS_RX_COBID = 0x7E4
 
+    NORMAL_MODE = 0x00
+    CONFIGURATION_MODE = 0x01
+
+    #: Max retries for any LSS request
+    MAX_RETRIES = 3
+
+    #: Max time in seconds to wait for response from server
+    RESPONSE_TIMEOUT = 0.5
 
     def __init__(self):
         self.network = None
         self._node_id = 0
         self._data = None
         self._mode_state = self.NORMAL_MODE
-        self._is_timeout = True
-        self._reply_received = threading.Condition()
+        self.responses = queue.Queue()
 
     def send_switch_mode_global(self, mode):
-        """There is no reply for this request
+        """switch mode to CONFIGURATION_MODE or NORMAL_MODE.
+        There is no reply for this request
+
+        :param int mode:
+            CONFIGURATION_MODE or NORMAL_MODE
         """
         # LSS messages are always a full 8 bytes long. 
         # Unused bytes are reserved and should be initialized with 0.
         
         message = [0]*8
 
-        if len(message) != 8:
-            raise ValueError('message should be a list with 8 items')
         if self._mode_state != mode:
             message[0] = SWITCH_MODE_GLOBAL
             message[1] = mode
@@ -69,8 +72,8 @@ class LssMaster(Listener):
         """
         message = [0]*8
         message[0] = INQUIRE_NODE_ID
-        self.__send_command(message)
-        current_node_id = self.__wait_for_reply(INQUIRE_NODE_ID)[0]
+        current_node_id, nothing = self.__send_command(message)
+
         return current_node_id
 
     def __send_configure(self, key, value1=0, value2=0):
@@ -81,8 +84,7 @@ class LssMaster(Listener):
         message[0] = key
         message[1] = value1
         message[2] = value2
-        self.__send_command(message)
-        error_code, error_extension = self.__wait_for_reply(key)
+        error_code, error_extension = self.__send_command(message)
         if error_code != ERROR_NONE:
             error_msg = "LSS Error: %d" %error_code
             raise LssError(error_msg)
@@ -98,22 +100,31 @@ class LssMaster(Listener):
         return self.__send_inquire_node_id()
 
     def configure_node_id(self, new_node_id):
+        """Set the node id
+
+        :param int new_node_id:
+            new node id to set
+        """
         self.send_switch_mode_global(self.CONFIGURATION_MODE)
         self.__send_configure(CONFIGURE_NODE_ID, new_node_id)
 
     def configure_bit_timing(self, new_bit_timing):
         """Set the bit timing.
 
-        0: 1 MBit/sec, 1: 800 kBit/sec, 
-        2: 500 kBit/sec, 3: 250 kBit/sec, 
-        4: 125 kBit/sec  5: 100 kBit/sec, 
-        6: 50 kBit/sec, 7: 20 kBit/sec, 
-        8: 10 kBit/sec
+        :param int new_bit_timing:
+            bit timing index.
+            0: 1 MBit/sec, 1: 800 kBit/sec,
+            2: 500 kBit/sec, 3: 250 kBit/sec,
+            4: 125 kBit/sec  5: 100 kBit/sec,
+            6: 50 kBit/sec, 7: 20 kBit/sec,
+            8: 10 kBit/sec
         """
         self.send_switch_mode_global(self.CONFIGURATION_MODE)
         self.__send_configure(CONFIGURE_BIT_TIMING, 0, new_bit_timing)
 
     def store_configuration(self):
+        """Store node id and baud rate.
+        """
         self.__send_configure(STORE_CONFIGURATION)
 
     def __send_command(self, message):
@@ -123,38 +134,48 @@ class LssMaster(Listener):
             LSS request message.
         """
 
+        retries_left = self.MAX_RETRIES
+
         message_str = "".join(["{:02x} ".format(x) for x in message])
         logger.info(
             "Sending LSS message %s", message_str)
 
-        self._is_timeout = True
-        self.network.send_message(LSS_TX_COBID, message)
-        
-    def on_message_received(self, msg):
-        if (msg.is_error_frame or msg.is_remote_frame or
-                msg.is_extended_id or msg.arbitration_id != LSS_RX_COBID):
-            return
+        response = None
+        if not self.responses.empty():
+            # logger.warning("There were unexpected messages in the queue")
+            self.responses = queue.Queue()
 
-        self._is_timeout = False
-        self._data = msg.data
-        with self._reply_received:
-            self._reply_received.notify_all()
+        while retries_left:
+            # Wait for node to respond
+            self.network.send_message(self.LSS_TX_COBID, message)
+			
+			# There is no response for SWITCH_MODE_GLOBAL message
+            if message[0] == SWITCH_MODE_GLOBAL:
+                return
 
-    def __wait_for_reply(self, opcode, timeout=1):
-        """Wait until a reply message is received."""
-        with self._reply_received:
-            self.reply_state = None
-            self._reply_received.wait(timeout)
+            try:
+                response = self.responses.get(
+                    block=True, timeout=self.RESPONSE_TIMEOUT)
+            except queue.Empty:
+                retries_left -= 1
+            else:
+                break
 
-        if self._is_timeout:
-            raise LssError("LSS response is timed out")
+        if not response:
+            raise LssError("No LSS response received")
+        if retries_left < self.MAX_RETRIES:
+            logger.warning("There were some issues while communicating with the node")
+        res_command, = struct.unpack("B", response[0:1])
+        if res_command != message[0]:
+            raise LssError(abort_code)
+        else:
+            self._mode_state = self.CONFIGURATION_MODE
+            message1, = struct.unpack("B", response[1:2])
+            message2, = struct.unpack("B", response[2:3])
+            return message1, message2
 
-        if self._data[0] != opcode:
-            raise LssError("LSS response has a different opcode")
-
-        self._mode_state = self.CONFIGURATION_MODE
-
-        return self._data[1], self._data[2]
+    def on_message_received(self, can_id, data, timestamp):
+        self.responses.put(bytes(data))
 
 class LssError(Exception):
     """Some LSS operation failed."""

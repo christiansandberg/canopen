@@ -36,11 +36,9 @@ class Network(collections.MutableMapping):
         self.bus = bus
         #: A :class:`~canopen.network.NodeScanner` for detecting nodes
         self.scanner = NodeScanner(self)
-        self.lss = LssMaster()
-        self.lss.network = self
         #: List of :class:`can.Listener` objects.
         #: Includes at least MessageListener.
-        self.listeners = [MessageListener(self), self.scanner, self.lss]
+        self.listeners = [MessageListener(self), self.scanner]
         self.notifier = None
         self.nodes = {}
         self.subscribers = {}
@@ -49,6 +47,11 @@ class Network(collections.MutableMapping):
         self.time = TimeProducer(self)
         self.nmt = NmtMaster(0)
         self.nmt.network = self
+
+        self.lss = LssMaster()
+        self.lss.network = self
+        self.subscribe(self.lss.LSS_RX_COBID, self.lss.on_message_received)
+
 
     def subscribe(self, can_id, callback):
         """Listen for messages with a specific CAN ID.
