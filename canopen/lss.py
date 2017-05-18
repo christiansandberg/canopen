@@ -148,8 +148,8 @@ class LssMaster(object):
         while retries_left:
             # Wait for node to respond
             self.network.send_message(self.LSS_TX_COBID, message)
-			
-			# There is no response for SWITCH_MODE_GLOBAL message
+
+            # There is no response for SWITCH_MODE_GLOBAL message
             if message[0] == SWITCH_MODE_GLOBAL:
                 return
 
