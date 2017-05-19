@@ -1,7 +1,5 @@
 import logging
 import struct
-import time
-
 try:
     import queue
 except ImportError:
@@ -55,10 +53,9 @@ class LssMaster(object):
         :param int mode:
             CONFIGURATION_MODE or NORMAL_MODE
         """
-        # LSS messages are always a full 8 bytes long. 
+        # LSS messages are always a full 8 bytes long.
         # Unused bytes are reserved and should be initialized with 0.
-        
-        message = [0]*8
+        message = bytearray(8)
 
         if self._mode_state != mode:
             message[0] = SWITCH_MODE_GLOBAL
@@ -68,19 +65,18 @@ class LssMaster(object):
 
     def __send_inquire_node_id(self):
         """
-        :return: int current node id
+        :return: Current node id
+        :rtype: int
         """
-        message = [0]*8
+        message = bytearray(8)
         message[0] = INQUIRE_NODE_ID
         current_node_id, nothing = self.__send_command(message)
 
         return current_node_id
 
     def __send_configure(self, key, value1=0, value2=0):
-        """Send a message to set a key with values
-        :return: int error_code, int error_extension 
-        """
-        message = [0]*8
+        """Send a message to set a key with values"""
+        message = bytearray(8)
         message[0] = key
         message[1] = value1
         message[2] = value2
@@ -130,13 +126,13 @@ class LssMaster(object):
     def __send_command(self, message):
         """Send a LSS operation code to the network
 
-        :param byte list message:
+        :param bytearray message:
             LSS request message.
         """
 
         retries_left = self.MAX_RETRIES
 
-        message_str = "".join(["{:02x} ".format(x) for x in message])
+        message_str = " ".join(["{:02x}".format(x) for x in message])
         logger.info(
             "Sending LSS message %s", message_str)
 
@@ -165,17 +161,15 @@ class LssMaster(object):
             raise LssError("No LSS response received")
         if retries_left < self.MAX_RETRIES:
             logger.warning("There were some issues while communicating with the node")
-        res_command, = struct.unpack("B", response[0:1])
+        res_command, message1, message2 = struct.unpack_from("BBB", response)
         if res_command != message[0]:
-            raise LssError(abort_code)
-        else:
-            self._mode_state = self.CONFIGURATION_MODE
-            message1, = struct.unpack("B", response[1:2])
-            message2, = struct.unpack("B", response[2:3])
-            return message1, message2
+            raise LssError("Unexpected response (%d)" % res_command)
+        self._mode_state = self.CONFIGURATION_MODE
+        return message1, message2
 
     def on_message_received(self, can_id, data, timestamp):
         self.responses.put(bytes(data))
+
 
 class LssError(Exception):
     """Some LSS operation failed."""
