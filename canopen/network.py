@@ -169,6 +169,9 @@ class Network(collections.MutableMapping):
         If a custom interface is used, this function must be called for each
         11-bit standard message read from the CAN bus.
 
+        when a node is discovered who isn't in the nodes list then
+        it will be automatically added to the network
+
         :param int can_id:
             CAN-ID of the message (always 11-bit)
         :param bytearray data:
@@ -176,6 +179,13 @@ class Network(collections.MutableMapping):
         :param float timestamp:
             Timestamp of the message, preferably as a Unix timestamp
         """
+
+        node_id = can_id & 0x7F
+        if node_id in self.nodes:
+            pass
+        else:
+            self.add_node(int(node_id))
+
         if can_id in self.subscribers:
             callback = self.subscribers[can_id]
             callback(can_id, data, timestamp)
