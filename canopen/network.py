@@ -38,7 +38,7 @@ class Network(collections.MutableMapping):
         self.scanner = NodeScanner(self)
         #: List of :class:`can.Listener` objects.
         #: Includes at least MessageListener.
-        self.listeners = [MessageListener(self), self.scanner]
+        self.listeners = [MessageListener(self)]
         self.notifier = None
         self.nodes = {}
         self.subscribers = {}
@@ -179,6 +179,7 @@ class Network(collections.MutableMapping):
         if can_id in self.subscribers:
             callback = self.subscribers[can_id]
             callback(can_id, data, timestamp)
+        self.scanner.on_message_received(can_id)
 
     def __getitem__(self, node_id):
         return self.nodes[node_id]
@@ -220,7 +221,7 @@ class MessageListener(Listener):
             logger.error(str(e))
 
 
-class NodeScanner(Listener):
+class NodeScanner(object):
     """Observes which nodes are present on the bus.
 
     Listens for the following messages:
@@ -243,12 +244,9 @@ class NodeScanner(Listener):
         #: A :class:`list` of nodes discovered
         self.nodes = []
 
-    def on_message_received(self, msg):
-        if (not self.active or msg.is_error_frame or msg.is_remote_frame or
-                msg.is_extended_id):
-            return
-        service = msg.arbitration_id & 0x780
-        node_id = msg.arbitration_id & 0x7F
+    def on_message_received(self, can_id):
+        service = can_id & 0x780
+        node_id = can_id & 0x7F
         if node_id not in self.nodes and node_id != 0 and service in self.SERVICES:
             self.nodes.append(node_id)
 

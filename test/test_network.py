@@ -29,14 +29,14 @@ class TestNetwork(unittest.TestCase):
         self.assertEqual(len(node.emcy.active), 1)
         self.network.notify(0x702, b'\x05', 1473418396.0)
         self.assertEqual(node.nmt.state, 'OPERATIONAL')
+        self.assertListEqual(self.network.scanner.nodes, [2])
 
 
 class TestScanner(unittest.TestCase):
 
     def test_passive_scanning(self):
         scanner = canopen.network.NodeScanner()
-        scanner(can.Message(arbitration_id=0x586, extended_id=False))
-        scanner(can.Message(arbitration_id=0x587, extended_id=False))
-        scanner(can.Message(arbitration_id=0x586, extended_id=False))
-        scanner(can.Message(arbitration_id=0x588, extended_id=True))
+        scanner.on_message_received(0x586)
+        scanner.on_message_received(0x587)
+        scanner.on_message_received(0x586)
         self.assertListEqual(scanner.nodes, [6, 7])
