@@ -64,6 +64,19 @@ class Node402(Node):
         super(Node402, self).__init__(node_id, object_dictionary)
         self.powerstate_402 = PowerStateMachine(self)
         self.powerstate_402.network = self.network
+        # dict with list of callbacks per state
+        self.callbacks_402 = {
+            'NOT READY TO SWITCH ON': [],
+            'SWITCH ON DISABLED'    : [],
+            'READY TO SWITCH ON'    : [],
+            'SWITCHED ON'           : [],
+            'OPERATION ENABLED'     : [],
+            'FAULT'                 : [],
+            'FAULT REACTION ACTIVE' : [],
+            'QUICK STOP ACTIVE'     : [],
+            'HOMED'                 : [],
+            'NOT HOMED'             : []
+        }
 
     def setup_402_state_machine(self):
         # setup TPDO1 for this node
@@ -81,6 +94,14 @@ class Node402(Node):
         self.pdo.tx[1].enabled = True
         self.pdo.tx[1].save()
         self.nmt.state = 'OPERATIONAL'
+
+    def add_callback_402_state(self, state, cb):
+        self.callbacks_402[state].append(cb)
+
+    def execute_callbacks_402(self, state):
+        #cb_list = self.callbacks_402[state]
+        for callback in self.callbacks_402[state]:
+            callback()
 
 class PowerStateMachine(object):
     """A CANopen CiA 402 Power State machine. Listens to state changes
@@ -110,12 +131,15 @@ class PowerStateMachine(object):
             bitmaskvalue = statusword & value[0]
             if bitmaskvalue == value[1]:
                 mapobject.pdo_node.node.powerstate_402._state = key
+                mapobject.pdo_node.node.execute_callbacks_402(key)
         # check for homing status, bit 12
         bitmaskvalue = statusword & (1 << (STATUSWORD_BITS['HOMING COMPLETE']))
         if bitmaskvalue == 1 << (STATUSWORD_BITS['HOMING COMPLETE']):
             mapobject.pdo_node.node.powerstate_402._homing_state = 'HOMED'
+            mapobject.pdo_node.node.execute_callbacks_402("HOMED")
         else:
             mapobject.pdo_node.node.powerstate_402._homing_state = 'NOT HOMED'
+            mapobject.pdo_node.node.execute_callbacks_402("NOT HOMED")
 
     @property
     def state(self):
