@@ -115,8 +115,10 @@ class PowerStateMachine(object):
     def __init__(self, node):
         self.id = node.id
         self.node = node
-        self._homing_state = None
+        self._homing_state = 'NOT HOMED'
         self._state = 'NOT READY TO SWITCH ON'
+        self.prev_state = 'NOT READY TO SWITCH ON'
+        self.prev_homing_state = 'NOT HOMED'
 
     @staticmethod
     def on_PDO1_callback(mapobject):
@@ -124,22 +126,37 @@ class PowerStateMachine(object):
         # this map object is then used for changing the
         # Node402.PowerstateMachine._state by reading the statusword
         # The TPDO1 is defined in setup_402_state_machine
+        #
+        # if a state change is detected (prev_state != key) then
+        # callbacks are made for that current new state.
+        # same goes for homing_state
         statusword = mapobject[0].raw
+        prev_state =  mapobject.pdo_node.node.powerstate_402.prev_state
         for key, value in POWER_STATES_402.iteritems():
     		# check if the value after applying the bitmask (value[0])
     		# corresponds with the value[1] to determine the current status
             bitmaskvalue = statusword & value[0]
             if bitmaskvalue == value[1]:
-                mapobject.pdo_node.node.powerstate_402._state = key
-                mapobject.pdo_node.node.execute_callbacks_402(key)
+                # detect state change
+                if (prev_state != key):
+                    mapobject.pdo_node.node.powerstate_402._state = key
+                    mapobject.pdo_node.node.execute_callbacks_402(key)
+                    prev_state = key
         # check for homing status, bit 12
         bitmaskvalue = statusword & (1 << (STATUSWORD_BITS['HOMING COMPLETE']))
+        prev_homing_state =  mapobject.pdo_node.node.powerstate_402.prev_homing_state
         if bitmaskvalue == 1 << (STATUSWORD_BITS['HOMING COMPLETE']):
-            mapobject.pdo_node.node.powerstate_402._homing_state = 'HOMED'
-            mapobject.pdo_node.node.execute_callbacks_402("HOMED")
+            # detect state change
+            if (prev_homing_state != 'HOMED'):
+                mapobject.pdo_node.node.powerstate_402._homing_state = 'HOMED'
+                mapobject.pdo_node.node.execute_callbacks_402("HOMED")
+                prev_homing_state = 'HOMED'
         else:
-            mapobject.pdo_node.node.powerstate_402._homing_state = 'NOT HOMED'
-            mapobject.pdo_node.node.execute_callbacks_402("NOT HOMED")
+            # detect state change
+            if (prev_homing_state != 'NOT HOMED'):
+                mapobject.pdo_node.node.powerstate_402._homing_state = 'NOT HOMED'
+                mapobject.pdo_node.node.execute_callbacks_402("NOT HOMED")
+                prev_homing_state = 'NOT HOMED'
 
     @property
     def state(self):
