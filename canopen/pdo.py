@@ -240,7 +240,12 @@ class Map(object):
             :class:`~canopen.pdo.Map`.
         """
         self.callbacks.append(callback)
-
+    
+    def clear_callbacks(self):
+        """Clear the list of callbacks.
+        """
+        self.callbacks = []
+     
     def read(self):
         """Read PDO configuration for this map using SDO."""
         cob_id = self.com_record[1].raw
