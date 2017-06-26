@@ -89,6 +89,7 @@ class Node402(Node):
         # Use register as to stay manufacturer agnostic
         self.pdo.tx[1].add_variable(0x6041)
         # add callback to listen to TPDO1 and change 402 state
+        self.pdo.tx[1].clear_callbacks()
         self.pdo.tx[1].add_callback(self.powerstate_402.on_PDO1_callback)
         self.pdo.tx[1].trans_type = 255
         self.pdo.tx[1].enabled = True
@@ -97,6 +98,11 @@ class Node402(Node):
 
     def add_callback_402_state(self, state, cb):
         self.callbacks_402[state].append(cb)
+
+    def clear_402_callbacks(self):
+        print "clearing 402 callbacks"
+        for key, (value, cblist) in enumerate(self.callbacks_402.iteritems()):
+            cblist = []
 
     def execute_callbacks_402(self, state):
         #cb_list = self.callbacks_402[state]
