@@ -1,3 +1,4 @@
+import time
 import os
 import unittest
 import canopen
@@ -31,6 +32,23 @@ class TestNetwork(unittest.TestCase):
         self.assertEqual(node.nmt.state, 'OPERATIONAL')
         self.assertListEqual(self.network.scanner.nodes, [2])
 
+    def test_send_perodic(self):
+        bus = can.interface.Bus(bustype="virtual", channel=1)
+        self.network.connect(bustype="virtual", channel=1)
+        task = self.network.send_periodic(0x123, [1, 2, 3], 0.01)
+        time.sleep(0.1)
+        self.assertTrue(9 <= bus.queue.qsize() <= 11)
+        msg = bus.recv(0)
+        self.assertIsNotNone(msg)
+        self.assertSequenceEqual(msg.data, [1, 2, 3])
+        # Update data
+        task.update([4, 5, 6])
+        time.sleep(0.02)
+        while msg is not None and msg.data == b'\x01\x02\x03':
+            msg = bus.recv(0)
+        self.assertIsNotNone(msg)
+        self.assertSequenceEqual(msg.data, [4, 5, 6])
+
 
 class TestScanner(unittest.TestCase):
 
@@ -40,3 +58,7 @@ class TestScanner(unittest.TestCase):
         scanner.on_message_received(0x587)
         scanner.on_message_received(0x586)
         self.assertListEqual(scanner.nodes, [6, 7])
+
+
+if __name__ == "__main__":
+    unittest.main()

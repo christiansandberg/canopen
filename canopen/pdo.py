@@ -169,6 +169,7 @@ class Map(object):
         self.receive_condition = threading.Condition()
         self.stop_event = threading.Event()
         self.is_received = False
+        self._task = None
 
     def __getitem__(self, key):
         if isinstance(key, int):
@@ -349,18 +350,16 @@ class Map(object):
             raise ValueError("A valid transmission period has not been given")
         logger.info("Starting %s with a period of %s seconds", self.name, self.period)
 
-        if not self.transmit_thread or not self.transmit_thread.is_alive():
-            self.stop_event.clear()
-            self.transmit_thread = threading.Thread(
-                name=self.name,
-                target=self._periodic_transmit)
-            self.transmit_thread.daemon = True
-            self.transmit_thread.start()
+        self._task = self.pdo_node.network.send_periodic(
+            self.cob_id, self.data, self.period)
 
     def stop(self):
         """Stop transmission."""
-        self.stop_event.set()
-        self.transmit_thread = None
+        self._task.stop()
+
+    def update(self):
+        """Update periodic message with new data."""
+        self._task.update(self.data)
 
     def remote_request(self):
         """Send a remote request for the transmit PDO.
@@ -380,17 +379,6 @@ class Map(object):
             self.is_received = False
             self.receive_condition.wait(timeout)
         return self.timestamp if self.is_received else None
-
-    def _periodic_transmit(self):
-        while not self.stop_event.is_set():
-            start = timer()
-            try:
-                self.transmit()
-            except CanError as error:
-                print(str(error))
-            time_left = self.period - (timer() - start)
-            if time_left > 0:
-                time.sleep(time_left)
 
 
 class Variable(common.Variable):
@@ -415,3 +403,4 @@ class Variable(common.Variable):
         logger.debug("Updating %s to %s in message 0x%X",
                      self.name, binascii.hexlify(data), self.msg.cob_id)
         self.msg.data[byte_offset:byte_offset + len(data)] = data
+        self.msg.update()

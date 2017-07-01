@@ -162,6 +162,27 @@ class Network(collections.MutableMapping):
                           is_remote_frame=remote)
         with self.send_lock:
             self.bus.send(msg)
+        # Check that no fatal error has occurred in the receiving thread
+        exc = self.notifier.exception
+        if exc is not None:
+            logger.error("An error has caused receiving of messages to stop")
+            raise exc
+
+    def send_periodic(self, can_id, data, period):
+        """Start sending a message periodically.
+
+        :param int can_id:
+            CAN-ID of the message (always 11-bit)
+        :param data:
+            Data to be transmitted (anything that can be converted to bytes)
+        :param float period:
+            Seconds between each message
+
+        :return:
+            An task object with a ``.stop()`` method to stop the transmission
+        :rtype: canopen.network.PeriodicMessageTask
+        """
+        return PeriodicMessageTask(can_id, data, period, self.bus)
 
     def notify(self, can_id, data, timestamp):
         """Feed incoming message to this library.
@@ -198,6 +219,48 @@ class Network(collections.MutableMapping):
 
     def __len__(self):
         return len(self.nodes)
+
+
+class PeriodicMessageTask(object):
+    """
+    Task object to transmit a message periodically using python-can's
+    CyclicSendTask
+    """
+
+    def __init__(self, can_id, data, period, bus):
+        """
+        :param int can_id:
+            CAN-ID of the message (always 11-bit)
+        :param data:
+            Data to be transmitted (anything that can be converted to bytes)
+        :param float period:
+            Seconds between each message
+        :param can.BusABC bus:
+            python-can bus to use for transmission
+        """
+        self.can_id = can_id
+        self.data = data
+        msg = self._get_message()
+        self._task = bus.send_periodic(msg, period)
+
+    def _get_message(self):
+        return can.Message(extended_id=False,
+                           arbitration_id=self.can_id,
+                           data=self.data)
+
+    def stop(self):
+        """Stop transmission"""
+        self._task.stop()
+
+    def update(self, data):
+        """Update data of message
+
+        :param data:
+            New data to transmit
+        """
+        self.data = data
+        msg = self._get_message()
+        self._task.modify_data(msg)
 
 
 class MessageListener(Listener):
