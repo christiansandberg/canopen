@@ -111,6 +111,7 @@ class Network(collections.MutableMapping):
         self.notifier.stop()
         self.bus.shutdown()
         self.bus = None
+        self.check()
 
     def add_node(self, node, object_dictionary=None, upload_eds=False):
         """Add a node to the network.
@@ -162,11 +163,7 @@ class Network(collections.MutableMapping):
                           is_remote_frame=remote)
         with self.send_lock:
             self.bus.send(msg)
-        # Check that no fatal error has occurred in the receiving thread
-        exc = self.notifier.exception
-        if exc is not None:
-            logger.error("An error has caused receiving of messages to stop")
-            raise exc
+        self.check()
 
     def send_periodic(self, can_id, data, period):
         """Start sending a message periodically.
@@ -201,6 +198,17 @@ class Network(collections.MutableMapping):
             callback = self.subscribers[can_id]
             callback(can_id, data, timestamp)
         self.scanner.on_message_received(can_id)
+
+    def check(self):
+        """Check that no fatal error has occurred in the receiving thread.
+
+        If an exception caused the thread to terminate, that exception will be
+        raised.
+        """
+        exc = self.notifier.exception
+        if exc is not None:
+            logger.error("An error has caused receiving of messages to stop")
+            raise exc
 
     def __getitem__(self, node_id):
         return self.nodes[node_id]
