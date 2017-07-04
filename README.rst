@@ -103,15 +103,25 @@ Here are some quick examples of what you can do:
 
     # Read PDO configuration from node
     node.pdo.read()
+    # Re-map TxPDO1
+    node.pdo.tx[1].clear()
+    node.pdo.tx[1].add_variable('Application Status', 'Status All')
+    node.pdo.tx[1].add_variable('Application Status', 'Actual Speed')
+    node.pdo.tx[1].trans_type = 254
+    node.pdo.tx[1].event_timer = 10
+    node.pdo.tx[1].enabled = True
+    # Save new PDO configuration to node
+    node.pdo.save()
+
     # Transmit SYNC every 100 ms
     network.sync.start(0.1)
 
     # Change state to operational (NMT start)
     node.nmt.state = 'OPERATIONAL'
 
-    # Read a value from Tx PDO 1
+    # Read a value from TxPDO1
     node.pdo.tx[1].wait_for_reception()
-    speed = node.pdo.tx[1]['ApplicationStatus.ActualSpeed'].phys
+    speed = node.pdo.tx[1]['Application Status.Actual Speed'].phys
 
     # Disconnect from CAN bus
     network.sync.stop()
