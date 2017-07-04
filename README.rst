@@ -118,6 +118,19 @@ Here are some quick examples of what you can do:
     network.disconnect()
 
 
+Debugging
+---------
+
+If you need to see what's going on in better detail, you can increase the
+logging_ level of this library and possibly for python-can as well:
+
+.. code-block:: python
+
+    import logging
+    logging.getLogger('canopen').setLevel(logging.DEBUG)
+    logging.getLogger('can').setLevel(logging.DEBUG)
+
+
 TODO
 ----
 
@@ -135,3 +148,4 @@ Pull requests are most welcome!
 .. _python-can: https://python-can.readthedocs.org/en/stable/
 .. _Sphinx: http://www.sphinx-doc.org/
 .. _develop mode: https://packaging.python.org/distributing/#working-in-development-mode
+.. _logging: https://docs.python.org/3/library/logging.html
