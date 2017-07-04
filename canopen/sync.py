@@ -5,7 +5,10 @@ from .network import CanError
 
 
 class SyncProducer(object):
-    """Transmits a SYNC message (0x80) periodically."""
+    """Transmits a SYNC message periodically."""
+
+    #: COB-ID of the SYNC message
+    cob_id = 0x80
 
     def __init__(self, network):
         self.network = network
@@ -15,7 +18,7 @@ class SyncProducer(object):
 
     def transmit(self):
         """Send out a SYNC message once."""
-        self.network.send_message(0x80, [])
+        self.network.send_message(self.cob_id, [])
 
     def start(self, period=None):
         """Start periodic transmission of SYNC message in a background thread.
