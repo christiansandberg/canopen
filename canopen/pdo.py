@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 import sys
 import time
 import threading
@@ -275,8 +276,9 @@ class Map(object):
             if size == 0:
                 continue
             var = self._get_variable(index, subindex)
-            assert size == len(var.od), "Size mismatch"
+            # assert size == len(var.od), "Size mismatch"
             var.offset = offset
+            var.length = size
             logger.info("Found %s (0x%X:%d) in PDO map",
                         var.name, index, subindex)
             self.map.append(var)
@@ -412,6 +414,7 @@ class Variable(common.Variable):
         #: Location of variable in the message in bits
         self.offset = None
         self.name = od.name
+        self.length = None
         if isinstance(od.parent, (objectdictionary.Record,
                                   objectdictionary.Array)):
             self.name = od.parent.name + "." + self.name
@@ -419,7 +422,26 @@ class Variable(common.Variable):
 
     def get_data(self):
         byte_offset = self.offset // 8
-        return bytes(self.msg.data[byte_offset:byte_offset + len(self.od) // 8])
+        bit_offset = self.offset % 8
+        data = int.from_bytes(self.msg.data[byte_offset:byte_offset + len(self.od) // 8], byteorder='little', signed=False)
+        data = (data >> bit_offset) & (2**self.length-1)
+
+        return data.to_bytes(len(self.od)//8, byteorder='little')
+        # data = self.msg.data[byte_offset:byte_offset + len(self.od) // 8]
+        # length = len(data)
+        # if length == 1:
+        #     length = 'B'
+        # elif length == 2:
+        #     length = 'H'
+        # elif length == 4:
+        #     length = 'L'
+        # elif length == 8:
+        #     length = 'Q'
+        # import struct
+        # data = struct.unpack("<"+length, data)[0]
+        # data = (data >> bit_offset) & (2**self.length-1)
+        # data = struct.pack("<"+length, data)
+        # return data
 
     def set_data(self, data):
         byte_offset = self.offset // 8
