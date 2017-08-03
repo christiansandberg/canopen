@@ -258,7 +258,7 @@ class Map(object):
         if self.trans_type >= 254:
             try:
                 self.event_timer = self.com_record[5].raw
-            except SdoAbortedError as e:
+            except (KeyError, SdoAbortedError) as e:
                 logger.info("Could not read event timer (%s)", e)
             else:
                 logger.info("Event timer is set to %d ms", self.event_timer)
