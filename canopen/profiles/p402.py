@@ -87,7 +87,7 @@ class PowerStateMachine(object):
         # Node402.PowerstateMachine._state by reading the statusword
         # The TPDO1 is defined in setup_402_state_machine
         statusword = mapobject[0].raw
-        for key, value in POWER_STATES_402.iteritems():
+        for key, value in POWER_STATES_402.items():
     		# check if the value after applying the bitmask (value[0])
     		# corresponds with the value[1] to determine the current status
             bitmaskvalue = statusword & value[0]
