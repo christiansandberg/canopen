@@ -265,10 +265,9 @@ class Map(object):
 
         self.map = []
         offset = 0
-        for entry in self.map_array.values():
-            if entry.od.subindex == 0:
-                continue
-            value = entry.raw
+        nof_entries = self.map_array[0].raw
+        for subindex in range(1, nof_entries + 1):
+            value = self.map_array[subindex].raw
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
