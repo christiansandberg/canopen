@@ -9,7 +9,7 @@ try:
 except ImportError:
     import Queue as queue
 
-import can
+from .network import CanError
 
 from . import objectdictionary
 from . import common
@@ -84,7 +84,7 @@ class SdoClient(collections.Mapping):
         while True:
             try:
                 self.network.send_message(self.rx_cobid, request)
-            except can.CanError as e:
+            except CanError as e:
                 # Could be a buffer overflow. Wait some time before trying again
                 retries_left -= 1
                 if not retries_left:
