@@ -360,13 +360,14 @@ class ReadableStream(io.RawIOBase):
         self._done = False
         self.sdo_client = sdo_client
         self._toggle = 0
+        self.pos = 0
 
         logger.debug("Reading 0x%X:%d from node %d", index, subindex,
                      sdo_client.rx_cobid - 0x600)
-        request = SDO_STRUCT.pack(REQUEST_UPLOAD, index, subindex)
-        request += b"\x00\x00\x00\x00"
+        request = bytearray(8)
+        SDO_STRUCT.pack_into(request, 0, REQUEST_UPLOAD, index, subindex)
         response = sdo_client.request_response(request)
-        res_command, res_index, res_subindex = SDO_STRUCT.unpack(response[0:4])
+        res_command, res_index, res_subindex = SDO_STRUCT.unpack_from(response)
         res_data = response[4:8]
 
         if res_command & 0xE0 != RESPONSE_UPLOAD:
@@ -387,6 +388,7 @@ class ReadableStream(io.RawIOBase):
                 self.exp_data = res_data[:self.size]
             else:
                 self.exp_data = res_data
+            self.pos += len(self.exp_data)
         elif res_command & SIZE_SPECIFIED:
             self.size, = struct.unpack("<L", res_data)
             logger.debug("Using segmented transfer of %d bytes", self.size)
@@ -415,16 +417,17 @@ class ReadableStream(io.RawIOBase):
         request = bytearray(8)
         request[0] = command
         response = self.sdo_client.request_response(request)
-        res_command, = struct.unpack("B", response[0:1])
+        res_command, = struct.unpack_from("B", response)
         if res_command & 0xE0 != RESPONSE_SEGMENT_UPLOAD:
             raise SdoCommunicationError("Unexpected response 0x%02X" % res_command)
         if res_command & TOGGLE_BIT != self._toggle:
             raise SdoCommunicationError("Toggle bit mismatch")
-        last_byte = 8 - ((res_command >> 1) & 0x7)
+        length = 7 - ((res_command >> 1) & 0x7)
         if res_command & NO_MORE_DATA:
             self._done = True
         self._toggle ^= TOGGLE_BIT
-        return response[1:last_byte]
+        self.pos += length
+        return response[1:length + 1]
 
     def readinto(self, b):
         """
@@ -437,6 +440,9 @@ class ReadableStream(io.RawIOBase):
 
     def readable(self):
         return True
+
+    def tell(self):
+        return self.pos
 
 
 class WritableStream(io.RawIOBase):
@@ -464,15 +470,14 @@ class WritableStream(io.RawIOBase):
 
         if size is None or size > 4 or force_segment:
             # Initiate segmented download
+            request = bytearray(8)
             command = REQUEST_DOWNLOAD
             if size is not None:
                 command |= SIZE_SPECIFIED
-                size_data = struct.pack("<L", size)
-            else:
-                size_data = b"\x00\x00\x00\x00"
-            request = SDO_STRUCT.pack(command, index, subindex) + size_data
+                struct.pack_into("<L", request, 4, size)
+            SDO_STRUCT.pack_into(request, 0, command, index, subindex)
             response = sdo_client.request_response(request)
-            res_command, = struct.unpack("B", response[0:1])
+            res_command, = struct.unpack_from("B", response)
             if res_command != RESPONSE_DOWNLOAD:
                 raise SdoCommunicationError(
                     "Unexpected response 0x%02X" % res_command)
@@ -499,7 +504,7 @@ class WritableStream(io.RawIOBase):
             data = b.tobytes() if isinstance(b, memoryview) else b
             request = self._exp_header + data.ljust(4, b"\x00")
             response = self.sdo_client.request_response(request)
-            res_command, = struct.unpack("B", response[0:1])
+            res_command, = struct.unpack_from("B", response)
             if res_command & 0xE0 != RESPONSE_DOWNLOAD:
                 raise SdoCommunicationError(
                     "Unexpected response 0x%02X" % res_command)
@@ -550,6 +555,9 @@ class WritableStream(io.RawIOBase):
 
     def writable(self):
         return True
+
+    def tell(self):
+        return self.pos
 
 
 class BlockUploadStream(io.RawIOBase):
