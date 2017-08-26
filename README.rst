@@ -61,6 +61,8 @@ At the time of writing this includes:
 * Kvaser
 * Peak CAN
 * IXXAT
+* Vector
+* isCAN
 * USB2CAN
 * NI-CAN
 * neoVI
@@ -92,6 +94,7 @@ Here are some quick examples of what you can do:
     # network.connect(bustype='kvaser', channel=0, bitrate=250000)
     # network.connect(bustype='pcan', channel='PCAN_USBBUS1', bitrate=250000)
     # network.connect(bustype='ixxat', channel=0, bitrate=250000)
+    # network.connect(bustype='vector', app_name='CANalyzer', channel=0, bitrate=250000)
     # network.connect(bustype='nican', channel='CAN0', bitrate=250000)
 
     # Read a variable using SDO
