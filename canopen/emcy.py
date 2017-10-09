@@ -22,18 +22,19 @@ class EmcyConsumer(object):
 
     def on_emcy(self, can_id, data, timestamp):
         code, register, data = self.EMCY_STRUCT.unpack(data)
-        if code & 0xFF == 0:
+        entry = EmcyError(code, register, data, timestamp)
+
+        with self.emcy_received:
+             self.log.append(entry)
+             self.active.append(entry)
+             self.emcy_received.notify_all()
+
+        if code & 0xFFFF == 0:
             # Error reset
             self.active = []
             for callback in self.callbacks:
                 callback(None)
         else:
-            entry = EmcyError(code, register, data, timestamp)
-            #print("EMCY received for node %d: %s" % (can_id & 0x7F, entry))
-            with self.emcy_received:
-                self.log.append(entry)
-                self.active.append(entry)
-                self.emcy_received.notify_all()
             for callback in self.callbacks:
                 callback(entry)
 
