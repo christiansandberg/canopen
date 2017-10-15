@@ -500,7 +500,8 @@ class WritableStream(io.RawIOBase):
             if len(b) < self.size:
                 # Not enough data provided
                 return 0
-            assert len(b) <= 4, "More data received than expected"
+            if len(b) > 4:
+                raise AssertionError("More data received than expected")
             data = b.tobytes() if isinstance(b, memoryview) else b
             request = self._exp_header + data.ljust(4, b"\x00")
             response = self.sdo_client.request_response(request)
@@ -799,9 +800,9 @@ class BlockDownloadStream(io.RawIOBase):
         :param bool end:
             If this is the last data.
         """
-        assert len(b) <= 7
+        assert len(b) <= 7, "Max 7 bytes can be sent"
         if not end:
-            assert len(b) == 7
+            assert len(b) == 7, "Less than 7 bytes only allowed if last data"
         self._seqno += 1
         command = self._seqno
         if end:

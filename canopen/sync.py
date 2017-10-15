@@ -22,7 +22,7 @@ class SyncProducer(object):
 
     def start(self, period=None):
         """Start periodic transmission of SYNC message in a background thread.
-        
+
         :param float period:
             Period of SYNC message in seconds.
         """

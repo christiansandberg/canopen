@@ -1,6 +1,6 @@
 # inspired by the NmtMaster code
 
-from canopen import Node, NodeScanner
+from canopen import Node
 
 # status word 0x6041 bitmask and values in the list in the dictionary value
 POWER_STATES_402 = {
@@ -26,7 +26,6 @@ POWER_STATE_COMMANDS = {
 
 COMMAND_TO_POWER_STATE = {
     0x80: 'SWITCH ON DISABLED',
-    0x02: 'SWITCH ON DISABLED',
     0x06: 'READY TO SWITCH ON',
     0x07: 'SWITCHED ON',
     0x0F: 'OPERATION ENABLED',

@@ -117,7 +117,8 @@ class Bits(collections.Mapping):
         self.variable = variable
         self.read()
 
-    def _get_bits(self, key):
+    @staticmethod
+    def _get_bits(key):
         if isinstance(key, slice):
             bits = range(key.start, key.stop, key.step)
         elif isinstance(key, int):

@@ -1,6 +1,6 @@
 import os
 import unittest
-import binascii
+# import binascii
 import canopen
 
 
@@ -151,7 +151,7 @@ class TestSDO(unittest.TestCase):
             (RX, b'\x80\x18\x10\x01\x11\x00\x09\x06')
         ]
         with self.assertRaises(canopen.SdoAbortedError) as cm:
-            vendor_id = self.network[2].sdo[0x1018][1].raw
+            _ = self.network[2].sdo[0x1018][1].raw
         self.assertEqual(cm.exception.code, 0x06090011)
 
 
