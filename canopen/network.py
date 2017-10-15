@@ -246,15 +246,16 @@ class PeriodicMessageTask(object):
         :param can.BusABC bus:
             python-can bus to use for transmission
         """
-        self.can_id = can_id
-        self.data = data
-        msg = self._get_message()
-        self._task = bus.send_periodic(msg, period)
+        self.bus = bus
+        self.period = period
+        self.msg = can.Message(extended_id=False,
+                               arbitration_id=can_id,
+                               data=data)
+        self._task = None
+        self._start()
 
-    def _get_message(self):
-        return can.Message(extended_id=False,
-                           arbitration_id=self.can_id,
-                           data=self.data)
+    def _start(self):
+        self._task = self.bus.send_periodic(self.msg, self.period)
 
     def stop(self):
         """Stop transmission"""
@@ -266,9 +267,13 @@ class PeriodicMessageTask(object):
         :param data:
             New data to transmit
         """
-        self.data = data
-        msg = self._get_message()
-        self._task.modify_data(msg)
+        self.msg.data = bytearray(data)
+        if hasattr(self._task, "modify_data"):
+            self._task.modify_data(self.msg)
+        else:
+            # Stop and start (will mess up period unfortunately)
+            self._task.stop()
+            self._start()
 
 
 class MessageListener(Listener):
