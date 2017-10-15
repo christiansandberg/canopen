@@ -61,6 +61,8 @@ At the time of writing this includes:
 * Kvaser
 * Peak CAN
 * IXXAT
+* Vector
+* isCAN
 * USB2CAN
 * NI-CAN
 * neoVI
@@ -92,6 +94,7 @@ Here are some quick examples of what you can do:
     # network.connect(bustype='kvaser', channel=0, bitrate=250000)
     # network.connect(bustype='pcan', channel='PCAN_USBBUS1', bitrate=250000)
     # network.connect(bustype='ixxat', channel=0, bitrate=250000)
+    # network.connect(bustype='vector', app_name='CANalyzer', channel=0, bitrate=250000)
     # network.connect(bustype='nican', channel='CAN0', bitrate=250000)
 
     # Read a variable using SDO
@@ -103,19 +106,42 @@ Here are some quick examples of what you can do:
 
     # Read PDO configuration from node
     node.pdo.read()
+    # Re-map TxPDO1
+    node.pdo.tx[1].clear()
+    node.pdo.tx[1].add_variable('Application Status', 'Status All')
+    node.pdo.tx[1].add_variable('Application Status', 'Actual Speed')
+    node.pdo.tx[1].trans_type = 254
+    node.pdo.tx[1].event_timer = 10
+    node.pdo.tx[1].enabled = True
+    # Save new PDO configuration to node
+    node.pdo.save()
+
     # Transmit SYNC every 100 ms
     network.sync.start(0.1)
 
     # Change state to operational (NMT start)
     node.nmt.state = 'OPERATIONAL'
 
-    # Read a value from Tx PDO 1
+    # Read a value from TxPDO1
     node.pdo.tx[1].wait_for_reception()
-    speed = node.pdo.tx[1]['ApplicationStatus.ActualSpeed'].phys
+    speed = node.pdo.tx[1]['Application Status.Actual Speed'].phys
 
     # Disconnect from CAN bus
     network.sync.stop()
     network.disconnect()
+
+
+Debugging
+---------
+
+If you need to see what's going on in better detail, you can increase the
+logging_ level of this library and possibly for python-can as well:
+
+.. code-block:: python
+
+    import logging
+    logging.getLogger('canopen').setLevel(logging.DEBUG)
+    logging.getLogger('can').setLevel(logging.DEBUG)
 
 
 TODO
@@ -126,7 +152,6 @@ Pull requests are most welcome!
 
 * More unit test coverage
 * Period transmits using python-can cyclic API
-* SDO block transfer
 * XDD support
 
 
@@ -135,3 +160,4 @@ Pull requests are most welcome!
 .. _python-can: https://python-can.readthedocs.org/en/stable/
 .. _Sphinx: http://www.sphinx-doc.org/
 .. _develop mode: https://packaging.python.org/distributing/#working-in-development-mode
+.. _logging: https://docs.python.org/3/library/logging.html

@@ -16,9 +16,6 @@ and SDO Block download/upload. The SDO block transfer is a newer addition to
 standard, which allows large amounts of data to be transferred with slightly
 less protocol overhead.
 
-.. note::
-    SDO block transfers are not yet supported.
-
 The COB-IDs of the respective SDO transfer messages from client to server and
 server to client can be set in the object dictionary. Up to 128 SDO servers can
 be set up in the object dictionary at addresses 0x1200 - 0x127F. Similarly, the
@@ -83,6 +80,28 @@ when dealing with large amounts of data::
     # Clean-up
     infile.close()
     outfile.close()
+
+Most APIs accepting file objects should also be able to accept this.
+
+Block transfer can be used to effectively transfer large amounts of data if the
+server supports it. This is done through the file object interface::
+
+    FIRMWARE_PATH = '/path/to/firmware.bin'
+    FILESIZE = os.path.getsize(FIRMWARE_PATH)
+    infile = open(FIRMWARE_PATH, 'rb')
+    outfile = node.sdo['Firmware'].open('wb', size=FILESIZE, block_transfer=True)
+
+    # Iteratively transfer data without having to read all into memory
+    while True:
+        data = infile.read(1024)
+        if not data:
+            break
+        outfile.write(data)
+    infile.close()
+    outfile.close()
+
+.. warning::
+   Block transfer is still in experimental stage!
 
 
 API
@@ -199,6 +218,14 @@ API
     :members: read, readinto, readall, readline, readlines
 
 .. autoclass:: canopen.sdo.WritableStream
+    :show-inheritance:
+    :members: write, close
+
+.. autoclass:: canopen.sdo.BlockUploadStream
+    :show-inheritance:
+    :members: read, readinto, readall, readline, readlines
+
+.. autoclass:: canopen.sdo.BlockDownloadStream
     :show-inheritance:
     :members: write, close
 

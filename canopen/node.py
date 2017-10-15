@@ -49,3 +49,25 @@ class Node(object):
         self.sdo.network = None
         self.pdo.network = None
         self.nmt.network = None
+
+    def store(self, subindex=1):
+        """Store parameters in non-volatile memory.
+
+        :param int subindex:
+            1 = All parameters\n
+            2 = Communication related parameters\n
+            3 = Application related parameters\n
+            4 - 127 = Manufacturer specific
+        """
+        self.sdo.download(0x1010, subindex, b"save")
+
+    def restore(self, subindex=1):
+        """Restore default parameters.
+
+        :param int subindex:
+            1 = All parameters\n
+            2 = Communication related parameters\n
+            3 = Application related parameters\n
+            4 - 127 = Manufacturer specific
+        """
+        self.sdo.download(0x1011, subindex, b"load")

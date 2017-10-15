@@ -7,6 +7,7 @@ import logging
 import binascii
 
 from .network import CanError
+from .sdo import SdoAbortedError
 from . import objectdictionary
 from . import common
 
@@ -156,8 +157,10 @@ class Map(object):
         self.rtr_allowed = True
         #: Transmission type (0-255)
         self.trans_type = None
+        #: Event timer (in ms)
+        self.event_timer = None
         #: List of variables mapped to this PDO
-        self.map = None
+        self.map = []
         #: Current message data
         self.data = bytearray()
         #: Timestamp of last received message
@@ -253,13 +256,19 @@ class Map(object):
         logger.info("RTR is %s", "allowed" if self.rtr_allowed else "not allowed")
         self.trans_type = self.com_record[2].raw
         logger.info("Transmission type is %d", self.trans_type)
+        if self.trans_type >= 254:
+            try:
+                self.event_timer = self.com_record[5].raw
+            except (KeyError, SdoAbortedError) as e:
+                logger.info("Could not read event timer (%s)", e)
+            else:
+                logger.info("Event timer is set to %d ms", self.event_timer)
 
         self.map = []
         offset = 0
-        for entry in self.map_array.values():
-            if entry.od.subindex == 0:
-                continue
-            value = entry.raw
+        nof_entries = self.map_array[0].raw
+        for subindex in range(1, nof_entries + 1):
+            value = self.map_array[subindex].raw
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
@@ -291,6 +300,9 @@ class Map(object):
         if self.trans_type is not None:
             logger.info("Setting transmission type to %d", self.trans_type)
             self.com_record[2].raw = self.trans_type
+        if self.event_timer is not None:
+            logger.info("Setting event timer to %d ms", self.event_timer)
+            self.com_record[5].raw = self.event_timer
 
         if self.map is not None:
             self.map_array[0].raw = 0
@@ -324,8 +336,6 @@ class Map(object):
         :return: Variable that was added
         :rtype: canopen.pdo.Variable
         """
-        if self.map is None:
-            self.map = []
         var = self._get_variable(index, subindex)
         var.offset = self._get_total_size()
         logger.info("Adding %s (0x%X:%d) to PDO map",

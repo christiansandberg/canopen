@@ -156,7 +156,8 @@ class Network(collections.MutableMapping):
         :raises can.CanError:
             When the message fails to be transmitted
         """
-        assert self.bus, "Not connected to CAN bus"
+        if not self.bus:
+            raise RuntimeError("Not connected to CAN bus")
         msg = can.Message(extended_id=False,
                           arbitration_id=can_id,
                           data=data,
@@ -332,7 +333,8 @@ class NodeScanner(object):
 
     def search(self, limit=127):
         """Search for nodes by sending SDO requests to all node IDs."""
-        assert self.network is not None, "A Network is required to do active scanning"
+        if self.network is None:
+            raise RuntimeError("A Network is required to do active scanning")
         sdo_req = b"\x40\x00\x10\x00\x00\x00\x00\x00"
         for node_id in range(1, limit + 1):
             self.network.send_message(0x600 + node_id, sdo_req)

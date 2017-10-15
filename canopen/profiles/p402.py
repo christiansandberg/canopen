@@ -1,6 +1,6 @@
 # inspired by the NmtMaster code
 
-from canopen import Node, NodeScanner
+from canopen import Node
 
 # status word 0x6041 bitmask and values in the list in the dictionary value
 POWER_STATES_402 = {
@@ -26,7 +26,6 @@ POWER_STATE_COMMANDS = {
 
 COMMAND_TO_POWER_STATE = {
     0x80: 'SWITCH ON DISABLED',
-    0x02: 'SWITCH ON DISABLED',
     0x06: 'READY TO SWITCH ON',
     0x07: 'SWITCHED ON',
     0x0F: 'OPERATION ENABLED',
@@ -87,7 +86,7 @@ class PowerStateMachine(object):
         # Node402.PowerstateMachine._state by reading the statusword
         # The TPDO1 is defined in setup_402_state_machine
         statusword = mapobject[0].raw
-        for key, value in POWER_STATES_402.iteritems():
+        for key, value in POWER_STATES_402.items():
     		# check if the value after applying the bitmask (value[0])
     		# corresponds with the value[1] to determine the current status
             bitmaskvalue = statusword & value[0]

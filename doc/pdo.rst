@@ -38,14 +38,15 @@ starts at 1, not 0)::
 
     # Do some changes to TxPDO4 and RxPDO4
     node.pdo.tx[4].clear()
-    node.pdo.tx[4].add_variable('ApplicationStatus', 'StatusAll')
-    node.pdo.tx[4].add_variable('ApplicationStatus', 'ActualSpeed')
-    node.pdo.tx[4].trans_type = 1
+    node.pdo.tx[4].add_variable('Application Status', 'Status All')
+    node.pdo.tx[4].add_variable('Application Status', 'Actual Speed')
+    node.pdo.tx[4].trans_type = 254
+    node.pdo.tx[4].event_timer = 10
     node.pdo.tx[4].enabled = True
 
     node.pdo.rx[4].clear()
-    node.pdo.rx[4].add_variable('ApplicationCommands', 'CommandAll')
-    node.pdo.rx[4].add_variable('ApplicationCommands', 'CommandSpeed')
+    node.pdo.rx[4].add_variable('Application Commands', 'Command All')
+    node.pdo.rx[4].add_variable('Application Commands', 'Command Speed')
     node.pdo.rx[4].enabled = True
 
     # Save new configuration (node must be in pre-operational)
@@ -54,11 +55,8 @@ starts at 1, not 0)::
     # Export a database file of PDO configuration
     node.pdo.export('database.dbc')
 
-    # Start SYNC message with a period of 10 ms
-    network.sync.start(0.01)
-
     # Start RxPDO4 with an interval of 100 ms
-    node.pdo.rx[4]['ApplicationCommands.CommandSpeed'].phys = 1000
+    node.pdo.rx[4]['Application Commands.Command Speed'].phys = 1000
     node.pdo.rx[4].start(0.1)
     node.nmt.state = 'OPERATIONAL'
 
@@ -66,19 +64,20 @@ starts at 1, not 0)::
     with open('output.txt', 'w') as f:
         for i in range(50):
             node.pdo.tx[4].wait_for_reception()
-            speed = node.pdo.tx[4]['ApplicationStatus.ActualSpeed'].phys
+            speed = node.pdo.tx[4]['Application Status.Actual Speed'].phys
             f.write('%s\n' % speed)
 
     # Using a callback to asynchronously receive values
     def print_speed(message):
-        print(message['ApplicationStatus.ActualSpeed'].phys)
+        print('%s received' % message.name)
+        for var in message:
+            print('%s = %d' % (var.name, var.raw))
 
     node.pdo.tx[4].add_callback(print_speed)
     time.sleep(5)
 
-    # Stop transmission of RxPDO and SYNC
+    # Stop transmission of RxPDO
     node.pdo.rx[4].stop()
-    network.sync.stop()
 
 
 API

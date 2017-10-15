@@ -70,7 +70,7 @@ class LssMaster(object):
         """
         message = bytearray(8)
         message[0] = INQUIRE_NODE_ID
-        current_node_id, nothing = self.__send_command(message)
+        current_node_id, _ = self.__send_command(message)
 
         return current_node_id
 
@@ -80,7 +80,7 @@ class LssMaster(object):
         message[0] = key
         message[1] = value1
         message[2] = value2
-        error_code, error_extension = self.__send_command(message)
+        error_code, _ = self.__send_command(message)
         if error_code != ERROR_NONE:
             error_msg = "LSS Error: %d" %error_code
             raise LssError(error_msg)

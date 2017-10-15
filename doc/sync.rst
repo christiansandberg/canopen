@@ -13,6 +13,18 @@ may apply their actuation in a coordinated fashion.
 The identifier of the Sync Object is available at index 1005h.
 
 
+Examples
+--------
+
+Use the :attr:`canopen.Network.sync` attribute to start and stop the SYNC
+message::
+
+    # Transmit every 10 ms
+    network.sync.start(0.01)
+
+    network.sync.stop()
+
+
 API
 ---
 

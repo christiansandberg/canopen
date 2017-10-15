@@ -13,6 +13,9 @@ TIME_OF_DAY_STRUCT = struct.Struct("<LH")
 class TimeProducer(object):
     """Produces timestamp objects."""
 
+    #: COB-ID of the SYNC message
+    cob_id = 0x100
+
     def __init__(self, network):
         self.network = network
 
@@ -25,4 +28,4 @@ class TimeProducer(object):
         delta = timestamp or time.time() - OFFSET
         days, seconds = divmod(delta, ONE_DAY)
         data = TIME_OF_DAY_STRUCT.pack(int(seconds * 1000), int(days))
-        self.network.send_message(0x100, data)
+        self.network.send_message(self.cob_id, data)

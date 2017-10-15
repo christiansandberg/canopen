@@ -26,6 +26,10 @@ Call the :meth:`~canopen.Network.connect` method to start the communication, opt
 arguments passed to a the :class:`can.BusABC` constructor::
 
     network.connect(channel='can0', bustype='socketcan')
+    # network.connect(bustype='kvaser', channel=0, bitrate=250000)
+    # network.connect(bustype='pcan', channel='PCAN_USBBUS1', bitrate=250000)
+    # network.connect(bustype='ixxat', channel=0, bitrate=250000)
+    # network.connect(bustype='nican', channel='CAN0', bitrate=250000)
 
 Add nodes to the network using the :meth:`~canopen.Network.add_node` method::
 
@@ -37,7 +41,7 @@ Nodes can also be accessed using the ``Network`` object as a Python dictionary::
         print(network[node_id])
 
 To automatically detect which nodes are present on the network, there is the
-:attr:`canopen.Network.scanner` available for this purpose::
+:attr:`~canopen.Network.scanner` attribute available for this purpose::
 
     # This will attempt to read an SDO from nodes 1 - 127
     network.scanner.search()
@@ -133,7 +137,6 @@ API
 
 
 .. autoclass:: canopen.network.NodeScanner
-   :show-inheritance:
    :members:
 
 

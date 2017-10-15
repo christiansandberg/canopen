@@ -79,7 +79,7 @@ def import_eds(source, node_id):
 
 def import_from_node(node_id, network):
     # Create temporary SDO client
-    sdo_client = SdoClient(node_id, None)
+    sdo_client = SdoClient(0x600 + node_id, 0x580 + node_id, None)
     sdo_client.network = network
     # Subscribe to SDO responses
     network.subscribe(0x580 + node_id, sdo_client.on_response)
@@ -108,7 +108,7 @@ def build_variable(eds, section, index, subindex=0):
         # This optional object is then placed in the eds under the section [A0] (start point, iterates for more)
         # The eds.get function gives us 0x00A0 now convert to String without hex representation and upper case
         # The sub2 part is then the section where the type parameter stands
-        var.data_type = int(eds.get("%Xsub1" % var.data_type, "DataType"), 0)
+        var.data_type = int(eds.get("%Xsub1" % var.data_type, "DefaultValue"), 0)
 
     if eds.has_option(section, "LowLimit"):
         try:

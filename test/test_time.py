@@ -6,7 +6,7 @@ class TestTime(unittest.TestCase):
 
     def test_time_producer(self):
         network = canopen.Network()
-        network.connect(bustype="virtual")
+        network.connect(bustype="virtual", receive_own_messages=True)
         producer = canopen.timestamp.TimeProducer(network)
         producer.transmit(1486236238)
         msg = network.bus.recv(1)
