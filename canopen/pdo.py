@@ -6,7 +6,6 @@ import collections
 import logging
 import binascii
 
-from .network import CanError
 from .sdo import SdoAbortedError
 from . import objectdictionary
 from . import common

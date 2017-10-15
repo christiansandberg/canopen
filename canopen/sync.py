@@ -1,4 +1,3 @@
-from .network import CanError
 
 
 class SyncProducer(object):
