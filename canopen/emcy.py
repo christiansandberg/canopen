@@ -25,26 +25,23 @@ class EmcyConsumer(object):
         entry = EmcyError(code, register, data, timestamp)
 
         with self.emcy_received:
-             self.log.append(entry)
-             self.active.append(entry)
-             self.emcy_received.notify_all()
+            if code & 0xFF00 == 0:
+                # Error reset
+                self.active = []
+            else:
+                self.active.append(entry)
+            self.log.append(entry)
+            self.emcy_received.notify_all()
 
-        if code & 0xFFFF == 0:
-            # Error reset
-            self.active = []
-            for callback in self.callbacks:
-                callback(None)
-        else:
-            for callback in self.callbacks:
-                callback(entry)
+        for callback in self.callbacks:
+            callback(entry)
 
     def add_callback(self, callback):
         """Get notified on EMCY messages from this node.
 
         :param callback:
             Callable which must take one argument of an
-            :class:`~canopen.emcy.EmcyError` instance or ``None`` if an
-            error reset is received.
+            :class:`~canopen.emcy.EmcyError` instance.
         """
         self.callbacks.append(callback)
 
