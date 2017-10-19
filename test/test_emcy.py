@@ -29,7 +29,7 @@ class TestEmcy(unittest.TestCase):
         self.assertEqual(emcy_node.active[1], error)
 
         emcy_node.on_emcy(0x81, b'\x00\x00\x00\x00\x00\x00\x00\x00', 1473418397.0)
-        self.assertEqual(len(emcy_node.log), 2)
+        self.assertEqual(len(emcy_node.log), 3)
         self.assertEqual(len(emcy_node.active), 0)
 
     def test_str(self):
