@@ -3,4 +3,6 @@ python:
   - "2.7"
   - "3.3"
   - "3.6"
-script: python setup.py test
+install: pip install . nose coverage codacy-coverage
+script: nosetests --with-coverage --cover-package=canopen --cover-xml
+after_script: python-codacy-coverage -r coverage.xml
