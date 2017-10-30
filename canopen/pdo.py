@@ -1,4 +1,3 @@
-from __future__ import unicode_literals
 import sys
 import time
 import threading
@@ -120,6 +119,7 @@ class PdoNode(object):
         """Stop transmission of all Rx PDOs."""
         for pdo_map in self.rx.values():
             pdo_map.stop()
+
 
 class Maps(collections.Mapping):
     """A collection of transmit or receive maps."""
@@ -259,24 +259,22 @@ class Map(object):
         if self.trans_type >= 254:
             try:
                 self.event_timer = self.com_record[5].raw
-            except SdoAbortedError as e:
+            except (KeyError, SdoAbortedError) as e:
                 logger.info("Could not read event timer (%s)", e)
             else:
                 logger.info("Event timer is set to %d ms", self.event_timer)
 
         self.map = []
         offset = 0
-        for entry in self.map_array.values():
-            if entry.od.subindex == 0:
-                continue
-            value = entry.raw
+        nof_entries = self.map_array[0].raw
+        for subindex in range(1, nof_entries + 1):
+            value = self.map_array[subindex].raw
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
             if size == 0:
                 continue
             var = self._get_variable(index, subindex)
-            # assert size == len(var.od), "Size mismatch"
             var.offset = offset
             var.length = size
             logger.info("Found %s (0x%X:%d) in PDO map",
@@ -423,25 +421,15 @@ class Variable(common.Variable):
     def get_data(self):
         byte_offset = self.offset // 8
         bit_offset = self.offset % 8
-        data = int.from_bytes(self.msg.data[byte_offset:byte_offset + len(self.od) // 8], byteorder='little', signed=False)
-        data = (data >> bit_offset) & (2**self.length-1)
 
-        return data.to_bytes(len(self.od)//8, byteorder='little')
-        # data = self.msg.data[byte_offset:byte_offset + len(self.od) // 8]
-        # length = len(data)
-        # if length == 1:
-        #     length = 'B'
-        # elif length == 2:
-        #     length = 'H'
-        # elif length == 4:
-        #     length = 'L'
-        # elif length == 8:
-        #     length = 'Q'
-        # import struct
-        # data = struct.unpack("<"+length, data)[0]
-        # data = (data >> bit_offset) & (2**self.length-1)
-        # data = struct.pack("<"+length, data)
-        # return data
+        data = self.msg.data[byte_offset:byte_offset + len(self.od) // 8]
+        # Need information of the current variable type (unsigned vs signed)
+        od_type = self.od.STRUCT_TYPES[self.od.data_type].format
+        data = struct.unpack(od_type, data)[0]
+        # Shift and mask to get the correct values
+        data = (data >> bit_offset) & (2**self.length-1)
+        data = struct.pack(od_type, data)
+        return data
 
     def set_data(self, data):
         byte_offset = self.offset // 8
