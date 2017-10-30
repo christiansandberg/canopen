@@ -5,6 +5,7 @@ import math
 import collections
 import logging
 import binascii
+import struct
 
 from .network import CanError
 from .sdo import SdoAbortedError
