@@ -259,16 +259,17 @@ class Map(object):
         if self.trans_type >= 254:
             try:
                 self.event_timer = self.com_record[5].raw
-            except (KeyError, SdoAbortedError) as e:
+            except SdoAbortedError as e:
                 logger.info("Could not read event timer (%s)", e)
             else:
                 logger.info("Event timer is set to %d ms", self.event_timer)
 
         self.map = []
         offset = 0
-        nof_entries = self.map_array[0].raw
-        for subindex in range(1, nof_entries + 1):
-            value = self.map_array[subindex].raw
+        for entry in self.map_array.values():
+            if entry.od.subindex == 0:
+                continue
+            value = entry.raw
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
