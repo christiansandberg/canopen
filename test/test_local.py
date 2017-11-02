@@ -17,11 +17,11 @@ class TestSDO(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.network1 = canopen.Network()
-        cls.network1.connect("test", interface="virtual")
+        cls.network1.connect("test", bustype="virtual")
         cls.remote_node = cls.network1.add_node(2, EDS_PATH)
 
         cls.network2 = canopen.Network()
-        cls.network2.connect("test", interface="virtual")
+        cls.network2.connect("test", bustype="virtual")
         cls.local_node = cls.network2.create_node(2, EDS_PATH)
 
     @classmethod
