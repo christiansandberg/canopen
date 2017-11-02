@@ -87,7 +87,7 @@ class SdoServer(collections.Mapping):
         res_command |= self._toggle
         # Add nof bytes not used
         res_command |= (7 - size) << 1
-        if not self._buffer:
+        if size <= 7:
             # Nothing left in buffer
             res_command |= NO_MORE_DATA
         # Toggle bit for next message
