@@ -9,47 +9,15 @@ try:
 except ImportError:
     import Queue as queue
 
-from .network import CanError
+from ..network import CanError
 
-from . import objectdictionary
-from . import common
+from .. import objectdictionary
+from .. import variable
+from .constants import *
+from .exceptions import *
 
 
 logger = logging.getLogger(__name__)
-
-
-# Command, index, subindex
-SDO_STRUCT = struct.Struct("<BHB")
-
-
-REQUEST_SEGMENT_DOWNLOAD = 0 << 5
-REQUEST_DOWNLOAD = 1 << 5
-REQUEST_UPLOAD = 2 << 5
-REQUEST_SEGMENT_UPLOAD = 3 << 5
-REQUEST_ABORTED = 4 << 5
-REQUEST_BLOCK_UPLOAD = 5 << 5
-REQUEST_BLOCK_DOWNLOAD = 6 << 5
-
-RESPONSE_SEGMENT_UPLOAD = 0 << 5
-RESPONSE_SEGMENT_DOWNLOAD = 1 << 5
-RESPONSE_UPLOAD = 2 << 5
-RESPONSE_DOWNLOAD = 3 << 5
-RESPONSE_ABORTED = 4 << 5
-RESPONSE_BLOCK_DOWNLOAD = 5 << 5
-RESPONSE_BLOCK_UPLOAD = 6 << 5
-
-INITIATE_BLOCK_TRANSFER = 0
-END_BLOCK_TRANSFER = 1
-BLOCK_TRANSFER_RESPONSE = 2
-START_BLOCK_UPLOAD = 3
-
-EXPEDITED = 0x2
-SIZE_SPECIFIED = 0x1
-BLOCK_SIZE_SPECIFIED = 0x2
-CRC_SUPPORTED = 0x4
-NO_MORE_DATA = 0x1
-NO_MORE_BLOCKS = 0x80
-TOGGLE_BIT = 0x10
 
 
 class SdoClient(collections.Mapping):
@@ -229,12 +197,12 @@ class Array(collections.Mapping):
         return 0 <= subindex <= len(self)
 
 
-class Variable(common.Variable):
+class Variable(variable.Variable):
     """Access object dictionary variable values using SDO protocol."""
 
     def __init__(self, sdo_node, od):
         self.sdo_node = sdo_node
-        common.Variable.__init__(self, od)
+        variable.Variable.__init__(self, od)
 
     def get_data(self):
         return self.sdo_node.upload(self.od.index, self.od.subindex)
@@ -242,45 +210,6 @@ class Variable(common.Variable):
     def set_data(self, data):
         force_segment = self.od.data_type == objectdictionary.DOMAIN
         self.sdo_node.download(self.od.index, self.od.subindex, data, force_segment)
-
-    def read(self, fmt="raw"):
-        """Alternative way of reading using a function instead of attributes.
-
-        May be useful for asynchronous reading.
-
-        :param str fmt:
-            How to return the value
-             - 'raw'
-             - 'phys'
-             - 'desc'
-
-        :returns:
-            The value of the variable.
-        """
-        if fmt == "raw":
-            return self.raw
-        elif fmt == "phys":
-            return self.phys
-        elif fmt == "desc":
-            return self.desc
-
-    def write(self, value, fmt="raw"):
-        """Alternative way of writing using a function instead of attributes.
-
-        May be useful for asynchronous writing.
-
-        :param str fmt:
-            How to write the value
-             - 'raw'
-             - 'phys'
-             - 'desc'
-        """
-        if fmt == "raw":
-            self.raw = value
-        elif fmt == "phys":
-            self.phys = value
-        elif fmt == "desc":
-            self.desc = value
 
     def open(self, mode="rb", encoding="ascii", buffering=1024, size=None,
              block_transfer=False):
@@ -873,49 +802,3 @@ class BlockDownloadStream(io.RawIOBase):
 
     def writable(self):
         return True
-
-
-class SdoError(Exception):
-    pass
-
-
-class SdoAbortedError(SdoError):
-    """SDO abort exception."""
-
-    CODES = {
-        0x05030000: "SDO toggle bit error",
-        0x05040000: "Timeout of transfer communication detected",
-        0x05040001: "Unknown SDO command specified",
-        0x05040002: "Invalid block size",
-        0x05040003: "Invalid sequence number",
-        0x05040004: "CRC error",
-        0x06010000: "Unsupported access to an object",
-        0x06010001: "Attempt to read a write only object",
-        0x06010002: "Attempt to write a read only object",
-        0x06020000: "Object does not exist",
-        0x06040042: "PDO length exceeded",
-        0x06060000: "Access failed due to a hardware error",
-        0x06070010: "Data type and length code do not match",
-        0x06090011: "Subindex does not exist",
-        0x06090030: "Value range of parameter exceeded",
-        0x060A0023: "Resource not available",
-        0x08000000: "General error",
-        0x08000021: ("Data can not be transferred or stored to the application "
-                     "because of local control"),
-        0x08000022: ("Data can not be transferred or stored to the application "
-                     "because of the present device state")
-    }
-
-    def __init__(self, code):
-        #: Abort code
-        self.code = code
-
-    def __str__(self):
-        text = "Code 0x{:08X}".format(self.code)
-        if self.code in self.CODES:
-            text = text + ", " + self.CODES[self.code]
-        return text
-
-
-class SdoCommunicationError(SdoError):
-    """No or unexpected response from slave."""

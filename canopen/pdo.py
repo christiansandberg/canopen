@@ -9,7 +9,7 @@ import binascii
 from .network import CanError
 from .sdo import SdoAbortedError
 from . import objectdictionary
-from . import common
+from . import variable
 
 
 PDO_NOT_VALID = 1 << 31
@@ -403,7 +403,7 @@ class Map(object):
                 time.sleep(time_left)
 
 
-class Variable(common.Variable):
+class Variable(variable.Variable):
     """One object dictionary variable mapped to a PDO."""
 
     def __init__(self, od):
@@ -414,7 +414,7 @@ class Variable(common.Variable):
         if isinstance(od.parent, (objectdictionary.Record,
                                   objectdictionary.Array)):
             self.name = od.parent.name + "." + self.name
-        common.Variable.__init__(self, od)
+        variable.Variable.__init__(self, od)
 
     def get_data(self):
         byte_offset = self.offset // 8

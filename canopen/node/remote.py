@@ -1,12 +1,12 @@
-from .sdo import SdoClient
-from .nmt import NmtMaster
-from .emcy import EmcyConsumer
-from .pdo import PdoNode
-from . import objectdictionary
+from ..sdo import SdoClient
+from ..nmt import NmtMaster
+from ..emcy import EmcyConsumer
+from ..pdo import PdoNode
+from .base import BaseNode
 
 
-class Node(object):
-    """A CANopen slave node.
+class RemoteNode(BaseNode):
+    """A CANopen remote node.
 
     :param int node_id:
         Node ID (set to None or 0 if specified by object dictionary)
@@ -17,17 +17,10 @@ class Node(object):
     """
 
     def __init__(self, node_id, object_dictionary):
-        self.network = None
+        super(RemoteNode, self).__init__(node_id, object_dictionary)
 
-        if not isinstance(object_dictionary,
-                          objectdictionary.ObjectDictionary):
-            object_dictionary = objectdictionary.import_od(
-                object_dictionary, node_id)
-        self.object_dictionary = object_dictionary
-
-        self.id = node_id or self.object_dictionary.node_id
-
-        self.sdo = SdoClient(0x600 + self.id, 0x580 + self.id, object_dictionary)
+        self.sdo = SdoClient(0x600 + self.id, 0x580 + self.id,
+                             self.object_dictionary)
         self.pdo = PdoNode(self)
         self.nmt = NmtMaster(self.id)
         self.emcy = EmcyConsumer()
