@@ -30,7 +30,7 @@ else:
 logger = logging.getLogger(__name__)
 
 
-class PdoNode(object):
+class PdoNode(collections.Mapping):
     """Represents a slave unit."""
 
     def __init__(self, node):
@@ -39,20 +39,26 @@ class PdoNode(object):
         self.rx = Maps(0x1400, 0x1600, self)
         self.tx = Maps(0x1800, 0x1A00, self)
 
-    def get_by_name(self, name):
-        """Finds a map entry matching ``name``.
-
-        :param str name: Name in the format of Group.Name.
-        :return: The matching variable object.
-        :rtype: canopen.pdo.Variable
-        :raises ValueError: When name is not found in map
-        """
+    def __iter__(self):
         for pdo_maps in (self.rx, self.tx):
             for pdo_map in pdo_maps.values():
                 for var in pdo_map.map:
-                    if var.name == name:
+                    yield var.name
+
+    def __getitem__(self, key):
+        for pdo_maps in (self.rx, self.tx):
+            for pdo_map in pdo_maps.values():
+                for var in pdo_map.map:
+                    if var.name == key:
                         return var
-        raise ValueError("%s was not found in any map" % name)
+        raise KeyError("%s was not found in any map" % key)
+
+    def __len__(self):
+        count = 0
+        for pdo_maps in (self.rx, self.tx):
+            for pdo_map in pdo_maps.values():
+                count += len(pdo_map)
+        return count
 
     def read(self):
         """Read PDO configuration from node using SDO."""

@@ -64,7 +64,7 @@ starts at 1, not 0)::
     with open('output.txt', 'w') as f:
         for i in range(50):
             node.pdo.tx[4].wait_for_reception()
-            speed = node.pdo.tx[4]['Application Status.Actual Speed'].phys
+            speed = node.pdo['Application Status.Actual Speed'].phys
             f.write('%s\n' % speed)
 
     # Using a callback to asynchronously receive values
