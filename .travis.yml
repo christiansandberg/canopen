@@ -6,5 +6,5 @@ python:
 install:
   - pip install -e .
   - pip install pytest pytest-cov codacy-coverage
-script: pytest -v --cov-report xml --cov=canopen test/
-after_script: python-codacy-coverage -r coverage.xml
+script: py.test -v --cov-report xml --cov=canopen test/
+after_script: python-codacy-coverage
