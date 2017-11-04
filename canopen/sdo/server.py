@@ -56,6 +56,8 @@ class SdoServer(collections.Mapping):
 
     def init_upload(self, request):
         _, index, subindex = SDO_STRUCT.unpack_from(request)
+        self._index = index
+        self._subindex = subindex
         res_command = RESPONSE_UPLOAD | SIZE_SPECIFIED
         response = bytearray(8)
 
@@ -82,14 +84,17 @@ class SdoServer(collections.Mapping):
         data = self._buffer[:7]
         size = len(data)
 
+        # Remove sent data from buffer
+        del self._buffer[:7]
+
         res_command = RESPONSE_SEGMENT_UPLOAD
         # Add toggle bit
         res_command |= self._toggle
         # Add nof bytes not used
         res_command |= (7 - size) << 1
-        if size <= 7:
+        if not self._buffer:
             # Nothing left in buffer
-            res_command |= NO_MORE_DATA
+            res_command |= NO_MORE_DATA << 1
         # Toggle bit for next message
         self._toggle ^= TOGGLE_BIT
 
@@ -98,11 +103,10 @@ class SdoServer(collections.Mapping):
         response[1:1 + size] = data
         self.send_response(response)
 
-        # Remove sent data from buffer
-        del self._buffer[:7]
-
     def init_download(self, request):
         command, index, subindex = SDO_STRUCT.unpack_from(request)
+        self._index = index
+        self._subindex = subindex
         res_command = RESPONSE_DOWNLOAD
         response = bytearray(8)
 
@@ -120,8 +124,6 @@ class SdoServer(collections.Mapping):
                 logger.info("Size is %d bytes", size)
             self._buffer = bytearray()
             self._toggle = 0
-            self._index = index
-            self._subindex = subindex
 
         SDO_STRUCT.pack_into(response, 0, res_command, index, subindex)
         self.send_response(response)
@@ -151,8 +153,8 @@ class SdoServer(collections.Mapping):
 
     def abort(self, abort_code=0x08000000):
         """Abort current transfer."""
-        # TODO: Include index and subindex
-        data = struct.pack("<BHBL", RESPONSE_ABORTED, 0, 0, abort_code)
+        data = struct.pack("<BHBL", RESPONSE_ABORTED,
+                           self._index, self._subindex, abort_code)
         self.send_response(data)
         # logger.error("Transfer aborted with code 0x{:08X}".format(abort_code))
 
@@ -167,8 +169,6 @@ class SdoServer(collections.Mapping):
         :return: A data object.
         :rtype: bytes
 
-        :raises canopen.SdoCommunicationError:
-            On unexpected response or timeout.
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
@@ -176,9 +176,9 @@ class SdoServer(collections.Mapping):
 
         # Try callback
         for callback in self._callbacks:
-            data = callback(index=index, subindex=subindex, od=obj, data=None)
-            if data is not None:
-                return data
+            result = callback(index=index, subindex=subindex, od=obj, data=None)
+            if result is not None:
+                return obj.encode_raw(result)
 
         # Try stored data
         try:
