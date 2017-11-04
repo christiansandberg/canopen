@@ -15,17 +15,6 @@ PDO_NOT_VALID = 1 << 31
 RTR_NOT_ALLOWED = 1 << 30
 
 
-if hasattr(time, "perf_counter"):
-    # Choose time.perf_counter if available
-    timer = time.perf_counter
-elif sys.platform == "win32":
-    # On Windows, the best timer is time.clock
-    timer = time.clock
-else:
-    # On most other platforms the best timer is time.time
-    timer = time.time
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -167,9 +156,7 @@ class Map(object):
         #: Period of receive message transmission in seconds
         self.period = None
         self.callbacks = []
-        self.transmit_thread = None
         self.receive_condition = threading.Condition()
-        self.stop_event = threading.Event()
         self.is_received = False
         self._task = None
 
@@ -224,7 +211,7 @@ class Map(object):
         return "%sPDO%d_node%d" % (direction, map_id, node_id)
 
     def on_message(self, can_id, data, timestamp):
-        is_transmitting = self.transmit_thread and self.transmit_thread.is_alive()
+        is_transmitting = self._task is not None
         if can_id == self.cob_id and not is_transmitting:
             with self.receive_condition:
                 self.is_received = True
@@ -365,6 +352,7 @@ class Map(object):
     def stop(self):
         """Stop transmission."""
         self._task.stop()
+        self._task = None
 
     def update(self):
         """Update periodic message with new data."""
