@@ -13,6 +13,7 @@ from ..network import CanError
 
 from .. import objectdictionary
 from .. import variable
+from .base import SdoBase
 from .constants import *
 from .exceptions import *
 
@@ -20,7 +21,7 @@ from .exceptions import *
 logger = logging.getLogger(__name__)
 
 
-class SdoClient(collections.Mapping):
+class SdoClient(SdoBase):
     """Handles communication with an SDO server."""
 
     #: Max time in seconds to wait for response from server
@@ -38,10 +39,7 @@ class SdoClient(collections.Mapping):
         :param canopen.ObjectDictionary od:
             Object Dictionary to use for communication
         """
-        self.rx_cobid = rx_cobid
-        self.tx_cobid = tx_cobid
-        self.network = None
-        self.od = od
+        SdoBase.__init__(self, rx_cobid, tx_cobid, od)
         self.responses = queue.Queue()
 
     def on_response(self, can_id, data, timestamp):
@@ -115,8 +113,10 @@ class SdoClient(collections.Mapping):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        with ReadableStream(self, index, subindex) as fp:
-            return fp.read()
+        fp = self.open(index, subindex)
+        data = fp.read()
+        fp.close()
+        return data
 
     def download(self, index, subindex, data, force_segment=False):
         """May be called to make a write operation without an Object Dictionary.
@@ -135,86 +135,19 @@ class SdoClient(collections.Mapping):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        raw_stream = WritableStream(self, index, subindex, len(data), force_segment)
-        fp = io.BufferedWriter(raw_stream, 7)
+        fp = self.open(index, subindex, "wb", buffering=7, size=len(data),
+                       force_segment=force_segment)
         fp.write(data)
         fp.close()
 
-    def __getitem__(self, index):
-        entry = self.od[index]
-        if isinstance(entry, objectdictionary.Variable):
-            return Variable(self, entry)
-        elif isinstance(entry, objectdictionary.Array):
-            return Array(self, entry)
-        elif isinstance(entry, objectdictionary.Record):
-            return Record(self, entry)
-
-    def __iter__(self):
-        return iter(self.od)
-
-    def __len__(self):
-        return len(self.od)
-
-    def __contains__(self, key):
-        return key in self.od
-
-
-class Record(collections.Mapping):
-
-    def __init__(self, sdo_node, od):
-        self.sdo_node = sdo_node
-        self.od = od
-
-    def __getitem__(self, subindex):
-        return Variable(self.sdo_node, self.od[subindex])
-
-    def __iter__(self):
-        return iter(self.od)
-
-    def __len__(self):
-        return len(self.od)
-
-    def __contains__(self, subindex):
-        return subindex in self.od
-
-
-class Array(collections.Mapping):
-
-    def __init__(self, sdo_node, od):
-        self.sdo_node = sdo_node
-        self.od = od
-
-    def __getitem__(self, subindex):
-        return Variable(self.sdo_node, self.od[subindex])
-
-    def __iter__(self):
-        return iter(range(1, len(self) + 1))
-
-    def __len__(self):
-        return self[0].raw
-
-    def __contains__(self, subindex):
-        return 0 <= subindex <= len(self)
-
-
-class Variable(variable.Variable):
-    """Access object dictionary variable values using SDO protocol."""
-
-    def __init__(self, sdo_node, od):
-        self.sdo_node = sdo_node
-        variable.Variable.__init__(self, od)
-
-    def get_data(self):
-        return self.sdo_node.upload(self.od.index, self.od.subindex)
-
-    def set_data(self, data):
-        force_segment = self.od.data_type == objectdictionary.DOMAIN
-        self.sdo_node.download(self.od.index, self.od.subindex, data, force_segment)
-
-    def open(self, mode="rb", encoding="ascii", buffering=1024, size=None,
-             block_transfer=False):
+    def open(self, index, subindex=0, mode="rb", encoding="ascii",
+             buffering=1024, size=None, block_transfer=False, force_segment=False):
         """Open the data stream as a file like object.
 
+        :param int index:
+            Index of object to open.
+        :param int subindex:
+            Sub-index of object to open.
         :param str mode:
             ========= ==========================================================
             Character Meaning
@@ -236,6 +169,8 @@ class Variable(variable.Variable):
             Size of data to that will be transmitted.
         :param bool block_transfer:
             If block transfer should be used.
+        :param bool force_segment:
+            Force use of segmented download regardless of data size.
 
         :returns:
             A file like object.
@@ -243,22 +178,18 @@ class Variable(variable.Variable):
         buffer_size = buffering if buffering > 1 else io.DEFAULT_BUFFER_SIZE
         if "r" in mode:
             if block_transfer:
-                raw_stream = BlockUploadStream(
-                    self.sdo_node, self.od.index, self.od.subindex)
+                raw_stream = BlockUploadStream(self, index, subindex)
             else:
-                raw_stream = ReadableStream(
-                    self.sdo_node, self.od.index, self.od.subindex)
+                raw_stream = ReadableStream(self, index, subindex)
             if buffering:
                 buffered_stream = io.BufferedReader(raw_stream, buffer_size=buffer_size)
             else:
                 return raw_stream
         if "w" in mode:
             if block_transfer:
-                raw_stream = BlockDownloadStream(
-                    self.sdo_node, self.od.index, self.od.subindex, size)
+                raw_stream = BlockDownloadStream(self, index, subindex, size)
             else:
-                raw_stream = WritableStream(
-                    self.sdo_node, self.od.index, self.od.subindex, size)
+                raw_stream = WritableStream(self, index, subindex, size, force_segment)
             if buffering:
                 buffered_stream = io.BufferedWriter(raw_stream, buffer_size=buffer_size)
             else:

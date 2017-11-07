@@ -75,7 +75,7 @@ API
 
    .. describe:: network[node_id]
 
-      Return the :class:`canopen.Node` for the specified node ID.
+      Return the :class:`canopen.RemoteNode` for the specified node ID.
 
    .. describe:: iter(network)
 
@@ -91,20 +91,16 @@ API
 
    .. method:: values()
 
-      Return a list of :class:`canopen.Node` handled by this network.
+      Return a list of :class:`canopen.RemoteNode` handled by this network.
 
 
-.. autoclass:: canopen.Node
+.. autoclass:: canopen.RemoteNode
     :members:
 
     .. py:attribute:: id
 
        The node id (1 - 127). Changing this after initializing the object
        will not have any effect.
-
-    .. py:attribute:: name
-
-       A descriptive name of the node.
 
     .. py:attribute:: sdo
 
@@ -121,6 +117,27 @@ API
     .. py:attribute:: emcy
 
        The :class:`canopen.emcy.EmcyConsumer` associated with the node.
+
+    .. py:attribute:: object_dictionary
+
+       The :class:`canopen.ObjectDictionary` associated with the node
+
+    .. py:attribute:: network
+
+       The :class:`canopen.Network` owning the node
+
+
+.. autoclass:: canopen.LocalNode
+    :members:
+
+    .. py:attribute:: id
+
+       The node id (1 - 127). Changing this after initializing the object
+       will not have any effect.
+
+    .. py:attribute:: sdo
+
+       The :class:`canopen.sdo.SdoServer` associated with the node.
 
     .. py:attribute:: object_dictionary
 

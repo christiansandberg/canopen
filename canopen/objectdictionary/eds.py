@@ -6,7 +6,7 @@ try:
 except ImportError:
     from ConfigParser import RawConfigParser as ConfigParser
 from canopen import objectdictionary
-from canopen.sdo import SdoClient, ReadableStream
+from canopen.sdo import SdoClient
 
 
 logger = logging.getLogger(__name__)
@@ -85,9 +85,7 @@ def import_from_node(node_id, network):
     network.subscribe(0x580 + node_id, sdo_client.on_response)
     # Create file like object for Store EDS variable
     try:
-        eds_fp = ReadableStream(sdo_client, 0x1021)
-        eds_fp = io.BufferedReader(eds_fp)
-        eds_fp = io.TextIOWrapper(eds_fp, "ascii")
+        eds_fp = sdo_client.open(0x1021, 0, "rt")
         od = import_eds(eds_fp, node_id)
     except Exception as e:
         logger.error("No object dictionary could be loaded for node %d: %s",

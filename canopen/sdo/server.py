@@ -3,6 +3,7 @@ import collections
 
 from .. import objectdictionary
 from .. import variable
+from .base import SdoBase
 from .constants import *
 from .exceptions import *
 
@@ -10,7 +11,7 @@ from .exceptions import *
 logger = logging.getLogger(__name__)
 
 
-class SdoServer(collections.Mapping):
+class SdoServer(SdoBase):
     """Creates an SDO server."""
 
     def __init__(self, rx_cobid, tx_cobid, node):
@@ -19,13 +20,10 @@ class SdoServer(collections.Mapping):
             COB-ID that the server receives on (usually 0x600 + node ID)
         :param int tx_cobid:
             COB-ID that the server responds with (usually 0x580 + node ID)
-        :param canopen.ObjectDictionary od:
-            Object Dictionary to use for communication
+        :param canopen.LocalNode od:
+            Node object owning the server
         """
-        self.rx_cobid = rx_cobid
-        self.tx_cobid = tx_cobid
-        self.network = None
-        self.od = node.object_dictionary
+        SdoBase.__init__(self, rx_cobid, tx_cobid, node.object_dictionary)
         self._callbacks = node.callbacks
         self._data_store = node.data_store
         self._buffer = None
@@ -94,7 +92,7 @@ class SdoServer(collections.Mapping):
         res_command |= (7 - size) << 1
         if not self._buffer:
             # Nothing left in buffer
-            res_command |= NO_MORE_DATA << 1
+            res_command |= NO_MORE_DATA
         # Toggle bit for next message
         self._toggle ^= TOGGLE_BIT
 
@@ -190,7 +188,7 @@ class SdoServer(collections.Mapping):
                 raise SdoAbortedError(0x060A0023)
             return obj.encode_raw(obj.default)
 
-    def download(self, index, subindex, data):
+    def download(self, index, subindex, data, force_segment=False):
         """May be called to make a write operation without an Object Dictionary.
 
         :param int index:
