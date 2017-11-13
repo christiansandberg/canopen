@@ -421,6 +421,10 @@ class Variable(common.Variable):
         common.Variable.__init__(self, od)
 
     def get_data(self):
+        """Reads the PDO variable from the last received message.
+
+        :return: Variable value as :class:`bytes`.
+        """
         byte_offset = self.offset // 8
         bit_offset = self.offset % 8
 
@@ -430,11 +434,35 @@ class Variable(common.Variable):
         data = struct.unpack(od_type, data)[0]
         # Shift and mask to get the correct values
         data = (data >> bit_offset) & (2**self.length-1)
+        # Check if the variable is signed and if the data is negative prepend signedness
+        if od_type.islower() and (2 ** self.length / 2) < data:
+            # fill up the rest of the bits to get the correct signedness
+            data = data | (~(2 ** self.length - 1))
         data = struct.pack(od_type, data)
         return data
 
     def set_data(self, data):
+        """Set for the given variable the PDO data.
+
+        :param data: Value for the PDO variable in the PDO message as :class:`bytes`.
+        """
         byte_offset = self.offset // 8
+        bit_offset = self.offset % 8
         logger.debug("Updating %s to %s in message 0x%X",
                      self.name, binascii.hexlify(data), self.msg.cob_id)
+        cur_msg_data = self.msg.data[byte_offset:byte_offset + len(self.od) // 8]
+        # Need information of the current variable type (unsigned vs signed)
+        od_type = self.od.STRUCT_TYPES[self.od.data_type].format
+        cur_msg_data = struct.unpack(od_type, cur_msg_data)[0]
+        # data has to have the same size as old_data
+        data = struct.unpack(od_type, data)[0]
+        # Mask out the old data value
+        # At the end we need to mask for correct variable length (bitwise operation failure)
+        shifted = ((2**self.length-1) << bit_offset) & (2 ** len(self.od) - 1)
+        bitwise_not = (~shifted) & (2 ** len(self.od) - 1)
+        cur_msg_data = cur_msg_data & bitwise_not
+        # Set the new data on the correct position
+        data = (data << bit_offset) | cur_msg_data
+        data = struct.pack(od_type, data)
         self.msg.data[byte_offset:byte_offset + len(data)] = data
+
