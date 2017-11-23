@@ -36,9 +36,9 @@ Easiest way to install is to use pip_::
    sync
    emcy
    timestamp
+   lss
    integration
    profiles
-   lss
 
 
 .. _CANopen: https://en.wikipedia.org/wiki/CANopen
