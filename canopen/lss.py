@@ -52,6 +52,19 @@ ERROR_STORE_ACCESS_PROBLEM = 2
 ERROR_VENDOR_SPECIFIC = 0xff
 
 
+ListMessageNeedResponse = [
+    CS_CONFIGURE_NODE_ID,
+    CS_CONFIGURE_BIT_TIMING,
+    CS_STORE_CONFIGURATION,
+    CS_SWITCH_STATE_SELECTIVE_SERIAL_NUMBER,
+    CS_INQUIRE_VENDOR_ID,
+    CS_INQUIRE_PRODUCT_CODE,
+    CS_INQUIRE_REVISION_NUMBER,
+    CS_INQUIRE_SERIAL_NUMBER,
+    CS_INQUIRE_NODE_ID,
+]
+
+
 class LssMaster(object):
     """The Master of Layer Setting Services"""
 
@@ -236,7 +249,7 @@ class LssMaster(object):
         response = self.__send_command(message)
         # some device needs these delays between messages
         # because it can't handle messages arriving with no delay
-        #time.sleep(0.2)
+        time.sleep(0.2)
 
         return response
 
@@ -291,24 +304,6 @@ class LssMaster(object):
             error_msg = "LSS Error: %d" %error_code
             raise LssError(error_msg)
 
-    def __has_response(self, commandSpecifier):
-        ListMessageNeedResponse = [
-            CS_CONFIGURE_NODE_ID,
-            CS_CONFIGURE_BIT_TIMING,
-            CS_STORE_CONFIGURATION,
-            CS_SWITCH_STATE_SELECTIVE_SERIAL_NUMBER,
-            CS_INQUIRE_VENDOR_ID,
-            CS_INQUIRE_PRODUCT_CODE,
-            CS_INQUIRE_REVISION_NUMBER,
-            CS_INQUIRE_SERIAL_NUMBER,
-            CS_INQUIRE_NODE_ID,
-        ]
-        if commandSpecifier in ListMessageNeedResponse:
-            return True
-        else:
-            return False
-
-
     def __send_command(self, message):
         """Send a LSS operation code to the network
 
@@ -332,7 +327,7 @@ class LssMaster(object):
 
         self.network.send_message(self.LSS_TX_COBID, message)
 
-        if not self.__has_response(message[0]):
+        if not bool(message[0] in ListMessageNeedResponse):
             return response
 
         # Wait for the slave to respond
