@@ -5,7 +5,6 @@ import math
 import collections
 import logging
 import binascii
-import struct
 
 from .network import CanError
 from .sdo import SdoAbortedError
@@ -133,7 +132,7 @@ class Maps(collections.Mapping):
 
     def __init__(self, com_offset, map_offset, pdo_node):
         self.maps = {}
-        for map_no in range(32):
+        for map_no in range(128):
             if com_offset + map_no in pdo_node.node.object_dictionary:
                 self.maps[map_no + 1] = Map(
                     pdo_node,
