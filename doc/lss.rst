@@ -17,7 +17,9 @@ Finally, you can switch to LSS waiting state.
 
         send_switch_mode_global() ==> send_switch_state_global()
         network.lss.CONFIGURATION_MODE ==> network.lss.CONFIGURATION_STATE
+        network.lss.NORMAL_MODE ==> network.lss.WAITING_STATE
 
+    You can still use the old name, but please use the new names.
 
 
 .. note::
@@ -26,33 +28,19 @@ Finally, you can switch to LSS waiting state.
 Examples
 --------
 
-If you want to switch all the slaves at once, run the following command::
+Switch all the slave into CONFIGURATION state::
 
-    network.lss.send_switch_state_global(network.lss.WAITING_STATE)
+    network.lss.send_switch_state_global(network.lss.CONFIGURATION_STATE)
 
-There is no response for the command
-Or, you can run this command if you want to switch only one slave::
+There is no response for the mesage.
+Or, you can call this method with 4 IDs if you want to switch only one slave::
 
+    vendorId = 0x00000022
+    productCode = 0x12345678
+    revisionNumber = 0x0000555
+    serialNumber = 0x00abcdef
     ret_bool = network.lss.send_switch_state_selective(vendorId, productCode,
                                         revisionNumber, serialNumber)
-
-
-Switch all the slave into CONFIGURATION mode::
-
-
-If you want to switch all the slaves at once, run the following command::
-
-    network.lss.send_switch_state_global(network.lss.WAITING_STATE)
-
-There is no response for the command
-Or, you can run this command if you want to switch only one slave::
-
-    ret_bool = network.lss.send_switch_state_selective(vendorId, productCode,
-                                        revisionNumber, serialNumber)
-
-
-
-    network.lss.send_state_mode_global(network.lss.CONFIGURATION_STATE)
 
 You can read the current node id of the LSS slave::
 
@@ -83,7 +71,7 @@ Save the configuration::
 
     network.lss.store_configuration()
 
-Finally, you can switch the state of target device from CONFIGURATION mode to NORMAL mode::
+Finally, you can switch the state of the slave(s) from CONFIGURATION state to WAITING state::
 
     network.lss.send_switch_state_global(network.lss.WAITING_STATE)
 
