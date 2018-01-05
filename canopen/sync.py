@@ -1,7 +1,3 @@
-import time
-import threading
-
-from .network import CanError
 
 
 class SyncProducer(object):
@@ -13,8 +9,7 @@ class SyncProducer(object):
     def __init__(self, network):
         self.network = network
         self.period = None
-        self.transmit_thread = None
-        self.stop_event = threading.Event()
+        self._task = None
 
     def transmit(self):
         """Send out a SYNC message once."""
@@ -32,24 +27,8 @@ class SyncProducer(object):
         if not self.period:
             raise ValueError("A valid transmission period has not been given")
 
-        if not self.transmit_thread or not self.transmit_thread.is_alive():
-            self.stop_event.clear()
-            self.transmit_thread = threading.Thread(
-                target=self._periodic_transmit)
-            self.transmit_thread.daemon = True
-            self.transmit_thread.start()
+        self._task = self.network.send_periodic(self.cob_id, [], self.period)
 
     def stop(self):
         """Stop periodic transmission of SYNC message."""
-        self.stop_event.set()
-        self.transmit_thread = None
-
-    def _periodic_transmit(self):
-        while not self.stop_event.is_set():
-            start = time.time()
-            try:
-                self.transmit()
-            except CanError as error:
-                print(str(error))
-            time_left = self.period - (time.time() - start)
-            time.sleep(max(time_left, 0.0))
+        self._task.stop()

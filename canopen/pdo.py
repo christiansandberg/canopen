@@ -6,7 +6,6 @@ import collections
 import logging
 import binascii
 
-from .network import CanError
 from .sdo import SdoAbortedError
 from . import objectdictionary
 from . import common
@@ -14,17 +13,6 @@ from . import common
 
 PDO_NOT_VALID = 1 << 31
 RTR_NOT_ALLOWED = 1 << 30
-
-
-if hasattr(time, "perf_counter"):
-    # Choose time.perf_counter if available
-    timer = time.perf_counter
-elif sys.platform == "win32":
-    # On Windows, the best timer is time.clock
-    timer = time.clock
-else:
-    # On most other platforms the best timer is time.time
-    timer = time.time
 
 
 logger = logging.getLogger(__name__)
@@ -176,10 +164,9 @@ class Map(object):
         #: Period of receive message transmission in seconds
         self.period = None
         self.callbacks = []
-        self.transmit_thread = None
         self.receive_condition = threading.Condition()
-        self.stop_event = threading.Event()
         self.is_received = False
+        self._task = None
 
     def __getitem__(self, key):
         if isinstance(key, int):
@@ -226,7 +213,7 @@ class Map(object):
         return "%sPDO%d_node%d" % (direction, map_id, node_id)
 
     def on_message(self, can_id, data, timestamp):
-        is_transmitting = self.transmit_thread and self.transmit_thread.is_alive()
+        is_transmitting = self._task is not None
         if can_id == self.cob_id and not is_transmitting:
             with self.receive_condition:
                 self.is_received = True
@@ -359,18 +346,17 @@ class Map(object):
             raise ValueError("A valid transmission period has not been given")
         logger.info("Starting %s with a period of %s seconds", self.name, self.period)
 
-        if not self.transmit_thread or not self.transmit_thread.is_alive():
-            self.stop_event.clear()
-            self.transmit_thread = threading.Thread(
-                name=self.name,
-                target=self._periodic_transmit)
-            self.transmit_thread.daemon = True
-            self.transmit_thread.start()
+        self._task = self.pdo_node.network.send_periodic(
+            self.cob_id, self.data, self.period)
 
     def stop(self):
         """Stop transmission."""
-        self.stop_event.set()
-        self.transmit_thread = None
+        self._task.stop()
+        self._task = None
+
+    def update(self):
+        """Update periodic message with new data."""
+        self._task.update(self.data)
 
     def remote_request(self):
         """Send a remote request for the transmit PDO.
@@ -390,17 +376,6 @@ class Map(object):
             self.is_received = False
             self.receive_condition.wait(timeout)
         return self.timestamp if self.is_received else None
-
-    def _periodic_transmit(self):
-        while not self.stop_event.is_set():
-            start = timer()
-            try:
-                self.transmit()
-            except CanError as error:
-                print(str(error))
-            time_left = self.period - (timer() - start)
-            if time_left > 0:
-                time.sleep(time_left)
 
 
 class Variable(common.Variable):
@@ -467,3 +442,5 @@ class Variable(common.Variable):
             data = od_struct.pack_into(self.msg.data, byte_offset, data)
         else:
             self.msg.data[byte_offset:byte_offset + len(data)] = data
+
+        self.msg.update()
