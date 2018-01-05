@@ -354,7 +354,8 @@ class Map(object):
 
     def update(self):
         """Update periodic message with new data."""
-        self._task.update(self.data)
+        if self._task is not None:
+            self._task.update(self.data)
 
     def remote_request(self):
         """Send a remote request for the transmit PDO.
