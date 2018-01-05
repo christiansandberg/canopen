@@ -27,7 +27,7 @@ class SyncProducer(object):
         if not self.period:
             raise ValueError("A valid transmission period has not been given")
 
-        self._task = self.network.send_periodic(0x80, [], self.period)
+        self._task = self.network.send_periodic(self.cob_id, [], self.period)
 
     def stop(self):
         """Stop periodic transmission of SYNC message."""
