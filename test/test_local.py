@@ -34,6 +34,14 @@ class TestSDO(unittest.TestCase):
         vendor_id = self.remote_node.sdo["Producer heartbeat time"].raw
         self.assertEqual(vendor_id, 0x99)
 
+    def test_expedited_upload_default_value_visible_string(self):
+        device_name = self.remote_node.sdo["Manufacturer device name"].raw
+        self.assertEqual(device_name, b"TEST DEVICE")
+
+    def test_expedited_upload_default_value_real(self):
+        sampling_rate = self.remote_node.sdo["Sensor Sampling Rate (Hz)"].raw
+        self.assertAlmostEqual(sampling_rate, 5.2, places=2)
+
     def test_segmented_upload(self):
         self.local_node.sdo["Manufacturer device name"].raw = "Some cool device"
         device_name = self.remote_node.sdo["Manufacturer device name"].data

@@ -130,6 +130,7 @@ ParameterName=Manufacturer device name
 ObjectType=0x7
 DataType=0x0009
 AccessType=const
+DefaultValue=TEST DEVICE
 PDOMapping=0
 
 [1017]
@@ -791,3 +792,13 @@ ObjectType=0x7
 DataType=0x0009
 AccessType=rw
 PDOMapping=0
+
+[3002]
+ParameterName=Sensor Sampling Rate (Hz)
+ObjectType=0x7
+DataType=0x0008
+AccessType=ro
+DefaultValue=5.2
+PDOMapping=0
+LowLimit=4.5
+ParameterValue=5.200000

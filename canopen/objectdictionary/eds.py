@@ -120,7 +120,12 @@ def build_variable(eds, section, index, subindex=0):
             pass
     if eds.has_option(section, "DefaultValue"):
         try:
-            var.default = int(eds.get(section, "DefaultValue"), 0)
+            if var.data_type is objectdictionary.VISIBLE_STRING:
+                var.default = eds.get(section, "DefaultValue")
+            elif var.data_type is objectdictionary.REAL32:
+                var.default = float(eds.get(section, "DefaultValue"))
+            else:
+                var.default = int(eds.get(section, "DefaultValue"), 0)
         except ValueError:
             pass
     return var
