@@ -44,6 +44,10 @@ class SdoServer(SdoBase):
                 self.init_download(data)
             elif ccs == REQUEST_SEGMENT_DOWNLOAD:
                 self.segmented_download(command, data)
+            elif ccs == REQUEST_BLOCK_UPLOAD:
+                self.block_upload(data)
+            elif ccs == REQUEST_BLOCK_DOWNLOAD:
+                self.block_download(data)
         except SdoAbortedError as exc:
             self.abort(exc.code)
         except KeyError as exc:
@@ -100,6 +104,18 @@ class SdoServer(SdoBase):
         response[0] = res_command
         response[1:1 + size] = data
         self.send_response(response)
+
+    def block_upload(self, data):
+        # We currently don't support BLOCK UPLOAD
+        # according to CIA301 the server is allowed
+        # to switch to regular upload
+        logger.info("Received block upload, switch to regular SDO upload")
+        self.init_upload(data)
+
+    def block_download(self, data):
+        # We currently don't support BLOCK DOWNLOAD
+        logger.error("Block download is not supported")
+        self.abort(0x05040001)
 
     def init_download(self, request):
         command, index, subindex = SDO_STRUCT.unpack_from(request)
