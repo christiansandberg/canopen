@@ -150,7 +150,9 @@ class Map(object):
         self.rtr_allowed = True
         #: Transmission type (0-255)
         self.trans_type = None
-        #: Event timer (in ms)
+        #: Inhibit Time (optional) (in 100µs)
+        self.inhibit_time = None
+        #: Event timer (optional) (in ms)
         self.event_timer = None
         #: List of variables mapped to this PDO
         self.map = []
@@ -244,6 +246,13 @@ class Map(object):
         logger.info("Transmission type is %d", self.trans_type)
         if self.trans_type >= 254:
             try:
+                self.inhibit_time = self.com_record[3].raw
+            except (KeyError, SdoAbortedError) as e:
+                logger.info("Could not read inhibit time (%s)", e)
+            else:
+                logger.info("Inhibit time is set to %d ms", self.inhibit_time)
+
+            try:
                 self.event_timer = self.com_record[5].raw
             except (KeyError, SdoAbortedError) as e:
                 logger.info("Could not read event timer (%s)", e)
@@ -276,6 +285,9 @@ class Map(object):
         if self.trans_type is not None:
             logger.info("Setting transmission type to %d", self.trans_type)
             self.com_record[2].raw = self.trans_type
+        if self.inhibit_time is not None:
+            logger.info("Setting inhibit time to %d µs", (self.inhibit_time * 100))
+            self.com_record[3].raw = self.inhibit_time
         if self.event_timer is not None:
             logger.info("Setting event timer to %d ms", self.event_timer)
             self.com_record[5].raw = self.event_timer
