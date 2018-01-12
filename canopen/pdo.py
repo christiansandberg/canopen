@@ -150,7 +150,7 @@ class Map(object):
         self.rtr_allowed = True
         #: Transmission type (0-255)
         self.trans_type = None
-        #: Inhibit Time (optional) (in 100µs)
+        #: Inhibit Time (optional) (in 100us)
         self.inhibit_time = None
         #: Event timer (optional) (in ms)
         self.event_timer = None
@@ -286,7 +286,7 @@ class Map(object):
             logger.info("Setting transmission type to %d", self.trans_type)
             self.com_record[2].raw = self.trans_type
         if self.inhibit_time is not None:
-            logger.info("Setting inhibit time to %d µs", (self.inhibit_time * 100))
+            logger.info("Setting inhibit time to %d us", (self.inhibit_time * 100))
             self.com_record[3].raw = self.inhibit_time
         if self.event_timer is not None:
             logger.info("Setting event timer to %d ms", self.event_timer)
