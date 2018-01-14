@@ -3,7 +3,7 @@ import unittest
 import canopen
 import logging
 
-# logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 
 
 EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
@@ -30,8 +30,8 @@ class TestSDO(unittest.TestCase):
         cls.network2.disconnect()
 
     def test_expedited_upload(self):
-        self.local_node.sdo["Producer heartbeat time"].raw = 0x99
-        vendor_id = self.remote_node.sdo["Producer heartbeat time"].raw
+        self.local_node.sdo[0x1400][1].raw = 0x99
+        vendor_id = self.remote_node.sdo[0x1400][1].raw
         self.assertEqual(vendor_id, 0x99)
 
     def test_block_upload_switch_to_expedite_upload(self):
@@ -71,6 +71,16 @@ class TestSDO(unittest.TestCase):
         self.remote_node.sdo["Manufacturer device name"].raw = "Another cool device"
         device_name = self.local_node.sdo["Manufacturer device name"].data
         self.assertEqual(device_name, b"Another cool device")
+
+    def test_slave_send_heartbeat(self):
+        # Setting the heartbeat time should trigger hearbeating 
+        # to start
+        self.remote_node.sdo["Producer heartbeat time"].raw = 1000
+        state = self.remote_node.nmt.wait_for_heartbeat()
+        self.local_node.nmt.stop_heartbeat()
+        # The NMT master will change the state INITIALISING (0)
+        # to PRE-OPERATIONAL (127)
+        self.assertEqual(state, canopen.nmt.NMT_STATES[127])
 
     def test_abort(self):
         with self.assertRaises(canopen.SdoAbortedError) as cm:
