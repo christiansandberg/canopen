@@ -41,5 +41,5 @@ class LocalNode(BaseNode):
                 self.nmt.stop_heartbeat()
             else:
                 (hearbeat_time, ) = struct.unpack_from("<H", kwargs["data"])
-                self.nmt.start_hearbeat(hearbeat_time)
+                self.nmt.start_heartbeat(hearbeat_time)
             return 0x0201

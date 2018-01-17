@@ -149,7 +149,7 @@ class NmtSlave(object):
         self._thread_stop = None
         self._heartbeat_time_ms = 0
 
-    def start_hearbeat(self, heartbeat_time_ms):
+    def start_heartbeat(self, heartbeat_time_ms):
         """Start the hearbeat service.
 
         :param int hearbeat_time
