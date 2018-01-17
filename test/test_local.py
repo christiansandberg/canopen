@@ -82,6 +82,13 @@ class TestSDO(unittest.TestCase):
         # to PRE-OPERATIONAL (127)
         self.assertEqual(state, canopen.nmt.NMT_STATES[127])
 
+    def test_receive_abort_request(self):
+        self.remote_node.sdo.abort(0x05040003)
+        # Line below is just so that we are sure the client have received the abort
+        # before we do the check
+        self.remote_node.sdo["Manufacturer device name"].raw = "Another cool device"
+        self.assertEqual(self.local_node.sdo.last_received_error, 0x05040003)
+
     def test_abort(self):
         with self.assertRaises(canopen.SdoAbortedError) as cm:
             _ = self.remote_node.sdo.upload(0x1234, 0)

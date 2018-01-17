@@ -30,6 +30,7 @@ class SdoServer(SdoBase):
         self._toggle = 0
         self._index = None
         self._subindex = None
+        self.last_received_error = 0x00000000
 
     def on_request(self, can_id, data, timestamp):
         command, = struct.unpack_from("B", data, 0)
@@ -48,6 +49,8 @@ class SdoServer(SdoBase):
                 self.block_upload(data)
             elif ccs == REQUEST_BLOCK_DOWNLOAD:
                 self.block_download(data)
+            elif ccs == REQUEST_ABORTED:
+                self.request_aborted(data)
         except SdoAbortedError as exc:
             self.abort(exc.code)
         except KeyError as exc:
@@ -111,6 +114,11 @@ class SdoServer(SdoBase):
         # to switch to regular upload
         logger.info("Received block upload, switch to regular SDO upload")
         self.init_upload(data)
+
+    def request_aborted(self, data):
+        _, index, subindex, code = struct.unpack_from("<BHBL", data)
+        self.last_received_error = code
+        logger.info("Received request aborted for 0x%X:%d with code 0x%X", index, subindex, code)
 
     def block_download(self, data):
         # We currently don't support BLOCK DOWNLOAD
