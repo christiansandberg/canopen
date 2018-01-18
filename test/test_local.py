@@ -73,7 +73,7 @@ class TestSDO(unittest.TestCase):
         self.assertEqual(device_name, b"Another cool device")
 
     def test_slave_send_heartbeat(self):
-        # Setting the heartbeat time should trigger hearbeating 
+        # Setting the heartbeat time should trigger hearbeating
         # to start
         self.remote_node.sdo["Producer heartbeat time"].raw = 1000
         state = self.remote_node.nmt.wait_for_heartbeat()
@@ -81,6 +81,14 @@ class TestSDO(unittest.TestCase):
         # The NMT master will change the state INITIALISING (0)
         # to PRE-OPERATIONAL (127)
         self.assertEqual(state, canopen.nmt.NMT_STATES[127])
+
+    def test_nmt_state_initializing_to_preoper(self):
+        # This transition shall start the heartbeating
+        self.local_node.nmt.state = 'INITIALISING'
+        self.local_node.nmt.state = 'PRE-OPERATIONAL'
+        state = self.remote_node.nmt.wait_for_heartbeat()
+        self.local_node.nmt.stop_heartbeat()
+        self.assertEqual(state, 'PRE-OPERATIONAL')
 
     def test_receive_abort_request(self):
         self.remote_node.sdo.abort(0x05040003)

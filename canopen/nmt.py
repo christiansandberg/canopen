@@ -141,13 +141,54 @@ class NmtSlave(object):
     """
     Handles the NMT state and handles heartbeat NMT service.
     """
-    def __init__(self, node_id):
+    def __init__(self, node_id, local_node):
         self._id = node_id
         self.network = None
         self._state = 0
         self._timer_thread = None
         self._thread_stop = None
         self._heartbeat_time_ms = 0
+        self._local_node = local_node
+
+    @property
+    def state(self):
+        """Attribute to get or set node's state as a string.
+
+        Can be one of:
+
+        - 'INITIALISING'
+        - 'PRE-OPERATIONAL'
+        - 'STOPPED'
+        - 'OPERATIONAL'
+        - 'SLEEP'
+        - 'STANDBY'
+        - 'RESET'
+        - 'RESET COMMUNICATION'
+        """
+        if self._state in NMT_STATES:
+            return NMT_STATES[self._state]
+        else:
+            return self._state
+
+    @state.setter
+    def state(self, new_state):
+        if new_state in NMT_COMMANDS:
+            new_nmt_state = COMMAND_TO_STATE[NMT_COMMANDS[new_state]]
+
+            logger.info("New NMT state %s, old state %s",
+                    NMT_STATES[new_nmt_state], NMT_STATES[self._state])
+
+            # The heartbeat service should start on the transition
+            # between INITIALIZING and PRE-OPERATIONAL state
+            if self._state is 0 and new_nmt_state is 127:
+                self.stop_heartbeat()
+                heartbeat_time_ms = self._local_node.sdo[0x1017].raw
+                self.start_heartbeat(heartbeat_time_ms)
+
+            self._state = new_nmt_state
+        else:
+            raise ValueError("'%s' is an invalid state. Must be one of %s." %
+                             (new_state, ", ".join(NMT_COMMANDS)))
 
     def start_heartbeat(self, heartbeat_time_ms):
         """Start the hearbeat service.
@@ -173,5 +214,5 @@ class NmtSlave(object):
         """Send heartbeat on a regular interval"""
         while not stop_event.is_set():
             stop_event.wait(self._heartbeat_time_ms/1000)
-            logger.info("Sending heartbeat, NMT state is  %s", NMT_STATES[self._state])
+            logger.debug("Sending heartbeat, NMT state is  %s", NMT_STATES[self._state])
             self.network.send_message(1792 + self._id, [self._state])

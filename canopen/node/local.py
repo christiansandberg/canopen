@@ -13,7 +13,7 @@ class LocalNode(BaseNode):
         self.callbacks = []
 
         self.sdo = SdoServer(0x600 + self.id, 0x580 + self.id, self)
-        self.nmt = NmtSlave(self.id)
+        self.nmt = NmtSlave(self.id, self)
         self.add_callback(self._producer_hearbeat_time_callback)
 
     def associate_network(self, network):
