@@ -3,6 +3,7 @@ import logging
 import struct
 import time
 
+from .network import CanError
 
 logger = logging.getLogger(__name__)
 
@@ -215,4 +216,9 @@ class NmtSlave(object):
         while not stop_event.is_set():
             stop_event.wait(self._heartbeat_time_ms/1000)
             logger.debug("Sending heartbeat, NMT state is  %s", NMT_STATES[self._state])
-            self.network.send_message(1792 + self._id, [self._state])
+            
+            try:
+                self.network.send_message(1792 + self._id, [self._state])
+            except CanError as e:
+                # We will just try again
+                logger.info("Failed to send heartbeat due to: %s", str(e))
