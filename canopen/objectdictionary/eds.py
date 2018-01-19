@@ -40,7 +40,7 @@ def import_eds(source, node_id):
         match = re.match(r"^[0-9A-Fa-f]{4}$", section)
         if match is not None:
             index = int(section, 16)
-            name = eds.get(section, "ParameterName")
+            name = eds.get(section, "ParameterName", raw=True)
             object_type = int(eds.get(section, "ObjectType"), 0)
 
             if object_type == VAR:

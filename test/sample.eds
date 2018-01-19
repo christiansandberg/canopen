@@ -802,3 +802,11 @@ DefaultValue=5.2
 PDOMapping=0
 LowLimit=4.5
 ParameterValue=5.200000
+
+[3003]
+ParameterName=Valve % open
+ObjectType=0x8
+DataType=0x0008
+AccessType=rw
+DefaultValue=
+PDOMapping=0
