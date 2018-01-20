@@ -1,6 +1,7 @@
 import re
 import io
 import logging
+import copy
 try:
     from configparser import ConfigParser
 except ImportError:
@@ -74,6 +75,19 @@ def import_eds(source, node_id):
                 var = build_variable(eds, section, index, subindex)
                 entry.add_member(var)
 
+        # Match [index]Name
+        match = re.match(r"^([0-9A-Fa-f]{4})Name", section)
+        if match is not None:
+            index = int(match.group(1), 16)
+            num_of_entries = int(eds.get(section, "NrOfEntries"))
+            entry = od[index]
+            # For CompactSubObj index 1 is were we find the variable
+            src_var = od[index][1]
+            for subindex in range(1, num_of_entries + 1):
+                var = copy_variable(eds, section, subindex, src_var)
+                if var is not None:
+                    entry.add_member(var)
+
     return od
 
 
@@ -128,4 +142,12 @@ def build_variable(eds, section, index, subindex=0):
                 var.default = int(eds.get(section, "DefaultValue"), 0)
         except ValueError:
             pass
+    return var
+
+def copy_variable(eds, section, subindex, src_var):
+    name = eds.get(section, str(subindex))
+    var = copy.copy(src_var)
+    # It is only the name and subindex that varies
+    var.name = name
+    var.subindex = subindex
     return var

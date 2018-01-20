@@ -55,3 +55,13 @@ class TestEDS(unittest.TestCase):
         self.assertEqual(var.subindex, 5)
         self.assertEqual(var.data_type, canopen.objectdictionary.UNSIGNED32)
         self.assertEqual(var.access_type, 'ro')
+
+    def test_explisit_name_subobj(self):
+        name = self.od[0x3004].name
+        self.assertEqual(name, 'Sensor Status')
+        name = self.od[0x3004][1].name
+        self.assertEqual(name, 'Sensor Status 1')
+        name = self.od[0x3004][3].name
+        self.assertEqual(name, 'Sensor Status 3')
+        value = self.od[0x3004][3].default
+        self.assertEqual(value, 3)
