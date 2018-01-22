@@ -69,3 +69,7 @@ class TestEDS(unittest.TestCase):
     def test_parameter_name_with_percent(self):
         name = self.od[0x3003].name
         self.assertEqual(name, 'Valve % open')
+
+    def test_compact_subobj_parameter_name_with_percent(self):
+        name = self.od[0x3006].name
+        self.assertEqual(name, 'Valve 1 % Open')

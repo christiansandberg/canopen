@@ -111,7 +111,7 @@ def import_from_node(node_id, network):
 
 
 def build_variable(eds, section, index, subindex=0):
-    name = eds.get(section, "ParameterName")
+    name = eds.get(section, "ParameterName", raw=True)
     var = objectdictionary.Variable(name, index, subindex)
     var.data_type = int(eds.get(section, "DataType"), 0)
     var.access_type = eds.get(section, "AccessType").lower()
