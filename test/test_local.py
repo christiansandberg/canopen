@@ -3,7 +3,7 @@ import unittest
 import canopen
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 
 
 EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
