@@ -151,6 +151,13 @@ class NmtSlave(object):
         self._heartbeat_time_ms = 0
         self._local_node = local_node
 
+    def on_command(self, can_id, data, timestamp):
+        (cmd, node_id) = struct.unpack_from("<BB", data)
+
+        if node_id == self._id:
+            logger.info("Received command %d", cmd)
+            self.state = NMT_STATES[COMMAND_TO_STATE[cmd]]
+
     @property
     def state(self):
         """Attribute to get or set node's state as a string.
@@ -177,7 +184,7 @@ class NmtSlave(object):
             new_nmt_state = COMMAND_TO_STATE[NMT_COMMANDS[new_state]]
 
             logger.info("New NMT state %s, old state %s",
-                    NMT_STATES[new_nmt_state], NMT_STATES[self._state])
+                        NMT_STATES[new_nmt_state], NMT_STATES[self._state])
 
             # The heartbeat service should start on the transition
             # between INITIALIZING and PRE-OPERATIONAL state
@@ -216,7 +223,7 @@ class NmtSlave(object):
         while not stop_event.is_set():
             stop_event.wait(self._heartbeat_time_ms/1000)
             logger.debug("Sending heartbeat, NMT state is  %s", NMT_STATES[self._state])
-            
+
             try:
                 self.network.send_message(1792 + self._id, [self._state])
             except CanError as e:

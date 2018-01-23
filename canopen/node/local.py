@@ -21,9 +21,11 @@ class LocalNode(BaseNode):
         self.sdo.network = network
         self.nmt.network = network
         network.subscribe(self.sdo.rx_cobid, self.sdo.on_request)
+        network.subscribe(0, self.nmt.on_command)
 
     def remove_network(self):
         self.network.unsubscribe(self.sdo.rx_cobid)
+        self.network.unsubscribe(0)
         self.network = None
         self.sdo.network = None
         self.nmt.network = None
