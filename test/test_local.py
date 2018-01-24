@@ -3,7 +3,7 @@ import unittest
 import canopen
 import logging
 
-#logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 
 
 EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
@@ -83,6 +83,9 @@ class TestSDO(unittest.TestCase):
         self.assertEqual(state, canopen.nmt.NMT_STATES[127])
 
     def test_nmt_state_initializing_to_preoper(self):
+        # Initialize the heartbeat timer
+        self.local_node.sdo["Producer heartbeat time"].raw = 1000
+        self.local_node.nmt.stop_heartbeat()
         # This transition shall start the heartbeating
         self.local_node.nmt.state = 'INITIALISING'
         self.local_node.nmt.state = 'PRE-OPERATIONAL'

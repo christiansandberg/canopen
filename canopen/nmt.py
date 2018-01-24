@@ -202,14 +202,18 @@ class NmtSlave(object):
         """Start the hearbeat service.
 
         :param int hearbeat_time
-            The heartbeat time in ms
+            The heartbeat time in ms. If the heartbeat time is 0
+            the heartbeating will not start.
         """
         self._heartbeat_time_ms = heartbeat_time_ms
-        logger.info("Start the hearbeat timer, interval is %d ms", self._heartbeat_time_ms)
-        self._thread_stop = threading.Event()
-        self._timer_thread = threading.Thread(target=self.send_heartbeat, args=(self._thread_stop,))
-        self._timer_thread.daemon = True
-        self._timer_thread.start()
+
+        if heartbeat_time_ms > 0:
+            logger.info("Start the hearbeat timer, interval is %d ms", self._heartbeat_time_ms)
+            self._thread_stop = threading.Event()
+            self._timer_thread = threading.Thread(target=self.send_heartbeat,
+                                                  args=(self._thread_stop,))
+            self._timer_thread.daemon = True
+            self._timer_thread.start()
 
     def stop_heartbeat(self):
         """Stop the hearbeat service."""
