@@ -209,6 +209,7 @@ class SdoServer(SdoBase):
             # Try default value
             if obj.default is None:
                 # Resource not available
+                logger.info("Resource unavailable for 0x%X:%d", index, subindex)
                 raise SdoAbortedError(0x060A0023)
             return obj.encode_raw(obj.default)
 

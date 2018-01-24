@@ -119,6 +119,11 @@ class TestSDO(unittest.TestCase):
         # Should be Subindex does not exist
         self.assertEqual(cm.exception.code, 0x06090011)
 
+        with self.assertRaises(canopen.SdoAbortedError) as cm:
+            _ = self.remote_node.sdo[0x1001].data
+        # Should be Resource not available
+        self.assertEqual(cm.exception.code, 0x060A0023)
+
     def _some_callback(self, **kwargs):
         self._kwargs = kwargs
         if kwargs["index"] == 0x1003:
