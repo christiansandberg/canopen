@@ -39,9 +39,10 @@ class LocalNode(BaseNode):
                 # This is a read callback. If we return none
                 # the data will be read from local storage
                 return None
-            elif kwargs["data"] == 0:
-                self.nmt.stop_heartbeat()
             else:
                 (hearbeat_time, ) = struct.unpack_from("<H", kwargs["data"])
-                self.nmt.start_heartbeat(hearbeat_time)
+                if hearbeat_time == 0:
+                    self.nmt.stop_heartbeat()
+                else:
+                    self.nmt.start_heartbeat(hearbeat_time)
             return 0x0201
