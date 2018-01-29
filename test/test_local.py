@@ -2,6 +2,7 @@ import os
 import unittest
 import canopen
 import logging
+import time
 
 # logging.basicConfig(level=logging.DEBUG)
 
@@ -97,14 +98,14 @@ class TestSDO(unittest.TestCase):
         self.remote_node.sdo.abort(0x05040003)
         # Line below is just so that we are sure the client have received the abort
         # before we do the check
-        self.remote_node.sdo["Manufacturer device name"].raw = "Another cool device"
+        time.sleep(0.1)
         self.assertEqual(self.local_node.sdo.last_received_error, 0x05040003)
 
     def test_start_remote_node(self):
         self.remote_node.nmt.state = 'OPERATIONAL'
         # Line below is just so that we are sure the client have received the command
         # before we do the check
-        self.remote_node.sdo["Manufacturer device name"].raw = "Another cool device"
+        time.sleep(0.1)
         slave_state = self.local_node.nmt.state
         self.assertEqual(slave_state, 'OPERATIONAL')
 
