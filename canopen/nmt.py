@@ -188,7 +188,7 @@ class NmtSlave(object):
 
             # The heartbeat service should start on the transition
             # between INITIALIZING and PRE-OPERATIONAL state
-            if self._state is 0 and new_nmt_state is 127:
+            if self._state == 0 and new_nmt_state == 127:
                 self.stop_heartbeat()
                 heartbeat_time_ms = self._local_node.sdo[0x1017].raw
                 self.start_heartbeat(heartbeat_time_ms)
