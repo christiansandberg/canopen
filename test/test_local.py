@@ -51,7 +51,7 @@ class TestSDO(unittest.TestCase):
 
     def test_expedited_upload_default_value_visible_string(self):
         device_name = self.remote_node.sdo["Manufacturer device name"].raw
-        self.assertEqual(device_name, b"TEST DEVICE")
+        self.assertEqual(device_name, "TEST DEVICE")
 
     def test_expedited_upload_default_value_real(self):
         sampling_rate = self.remote_node.sdo["Sensor Sampling Rate (Hz)"].raw
