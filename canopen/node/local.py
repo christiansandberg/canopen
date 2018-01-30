@@ -45,4 +45,6 @@ class LocalNode(BaseNode):
                     self.nmt.stop_heartbeat()
                 else:
                     self.nmt.start_heartbeat(hearbeat_time)
-            return 0x0201
+
+                # Return True to indicate that we have handled the callback
+                return True
