@@ -3,9 +3,9 @@ import io
 import logging
 import copy
 try:
-    from configparser import ConfigParser
+    from configparser import RawConfigParser
 except ImportError:
-    from ConfigParser import RawConfigParser as ConfigParser
+    from ConfigParser import RawConfigParser
 from canopen import objectdictionary
 from canopen.sdo import SdoClient
 
@@ -19,7 +19,7 @@ RECORD = 9
 
 
 def import_eds(source, node_id):
-    eds = ConfigParser()
+    eds = RawConfigParser()
     if hasattr(source, "read"):
         fp = source
     else:
@@ -41,7 +41,7 @@ def import_eds(source, node_id):
         match = re.match(r"^[0-9A-Fa-f]{4}$", section)
         if match is not None:
             index = int(section, 16)
-            name = eds.get(section, "ParameterName", raw=True)
+            name = eds.get(section, "ParameterName")
             object_type = int(eds.get(section, "ObjectType"), 0)
 
             if object_type == VAR:
@@ -111,7 +111,7 @@ def import_from_node(node_id, network):
 
 
 def build_variable(eds, section, index, subindex=0):
-    name = eds.get(section, "ParameterName", raw=True)
+    name = eds.get(section, "ParameterName")
     var = objectdictionary.Variable(name, index, subindex)
     var.data_type = int(eds.get(section, "DataType"), 0)
     var.access_type = eds.get(section, "AccessType").lower()
