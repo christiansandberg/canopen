@@ -40,7 +40,7 @@ class TestSDO(unittest.TestCase):
             self.remote_node.sdo[0x1008].open('r', block_transfer=True)
         # We get this since the sdo client don't support the switch
         # from block upload to expedite upload
-        self.assertTrue("Unexpected response 0x41" in context.exception)
+        self.assertEqual("Unexpected response 0x41", str(context.exception))
 
     def test_block_download_not_supported(self):
         data = b"TEST DEVICE"
