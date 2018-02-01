@@ -28,6 +28,7 @@ setup(
         "Topic :: Scientific/Engineering"
     ],
     install_requires=["python-can>=2.0.0", "canmatrix"],
+    include_package_data=True,
 
     # Tests can be run using `python setup.py test`
     test_suite="nose.collector",
