@@ -25,6 +25,10 @@ class TestSDO(unittest.TestCase):
         cls.network2.connect("test", bustype="virtual")
         cls.local_node = cls.network2.create_node(2, EDS_PATH)
 
+        cls.remote_node2 = cls.network1.add_node(3, EDS_PATH)
+
+        cls.local_node2 = cls.network2.create_node(3, EDS_PATH)
+
     @classmethod
     def tearDownClass(cls):
         cls.network1.disconnect()
@@ -107,6 +111,30 @@ class TestSDO(unittest.TestCase):
         # before we do the check
         time.sleep(0.1)
         slave_state = self.local_node.nmt.state
+        self.assertEqual(slave_state, 'OPERATIONAL')
+
+    def test_two_nodes_on_the_bus(self):
+        self.local_node.sdo["Manufacturer device name"].raw = "Some cool device"
+        device_name = self.remote_node.sdo["Manufacturer device name"].data
+        self.assertEqual(device_name, b"Some cool device")
+
+        self.local_node2.sdo["Manufacturer device name"].raw = "Some cool device2"
+        device_name = self.remote_node2.sdo["Manufacturer device name"].data
+        self.assertEqual(device_name, b"Some cool device2")
+
+    def test_start_two_remote_nodes(self):
+        self.remote_node.nmt.state = 'OPERATIONAL'
+        # Line below is just so that we are sure the client have received the command
+        # before we do the check
+        time.sleep(0.1)
+        slave_state = self.local_node.nmt.state
+        self.assertEqual(slave_state, 'OPERATIONAL')
+
+        self.remote_node2.nmt.state = 'OPERATIONAL'
+        # Line below is just so that we are sure the client have received the command
+        # before we do the check
+        time.sleep(0.1)
+        slave_state = self.local_node2.nmt.state
         self.assertEqual(slave_state, 'OPERATIONAL')
 
     def test_abort(self):

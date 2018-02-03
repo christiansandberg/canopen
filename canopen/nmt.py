@@ -152,11 +152,10 @@ class NmtSlave(object):
         self._local_node = local_node
 
     def on_command(self, can_id, data, timestamp):
-        (cmd, node_id) = struct.unpack_from("<BB", data)
+        (cmd, _) = struct.unpack_from("<BB", data)
 
-        if node_id == self._id:
-            logger.info("Received command %d", cmd)
-            self.state = NMT_STATES[COMMAND_TO_STATE[cmd]]
+        logger.info("Node %d received command %d",can_id, cmd)
+        self.state = NMT_STATES[COMMAND_TO_STATE[cmd]]
 
     @property
     def state(self):
