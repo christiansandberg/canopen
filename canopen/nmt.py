@@ -151,10 +151,10 @@ class NmtSlave(object):
         self._heartbeat_time_ms = 0
         self._local_node = local_node
 
-    def on_command(self, can_id, data, timestamp):
+    def on_command(self, data, timestamp):
         (cmd, _) = struct.unpack_from("<BB", data)
 
-        logger.info("Node %d received command %d",can_id, cmd)
+        logger.info("Node %d received command %d", self._id, cmd)
         self.state = NMT_STATES[COMMAND_TO_STATE[cmd]]
 
     @property

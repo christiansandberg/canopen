@@ -219,11 +219,17 @@ class Network(collections.MutableMapping):
 
         # NMT commands is sent out with can_id = 0
         if can_id == 0:
-            (cmd, node_id) = struct.unpack_from("<BB", data)
+            (_, node_id) = struct.unpack_from("<BB", data)
 
-            if node_id in self.nmt_cmd_subscribers:
+            # Broadcast has node-id = 0
+            if node_id == 0:
+                for subscriber_id in self.nmt_cmd_subscribers:
+                    callback = self.nmt_cmd_subscribers[subscriber_id]
+                    callback(data, timestamp)
+
+            elif node_id in self.nmt_cmd_subscribers:
                 callback = self.nmt_cmd_subscribers[node_id]
-                callback(node_id, data, timestamp)
+                callback(data, timestamp)
         else:
             if can_id in self.subscribers:
                 callback = self.subscribers[can_id]
