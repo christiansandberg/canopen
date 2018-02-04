@@ -137,7 +137,7 @@ class TestSDO(unittest.TestCase):
         slave_state = self.local_node2.nmt.state
         self.assertEqual(slave_state, 'OPERATIONAL')
 
-    def test_start_two_remote_nodes_using_broadcast(self):
+    def test_stop_two_remote_nodes_using_broadcast(self):
         # This is a NMT broadcast "Stop remote node"
         # ie. set the node in STOPPED state
         self.network1.send_message(0, [2, 0])
