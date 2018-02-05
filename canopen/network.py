@@ -1,6 +1,7 @@
 import collections
 import logging
 import threading
+import struct
 
 try:
     import can
@@ -42,6 +43,7 @@ class Network(collections.MutableMapping):
         self.notifier = None
         self.nodes = {}
         self.subscribers = {}
+        self.nmt_cmd_subscribers = {}
         self.send_lock = threading.Lock()
         self.sync = SyncProducer(self)
         self.time = TimeProducer(self)
@@ -68,6 +70,23 @@ class Network(collections.MutableMapping):
     def unsubscribe(self, can_id):
         """Stop listening for message."""
         del self.subscribers[can_id]
+
+    def subscribe_nmt_cmd(self, node_id, callback):
+        """Listen for nmt commands to a specific node.
+
+        Only one callback can be used per Node ID.
+
+        :param int node_id:
+            The Node ID to listen for.
+        :param callback:
+            Function to call when message is received.
+        """
+        self.nmt_cmd_subscribers[node_id] = callback
+
+    def unsubscribe_nmt_cmd(self, node_id):
+        """Stop listening for nmt commands."""
+        del self.nmt_cmd_subscribers[node_id]
+
 
     def connect(self, *args, **kwargs):
         """Connect to CAN bus using python-can.
@@ -197,10 +216,25 @@ class Network(collections.MutableMapping):
         :param float timestamp:
             Timestamp of the message, preferably as a Unix timestamp
         """
-        if can_id in self.subscribers:
-            callback = self.subscribers[can_id]
-            callback(can_id, data, timestamp)
-        self.scanner.on_message_received(can_id)
+
+        # NMT commands is sent out with can_id = 0
+        if can_id == 0:
+            (_, node_id) = struct.unpack_from("<BB", data)
+
+            # Broadcast has node-id = 0
+            if node_id == 0:
+                for subscriber_id in self.nmt_cmd_subscribers:
+                    callback = self.nmt_cmd_subscribers[subscriber_id]
+                    callback(data, timestamp)
+
+            elif node_id in self.nmt_cmd_subscribers:
+                callback = self.nmt_cmd_subscribers[node_id]
+                callback(data, timestamp)
+        else:
+            if can_id in self.subscribers:
+                callback = self.subscribers[can_id]
+                callback(can_id, data, timestamp)
+            self.scanner.on_message_received(can_id)
 
     def __getitem__(self, node_id):
         return self.nodes[node_id]

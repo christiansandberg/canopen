@@ -130,6 +130,7 @@ ParameterName=Manufacturer device name
 ObjectType=0x7
 DataType=0x0009
 AccessType=const
+DefaultValue=TEST DEVICE
 PDOMapping=0
 
 [1017]
@@ -790,4 +791,46 @@ ParameterName=Writable string
 ObjectType=0x7
 DataType=0x0009
 AccessType=rw
+PDOMapping=0
+
+[3002]
+ParameterName=Sensor Sampling Rate (Hz)
+ObjectType=0x7
+DataType=0x0008
+AccessType=ro
+DefaultValue=5.2
+PDOMapping=0
+LowLimit=4.5
+ParameterValue=5.200000
+
+[3003]
+ParameterName=Valve % open
+ObjectType=0x8
+DataType=0x0008
+AccessType=rw
+DefaultValue=
+PDOMapping=0
+
+[3004]
+CompactSubObj=3
+ParameterName=Sensor Status
+ObjectType=8
+DataType=0x0006
+AccessType=ro
+DefaultValue=3
+PDOMapping=0
+
+[3004Name]
+NrOfEntries=3
+1=Sensor Status 1
+2=Sensor Status 2
+3=Sensor Status 3
+
+[3006]
+CompactSubObj=24
+ParameterName=Valve 1 % Open
+ObjectType=8
+DataType=0x0008
+AccessType=rw
+DefaultValue=
 PDOMapping=0

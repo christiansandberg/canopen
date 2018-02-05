@@ -30,6 +30,7 @@ class SdoServer(SdoBase):
         self._toggle = 0
         self._index = None
         self._subindex = None
+        self.last_received_error = 0x00000000
 
     def on_request(self, can_id, data, timestamp):
         command, = struct.unpack_from("B", data, 0)
@@ -44,6 +45,12 @@ class SdoServer(SdoBase):
                 self.init_download(data)
             elif ccs == REQUEST_SEGMENT_DOWNLOAD:
                 self.segmented_download(command, data)
+            elif ccs == REQUEST_BLOCK_UPLOAD:
+                self.block_upload(data)
+            elif ccs == REQUEST_BLOCK_DOWNLOAD:
+                self.block_download(data)
+            elif ccs == REQUEST_ABORTED:
+                self.request_aborted(data)
         except SdoAbortedError as exc:
             self.abort(exc.code)
         except KeyError as exc:
@@ -100,6 +107,23 @@ class SdoServer(SdoBase):
         response[0] = res_command
         response[1:1 + size] = data
         self.send_response(response)
+
+    def block_upload(self, data):
+        # We currently don't support BLOCK UPLOAD
+        # according to CIA301 the server is allowed
+        # to switch to regular upload
+        logger.info("Received block upload, switch to regular SDO upload")
+        self.init_upload(data)
+
+    def request_aborted(self, data):
+        _, index, subindex, code = struct.unpack_from("<BHBL", data)
+        self.last_received_error = code
+        logger.info("Received request aborted for 0x%X:%d with code 0x%X", index, subindex, code)
+
+    def block_download(self, data):
+        # We currently don't support BLOCK DOWNLOAD
+        logger.error("Block download is not supported")
+        self.abort(0x05040001)
 
     def init_download(self, request):
         command, index, subindex = SDO_STRUCT.unpack_from(request)
@@ -185,6 +209,7 @@ class SdoServer(SdoBase):
             # Try default value
             if obj.default is None:
                 # Resource not available
+                logger.info("Resource unavailable for 0x%X:%d", index, subindex)
                 raise SdoAbortedError(0x060A0023)
             return obj.encode_raw(obj.default)
 

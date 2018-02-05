@@ -55,3 +55,21 @@ class TestEDS(unittest.TestCase):
         self.assertEqual(var.subindex, 5)
         self.assertEqual(var.data_type, canopen.objectdictionary.UNSIGNED32)
         self.assertEqual(var.access_type, 'ro')
+
+    def test_explicit_name_subobj(self):
+        name = self.od[0x3004].name
+        self.assertEqual(name, 'Sensor Status')
+        name = self.od[0x3004][1].name
+        self.assertEqual(name, 'Sensor Status 1')
+        name = self.od[0x3004][3].name
+        self.assertEqual(name, 'Sensor Status 3')
+        value = self.od[0x3004][3].default
+        self.assertEqual(value, 3)
+
+    def test_parameter_name_with_percent(self):
+        name = self.od[0x3003].name
+        self.assertEqual(name, 'Valve % open')
+
+    def test_compact_subobj_parameter_name_with_percent(self):
+        name = self.od[0x3006].name
+        self.assertEqual(name, 'Valve 1 % Open')
