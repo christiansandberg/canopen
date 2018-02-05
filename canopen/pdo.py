@@ -120,7 +120,16 @@ class Maps(collections.Mapping):
         self.maps = {}
         for map_no in range(128):
             if com_offset + map_no in pdo_node.node.object_dictionary:
+                if com_offset == 0x1800:
+                    # Transmit PDO
+                    cob_id = 0x180
+                else:
+                    # Receive PDO
+                    cob_id = 0x200
+                cob_id += 0x100 * min(map_no, 3)
+                cob_id += pdo_node.node.id
                 self.maps[map_no + 1] = Map(
+                    cob_id,
                     pdo_node,
                     pdo_node.node.sdo[com_offset + map_no],
                     pdo_node.node.sdo[map_offset + map_no])
@@ -138,14 +147,14 @@ class Maps(collections.Mapping):
 class Map(object):
     """One message which can have up to 8 bytes of variables mapped."""
 
-    def __init__(self, pdo_node, com_record, map_array):
+    def __init__(self, cob_id, pdo_node, com_record, map_array):
         self.pdo_node = pdo_node
         self.com_record = com_record
         self.map_array = map_array
         #: If this map is valid
         self.enabled = False
         #: COB-ID for this PDO
-        self.cob_id = None
+        self.cob_id = cob_id
         #: Is the remote transmit request (RTR) allowed for this PDO
         self.rtr_allowed = True
         #: Transmission type (0-255)
@@ -273,12 +282,6 @@ class Map(object):
 
     def save(self):
         """Save PDO configuration for this map using SDO."""
-        cob_id = self.com_record[1].raw
-        if self.cob_id is None:
-            self.cob_id = cob_id & 0x7FF
-        if self.enabled is None:
-            # Need to check if the PDO is enabled or not
-            self.enabled = cob_id & PDO_NOT_VALID == 0
         logger.info("Setting COB-ID 0x%X and temporarily disabling PDO",
                     self.cob_id)
         self.com_record[1].raw = self.cob_id | PDO_NOT_VALID
@@ -326,15 +329,22 @@ class Map(object):
         :return: Variable that was added
         :rtype: canopen.pdo.Variable
         """
-        var = self._get_variable(index, subindex)
-        var.offset = self.length
-        if length is not None:
-            # Custom bit length
-            var.length = length
-        logger.info("Adding %s (0x%X:%d) to PDO map",
-                    var.name, var.od.index, var.od.subindex)
-        self.map.append(var)
-        self.length += var.length
+        try:
+            var = self._get_variable(index, subindex)
+            var.offset = self.length
+            if length is not None:
+                # Custom bit length
+                var.length = length
+            else:
+                length = var.length
+            logger.info("Adding %s (0x%X:%d) to PDO map",
+                        var.name, var.od.index, var.od.subindex)
+            self.map.append(var)
+        except KeyError as exc:
+            logger.warning("%s", exc)
+            var = None
+
+        self.length += length
         self._update_data_size()
         if self.length > 64:
             logger.warning("Max size of PDO exceeded (%d > 64)", self.length)
