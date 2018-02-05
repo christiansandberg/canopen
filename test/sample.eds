@@ -793,6 +793,34 @@ DataType=0x0009
 AccessType=rw
 PDOMapping=0
 
+[2001]
+ParameterName=INTEGER16 value
+ObjectType=0x7
+DataType=0x0003
+AccessType=rw
+PDOMapping=1
+
+[2002]
+ParameterName=UNSIGNED8 value
+ObjectType=0x7
+DataType=0x0005
+AccessType=rw
+PDOMapping=1
+
+[2003]
+ParameterName=INTEGER8 value
+ObjectType=0x7
+DataType=0x0002
+AccessType=rw
+PDOMapping=1
+
+[2004]
+ParameterName=INTEGER32 value
+ObjectType=0x7
+DataType=0x0004
+AccessType=rw
+PDOMapping=1
+
 [3002]
 ParameterName=Sensor Sampling Rate (Hz)
 ObjectType=0x7

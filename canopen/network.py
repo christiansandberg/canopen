@@ -131,6 +131,7 @@ class Network(collections.MutableMapping):
         self.notifier.stop()
         self.bus.shutdown()
         self.bus = None
+        self.check()
 
     def add_node(self, node, object_dictionary=None, upload_eds=False):
         """Add a remote node to the network.
@@ -202,6 +203,23 @@ class Network(collections.MutableMapping):
                           is_remote_frame=remote)
         with self.send_lock:
             self.bus.send(msg)
+        self.check()
+
+    def send_periodic(self, can_id, data, period):
+        """Start sending a message periodically.
+
+        :param int can_id:
+            CAN-ID of the message (always 11-bit)
+        :param data:
+            Data to be transmitted (anything that can be converted to bytes)
+        :param float period:
+            Seconds between each message
+
+        :return:
+            An task object with a ``.stop()`` method to stop the transmission
+        :rtype: canopen.network.PeriodicMessageTask
+        """
+        return PeriodicMessageTask(can_id, data, period, self.bus)
 
     def notify(self, can_id, data, timestamp):
         """Feed incoming message to this library.
@@ -236,6 +254,17 @@ class Network(collections.MutableMapping):
                 callback(can_id, data, timestamp)
             self.scanner.on_message_received(can_id)
 
+    def check(self):
+        """Check that no fatal error has occurred in the receiving thread.
+
+        If an exception caused the thread to terminate, that exception will be
+        raised.
+        """
+        exc = self.notifier.exception
+        if exc is not None:
+            logger.error("An error has caused receiving of messages to stop")
+            raise exc
+
     def __getitem__(self, node_id):
         return self.nodes[node_id]
 
@@ -253,6 +282,53 @@ class Network(collections.MutableMapping):
 
     def __len__(self):
         return len(self.nodes)
+
+
+class PeriodicMessageTask(object):
+    """
+    Task object to transmit a message periodically using python-can's
+    CyclicSendTask
+    """
+
+    def __init__(self, can_id, data, period, bus):
+        """
+        :param int can_id:
+            CAN-ID of the message (always 11-bit)
+        :param data:
+            Data to be transmitted (anything that can be converted to bytes)
+        :param float period:
+            Seconds between each message
+        :param can.BusABC bus:
+            python-can bus to use for transmission
+        """
+        self.bus = bus
+        self.period = period
+        self.msg = can.Message(extended_id=False,
+                               arbitration_id=can_id,
+                               data=data)
+        self._task = None
+        self._start()
+
+    def _start(self):
+        self._task = self.bus.send_periodic(self.msg, self.period)
+
+    def stop(self):
+        """Stop transmission"""
+        self._task.stop()
+
+    def update(self, data):
+        """Update data of message
+
+        :param data:
+            New data to transmit
+        """
+        self.msg.data = bytearray(data)
+        if hasattr(self._task, "modify_data"):
+            self._task.modify_data(self.msg)
+        else:
+            # Stop and start (will mess up period unfortunately)
+            self._task.stop()
+            self._start()
 
 
 class MessageListener(Listener):

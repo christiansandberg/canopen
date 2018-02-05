@@ -109,7 +109,7 @@ Here are some quick examples of what you can do:
     # Re-map TxPDO1
     node.pdo.tx[1].clear()
     node.pdo.tx[1].add_variable('Application Status', 'Status All')
-    node.pdo.tx[1].add_variable('Application Status', 'Actual Speed')
+    node.pdo.tx[1].add_variable('Actual Speed')
     node.pdo.tx[1].trans_type = 254
     node.pdo.tx[1].event_timer = 10
     node.pdo.tx[1].enabled = True
@@ -124,7 +124,7 @@ Here are some quick examples of what you can do:
 
     # Read a value from TxPDO1
     node.pdo.tx[1].wait_for_reception()
-    speed = node.pdo.tx[1]['Application Status.Actual Speed'].phys
+    speed = node.pdo['Actual Speed'].phys
 
     # Disconnect from CAN bus
     network.sync.stop()

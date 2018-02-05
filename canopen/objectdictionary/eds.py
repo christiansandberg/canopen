@@ -45,7 +45,7 @@ def import_eds(source, node_id):
             object_type = int(eds.get(section, "ObjectType"), 0)
 
             if object_type == VAR:
-                var = build_variable(eds, section, index)
+                var = build_variable(eds, section, node_id, index)
                 od.add_object(var)
             elif object_type == ARR and eds.has_option(section, "CompactSubObj"):
                 arr = objectdictionary.Array(name, index)
@@ -53,7 +53,7 @@ def import_eds(source, node_id):
                     "Number of entries", index, 0)
                 last_subindex.data_type = objectdictionary.UNSIGNED8
                 arr.add_member(last_subindex)
-                arr.add_member(build_variable(eds, section, index, 1))
+                arr.add_member(build_variable(eds, section, node_id, index, 1))
                 od.add_object(arr)
             elif object_type == ARR:
                 arr = objectdictionary.Array(name, index)
@@ -72,7 +72,7 @@ def import_eds(source, node_id):
             entry = od[index]
             if isinstance(entry, (objectdictionary.Record,
                                   objectdictionary.Array)):
-                var = build_variable(eds, section, index, subindex)
+                var = build_variable(eds, section, node_id, index, subindex)
                 entry.add_member(var)
 
         # Match [index]Name
@@ -110,7 +110,7 @@ def import_from_node(node_id, network):
     return od
 
 
-def build_variable(eds, section, index, subindex=0):
+def build_variable(eds, section, node_id, index, subindex=0):
     name = eds.get(section, "ParameterName")
     var = objectdictionary.Variable(name, index, subindex)
     var.data_type = int(eds.get(section, "DataType"), 0)
@@ -134,12 +134,18 @@ def build_variable(eds, section, index, subindex=0):
             pass
     if eds.has_option(section, "DefaultValue"):
         try:
+            default_value = eds.get(section, "DefaultValue")
+
             if var.data_type in objectdictionary.DATA_TYPES:
-                var.default = eds.get(section, "DefaultValue")
+                var.default = default_value
             elif var.data_type in objectdictionary.FLOAT_TYPES:
-                var.default = float(eds.get(section, "DefaultValue"))
+                var.default = float(default_value)
             else:
-                var.default = int(eds.get(section, "DefaultValue"), 0)
+                #COB-ID can have a suffix of '$NODEID+' so replace this with node_id before converting
+                if '$NODEID+' in default_value and node_id is not None:
+                    var.default = int(default_value.replace('$NODEID+',''), 0) + node_id
+                else:
+                    var.default = int(default_value, 0)
         except ValueError:
             pass
     return var

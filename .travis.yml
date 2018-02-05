@@ -7,4 +7,4 @@ install:
   - pip install -e .
   - pip install pytest pytest-cov codacy-coverage
 script: py.test -v --cov-report xml --cov=canopen test/
-after_script: python-codacy-coverage -r coverage.xml
+after_script: python-codacy-coverage

@@ -1,12 +1,9 @@
-import sys
-import time
 import threading
 import math
 import collections
 import logging
 import binascii
 
-from .network import CanError
 from .sdo import SdoAbortedError
 from . import objectdictionary
 from . import variable
@@ -16,21 +13,10 @@ PDO_NOT_VALID = 1 << 31
 RTR_NOT_ALLOWED = 1 << 30
 
 
-if hasattr(time, "perf_counter"):
-    # Choose time.perf_counter if available
-    timer = time.perf_counter
-elif sys.platform == "win32":
-    # On Windows, the best timer is time.clock
-    timer = time.clock
-else:
-    # On most other platforms the best timer is time.time
-    timer = time.time
-
-
 logger = logging.getLogger(__name__)
 
 
-class PdoNode(object):
+class PdoNode(collections.Mapping):
     """Represents a slave unit."""
 
     def __init__(self, node):
@@ -39,20 +25,26 @@ class PdoNode(object):
         self.rx = Maps(0x1400, 0x1600, self)
         self.tx = Maps(0x1800, 0x1A00, self)
 
-    def get_by_name(self, name):
-        """Finds a map entry matching ``name``.
-
-        :param str name: Name in the format of Group.Name.
-        :return: The matching variable object.
-        :rtype: canopen.pdo.Variable
-        :raises ValueError: When name is not found in map
-        """
+    def __iter__(self):
         for pdo_maps in (self.rx, self.tx):
             for pdo_map in pdo_maps.values():
                 for var in pdo_map.map:
-                    if var.name == name:
+                    yield var.name
+
+    def __getitem__(self, key):
+        for pdo_maps in (self.rx, self.tx):
+            for pdo_map in pdo_maps.values():
+                for var in pdo_map.map:
+                    if var.name == key:
                         return var
-        raise ValueError("%s was not found in any map" % name)
+        raise KeyError("%s was not found in any map" % key)
+
+    def __len__(self):
+        count = 0
+        for pdo_maps in (self.rx, self.tx):
+            for pdo_map in pdo_maps.values():
+                count += len(pdo_map)
+        return count
 
     def read(self):
         """Read PDO configuration from node using SDO."""
@@ -100,7 +92,7 @@ class PdoNode(object):
                     name = name.replace(".", "_")
                     signal = canmatrix.Signal(name,
                                               startBit=var.offset,
-                                              signalSize=len(var.od),
+                                              signalSize=var.length,
                                               is_signed=is_signed,
                                               is_float=is_float,
                                               factor=var.od.factor,
@@ -120,12 +112,13 @@ class PdoNode(object):
         for pdo_map in self.rx.values():
             pdo_map.stop()
 
+
 class Maps(collections.Mapping):
     """A collection of transmit or receive maps."""
 
     def __init__(self, com_offset, map_offset, pdo_node):
         self.maps = {}
-        for map_no in range(32):
+        for map_no in range(128):
             if com_offset + map_no in pdo_node.node.object_dictionary:
                 self.maps[map_no + 1] = Map(
                     pdo_node,
@@ -157,10 +150,13 @@ class Map(object):
         self.rtr_allowed = True
         #: Transmission type (0-255)
         self.trans_type = None
-        #: Event timer (in ms)
+        #: Inhibit Time (optional) (in 100us)
+        self.inhibit_time = None
+        #: Event timer (optional) (in ms)
         self.event_timer = None
         #: List of variables mapped to this PDO
         self.map = []
+        self.length = 0
         #: Current message data
         self.data = bytearray()
         #: Timestamp of last received message
@@ -168,10 +164,9 @@ class Map(object):
         #: Period of receive message transmission in seconds
         self.period = None
         self.callbacks = []
-        self.transmit_thread = None
         self.receive_condition = threading.Condition()
-        self.stop_event = threading.Event()
         self.is_received = False
+        self._task = None
 
     def __getitem__(self, key):
         if isinstance(key, int):
@@ -191,12 +186,6 @@ class Map(object):
     def __len__(self):
         return len(self.map)
 
-    def _get_total_size(self):
-        size = 0
-        for var in self.map:
-            size += len(var.od)
-        return size
-
     def _get_variable(self, index, subindex):
         obj = self.pdo_node.node.object_dictionary[index]
         if isinstance(obj, (objectdictionary.Record, objectdictionary.Array)):
@@ -206,7 +195,7 @@ class Map(object):
         return var
 
     def _update_data_size(self):
-        self.data = bytearray(int(math.ceil(self._get_total_size() / 8.0)))
+        self.data = bytearray(int(math.ceil(self.length / 8.0)))
 
     @property
     def name(self):
@@ -224,7 +213,7 @@ class Map(object):
         return "%sPDO%d_node%d" % (direction, map_id, node_id)
 
     def on_message(self, can_id, data, timestamp):
-        is_transmitting = self.transmit_thread and self.transmit_thread.is_alive()
+        is_transmitting = self._task is not None
         if can_id == self.cob_id and not is_transmitting:
             with self.receive_condition:
                 self.is_received = True
@@ -257,30 +246,27 @@ class Map(object):
         logger.info("Transmission type is %d", self.trans_type)
         if self.trans_type >= 254:
             try:
+                self.inhibit_time = self.com_record[3].raw
+            except (KeyError, SdoAbortedError) as e:
+                logger.info("Could not read inhibit time (%s)", e)
+            else:
+                logger.info("Inhibit time is set to %d ms", self.inhibit_time)
+
+            try:
                 self.event_timer = self.com_record[5].raw
             except (KeyError, SdoAbortedError) as e:
                 logger.info("Could not read event timer (%s)", e)
             else:
                 logger.info("Event timer is set to %d ms", self.event_timer)
 
-        self.map = []
-        offset = 0
+        self.clear()
         nof_entries = self.map_array[0].raw
         for subindex in range(1, nof_entries + 1):
             value = self.map_array[subindex].raw
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
-            if size == 0:
-                continue
-            var = self._get_variable(index, subindex)
-            assert size == len(var.od), "Size mismatch"
-            var.offset = offset
-            logger.info("Found %s (0x%X:%d) in PDO map",
-                        var.name, index, subindex)
-            self.map.append(var)
-            offset += size
-        self._update_data_size()
+            self.add_variable(index, subindex, size)
 
         if self.enabled:
             self.pdo_node.network.subscribe(self.cob_id, self.on_message)
@@ -299,6 +285,9 @@ class Map(object):
         if self.trans_type is not None:
             logger.info("Setting transmission type to %d", self.trans_type)
             self.com_record[2].raw = self.trans_type
+        if self.inhibit_time is not None:
+            logger.info("Setting inhibit time to %d us", (self.inhibit_time * 100))
+            self.com_record[3].raw = self.inhibit_time
         if self.event_timer is not None:
             logger.info("Setting event timer to %d ms", self.event_timer)
             self.com_record[5].raw = self.event_timer
@@ -311,7 +300,7 @@ class Map(object):
                             var.name, var.od.index, var.od.subindex)
                 self.map_array[subindex].raw = (var.od.index << 16 |
                                                 var.od.subindex << 8 |
-                                                len(var.od))
+                                                var.length)
                 subindex += 1
             self.map_array[0].raw = len(self.map)
             self._update_data_size()
@@ -324,23 +313,31 @@ class Map(object):
     def clear(self):
         """Clear all variables from this map."""
         self.map = []
+        self.length = 0
 
-    def add_variable(self, index, subindex=0):
+    def add_variable(self, index, subindex=0, length=None):
         """Add a variable from object dictionary as the next entry.
 
         :param index: Index of variable as name or number
         :param subindex: Sub-index of variable as name or number
+        :param int length: Size of data in number of bits
         :type index: :class:`str` or :class:`int`
         :type subindex: :class:`str` or :class:`int`
         :return: Variable that was added
         :rtype: canopen.pdo.Variable
         """
         var = self._get_variable(index, subindex)
-        var.offset = self._get_total_size()
+        var.offset = self.length
+        if length is not None:
+            # Custom bit length
+            var.length = length
         logger.info("Adding %s (0x%X:%d) to PDO map",
                     var.name, var.od.index, var.od.subindex)
         self.map.append(var)
-        assert self._get_total_size() <= 64, "Max size of PDO exceeded"
+        self.length += var.length
+        self._update_data_size()
+        if self.length > 64:
+            logger.warning("Max size of PDO exceeded (%d > 64)", self.length)
         return var
 
     def transmit(self):
@@ -359,18 +356,18 @@ class Map(object):
             raise ValueError("A valid transmission period has not been given")
         logger.info("Starting %s with a period of %s seconds", self.name, self.period)
 
-        if not self.transmit_thread or not self.transmit_thread.is_alive():
-            self.stop_event.clear()
-            self.transmit_thread = threading.Thread(
-                name=self.name,
-                target=self._periodic_transmit)
-            self.transmit_thread.daemon = True
-            self.transmit_thread.start()
+        self._task = self.pdo_node.network.send_periodic(
+            self.cob_id, self.data, self.period)
 
     def stop(self):
         """Stop transmission."""
-        self.stop_event.set()
-        self.transmit_thread = None
+        self._task.stop()
+        self._task = None
+
+    def update(self):
+        """Update periodic message with new data."""
+        if self._task is not None:
+            self._task.update(self.data)
 
     def remote_request(self):
         """Send a remote request for the transmit PDO.
@@ -391,17 +388,6 @@ class Map(object):
             self.receive_condition.wait(timeout)
         return self.timestamp if self.is_received else None
 
-    def _periodic_transmit(self):
-        while not self.stop_event.is_set():
-            start = timer()
-            try:
-                self.transmit()
-            except CanError as error:
-                print(str(error))
-            time_left = self.period - (timer() - start)
-            if time_left > 0:
-                time.sleep(time_left)
-
 
 class Variable(variable.Variable):
     """One object dictionary variable mapped to a PDO."""
@@ -411,17 +397,61 @@ class Variable(variable.Variable):
         #: Location of variable in the message in bits
         self.offset = None
         self.name = od.name
+        self.length = len(od)
         if isinstance(od.parent, (objectdictionary.Record,
                                   objectdictionary.Array)):
             self.name = od.parent.name + "." + self.name
         variable.Variable.__init__(self, od)
 
     def get_data(self):
-        byte_offset = self.offset // 8
-        return bytes(self.msg.data[byte_offset:byte_offset + len(self.od) // 8])
+        """Reads the PDO variable from the last received message.
+
+        :return: Variable value as :class:`bytes`.
+        :rtype: bytes
+        """
+        byte_offset, bit_offset = divmod(self.offset, 8)
+
+        if bit_offset or self.length % 8:
+            # Need information of the current variable type (unsigned vs signed)
+            od_struct = self.od.STRUCT_TYPES[self.od.data_type]
+            data = od_struct.unpack_from(self.msg.data, byte_offset)[0]
+            # Shift and mask to get the correct values
+            data = (data >> bit_offset) & ((1 << self.length) - 1)
+            # Check if the variable is signed and if the data is negative prepend signedness
+            if od_struct.format.islower() and (1 << (self.length - 1)) < data:
+                # fill up the rest of the bits to get the correct signedness
+                data = data | (~((1 << self.length) - 1))
+            data = od_struct.pack(data)
+        else:
+            data = self.msg.data[byte_offset:byte_offset + len(self.od) // 8]
+
+        return data
 
     def set_data(self, data):
-        byte_offset = self.offset // 8
+        """Set for the given variable the PDO data.
+
+        :param bytes data: Value for the PDO variable in the PDO message as :class:`bytes`.
+        """
+        byte_offset, bit_offset = divmod(self.offset, 8)
         logger.debug("Updating %s to %s in message 0x%X",
                      self.name, binascii.hexlify(data), self.msg.cob_id)
-        self.msg.data[byte_offset:byte_offset + len(data)] = data
+
+        if bit_offset or self.length % 8:
+            cur_msg_data = self.msg.data[byte_offset:byte_offset + len(self.od) // 8]
+            # Need information of the current variable type (unsigned vs signed)
+            od_struct = self.od.STRUCT_TYPES[self.od.data_type]
+            cur_msg_data = od_struct.unpack(cur_msg_data)[0]
+            # data has to have the same size as old_data
+            data = od_struct.unpack(data)[0]
+            # Mask out the old data value
+            # At the end we need to mask for correct variable length (bitwise operation failure)
+            shifted = (((1 << self.length) - 1) << bit_offset) & ((1 << len(self.od)) - 1)
+            bitwise_not = (~shifted) & ((1 << len(self.od)) - 1)
+            cur_msg_data = cur_msg_data & bitwise_not
+            # Set the new data on the correct position
+            data = (data << bit_offset) | cur_msg_data
+            data = od_struct.pack_into(self.msg.data, byte_offset, data)
+        else:
+            self.msg.data[byte_offset:byte_offset + len(data)] = data
+
+        self.msg.update()

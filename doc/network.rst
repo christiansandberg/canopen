@@ -157,4 +157,8 @@ API
    :members:
 
 
+.. autoclass:: canopen.network.PeriodicMessageTask
+   :members:
+
+
 .. _python-can: https://python-can.readthedocs.org/en/stable/

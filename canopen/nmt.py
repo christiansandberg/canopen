@@ -59,7 +59,7 @@ class NmtMaster(object):
     def on_heartbeat(self, can_id, data, timestamp):
         with self.state_update:
             self.timestamp = timestamp
-            new_state, = struct.unpack("B", data)
+            new_state, = struct.unpack_from("B", data)
             logger.info("Received heartbeat can-id %d, state is %d", can_id, new_state)
             if new_state == 0:
                 # Boot-up, will go to PRE-OPERATIONAL automatically
