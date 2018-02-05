@@ -138,6 +138,7 @@ class NmtMaster(object):
 class NmtError(Exception):
     """Some NMT operation failed."""
 
+
 class NmtSlave(object):
     """
     Handles the NMT state and handles heartbeat NMT service.
@@ -197,6 +198,14 @@ class NmtSlave(object):
             raise ValueError("'%s' is an invalid state. Must be one of %s." %
                              (new_state, ", ".join(NMT_COMMANDS)))
 
+    def on_write(self, index, data, **kwargs):
+        if index == 0x1017:
+            hearbeat_time, = struct.unpack_from("<H", data)
+            if hearbeat_time == 0:
+                self.stop_heartbeat()
+            else:
+                self.start_heartbeat(hearbeat_time)
+
     def start_heartbeat(self, heartbeat_time_ms):
         """Start the hearbeat service.
 
@@ -224,11 +233,11 @@ class NmtSlave(object):
     def send_heartbeat(self, stop_event):
         """Send heartbeat on a regular interval"""
         while not stop_event.is_set():
-            stop_event.wait(self._heartbeat_time_ms/1000)
+            stop_event.wait(self._heartbeat_time_ms / 1000.0)
             logger.debug("Sending heartbeat, NMT state is  %s", NMT_STATES[self._state])
 
             try:
-                self.network.send_message(1792 + self._id, [self._state])
+                self.network.send_message(0x700 + self._id, [self._state])
             except CanError as e:
                 # We will just try again
                 logger.info("Failed to send heartbeat due to: %s", str(e))

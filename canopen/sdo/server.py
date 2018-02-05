@@ -1,8 +1,5 @@
 import logging
-import collections
 
-from .. import objectdictionary
-from .. import variable
 from .base import SdoBase
 from .constants import *
 from .exceptions import *
@@ -24,8 +21,7 @@ class SdoServer(SdoBase):
             Node object owning the server
         """
         SdoBase.__init__(self, rx_cobid, tx_cobid, node.object_dictionary)
-        self._callbacks = node.callbacks
-        self._data_store = node.data_store
+        self._node = node
         self._buffer = None
         self._toggle = 0
         self._index = None
@@ -51,6 +47,8 @@ class SdoServer(SdoBase):
                 self.block_download(data)
             elif ccs == REQUEST_ABORTED:
                 self.request_aborted(data)
+            else:
+                self.abort(0x05040001)
         except SdoAbortedError as exc:
             self.abort(exc.code)
         except KeyError as exc:
@@ -194,24 +192,7 @@ class SdoServer(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        obj = self._find_object(index, subindex)
-
-        # Try callback
-        for callback in self._callbacks:
-            result = callback(index=index, subindex=subindex, od=obj, data=None)
-            if result is not None:
-                return obj.encode_raw(result)
-
-        # Try stored data
-        try:
-            return self._data_store[index][subindex]
-        except KeyError:
-            # Try default value
-            if obj.default is None:
-                # Resource not available
-                logger.info("Resource unavailable for 0x%X:%d", index, subindex)
-                raise SdoAbortedError(0x060A0023)
-            return obj.encode_raw(obj.default)
+        return self._node.get_data(index, subindex)
 
     def download(self, index, subindex, data, force_segment=False):
         """May be called to make a write operation without an Object Dictionary.
@@ -226,97 +207,4 @@ class SdoServer(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        obj = self._find_object(index, subindex)
-
-        # Try callback
-        for callback in self._callbacks:
-            status = callback(index=index, subindex=subindex, od=obj, data=data)
-            if status:
-                break
-
-        # Store data
-        self._data_store.setdefault(index, {})
-        self._data_store[index][subindex] = bytes(data)
-
-    def _find_object(self, index, subindex):
-        if index not in self.od:
-            # Index does not exist
-            raise SdoAbortedError(0x06020000)
-        obj = self.od[index]
-        if not isinstance(obj, objectdictionary.Variable):
-            # Group or array
-            if subindex not in obj:
-                # Subindex does not exist
-                raise SdoAbortedError(0x06090011)
-            obj = obj[subindex]
-        return obj
-
-    def __getitem__(self, index):
-        entry = self.od[index]
-        if isinstance(entry, objectdictionary.Variable):
-            return Variable(self, entry)
-        elif isinstance(entry, objectdictionary.Array):
-            return Array(self, entry)
-        elif isinstance(entry, objectdictionary.Record):
-            return Record(self, entry)
-
-    def __iter__(self):
-        return iter(self.od)
-
-    def __len__(self):
-        return len(self.od)
-
-    def __contains__(self, key):
-        return key in self.od
-
-
-class Record(collections.Mapping):
-
-    def __init__(self, sdo_node, od):
-        self.sdo_node = sdo_node
-        self.od = od
-
-    def __getitem__(self, subindex):
-        return Variable(self.sdo_node, self.od[subindex])
-
-    def __iter__(self):
-        return iter(self.od)
-
-    def __len__(self):
-        return len(self.od)
-
-    def __contains__(self, subindex):
-        return subindex in self.od
-
-
-class Array(collections.Mapping):
-
-    def __init__(self, sdo_node, od):
-        self.sdo_node = sdo_node
-        self.od = od
-
-    def __getitem__(self, subindex):
-        return Variable(self.sdo_node, self.od[subindex])
-
-    def __iter__(self):
-        return iter(range(1, len(self) + 1))
-
-    def __len__(self):
-        return self[0].raw
-
-    def __contains__(self, subindex):
-        return 0 <= subindex <= len(self)
-
-
-class Variable(variable.Variable):
-    """Access object dictionary variable values using SDO protocol."""
-
-    def __init__(self, sdo_node, od):
-        self.sdo_node = sdo_node
-        variable.Variable.__init__(self, od)
-
-    def get_data(self):
-        return self.sdo_node.upload(self.od.index, self.od.subindex)
-
-    def set_data(self, data):
-        self.sdo_node.download(self.od.index, self.od.subindex, data)
+        return self._node.set_data(index, subindex, data)

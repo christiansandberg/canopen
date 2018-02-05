@@ -166,19 +166,26 @@ class TestSDO(unittest.TestCase):
         # Should be Resource not available
         self.assertEqual(cm.exception.code, 0x060A0023)
 
-    def _some_callback(self, **kwargs):
+    def _some_read_callback(self, **kwargs):
         self._kwargs = kwargs
         if kwargs["index"] == 0x1003:
             return 0x0201
 
+    def _some_write_callback(self, **kwargs):
+        self._kwargs = kwargs
+
     def test_callbacks(self):
-        self.local_node.add_callback(self._some_callback)
+        self.local_node.add_read_callback(self._some_read_callback)
+        self.local_node.add_write_callback(self._some_write_callback)
+
         data = self.remote_node.sdo.upload(0x1003, 5)
         self.assertEqual(data, b"\x01\x02\x00\x00")
         self.assertEqual(self._kwargs["index"], 0x1003)
         self.assertEqual(self._kwargs["subindex"], 5)
 
         self.remote_node.sdo.download(0x1003, 6, b"\x03\x04\x05\x06")
+        self.assertEqual(self._kwargs["index"], 0x1003)
+        self.assertEqual(self._kwargs["subindex"], 6)
         self.assertEqual(self._kwargs["data"], b"\x03\x04\x05\x06")
 
 
