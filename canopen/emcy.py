@@ -4,13 +4,13 @@ import threading
 import time
 
 
+# Error code, error register, vendor specific data
+EMCY_STRUCT = struct.Struct("<HB5s")
+
 logger = logging.getLogger(__name__)
 
 
 class EmcyConsumer(object):
-
-    # Error code, error register, vendor specific data
-    EMCY_STRUCT = struct.Struct("<HB5s")
 
     def __init__(self):
         #: Log of all received EMCYs for this node
@@ -21,7 +21,7 @@ class EmcyConsumer(object):
         self.emcy_received = threading.Condition()
 
     def on_emcy(self, can_id, data, timestamp):
-        code, register, data = self.EMCY_STRUCT.unpack(data)
+        code, register, data = EMCY_STRUCT.unpack(data)
         entry = EmcyError(code, register, data, timestamp)
 
         with self.emcy_received:
@@ -76,6 +76,17 @@ class EmcyConsumer(object):
                 if emcy_code is None or emcy.code == emcy_code:
                     # This is the one we're interested in
                     return emcy
+
+
+class EmcyProducer(object):
+
+    def __init__(self, cob_id):
+        self.network = None
+        self.cob_id = cob_id
+
+    def send(self, code, register=0, data=b""):
+        payload = EMCY_STRUCT.pack(code, register, data)
+        self.network.send_message(self.cob_id, payload)
 
 
 class EmcyError(Exception):

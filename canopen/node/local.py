@@ -4,6 +4,7 @@ import struct
 from .base import BaseNode
 from ..sdo import SdoServer, SdoAbortedError
 from ..nmt import NmtSlave
+from ..emcy import EmcyProducer
 from .. import objectdictionary
 
 
@@ -23,11 +24,13 @@ class LocalNode(BaseNode):
         self.nmt = NmtSlave(self.id, self)
         # Let self.nmt handle writes for 0x1017
         self.add_write_callback(self.nmt.on_write)
+        self.emcy = EmcyProducer(0x80 + self.id)
 
     def associate_network(self, network):
         self.network = network
         self.sdo.network = network
         self.nmt.network = network
+        self.emcy.network = network
         network.subscribe(self.sdo.rx_cobid, self.sdo.on_request)
         network.subscribe_nmt_cmd(self.id, self.nmt.on_command)
 
@@ -37,6 +40,7 @@ class LocalNode(BaseNode):
         self.network = None
         self.sdo.network = None
         self.nmt.network = None
+        self.emcy.network = None
 
     def add_read_callback(self, callback):
         self._read_callbacks.append(callback)
