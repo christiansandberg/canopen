@@ -361,8 +361,9 @@ class Map(object):
 
     def stop(self):
         """Stop transmission."""
-        self._task.stop()
-        self._task = None
+        if self._task is not None:
+            self._task.stop()
+            self._task = None
 
     def update(self):
         """Update periodic message with new data."""
