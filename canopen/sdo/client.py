@@ -1,4 +1,3 @@
-import collections
 import struct
 import logging
 import io
@@ -11,8 +10,6 @@ except ImportError:
 
 from ..network import CanError
 
-from .. import objectdictionary
-from .. import variable
 from .base import SdoBase
 from .constants import *
 from .exceptions import *
