@@ -12,14 +12,10 @@ RTR_NOT_ALLOWED = 1 << 30
 
 logger = logging.getLogger(__name__)
 
-# TODO: Load the PDOs as configured in the EDS file
-# TODO: Handle the mapping configuration
-# TODO: Support the PDO trigger types
-# TODO: Depending on the trigger a write to a variable needs to trigger a PDO
-#       message send
-# TODO: PDOs support data mapping on the bit level (e.g. 10 bits)
 # TODO: Depending on the implemented standard a PDO communication entry has a
 #       reserved byte at subindex 4
+# TODO: Support the inhibit time constraint for transmission
+# TODO: Support the event timer constraint for transmission
 
 
 def create_pdos(com_offset, map_offset, pdo_node, direction):
@@ -128,7 +124,7 @@ class PDOBase(object):
         self.timestamp = 0
         self.callbacks = []
 
-    def _register_pdo(self):
+    def _setup_pdo(self):
         # TODO: Install the traps and callbacks for data changes
         raise NotImplementedError
 
@@ -185,6 +181,13 @@ class PDOBase(object):
 
 class TPDO(PDOBase):
     """Transmit PDO specialization of the PDOBase class."""
+    # The transmission type constants
+    # TODO: The transmission type can be more fine grained
+    TT_UNDEFINED = 0x00
+    TT_RTR_TRIGGERED = 0x01
+    TT_EVENT_TRIGGERED = 0x02
+    TT_SYNC_TRIGGERED = 0x04
+    TT_CYCLIC = 0x08
 
     def __init__(self, cob_id, pdo_node, com_index, map_index):
         PDOBase.__init__(self, cob_id, pdo_node, com_index, map_index)
@@ -192,7 +195,7 @@ class TPDO(PDOBase):
         #: Is the remote transmit request (RTR) allowed for this PDO
         self.rtr_allowed = True
         #: Transmission type (0-255)
-        self.trans_type = com_entry.subindices[2]
+        self.trans_type = self._map_transmission_type(com_entry.subindices[2])
         #: Inhibit Time (optional) (in 100us)
         if 3 in com_entry.subindices:
             self.inhibit_time = com_entry.subindices[3]
@@ -201,23 +204,63 @@ class TPDO(PDOBase):
         #: Event timer (optional) (in ms)
         if 5 in com_entry.subindices:
             self.event_timer = com_entry.subindices[5]
+            # TODO: Is this correct?
+            self.trans_type |= self.TT_CYCLIC
         else:
             self.event_timer = None
         #: Period of receive message transmission in seconds
-        self.period = None
+        self.period = self.event_timer / 1000.0 if self.event_timer else None
         self._task = None
-        self._register_pdo()
+        self.data = bytes()
+        self._setup_pdo()
 
-    def _register_pdo(self):
-        # TODO: Install the traps and callbacks for data changes
-        raise NotImplementedError
+    def _setup_pdo(self):
+        self.data = self._build_data()
+        do_setup_traps = False
+        if self.trans_type & self.TT_SYNC_TRIGGERED:
+            # Subscribe to the SYNC message
+            self.pdo_node.network.subscribe(0x80, self.on_sync)
+        elif self.trans_type & self.TT_EVENT_TRIGGERED:
+            # Register the traps to catch a change of data
+            # TODO: The trigger conditions can be specified in the
+            #       manufacturer, device and application profiles
+            do_setup_traps = True
+        elif self.trans_type & self.TT_RTR_TRIGGERED:
+            # RTR triggering must be supported
+            if self.rtr_allowed:
+                # TODO
+                pass
+        elif self.trans_type & self.TT_CYCLIC:
+            # Register the traps to catch a change of data
+            do_setup_traps = True
+            self.transmit_cyclic()
+        else:
+            pass
 
-    def transmit(self):
+        if do_setup_traps:
+            # TODO: We also need traps for the SDO changeable communication
+            #       parameters
+            traps = self.pdo_node.node.data_store_traps
+            for index, subindex, _ in self.map:
+                if self.on_value_change not in traps[(index, subindex)]:
+                    traps[(index, subindex)].append(self.on_value_change)
+
+    def on_sync(self, can_id, data, timestamp):
+        """This is the callback method for when this PDO receives a SYNC
+        message. The SYNC triggers the data of the PDO to be sent."""
+        self.transmit_once()
+
+    def on_value_change(self, index, subindex, data):
+        """This is the callback method for when the internal data of the node
+        has changed."""
+        self.data = self._build_data()
+
+    def transmit_once(self):
         """Transmit the message once."""
         self.pdo_node.network.send_message(self.cob_id, self.data)
 
-    def start(self, period=None):
-        """Start periodic transmission of message in a background thread.
+    def start_cyclic_transmit(self, period=None):
+        """Start periodic transmission of the TPDO in a background thread.
 
         :param float period: Transmission period in seconds
         """
@@ -232,16 +275,43 @@ class TPDO(PDOBase):
         self._task = self.pdo_node.network.send_periodic(
             self.cob_id, self.data, self.period)
 
-    def stop(self):
-        """Stop transmission."""
+    def stop_cyclic_transmit(self):
+        """Stop cyclic transmission."""
         if self._task is not None:
             self._task.stop()
             self._task = None
 
-    def update(self):
-        """Update periodic message with new data."""
+    def update_cyclic_transmit(self):
+        """Update cyclic message with new data."""
         if self._task is not None:
             self._task.update(self.data)
+
+    @classmethod
+    def _map_transmission_type(cls, ttype):
+        ttype_mapped = cls.TT_UNDEFINED
+        if ttype <= 0xF0:
+            # Transmission is triggered by SYNC messages
+            ttype_mapped = cls.TT_SYNC_TRIGGERED
+        elif 0xF1 <= ttype <= 0xFB:
+            # These are reserved values and currently not supported
+            logger.error("Reserved transmission type 0x%X" % ttype)
+            ttype_mapped = cls.TT_UNDEFINED
+        elif 0xFC <= ttype <= 0xFD:
+            # RTR triggered
+            ttype_mapped = cls.TT_RTR_TRIGGERED
+        else:
+            # The transmission is event triggered.
+            # TODO: The trigger configuration can be specified in the
+            #       manufacturer, device and application profiles
+            ttype_mapped = cls.TT_EVENT_TRIGGERED
+        return ttype_mapped
+
+    def _build_data(self):
+        data = bytes()
+        for index, subindex, length in self.map:
+            entry_data = self.pdo_node.node.get_data(index, subindex)
+            data += entry_data[:length]
+        return data
 
 
 class RPDO(PDOBase):
@@ -251,9 +321,9 @@ class RPDO(PDOBase):
         PDOBase.__init__(self, cob_id, pdo_node, com_index, map_index)
         self.receive_condition = threading.Condition()
         self.is_received = False
-        self._register_pdo()
+        self._setup_pdo()
 
-    def _register_pdo(self):
+    def _setup_pdo(self):
         # TODO: Install the traps and callbacks for data changes
         raise NotImplementedError
 
