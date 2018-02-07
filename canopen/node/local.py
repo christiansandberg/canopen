@@ -17,7 +17,6 @@ class LocalNode(BaseNode):
     def __init__(self, node_id, object_dictionary):
         super(LocalNode, self).__init__(node_id, object_dictionary)
 
-        self.data_store = {}
         self._read_callbacks = []
         self._write_callbacks = []
 
