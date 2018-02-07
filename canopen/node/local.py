@@ -3,7 +3,7 @@ import struct
 
 from .base import BaseNode
 from ..sdo import SdoServer, SdoAbortedError
-from ..pdo import PdoNode
+from ..pdo import LocalPdoNode
 from ..nmt import NmtSlave
 from ..emcy import EmcyProducer
 from .. import objectdictionary
@@ -22,7 +22,7 @@ class LocalNode(BaseNode):
         self._write_callbacks = []
 
         self.sdo = SdoServer(0x600 + self.id, 0x580 + self.id, self)
-        self.pdo = PdoNode(self)
+        self.pdo = LocalPdoNode(self)
         self.nmt = NmtSlave(self.id, self)
         # Let self.nmt handle writes for 0x1017
         self.add_write_callback(self.nmt.on_write)

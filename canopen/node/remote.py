@@ -1,7 +1,7 @@
 from ..sdo import SdoClient
 from ..nmt import NmtMaster
 from ..emcy import EmcyConsumer
-from ..pdo import PdoNode
+from ..pdo import RemotePdoNode
 from .base import BaseNode
 
 
@@ -21,7 +21,7 @@ class RemoteNode(BaseNode):
 
         self.sdo = SdoClient(0x600 + self.id, 0x580 + self.id,
                              self.object_dictionary)
-        self.pdo = PdoNode(self)
+        self.pdo = RemotePdoNode(self)
         self.nmt = NmtMaster(self.id)
         self.emcy = EmcyConsumer()
 
