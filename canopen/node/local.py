@@ -1,5 +1,4 @@
 import logging
-import struct
 
 from .base import BaseNode
 from ..sdo import SdoServer, SdoAbortedError
@@ -35,10 +34,10 @@ class LocalNode(BaseNode):
         self.emcy.network = network
         network.subscribe(self.sdo.rx_cobid, self.sdo.on_request)
         network.subscribe_nmt_cmd(self.id, self.nmt.on_command)
+        self.pdo.setup()
 
     def remove_network(self):
-        self.network.unsubscribe(self.sdo.rx_cobid)
-        self.network.unsubscribe_nmt_cmd(self.id)
+        self.network.unsubscribe_all(self.sdo.rx_cobid)
         self.network = None
         self.sdo.network = None
         self.pdo.network = None

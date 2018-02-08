@@ -97,6 +97,11 @@ class LocalPdoNode(collections.Mapping):
         for tpdo in self.tx.values():
             tpdo.stop()
 
+    def setup(self):
+        for pdos in (self.rx, self.tx):
+            for pdo in pdos.values():
+                pdo.setup()
+
 
 class PDOBase(object):
     """One message which can have up to 8 bytes of variables mapped."""
@@ -110,13 +115,15 @@ class PDOBase(object):
         self.enabled = True
         self.map = []
         # Iterate over the sub-indices describing the map
-        for map_entry in pdo_node.node.object_dictionary[map_index].values():
+        map_entry = pdo_node.node.object_dictionary[map_index]
+        map_info_count = map_entry[0].default
+        for map_entry_index in range(1, map_info_count+1):
             # The routing hex is 4 byte long and holds index (16bit), subindex
             # (8 bits) and bit length (8 bits)
             # TODO: We shouldn't use just default, because the actual value can
             # be overwritten via SDO
             # TODO: We need to handle dummy mapping entries
-            routing_hex = map_entry.default
+            routing_hex = map_entry[map_entry_index].default
             index = (routing_hex >> 16) & 0xFFFF
             subindex = (routing_hex >> 8) & 0xFF
             length = routing_hex & 0xFF
@@ -125,7 +132,7 @@ class PDOBase(object):
         self.timestamp = 0
         self.callbacks = []
 
-    def setup_pdo(self):
+    def setup(self):
         # TODO: Install the traps and callbacks for data changes
         raise NotImplementedError
 
@@ -219,28 +226,26 @@ class TPDO(PDOBase):
         self._task = None
         self.data = bytes()
 
-    def setup_pdo(self):
+    def setup(self):
         self.data = self._build_data()
         do_setup_traps = False
         if self.trans_type & self.TT_SYNC_TRIGGERED:
             # Subscribe to the SYNC message
             self.pdo_node.network.subscribe(0x80, self.on_sync)
-        elif self.trans_type & self.TT_EVENT_TRIGGERED:
+        if self.trans_type & self.TT_EVENT_TRIGGERED:
             # Register the traps to catch a change of data
             # TODO: The trigger conditions can be specified in the
             #       manufacturer, device and application profiles
             do_setup_traps = True
-        elif self.trans_type & self.TT_RTR_TRIGGERED:
+        if self.trans_type & self.TT_RTR_TRIGGERED:
             # RTR triggering must be supported
             if self.rtr_allowed:
                 # TODO
                 pass
-        elif self.trans_type & self.TT_CYCLIC:
+        if self.trans_type & self.TT_CYCLIC:
             # Register the traps to catch a change of data
             do_setup_traps = True
-            self.transmit_cyclic()
-        else:
-            pass
+            self.start_cyclic_transmit()
 
         if do_setup_traps:
             # TODO: We also need traps for the SDO changeable communication
@@ -278,7 +283,6 @@ class TPDO(PDOBase):
             raise ValueError("A valid transmission period has not been given")
         logger.info("Starting %s with a period of %s seconds",
                     self.name, self.period)
-
         self._task = self.pdo_node.network.send_periodic(
             self.cob_id, self.data, self.period)
 
@@ -329,7 +333,7 @@ class RPDO(PDOBase):
         self.receive_condition = threading.Condition()
         self.is_received = False
 
-    def setup_pdo(self):
+    def setup(self):
         self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
     def on_message(self, can_id, data, timestamp):

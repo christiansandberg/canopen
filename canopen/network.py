@@ -87,6 +87,9 @@ class Network(collections.MutableMapping):
         """Stop listening for nmt commands."""
         del self.nmt_cmd_subscribers[node_id]
 
+    def unsubscribe_all(self):
+        self.subscribers = {}
+        self.nmt_cmd_subscribers = {}
 
     def connect(self, *args, **kwargs):
         """Connect to CAN bus using python-can.
