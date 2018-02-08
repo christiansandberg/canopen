@@ -110,11 +110,12 @@ class PDOBase(object):
         self.enabled = True
         self.map = []
         # Iterate over the sub-indices describing the map
-        for map_entry in pdo_node.node.object_dictionary[map_index]:
+        for map_entry in pdo_node.node.object_dictionary[map_index].values():
             # The routing hex is 4 byte long and holds index (16bit), subindex
             # (8 bits) and bit length (8 bits)
             # TODO: We shouldn't use just default, because the actual value can
             # be overwritten via SDO
+            # TODO: We need to handle dummy mapping entries
             routing_hex = map_entry.default
             index = (routing_hex >> 16) & 0xFFFF
             subindex = (routing_hex >> 8) & 0xFF
@@ -124,7 +125,7 @@ class PDOBase(object):
         self.timestamp = 0
         self.callbacks = []
 
-    def _setup_pdo(self):
+    def setup_pdo(self):
         # TODO: Install the traps and callbacks for data changes
         raise NotImplementedError
 
@@ -157,8 +158,8 @@ class PDOBase(object):
         """A descriptive name of the PDO.
 
         Examples:
-         * TxPDO_0x1542_node4
-         * RxPDO_0x1812_node1
+            * TxPDO_0x1542_node4
+            * RxPDO_0x1812_node1
         """
         direction = "Rx" if 0x1400 <= self.com_index < 0x1600 else "Tx"
         node_id = self.pdo_node.node.id
@@ -190,12 +191,15 @@ class TPDO(PDOBase):
     TT_CYCLIC = 0x08
 
     def __init__(self, cob_id, pdo_node, com_index, map_index):
+        # TODO: It is not good to use only the default values
         PDOBase.__init__(self, cob_id, pdo_node, com_index, map_index)
         com_entry = pdo_node.node.object_dictionary[com_index]
         #: Is the remote transmit request (RTR) allowed for this PDO
         self.rtr_allowed = True
         #: Transmission type (0-255)
-        self.trans_type = self._map_transmission_type(com_entry.subindices[2])
+        trans_type_variable = com_entry.subindices[2]
+        self.trans_type = self._map_transmission_type(
+            trans_type_variable.default)
         #: Inhibit Time (optional) (in 100us)
         if 3 in com_entry.subindices:
             self.inhibit_time = com_entry.subindices[3]
@@ -209,12 +213,13 @@ class TPDO(PDOBase):
         else:
             self.event_timer = None
         #: Period of receive message transmission in seconds
-        self.period = self.event_timer / 1000.0 if self.event_timer else None
+        self.period = None
+        if self.event_timer:
+            self.period = self.event_timer.default / 1000.0
         self._task = None
         self.data = bytes()
-        self._setup_pdo()
 
-    def _setup_pdo(self):
+    def setup_pdo(self):
         self.data = self._build_data()
         do_setup_traps = False
         if self.trans_type & self.TT_SYNC_TRIGGERED:
@@ -254,6 +259,8 @@ class TPDO(PDOBase):
         """This is the callback method for when the internal data of the node
         has changed."""
         self.data = self._build_data()
+        if self._task is not None:
+            self._task.update(self.data)
 
     def transmit_once(self):
         """Transmit the message once."""
@@ -321,19 +328,16 @@ class RPDO(PDOBase):
         PDOBase.__init__(self, cob_id, pdo_node, com_index, map_index)
         self.receive_condition = threading.Condition()
         self.is_received = False
-        self._setup_pdo()
 
-    def _setup_pdo(self):
-        # TODO: Install the traps and callbacks for data changes
-        raise NotImplementedError
+    def setup_pdo(self):
+        self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
     def on_message(self, can_id, data, timestamp):
-        is_transmitting = self._task is not None
-        if can_id == self.cob_id and not is_transmitting:
+        # TODO: Invalid data changes shall be answered with an SDO abort
+        if can_id == self.cob_id:
             with self.receive_condition:
                 self.is_received = True
                 self.data = data
-                self.period = timestamp - self.timestamp
                 self.timestamp = timestamp
                 self.receive_condition.notify_all()
                 self._update_mapped_data()
@@ -343,6 +347,8 @@ class RPDO(PDOBase):
         data_start = 0
         for index, subindex, length in self.map:
             data_end = data_start + length
+            # TODO: This will trigger change callbacks per mapped entry, it is
+            # preferable to change the data atomically and then invoke callbacks
             self.pdo_node.node.set_data(index, subindex,
                                         self.data[data_start:data_end])
             data_start = data_end

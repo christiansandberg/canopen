@@ -78,7 +78,11 @@ class LocalNode(BaseNode):
         self.data_store.setdefault(index, {})
         self.data_store[index][subindex] = bytes(data)
 
-        # Try callbacks
+        # Execute the data change traps
+        for callback in self.data_store_traps[(index, subindex)]:
+            callback(index, subindex, data)
+
+        # Try generic setter callbacks
         for callback in self._write_callbacks:
             callback(index=index, subindex=subindex, od=obj, data=data)
 
