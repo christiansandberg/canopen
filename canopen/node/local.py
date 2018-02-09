@@ -72,11 +72,14 @@ class LocalNode(BaseNode):
             return obj.encode_raw(obj.default)
 
     def set_data(self, index, subindex, data):
+        if not isinstance(data, (bytes, bytearray)):
+            logger.error("Node data must be given as byte object")
+
         obj = self._find_object(index, subindex)
 
         # Store data
         self.data_store.setdefault(index, {})
-        self.data_store[index][subindex] = bytes(data)
+        self.data_store[index][subindex] = data
 
         # Execute the data change traps
         for callback in self.data_store_traps[(index, subindex)]:
