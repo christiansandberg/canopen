@@ -119,6 +119,7 @@ class PDOBase(object):
         self.callbacks = []
 
     def setup(self):
+        logger.info("Setting up PDO 0x%X on node %d" % (self.com_index, self.pdo_node.node.id))
         com_entry = self.pdo_node.node.object_dictionary[self.com_index]
         map_entry = self.pdo_node.node.object_dictionary[self.map_index]
         com_info_count = com_entry[0].default
@@ -141,8 +142,10 @@ class PDOBase(object):
             subindex = (routing_hex >> 8) & 0xFF
             length = routing_hex & 0xFF
             self.map.append((index, subindex, length))
+        logger.info("Internal map: {}".format(self.map))
 
     def on_config_change(self, transaction):
+        logger.info("Change detected")
         for index, subindex, data in transaction:
             if index == self.com_index:
                 self.update_com_config()
@@ -262,6 +265,7 @@ class TPDO(PDOBase):
             self.start_cyclic_transmit()
 
         if do_setup_data_traps:
+            logger.info("Setting up data traps for node")
             traps = self.pdo_node.node.data_store_traps
             for index, subindex, _ in self.map:
                 if self.on_data_change not in traps[(index, subindex)]:
@@ -275,8 +279,11 @@ class TPDO(PDOBase):
     def on_data_change(self, transaction):
         """This is the callback method for when the internal data of the node
         has changed."""
+        logger.info("Data change detected")
+        logger.info("Old message content {}".format(self.data))
         # Parts of our data changed, the details don't matter, rebuild the data
         self.data = self._build_data()
+        logger.info("New message content {}".format(self.data))
         if self._task is not None:
             self._task.update(self.data)
 
@@ -296,6 +303,8 @@ class TPDO(PDOBase):
             raise ValueError("A valid transmission period has not been given")
         logger.info("Starting %s with a period of %s seconds",
                     self.name, self.period)
+        logger.info("Preparing periodic transmit with period "
+                     "%f, COBID 0x%X" % (self.period, self.cob_id))
         self._task = self.pdo_node.network.send_periodic(
             self.cob_id, self.data, self.period)
 
@@ -344,9 +353,12 @@ class RPDO(PDOBase):
         self.is_received = False
 
     def setup(self):
+        PDOBase.setup(self)
         self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
     def on_message(self, can_id, data, timestamp):
+        logger.info("Received PDO on COBID 0x%X" % can_id)
+        logger.info("Data: {}".format(data))
         if can_id == self.cob_id:
             with self.receive_condition:
                 self.is_received = True
@@ -356,12 +368,13 @@ class RPDO(PDOBase):
                 self.data_transaction(data)
 
     def data_transaction(self, data):
+        logger.info("Updating values in internal data store...")
         # Map the received byte data according to the mapping rules of this PDO
         data_start = 0
         transaction = []
         for index, subindex, length in self.map:
             data_end = data_start + length
-            transaction.append(index, subindex, self.data[data_start:data_end])
+            transaction.append((index, subindex, self.data[data_start:data_end]))
             data_start = data_end
         # First execute the node data transaction
         self.pdo_node.node.data_transaction(transaction)

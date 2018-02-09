@@ -100,7 +100,7 @@ class LocalNode(BaseNode):
         callback_infos = defaultdict(list)
         for index, subindex, data in transaction:
             self.data_store.setdefault(index, {})
-            self.data_store[index][subindex] = bytes(data)
+            self.data_store[index][subindex] = data
             for callback in self.data_store_traps[(index, subindex)]:
                 callback_infos[callback].append((index, subindex, data))
 
