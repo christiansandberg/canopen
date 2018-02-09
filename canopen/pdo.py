@@ -12,10 +12,19 @@ RTR_NOT_ALLOWED = 1 << 30
 
 logger = logging.getLogger(__name__)
 
-# TODO: Depending on the implemented standard a PDO communication entry has a
-#       reserved byte at subindex 4
+# TODO: Only send and receive messages when in state OPERATIONAL
 # TODO: Support the inhibit time constraint for transmission
-# TODO: Support the event timer constraint for transmission
+# TODO: Support more fine grained transmission types
+# TODO: Implement RemotePdoNode
+# TODO: Implement LocalPdoNode.__iter__
+# TODO: Implement LocalPdoNode.__getitem__
+# TODO: Implement LocalPdoNode.export
+# TODO: We need to handle dummy mapping entries
+# TODO: Implement update_com_config
+# TODO: Implement update_map_config
+# TODO: Support more sophisticated trigger mechanisms
+# TODO: Support RTR trigger correctly
+# TODO: Invalid data changes shall be answered with an SDO abort
 
 
 def create_pdos(com_offset, map_offset, pdo_node, direction):
@@ -45,8 +54,6 @@ def create_pdos(com_offset, map_offset, pdo_node, direction):
 
 class RemotePdoNode(collections.Mapping):
     """Represents a slave unit."""
-    # TODO: Remote nodes behave different, because we don't own the data that
-    #       is sent or received.
     def __init__(self, node):
         self.network = None
         self.node = node
@@ -62,13 +69,9 @@ class LocalPdoNode(collections.Mapping):
         self.tx = create_pdos(0x1800, 0x1A00, self, "Tx")
 
     def __iter__(self):
-        # TODO: What do we want to yield here? The communication parameters or
-        #       the mapped object dictionary indices?
         raise StopIteration
 
     def __getitem__(self, key):
-        # TODO: What do we want to get here? The communication parameters or
-        #       the mapped object dictionary indices?
         raise KeyError("%s was not found in any map" % key)
 
     def __len__(self):
@@ -87,9 +90,6 @@ class LocalPdoNode(collections.Mapping):
         :return: The CanMatrix object created
         :rtype: canmatrix.canmatrix.CanMatrix
         """
-        # TODO: Retrieve the info from self.node.object_dictionary with the
-        #       help of com_index and map_index of the PDO classes and create
-        #       the canmatrix data type
         raise NotImplementedError
 
     def stop(self):
@@ -114,26 +114,45 @@ class PDOBase(object):
         #: If this map is valid
         self.enabled = True
         self.map = []
-        # Iterate over the sub-indices describing the map
-        map_entry = pdo_node.node.object_dictionary[map_index]
-        map_info_count = map_entry[0].default
-        for map_entry_index in range(1, map_info_count+1):
-            # The routing hex is 4 byte long and holds index (16bit), subindex
-            # (8 bits) and bit length (8 bits)
-            # TODO: We shouldn't use just default, because the actual value can
-            # be overwritten via SDO
-            # TODO: We need to handle dummy mapping entries
-            routing_hex = map_entry[map_entry_index].default
-            index = (routing_hex >> 16) & 0xFFFF
-            subindex = (routing_hex >> 8) & 0xFF
-            length = routing_hex & 0xFF
-            self.map.append((index, subindex, length))
         #: Time stamp of last sent or received message
         self.timestamp = 0
         self.callbacks = []
 
     def setup(self):
-        # TODO: Install the traps and callbacks for data changes
+        com_entry = self.pdo_node.node.object_dictionary[self.com_index]
+        map_entry = self.pdo_node.node.object_dictionary[self.map_index]
+        com_info_count = com_entry[0].default
+        map_info_count = map_entry[0].default
+        traps = self.pdo_node.node.data_store_traps
+        # Makes sure the node is informed about communication parameter changes
+        for com_subentry_index in range(0, com_info_count+1):
+            if self.on_config_change not in traps[(self.com_index, com_subentry_index)]:
+                traps[(self.com_index, com_subentry_index)].append(self.on_config_change)
+        # Makes sure the node is informed about mapping parameter changes
+        for map_subentry_index in range(0, map_info_count+1):
+            if self.on_config_change not in traps[(self.map_index, map_subentry_index)]:
+                traps[(self.map_index, map_subentry_index)].append(self.on_config_change)
+        # Create info about how the contents of this PDO are mapped
+        for map_entry_index in range(1, map_info_count+1):
+            # The routing hex is 4 byte long and holds index (16bit), subindex
+            # (8 bits) and bit length (8 bits)
+            routing_hex = map_entry[map_entry_index].default
+            index = (routing_hex >> 16) & 0xFFFF
+            subindex = (routing_hex >> 8) & 0xFF
+            length = routing_hex & 0xFF
+            self.map.append((index, subindex, length))
+
+    def on_config_change(self, transaction):
+        for index, subindex, data in transaction:
+            if index == self.com_index:
+                self.update_com_config()
+            if index == self.map_index:
+                self.update_map_config()
+
+    def update_map_config(self):
+        raise NotImplementedError
+
+    def update_com_config(self):
         raise NotImplementedError
 
     def __getitem__(self, key):
@@ -190,7 +209,6 @@ class PDOBase(object):
 class TPDO(PDOBase):
     """Transmit PDO specialization of the PDOBase class."""
     # The transmission type constants
-    # TODO: The transmission type can be more fine grained
     TT_UNDEFINED = 0x00
     TT_RTR_TRIGGERED = 0x01
     TT_EVENT_TRIGGERED = 0x02
@@ -198,7 +216,6 @@ class TPDO(PDOBase):
     TT_CYCLIC = 0x08
 
     def __init__(self, cob_id, pdo_node, com_index, map_index):
-        # TODO: It is not good to use only the default values
         PDOBase.__init__(self, cob_id, pdo_node, com_index, map_index)
         com_entry = pdo_node.node.object_dictionary[com_index]
         #: Is the remote transmit request (RTR) allowed for this PDO
@@ -215,7 +232,6 @@ class TPDO(PDOBase):
         #: Event timer (optional) (in ms)
         if 5 in com_entry.subindices:
             self.event_timer = com_entry.subindices[5]
-            # TODO: Is this correct?
             self.trans_type |= self.TT_CYCLIC
         else:
             self.event_timer = None
@@ -227,42 +243,39 @@ class TPDO(PDOBase):
         self.data = bytes()
 
     def setup(self):
+        PDOBase.setup(self)
         self.data = self._build_data()
-        do_setup_traps = False
+        do_setup_data_traps = False
         if self.trans_type & self.TT_SYNC_TRIGGERED:
             # Subscribe to the SYNC message
             self.pdo_node.network.subscribe(0x80, self.on_sync)
         if self.trans_type & self.TT_EVENT_TRIGGERED:
             # Register the traps to catch a change of data
-            # TODO: The trigger conditions can be specified in the
-            #       manufacturer, device and application profiles
-            do_setup_traps = True
+            do_setup_data_traps = True
         if self.trans_type & self.TT_RTR_TRIGGERED:
             # RTR triggering must be supported
             if self.rtr_allowed:
-                # TODO
                 pass
         if self.trans_type & self.TT_CYCLIC:
             # Register the traps to catch a change of data
-            do_setup_traps = True
+            do_setup_data_traps = True
             self.start_cyclic_transmit()
 
-        if do_setup_traps:
-            # TODO: We also need traps for the SDO changeable communication
-            #       parameters
+        if do_setup_data_traps:
             traps = self.pdo_node.node.data_store_traps
             for index, subindex, _ in self.map:
-                if self.on_value_change not in traps[(index, subindex)]:
-                    traps[(index, subindex)].append(self.on_value_change)
+                if self.on_data_change not in traps[(index, subindex)]:
+                    traps[(index, subindex)].append(self.on_data_change)
 
     def on_sync(self, can_id, data, timestamp):
         """This is the callback method for when this PDO receives a SYNC
         message. The SYNC triggers the data of the PDO to be sent."""
         self.transmit_once()
 
-    def on_value_change(self, index, subindex, data):
+    def on_data_change(self, transaction):
         """This is the callback method for when the internal data of the node
         has changed."""
+        # Parts of our data changed, the details don't matter, rebuild the data
         self.data = self._build_data()
         if self._task is not None:
             self._task.update(self.data)
@@ -311,9 +324,6 @@ class TPDO(PDOBase):
             # RTR triggered
             ttype_mapped = cls.TT_RTR_TRIGGERED
         else:
-            # The transmission is event triggered.
-            # TODO: The trigger configuration can be specified in the
-            #       manufacturer, device and application profiles
             ttype_mapped = cls.TT_EVENT_TRIGGERED
         return ttype_mapped
 
@@ -337,26 +347,25 @@ class RPDO(PDOBase):
         self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
     def on_message(self, can_id, data, timestamp):
-        # TODO: Invalid data changes shall be answered with an SDO abort
         if can_id == self.cob_id:
             with self.receive_condition:
                 self.is_received = True
                 self.data = data
                 self.timestamp = timestamp
                 self.receive_condition.notify_all()
-                self._update_mapped_data()
+                self.data_transaction(data)
 
-    def _update_mapped_data(self):
+    def data_transaction(self, data):
         # Map the received byte data according to the mapping rules of this PDO
         data_start = 0
+        transaction = []
         for index, subindex, length in self.map:
             data_end = data_start + length
-            # TODO: This will trigger change callbacks per mapped entry, it is
-            # preferable to change the data atomically and then invoke callbacks
-            self.pdo_node.node.set_data(index, subindex,
-                                        self.data[data_start:data_end])
+            transaction.append(index, subindex, self.data[data_start:data_end])
             data_start = data_end
-        # Data has been updated, now we can invoke the callbacks
+        # First execute the node data transaction
+        self.pdo_node.node.data_transaction(transaction)
+        # Then invoke the PDO specific callbacks
         for callback in self.callbacks:
             callback(self)
 

@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 
 from .base import BaseNode
 from ..sdo import SdoServer, SdoAbortedError
@@ -79,11 +80,31 @@ class LocalNode(BaseNode):
 
         # Execute the data change traps
         for callback in self.data_store_traps[(index, subindex)]:
-            callback(index, subindex, data)
+            callback([(index, subindex, data)])
 
         # Try generic setter callbacks
         for callback in self._write_callbacks:
             callback(index=index, subindex=subindex, od=obj, data=data)
+
+    def data_transaction(self, transaction):
+        """Change the internal data atomically. The net result of this method
+        is identical to calling `set_data` for every data change found in the
+        transaction object. The difference is that the callbacks are only
+        called once at the end.
+
+        :param transaction: A list of (index, subindex, new_byte_data) tuples
+        """
+        callback_infos = defaultdict(list)
+        for index, subindex, data in transaction:
+            self.data_store.setdefault(index, {})
+            self.data_store[index][subindex] = bytes(data)
+            for callback in self.data_store_traps[(index, subindex)]:
+                callback_infos[callback].append((index, subindex, data))
+
+        # Now call the callback, but once with the info about all changes of
+        # interest
+        for callback, callback_args in callback_infos.items():
+            callback(callback_args)
 
     def _find_object(self, index, subindex):
         if index not in self.object_dictionary:
