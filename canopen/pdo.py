@@ -58,6 +58,19 @@ class RemotePdoNode(collections.Mapping):
         self.network = None
         self.node = node
 
+    def __iter__(self):
+        raise StopIteration
+
+    def __getitem__(self, key):
+        raise KeyError("%s was not found in any map" % key)
+
+    def __len__(self):
+        count = 0
+        for pdo_maps in (self.rx, self.tx):
+            for pdo_map in pdo_maps.values():
+                count += len(pdo_map)
+        return count
+
 
 class LocalPdoNode(collections.Mapping):
     """Represents a slave unit."""
