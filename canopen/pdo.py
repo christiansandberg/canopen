@@ -140,7 +140,7 @@ class PDOBase(object):
             routing_hex = map_entry[map_entry_index].default
             index = (routing_hex >> 16) & 0xFFFF
             subindex = (routing_hex >> 8) & 0xFF
-            length = routing_hex & 0xFF
+            length = int((routing_hex & 0xFF) / 8)
             self.map.append((index, subindex, length))
         logger.info("Internal map: {}".format(self.map))
 
