@@ -51,7 +51,7 @@ def import_eds(source, node_id):
                 arr = objectdictionary.Array(name, index)
                 last_subindex = objectdictionary.Variable(
                     "Number of entries", index, 0)
-                last_subindex.data_type = objectdictionary.UNSIGNED8
+                last_subindex.data_type = objectdictionary.datatypes.UNSIGNED8
                 arr.add_member(last_subindex)
                 arr.add_member(build_variable(eds, section, node_id, index, 1))
                 od.add_object(arr)
