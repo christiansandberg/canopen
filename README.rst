@@ -85,7 +85,6 @@ Here are some quick examples of what you can do:
 
     # Add some nodes with corresponding Object Dictionaries
     node = network.add_node(6, '/path/to/object_dictionary.eds')
-    network.add_node(7, '/path/to/object_dictionary.eds')
 
     # Connect to the CAN bus
     # Arguments are passed to python-can's can.interface.Bus() constructor
@@ -135,13 +134,12 @@ Debugging
 ---------
 
 If you need to see what's going on in better detail, you can increase the
-logging_ level of this library and possibly for python-can as well:
+logging_ level:
 
 .. code-block:: python
 
     import logging
-    logging.getLogger('canopen').setLevel(logging.DEBUG)
-    logging.getLogger('can').setLevel(logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
 
 
 TODO
@@ -151,7 +149,6 @@ There are a lot of things that still needs implementing and fixing.
 Pull requests are most welcome!
 
 * More unit test coverage
-* Period transmits using python-can cyclic API
 * XDD support
 
 
