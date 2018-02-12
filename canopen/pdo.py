@@ -132,7 +132,8 @@ class PDOBase(object):
         self.callbacks = []
 
     def setup(self):
-        logger.info("Setting up PDO 0x%X on node %d" % (self.com_index, self.pdo_node.node.id))
+        logger.info("Setting up PDO 0x%X on node %d" % (
+            self.com_index, self.pdo_node.node.id))
         com_entry = self.pdo_node.node.object_dictionary[self.com_index]
         map_entry = self.pdo_node.node.object_dictionary[self.map_index]
         com_info_count = com_entry[0].default
@@ -317,7 +318,7 @@ class TPDO(PDOBase):
         logger.info("Starting %s with a period of %s seconds",
                     self.name, self.period)
         logger.info("Preparing periodic transmit with period "
-                     "%f, COBID 0x%X" % (self.period, self.cob_id))
+                    "%f, COBID 0x%X" % (self.period, self.cob_id))
         self._task = self.pdo_node.network.send_periodic(
             self.cob_id, self.data, self.period)
 
@@ -387,7 +388,8 @@ class RPDO(PDOBase):
         transaction = []
         for index, subindex, length in self.map:
             data_end = data_start + length
-            transaction.append((index, subindex, self.data[data_start:data_end]))
+            transaction.append((index, subindex,
+                                self.data[data_start:data_end]))
             data_start = data_end
         # First execute the node data transaction
         self.pdo_node.node.data_transaction(transaction)

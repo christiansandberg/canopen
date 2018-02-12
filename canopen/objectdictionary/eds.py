@@ -1,5 +1,4 @@
 import re
-import io
 import logging
 import copy
 try:
@@ -8,14 +7,10 @@ except ImportError:
     from ConfigParser import RawConfigParser
 from canopen import objectdictionary
 from canopen.sdo import SdoClient
+from . import objecttypes as otype
 
 
 logger = logging.getLogger(__name__)
-
-
-VAR = 7
-ARR = 8
-RECORD = 9
 
 
 od_main_index_regex = re.compile(r"^[0-9A-Fa-f]{4}$")
@@ -49,10 +44,10 @@ def import_eds(source, node_id):
             name = eds.get(section, "ParameterName")
             object_type = int(eds.get(section, "ObjectType"), 0)
 
-            if object_type == VAR:
+            if object_type == otype.VAR:
                 var = build_variable(eds, section, node_id, index)
                 od.add_object(var)
-            elif object_type == ARR and eds.has_option(section, "CompactSubObj"):
+            elif object_type == otype.ARR and eds.has_option(section, "CompactSubObj"):
                 arr = objectdictionary.Array(name, index)
                 last_subindex = objectdictionary.Variable(
                     "Number of entries", index, 0)
@@ -60,10 +55,10 @@ def import_eds(source, node_id):
                 arr.add_member(last_subindex)
                 arr.add_member(build_variable(eds, section, node_id, index, 1))
                 od.add_object(arr)
-            elif object_type == ARR:
+            elif object_type == otype.ARR:
                 arr = objectdictionary.Array(name, index)
                 od.add_object(arr)
-            elif object_type == RECORD:
+            elif object_type == otype.RECORD:
                 record = objectdictionary.Record(name, index)
                 od.add_object(record)
 
