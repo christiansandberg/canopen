@@ -52,7 +52,7 @@ class LocalNode(BaseNode):
         self._write_callbacks.append(callback)
 
     def get_data(self, index, subindex):
-        obj = self._find_object(index, subindex)
+        obj = self.get_object(index, subindex)
 
         # Try callback
         for callback in self._read_callbacks:
@@ -60,26 +60,16 @@ class LocalNode(BaseNode):
             if result is not None:
                 return obj.encode_raw(result)
 
-        # Try stored data
-        try:
-            return self.data_store[index][subindex]
-        except KeyError:
-            # Try default value
-            if obj.default is None:
-                # Resource not available
-                logger.info("Resource unavailable for 0x%X:%d", index, subindex)
-                raise SdoAbortedError(0x060A0023)
-            return obj.encode_raw(obj.default)
+        return obj.raw
 
     def set_data(self, index, subindex, data):
         if not isinstance(data, (bytes, bytearray)):
             logger.error("Node data must be given as byte object")
 
-        obj = self._find_object(index, subindex)
+        obj = self.get_object(index, subindex)
 
         # Store data
-        self.data_store.setdefault(index, {})
-        self.data_store[index][subindex] = data
+        obj.raw = data
 
         # Execute the data change traps
         for callback in self.data_store_traps[(index, subindex)]:
@@ -88,6 +78,31 @@ class LocalNode(BaseNode):
         # Try generic setter callbacks
         for callback in self._write_callbacks:
             callback(index=index, subindex=subindex, od=obj, data=data)
+
+    def get_value(self, index, subindex):
+        obj = self.get_object(index, subindex)
+
+        # Try callback
+        for callback in self._read_callbacks:
+            result = callback(index=index, subindex=subindex, od=obj)
+            if result is not None:
+                return obj.encode_raw(result)
+
+        return obj.value
+
+    def set_value(self, index, subindex, value):
+        obj = self.get_object(index, subindex)
+
+        # Store data
+        obj.value = value
+
+        # Execute the data change traps
+        for callback in self.data_store_traps[(index, subindex)]:
+            callback([(index, subindex, value)])
+
+        # Try generic setter callbacks
+        for callback in self._write_callbacks:
+            callback(index=index, subindex=subindex, od=obj, data=value)
 
     def data_transaction(self, transaction):
         """Change the internal data atomically. The net result of this method
@@ -99,8 +114,7 @@ class LocalNode(BaseNode):
         """
         callback_infos = defaultdict(list)
         for index, subindex, data in transaction:
-            self.data_store.setdefault(index, {})
-            self.data_store[index][subindex] = data
+            self.set_data(index, subindex, data)
             for callback in self.data_store_traps[(index, subindex)]:
                 callback_infos[callback].append((index, subindex, data))
 
@@ -109,7 +123,7 @@ class LocalNode(BaseNode):
         for callback, callback_args in callback_infos.items():
             callback(callback_args)
 
-    def _find_object(self, index, subindex):
+    def get_object(self, index, subindex):
         if index not in self.object_dictionary:
             # Index does not exist
             raise SdoAbortedError(0x06020000)

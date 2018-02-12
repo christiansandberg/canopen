@@ -3,7 +3,6 @@ import collections
 import logging
 
 from . import objectdictionary
-from . import variable
 
 
 PDO_NOT_VALID = 1 << 31
@@ -42,8 +41,8 @@ def create_pdos(com_offset, map_offset, pdo_node, direction):
         map_index = map_offset + idx
         if com_index in pdo_node.node.object_dictionary:
             com_entry = pdo_node.node.object_dictionary[com_index]
-            if com_entry.subindices[1].default:
-                cob_id = com_entry.subindices[1].default
+            if com_entry.subindices[1].value:
+                cob_id = com_entry.subindices[1].value
             else:
                 logger.warning("Don't know how to handle communication "
                                "index 0x{:X}".format(com_index))
@@ -136,8 +135,8 @@ class PDOBase(object):
             self.com_index, self.pdo_node.node.id))
         com_entry = self.pdo_node.node.object_dictionary[self.com_index]
         map_entry = self.pdo_node.node.object_dictionary[self.map_index]
-        com_info_count = com_entry[0].default
-        map_info_count = map_entry[0].default
+        com_info_count = com_entry[0].value
+        map_info_count = map_entry[0].value
         traps = self.pdo_node.node.data_store_traps
         # Makes sure the node is informed about communication parameter changes
         for com_subentry_index in range(0, com_info_count+1):
@@ -151,7 +150,7 @@ class PDOBase(object):
         for map_entry_index in range(1, map_info_count+1):
             # The routing hex is 4 byte long and holds index (16bit), subindex
             # (8 bits) and bit length (8 bits)
-            routing_hex = map_entry[map_entry_index].default
+            routing_hex = map_entry[map_entry_index].value
             index = (routing_hex >> 16) & 0xFFFF
             subindex = (routing_hex >> 8) & 0xFF
             length = int((routing_hex & 0xFF) / 8)
@@ -185,10 +184,9 @@ class PDOBase(object):
         return len(self.map)
 
     def _get_variable(self, index, subindex):
-        obj = self.pdo_node.node.object_dictionary[index]
-        if isinstance(obj, (objectdictionary.Record, objectdictionary.Array)):
-            obj = obj[subindex]
-        var = variable.Variable(obj)
+        var = self.pdo_node.node.object_dictionary[index]
+        if isinstance(var, (objectdictionary.Record, objectdictionary.Array)):
+            var = var[subindex]
         var.msg = self
         return var
 
@@ -240,7 +238,7 @@ class TPDO(PDOBase):
         #: Transmission type (0-255)
         trans_type_variable = com_entry.subindices[2]
         self.trans_type = self._map_transmission_type(
-            trans_type_variable.default)
+            trans_type_variable.value)
         #: Inhibit Time (optional) (in 100us)
         if 3 in com_entry.subindices:
             self.inhibit_time = com_entry.subindices[3]
@@ -255,7 +253,7 @@ class TPDO(PDOBase):
         #: Period of receive message transmission in seconds
         self.period = None
         if self.event_timer:
-            self.period = self.event_timer.default / 1000.0
+            self.period = self.event_timer.value / 1000.0
         self._task = None
         self.data = bytes()
 
@@ -315,10 +313,9 @@ class TPDO(PDOBase):
 
         if not self.period:
             raise ValueError("A valid transmission period has not been given")
-        logger.info("Starting %s with a period of %s seconds",
-                    self.name, self.period)
-        logger.info("Preparing periodic transmit with period "
-                    "%f, COBID 0x%X" % (self.period, self.cob_id))
+        logger.info("Starting %s with a period of %s seconds, COBID 0x%X",
+                    self.name, self.period, self.cob_id)
+        logger.info("Data: {}".format(self.data))
         self._task = self.pdo_node.network.send_periodic(
             self.cob_id, self.data, self.period)
 
