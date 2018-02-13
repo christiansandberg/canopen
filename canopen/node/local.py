@@ -38,7 +38,12 @@ class LocalNode(BaseNode):
         self.pdo.setup()
 
     def remove_network(self):
-        self.network.unsubscribe_all(self.sdo.rx_cobid)
+        self.network.unsubscribe(self.sdo.rx_cobid)
+        self.network.unsubscribe_nmt_cmd(self.id)
+        for pdos in (self.pdo.rx, self.pdo.tx):
+            for pdo in pdos.values():
+                for subscription in pdo.subscriptions:
+                    self.network.unsubscribe(subscription)
         self.network = None
         self.sdo.network = None
         self.pdo.network = None

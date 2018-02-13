@@ -56,6 +56,8 @@ class RemotePdoNode(collections.Mapping):
     def __init__(self, node):
         self.network = None
         self.node = node
+        self.rx = {}
+        self.tx = {}
 
     def __iter__(self):
         raise StopIteration
@@ -69,6 +71,9 @@ class RemotePdoNode(collections.Mapping):
             for pdo_map in pdo_maps.values():
                 count += len(pdo_map)
         return count
+
+    def setup(self):
+        pass
 
 
 class LocalPdoNode(collections.Mapping):
@@ -129,6 +134,7 @@ class PDOBase(object):
         #: Time stamp of last sent or received message
         self.timestamp = 0
         self.callbacks = []
+        self.subscriptions = set()
 
     def setup(self):
         logger.info("Setting up PDO 0x%X on node %d" % (
@@ -264,6 +270,7 @@ class TPDO(PDOBase):
         if self.trans_type & self.TT_SYNC_TRIGGERED:
             # Subscribe to the SYNC message
             self.pdo_node.network.subscribe(0x80, self.on_sync)
+            self.subscriptions.add(0x80)
         if self.trans_type & self.TT_EVENT_TRIGGERED:
             # Register the traps to catch a change of data
             do_setup_data_traps = True
@@ -286,6 +293,8 @@ class TPDO(PDOBase):
     def on_sync(self, can_id, data, timestamp):
         """This is the callback method for when this PDO receives a SYNC
         message. The SYNC triggers the data of the PDO to be sent."""
+        logger.info("Node %d: Transmitting on SYNC request" %
+                    self.pdo_node.node.id)
         self.transmit_once()
 
     def on_data_change(self, transaction):
@@ -366,6 +375,7 @@ class RPDO(PDOBase):
     def setup(self):
         PDOBase.setup(self)
         self.pdo_node.network.subscribe(self.cob_id, self.on_message)
+        self.subscriptions.add(self.cob_id)
 
     def on_message(self, can_id, data, timestamp):
         logger.info("Received PDO on COBID 0x%X" % can_id)

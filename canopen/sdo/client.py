@@ -110,6 +110,7 @@ class SdoClient(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
+        logger.info("Initiating upload for (0x%X, %d)" % (index, subindex))
         fp = self.open(index, subindex)
         data = fp.read()
         fp.close()
@@ -132,6 +133,7 @@ class SdoClient(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
+        logger.info("Initiating download for (0x%X, %d)" % (index, subindex))
         fp = self.open(index, subindex, "wb", buffering=7, size=len(data),
                        force_segment=force_segment)
         fp.write(data)

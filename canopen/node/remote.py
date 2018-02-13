@@ -33,15 +33,26 @@ class RemoteNode(BaseNode):
         network.subscribe(self.sdo.tx_cobid, self.sdo.on_response)
         network.subscribe(0x700 + self.id, self.nmt.on_heartbeat)
         network.subscribe(0x80 + self.id, self.emcy.on_emcy)
+        self.pdo.setup()
 
     def remove_network(self):
         self.network.unsubscribe(self.sdo.tx_cobid)
         self.network.unsubscribe(0x700 + self.id)
         self.network.unsubscribe(0x80 + self.id)
+        for pdos in (self.pdo.rx, self.pdo.tx):
+            for pdo in pdos.values():
+                for subscription in pdo.subscriptions:
+                    self.network.unsubscribe(subscription)
         self.network = None
         self.sdo.network = None
         self.pdo.network = None
         self.nmt.network = None
+
+    def get_data(self, index, subindex):
+        return self.sdo.upload(index, subindex)
+
+    def set_data(self, index, subindex, data):
+        return self.sdo.download(index, subindex, data)
 
     def store(self, subindex=1):
         """Store parameters in non-volatile memory.
