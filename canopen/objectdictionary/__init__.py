@@ -93,7 +93,65 @@ class ObjectDictionary(collections.MutableMapping):
         self.names[obj.name] = obj
 
 
-class Record(collections.MutableMapping):
+class ValueStore(object):
+    """Provides a common interface to set and get all values out of object
+    types that hold a collection of values."""
+    subindices = {}
+
+    @property
+    def raw(self):
+        values = []
+        for index in self:
+            values.append(self.subindices[index].raw)
+        return values
+
+    @raw.setter
+    def raw(self, values):
+        if len(values) != len(self.subindices):
+            logger.error("Length of list with new values does not match "
+                         "sub-index count")
+            return
+        for index in self:
+            self.subindices[index].raw = values.pop(0)
+
+    @property
+    def value(self):
+        """Return a list of the values of all contained sub-indices of the
+        array. The type conversion rules between CANopen and Python are
+        explained in :meth:`canopen.objectdictionary.Variable`.
+        """
+        values = []
+        for index in self:
+            values.append(self.subindices[index].value)
+        return values
+
+    @value.setter
+    def value(self, values):
+        if len(values) != len(self.subindices):
+            logger.error("Length of list with new values does not match "
+                         "sub-index count")
+            return
+        for index in self:
+            self.subindices[index].value = values.pop(0)
+
+    @property
+    def phys(self):
+        values = []
+        for index in self:
+            values.append(self.subindices[index].phys)
+        return values
+
+    @phys.setter
+    def phys(self, values):
+        if len(values) != len(self.subindices):
+            logger.error("Length of list with new values does not match "
+                         "sub-index count")
+            return
+        for index in self:
+            self.subindices[index].phys = values.pop(0)
+
+
+class Record(collections.MutableMapping, ValueStore):
     """Groups multiple :class:`~canopen.objectdictionary.Variable` objects using
     subindices.
     """
@@ -145,7 +203,7 @@ class Record(collections.MutableMapping):
         self.names[variable.name] = variable
 
 
-class Array(collections.Mapping):
+class Array(collections.Mapping, ValueStore):
     """An array of :class:`~canopen.objectdictionary.Variable` objects using
     subindices.
 
