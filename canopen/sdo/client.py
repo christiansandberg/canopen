@@ -174,6 +174,9 @@ class SdoClient(SdoBase):
         :returns:
             A file like object.
         """
+        entry = self.od.get_object(index, subindex)
+        index = entry.index
+        subindex = entry.subindex
         buffer_size = buffering if buffering > 1 else io.DEFAULT_BUFFER_SIZE
         if "r" in mode:
             if block_transfer:

@@ -1,4 +1,3 @@
-
 class SdoError(Exception):
     pass
 

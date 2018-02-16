@@ -75,6 +75,9 @@ class RemotePdoNode(collections.Mapping):
     def setup(self):
         pass
 
+    def stop(self):
+        pass
+
 
 class LocalPdoNode(collections.Mapping):
     """Represents a slave unit."""
@@ -112,7 +115,7 @@ class LocalPdoNode(collections.Mapping):
     def stop(self):
         """Stop transmission of all TPDOs."""
         for tpdo in self.tx.values():
-            tpdo.stop()
+            tpdo.stop_cyclic_transmit()
 
     def setup(self):
         for pdos in (self.rx, self.tx):
@@ -165,17 +168,17 @@ class PDOBase(object):
 
     def on_config_change(self, transaction):
         logger.info("Change detected")
-        for index, subindex, data in transaction:
-            if index == self.com_index:
-                self.update_com_config()
-            if index == self.map_index:
-                self.update_map_config()
-
-    def update_map_config(self):
-        raise NotImplementedError
-
-    def update_com_config(self):
-        raise NotImplementedError
+        com_index_already_updated = False
+        map_index_already_updated = False
+        for index, _, _ in transaction:
+            if index == self.com_index and not com_index_already_updated:
+                com_index_already_updated = True
+                logger.info("Communication parameters for PDO "
+                            "0x%X have changed" % self.cob_id)
+            if index == self.map_index and not map_index_already_updated:
+                map_index_already_updated = True
+                logger.info("Mapping parameters for PDO "
+                            "0x%X have changed" % self.cob_id)
 
     def __getitem__(self, key):
         if isinstance(key, int):

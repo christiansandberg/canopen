@@ -6,6 +6,7 @@ import collections
 import logging
 
 from . import datatypes as dtypes
+from .exceptions import OdIndexError, OdSubIndexError
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +92,22 @@ class ObjectDictionary(collections.MutableMapping):
         obj.parent = self
         self.indices[obj.index] = obj
         self.names[obj.name] = obj
+
+    def get_object(self, index, subindex):
+        if index in self.indices:
+            obj = self.indices[index]
+        elif index in self.names:
+            obj = self.names[index]
+        else:
+            # Index does not exist
+            raise OdIndexError(index)
+        if not isinstance(obj, Variable):
+            # Group or array
+            if subindex not in obj:
+                # Subindex does not exist
+                raise OdSubIndexError(subindex)
+            obj = obj[subindex]
+        return obj
 
 
 class ValueStore(object):

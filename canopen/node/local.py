@@ -2,11 +2,10 @@ import logging
 from collections import defaultdict
 
 from .base import BaseNode
-from ..sdo import SdoServer, SdoAbortedError
+from ..sdo import SdoServer
 from ..pdo import LocalPdoNode
 from ..nmt import NmtSlave
 from ..emcy import EmcyProducer
-from .. import objectdictionary
 
 
 logger = logging.getLogger(__name__)
@@ -56,7 +55,7 @@ class LocalNode(BaseNode):
     def add_write_callback(self, callback):
         self._write_callbacks.append(callback)
 
-    def get_data(self, index, subindex):
+    def get_data(self, index, subindex=0):
         obj = self.get_object(index, subindex)
 
         # Try callback
@@ -84,7 +83,7 @@ class LocalNode(BaseNode):
         for callback in self._write_callbacks:
             callback(index=index, subindex=subindex, od=obj, data=data)
 
-    def get_value(self, index, subindex):
+    def get_value(self, index, subindex=0):
         obj = self.get_object(index, subindex)
 
         # Try callback
@@ -127,16 +126,3 @@ class LocalNode(BaseNode):
         # interest
         for callback, callback_args in callback_infos.items():
             callback(callback_args)
-
-    def get_object(self, index, subindex):
-        if index not in self.object_dictionary:
-            # Index does not exist
-            raise SdoAbortedError(0x06020000)
-        obj = self.object_dictionary[index]
-        if not isinstance(obj, objectdictionary.Variable):
-            # Group or array
-            if subindex not in obj:
-                # Subindex does not exist
-                raise SdoAbortedError(0x06090011)
-            obj = obj[subindex]
-        return obj
