@@ -116,7 +116,27 @@ class ValueStore(object):
     subindices = {}
 
     @property
+    def bytes(self):
+        values = []
+        for index in self:
+            values.append(self.subindices[index].bytes)
+        return values
+
+    @bytes.setter
+    def bytes(self, values):
+        if len(values) != len(self.subindices):
+            logger.error("Length of list with new values does not match "
+                         "sub-index count")
+            return
+        for index in self:
+            self.subindices[index].bytes = values.pop(0)
+
+    @property
     def raw(self):
+        """Return a list of the values of all contained sub-indices of the
+        array. The type conversion rules between CANopen and Python are
+        explained in :meth:`canopen.objectdictionary.Variable`.
+        """
         values = []
         for index in self:
             values.append(self.subindices[index].raw)
@@ -130,26 +150,6 @@ class ValueStore(object):
             return
         for index in self:
             self.subindices[index].raw = values.pop(0)
-
-    @property
-    def value(self):
-        """Return a list of the values of all contained sub-indices of the
-        array. The type conversion rules between CANopen and Python are
-        explained in :meth:`canopen.objectdictionary.Variable`.
-        """
-        values = []
-        for index in self:
-            values.append(self.subindices[index].value)
-        return values
-
-    @value.setter
-    def value(self, values):
-        if len(values) != len(self.subindices):
-            logger.error("Length of list with new values does not match "
-                         "sub-index count")
-            return
-        for index in self:
-            self.subindices[index].value = values.pop(0)
 
     @property
     def phys(self):
@@ -338,18 +338,18 @@ class Variable(object):
             return 8
 
     @property
-    def raw(self):
+    def bytes(self):
         return self.current
 
-    @raw.setter
-    def raw(self, value):
+    @bytes.setter
+    def bytes(self, value):
         if not isinstance(value, (bytes, bytearray)):
             logger.error("Setting raw value requires a bytes like object")
             return
         self.current = value
 
     @property
-    def value(self):
+    def raw(self):
         """Return the underlying data as native Python data type
 
         This table lists the translations between object dictionary data types
@@ -383,8 +383,8 @@ class Variable(object):
         value = self.decode_raw(self.current)
         return value
 
-    @value.setter
-    def value(self, value):
+    @raw.setter
+    def raw(self, value):
         self.current = self.encode_raw(value)
 
     @property

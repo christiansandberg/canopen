@@ -62,9 +62,9 @@ class LocalNode(BaseNode):
         for callback in self._read_callbacks:
             result = callback(index=index, subindex=subindex, od=obj)
             if result is not None:
-                return obj.encode_raw(result)
+                return result
 
-        return obj.raw
+        return obj.bytes
 
     def set_data(self, index, subindex, data):
         if not isinstance(data, (bytes, bytearray)):
@@ -73,7 +73,7 @@ class LocalNode(BaseNode):
         obj = self.get_object(index, subindex)
 
         # Store data
-        obj.raw = data
+        obj.bytes = data
 
         # Execute the data change traps
         for callback in self.data_store_traps[(index, subindex)]:
@@ -92,13 +92,13 @@ class LocalNode(BaseNode):
             if result is not None:
                 return obj.encode_raw(result)
 
-        return obj.value
+        return obj.raw
 
     def set_value(self, index, subindex, value):
         obj = self.get_object(index, subindex)
 
         # Store data
-        obj.value = value
+        obj.raw = value
 
         # Execute the data change traps
         for callback in self.data_store_traps[(index, subindex)]:
