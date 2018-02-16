@@ -6,7 +6,8 @@ import collections
 import logging
 
 from . import datatypes as dtypes
-from .exceptions import OdIndexError, OdSubIndexError
+from .datatypes import *
+from .exceptions import OdIndexError, OdSubIndexError, OdNoDataError
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +131,14 @@ class ValueStore(object):
             return
         for index in self:
             self.subindices[index].bytes = values.pop(0)
+
+    @property
+    def data(self):
+        return self.bytes
+
+    @data.setter
+    def data(self, values):
+        self.bytes = values
 
     @property
     def raw(self):
@@ -313,9 +322,9 @@ class Variable(object):
         #: Maximum allowed value
         self.max = None
         #: Default value at start-up
-        self.default = bytes()
+        self.default = None
         #: The current value of this variable stored in the object dictionary
-        self.current = bytes()
+        self.current = None
         #: Data type according to the standard as an :class:`int`
         self.data_type = None
         #: Access type, should be "rw", "ro", "wo", or "const"
@@ -339,7 +348,10 @@ class Variable(object):
 
     @property
     def bytes(self):
-        return self.current
+        if self.current is not None:
+            return self.current
+        else:
+            raise OdNoDataError
 
     @bytes.setter
     def bytes(self, value):
@@ -347,6 +359,14 @@ class Variable(object):
             logger.error("Setting raw value requires a bytes like object")
             return
         self.current = value
+
+    @property
+    def data(self):
+        return self.bytes
+
+    @data.setter
+    def data(self, value):
+        self.bytes = value
 
     @property
     def raw(self):
@@ -380,12 +400,12 @@ class Variable(object):
         Data types that this library does not handle yet must be read and
         written as :class:`bytes`.
         """
-        value = self.decode_raw(self.current)
+        value = self.decode_raw(self.bytes)
         return value
 
     @raw.setter
     def raw(self, value):
-        self.current = self.encode_raw(value)
+        self.bytes = self.encode_raw(value)
 
     @property
     def phys(self):
@@ -395,25 +415,25 @@ class Variable(object):
         either a :class:`float` or an :class:`int`.
         Non integers will be passed as is.
         """
-        value = self.decode_phys(self.current)
+        value = self.decode_phys(self.bytes)
         if self.unit:
             logger.debug("Physical value is %s %s", value, self.unit)
         return value
 
     @phys.setter
     def phys(self, value):
-        self.current = self.encode_phys(value)
+        self.bytes = self.encode_phys(value)
 
     @property
     def desc(self):
         """Converts to and from a description of the value as a string."""
-        value = self.decode_desc(self.current)
+        value = self.decode_desc(self.bytes)
         logger.debug("Description is '%s'", value)
         return value
 
     @desc.setter
     def desc(self, desc):
-        self.current = self.od.encode_desc(desc)
+        self.bytes = self.od.encode_desc(desc)
 
     @property
     def bits(self):
@@ -615,10 +635,10 @@ class Bits(collections.Mapping):
         return len(self.variable.bit_definitions)
 
     def read(self):
-        self.current = self.variable.current
+        self.current = self.variable.raw
 
     def write(self):
-        self.variable.current = self.current
+        self.variable.raw = self.current
 
 
 class ObjectDictionaryError(Exception):

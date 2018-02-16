@@ -1,3 +1,4 @@
+import collections
 import struct
 import logging
 import io
@@ -10,15 +11,140 @@ except ImportError:
 
 from ..network import CanError
 
-from .base import SdoBase
 from .constants import *
 from .exceptions import *
+from ..objectdictionary import datatypes, Bits
+from ..objectdictionary.exceptions import OdIndexError, OdSubIndexError
 
 
 logger = logging.getLogger(__name__)
 
 
-class SdoClient(SdoBase):
+class DataProxy(object):
+    """This class provides the same interface as for local data access. But in
+    contrast to local data access every read/write is routed to a
+    upload/download request via the network.
+    """
+
+    def __init__(self, sdo, obj):
+        self.sdo = sdo
+        self.obj = obj
+
+    def __getitem__(self, index):
+        return DataProxy(self.sdo, self.obj[index])
+
+    def get_data(self):
+        return self.sdo.upload(self.obj.index, self.obj.subindex)
+
+    def set_data(self, data):
+        force_segment = self.obj.data_type == datatypes.DOMAIN
+        self.sdo.download(self.obj.index, self.obj.subindex,
+                          data, force_segment)
+
+    @property
+    def data(self):
+        return self.get_data()
+
+    @data.setter
+    def data(self, data):
+        self.set_data(data)
+
+    @property
+    def bytes(self):
+        return self.get_data()
+
+    @bytes.setter
+    def bytes(self, data):
+        self.set_data(data)
+
+    @property
+    def raw(self):
+        value = self.obj.decode_raw(self.data)
+        return value
+
+    @raw.setter
+    def raw(self, value):
+        self.data = self.obj.encode_raw(value)
+
+    @property
+    def phys(self):
+        value = self.obj.decode_phys(self.raw)
+        return value
+
+    @phys.setter
+    def phys(self, value):
+        self.raw = self.obj.encode_phys(value)
+
+    @property
+    def desc(self):
+        value = self.obj.decode_desc(self.raw)
+        return value
+
+    @desc.setter
+    def desc(self, desc):
+        self.raw = self.obj.encode_desc(desc)
+
+    @property
+    def bits(self):
+        return Bits(self)
+
+    def read(self, fmt="raw"):
+        """Alternative way of reading using a function instead of attributes.
+
+        May be useful for asynchronous reading.
+
+        :param str fmt:
+            How to return the value
+             - 'raw'
+             - 'phys'
+             - 'desc'
+             - 'bytes'
+             - 'bits'
+
+        :returns:
+            The value of the variable.
+        """
+        if fmt == "raw":
+            return self.raw
+        elif fmt == "phys":
+            return self.phys
+        elif fmt == "desc":
+            return self.desc
+        elif fmt == "bytes":
+            return self.bytes
+        elif fmt == "bits":
+            return self.bits
+
+    def write(self, value, fmt="raw"):
+        """Alternative way of writing using a function instead of attributes.
+
+        May be useful for asynchronous writing.
+
+        :param str fmt:
+            How to write the value
+             - 'raw'
+             - 'phys'
+             - 'desc'
+             - 'bytes'
+        """
+        if fmt == "raw":
+            self.raw = value
+        elif fmt == "phys":
+            self.phys = value
+        elif fmt == "desc":
+            self.desc = value
+        elif fmt == "bytes":
+            self.bytes = value
+
+    def open(self, mode="rb", encoding="ascii", buffering=1024, size=None,
+             block_transfer=False, force_segment=False):
+        return self.sdo.open(self.obj.index, self.obj.subindex, mode=mode,
+                             encoding=encoding, buffering=buffering, size=size,
+                             block_transfer=block_transfer,
+                             force_segment=force_segment)
+
+
+class SdoClient(collections.Mapping):
     """Handles communication with an SDO server."""
 
     #: Max time in seconds to wait for response from server
@@ -27,7 +153,7 @@ class SdoClient(SdoBase):
     #: Max number of request retries before raising error
     MAX_RETRIES = 1
 
-    def __init__(self, rx_cobid, tx_cobid, od):
+    def __init__(self, rx_cobid, tx_cobid, node):
         """
         :param int rx_cobid:
             COB-ID that the server receives on (usually 0x600 + node ID)
@@ -36,8 +162,24 @@ class SdoClient(SdoBase):
         :param canopen.ObjectDictionary od:
             Object Dictionary to use for communication
         """
-        SdoBase.__init__(self, rx_cobid, tx_cobid, od)
+        self.rx_cobid = rx_cobid
+        self.tx_cobid = tx_cobid
+        self.network = None
+        self.node = node
+        self.od = node.object_dictionary
         self.responses = queue.Queue()
+
+    def __getitem__(self, index):
+        return DataProxy(self, self.node.object_dictionary[index])
+
+    def __iter__(self):
+        return iter(self.od)
+
+    def __len__(self):
+        return len(self.od)
+
+    def __contains__(self, key):
+        return key in self.od
 
     def on_response(self, can_id, data, timestamp):
         self.responses.put(bytes(data))
@@ -174,7 +316,12 @@ class SdoClient(SdoBase):
         :returns:
             A file like object.
         """
-        entry = self.od.get_object(index, subindex)
+        try:
+            entry = self.od.get_object(index, subindex)
+        except OdIndexError:
+            raise SdoAbortedError(0x06020000)
+        except OdSubIndexError:
+            raise SdoAbortedError(0x06090011)
         index = entry.index
         subindex = entry.subindex
         buffer_size = buffering if buffering > 1 else io.DEFAULT_BUFFER_SIZE

@@ -41,8 +41,8 @@ def create_pdos(com_offset, map_offset, pdo_node, direction):
         map_index = map_offset + idx
         if com_index in pdo_node.node.object_dictionary:
             com_entry = pdo_node.node.object_dictionary[com_index]
-            if com_entry.subindices[1].value:
-                cob_id = com_entry.subindices[1].value
+            if com_entry.subindices[1].raw:
+                cob_id = com_entry.subindices[1].raw
             else:
                 logger.warning("Don't know how to handle communication "
                                "index 0x{:X}".format(com_index))
@@ -85,6 +85,7 @@ class LocalPdoNode(collections.Mapping):
     def __init__(self, node):
         self.network = None
         self.node = node
+        self.subscriptions = set()
         self.rx = create_pdos(0x1400, 0x1600, self, "Rx")
         self.tx = create_pdos(0x1800, 0x1A00, self, "Tx")
 
@@ -137,15 +138,14 @@ class PDOBase(object):
         #: Time stamp of last sent or received message
         self.timestamp = 0
         self.callbacks = []
-        self.subscriptions = set()
 
     def setup(self):
         logger.info("Setting up PDO 0x%X on node %d" % (
             self.com_index, self.pdo_node.node.id))
         com_entry = self.pdo_node.node.object_dictionary[self.com_index]
         map_entry = self.pdo_node.node.object_dictionary[self.map_index]
-        com_info_count = com_entry[0].value
-        map_info_count = map_entry[0].value
+        com_info_count = com_entry[0].raw
+        map_info_count = map_entry[0].raw
         traps = self.pdo_node.node.data_store_traps
         # Makes sure the node is informed about communication parameter changes
         for com_subentry_index in range(0, com_info_count+1):
@@ -159,7 +159,7 @@ class PDOBase(object):
         for map_entry_index in range(1, map_info_count+1):
             # The routing hex is 4 byte long and holds index (16bit), subindex
             # (8 bits) and bit length (8 bits)
-            routing_hex = map_entry[map_entry_index].value
+            routing_hex = map_entry[map_entry_index].raw
             index = (routing_hex >> 16) & 0xFFFF
             subindex = (routing_hex >> 8) & 0xFF
             length = int((routing_hex & 0xFF) / 8)
@@ -247,7 +247,7 @@ class TPDO(PDOBase):
         #: Transmission type (0-255)
         trans_type_variable = com_entry.subindices[2]
         self.trans_type = self._map_transmission_type(
-            trans_type_variable.value)
+            trans_type_variable.raw)
         #: Inhibit Time (optional) (in 100us)
         if 3 in com_entry.subindices:
             self.inhibit_time = com_entry.subindices[3]
@@ -262,7 +262,7 @@ class TPDO(PDOBase):
         #: Period of receive message transmission in seconds
         self.period = None
         if self.event_timer:
-            self.period = self.event_timer.value / 1000.0
+            self.period = self.event_timer.raw / 1000.0
         self._task = None
         self.data = bytes()
 
@@ -273,7 +273,7 @@ class TPDO(PDOBase):
         if self.trans_type & self.TT_SYNC_TRIGGERED:
             # Subscribe to the SYNC message
             self.pdo_node.network.subscribe(0x80, self.on_sync)
-            self.subscriptions.add(0x80)
+            self..pdo_node.subscriptions.add(0x80)
         if self.trans_type & self.TT_EVENT_TRIGGERED:
             # Register the traps to catch a change of data
             do_setup_data_traps = True
@@ -378,7 +378,7 @@ class RPDO(PDOBase):
     def setup(self):
         PDOBase.setup(self)
         self.pdo_node.network.subscribe(self.cob_id, self.on_message)
-        self.subscriptions.add(self.cob_id)
+        self..pdo_node.subscriptions.add(self.cob_id)
 
     def on_message(self, can_id, data, timestamp):
         logger.info("Received PDO on COBID 0x%X" % can_id)

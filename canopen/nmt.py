@@ -190,7 +190,7 @@ class NmtSlave(object):
             # between INITIALIZING and PRE-OPERATIONAL state
             if self._state == 0 and new_nmt_state == 127:
                 self.stop_heartbeat()
-                heartbeat_time_ms = self._local_node.sdo[0x1017].value
+                heartbeat_time_ms = self._local_node.sdo[0x1017].raw
                 self.start_heartbeat(heartbeat_time_ms)
 
             self._state = new_nmt_state

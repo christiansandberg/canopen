@@ -862,3 +862,67 @@ DataType=0x0008
 AccessType=rw
 DefaultValue=
 PDOMapping=0
+
+[6040]
+ParameterName=Process Data 1
+ObjectType=0x7
+DataType=0x0003
+AccessType=rw
+DefaultValue=100
+PDOMapping=0
+
+[6041]
+ParameterName=Process Data 2
+ObjectType=0x7
+DataType=0x0003
+AccessType=rw
+DefaultValue=75
+PDOMapping=0
+
+[6060]
+ParameterName=Process Data 3
+ObjectType=0x7
+DataType=0x0005
+AccessType=rw
+DefaultValue=128
+PDOMapping=0
+
+[6061]
+ParameterName=Process Data 4
+ObjectType=0x7
+DataType=0x0005
+AccessType=rw
+DefaultValue=42
+PDOMapping=0
+
+[6064]
+ParameterName=Process Data 5
+ObjectType=0x7
+DataType=0x0004
+AccessType=rw
+DefaultValue=135246
+PDOMapping=0
+
+[606C]
+ParameterName=Process Data 6
+ObjectType=0x7
+DataType=0x0004
+AccessType=rw
+DefaultValue=432897
+PDOMapping=0
+
+[607A]
+ParameterName=Process Data 7
+ObjectType=0x7
+DataType=0x0004
+AccessType=rw
+DefaultValue=123456
+PDOMapping=0
+
+[60FF]
+ParameterName=Process Data 8
+ObjectType=0x7
+DataType=0x0004
+AccessType=rw
+DefaultValue=111222333
+PDOMapping=0

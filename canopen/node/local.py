@@ -39,10 +39,8 @@ class LocalNode(BaseNode):
     def remove_network(self):
         self.network.unsubscribe(self.sdo.rx_cobid)
         self.network.unsubscribe_nmt_cmd(self.id)
-        for pdos in (self.pdo.rx, self.pdo.tx):
-            for pdo in pdos.values():
-                for subscription in pdo.subscriptions:
-                    self.network.unsubscribe(subscription)
+        for subscription in self.pdo.subscriptions:
+            self.network.unsubscribe(subscription)
         self.network = None
         self.sdo.network = None
         self.pdo.network = None
@@ -57,11 +55,12 @@ class LocalNode(BaseNode):
 
     def get_data(self, index, subindex=0):
         obj = self.get_object(index, subindex)
-
         # Try callback
         for callback in self._read_callbacks:
             result = callback(index=index, subindex=subindex, od=obj)
             if result is not None:
+                if not isinstance(result, (bytes, bytearray)):
+                    result = obj.encode_raw(result)
                 return result
 
         return obj.bytes
@@ -90,7 +89,7 @@ class LocalNode(BaseNode):
         for callback in self._read_callbacks:
             result = callback(index=index, subindex=subindex, od=obj)
             if result is not None:
-                return obj.encode_raw(result)
+                return result
 
         return obj.raw
 

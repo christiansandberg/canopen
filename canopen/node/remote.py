@@ -23,8 +23,7 @@ class RemoteNode(BaseNode):
     def __init__(self, node_id, object_dictionary):
         super(RemoteNode, self).__init__(node_id, object_dictionary)
 
-        self.sdo = SdoClient(0x600 + self.id, 0x580 + self.id,
-                             self.object_dictionary)
+        self.sdo = SdoClient(0x600 + self.id, 0x580 + self.id, self)
         self.pdo = RemotePdoNode(self)
         self.nmt = NmtMaster(self.id)
         self.emcy = EmcyConsumer()

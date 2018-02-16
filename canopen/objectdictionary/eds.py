@@ -137,16 +137,18 @@ def build_variable(eds, section, node_id, index, subindex=0):
             default_value = eds.get(section, "DefaultValue")
 
             if var.data_type in objectdictionary.datatypes.DATA_TYPES:
-                var.value = default_value
+                value = default_value
             elif var.data_type in objectdictionary.datatypes.FLOAT_TYPES:
-                var.value = float(default_value)
+                value = float(default_value)
             else:
-                #COB-ID can have a suffix of '$NODEID+' so replace this with node_id before converting
+                #COB-ID can have a suffix of '$NODEID+' so replace this with
+                # node_id before converting
                 if '$NODEID+' in default_value and node_id is not None:
-                    var.value = int(default_value.replace('$NODEID+',''), 0) + node_id
+                    value = int(default_value.replace('$NODEID+',''), 0) + node_id
                 else:
-                    var.value = int(default_value, 0)
-            var.default = var.current
+                    value = int(default_value, 0)
+            var.default = value
+            var.current = var.encode_raw(value)
         except ValueError:
             pass
     return var

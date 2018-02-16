@@ -1,14 +1,18 @@
+import collections
 import logging
+import struct
 
-from .base import SdoBase
 from .constants import *
 from .exceptions import *
+from ..objectdictionary.exceptions import (OdIndexError,
+                                           OdSubIndexError,
+                                           OdNoDataError)
 
 
 logger = logging.getLogger(__name__)
 
 
-class SdoServer(SdoBase):
+class SdoServer(collections.Mapping):
     """Creates an SDO server."""
 
     def __init__(self, rx_cobid, tx_cobid, node):
@@ -20,13 +24,27 @@ class SdoServer(SdoBase):
         :param canopen.LocalNode od:
             Node object owning the server
         """
-        SdoBase.__init__(self, rx_cobid, tx_cobid, node.object_dictionary)
-        self._node = node
+        self.rx_cobid = rx_cobid
+        self.tx_cobid = tx_cobid
+        self.network = None
+        self.node = node
         self._buffer = None
         self._toggle = 0
         self._index = None
         self._subindex = None
         self.last_received_error = 0x00000000
+
+    def __getitem__(self, index):
+        return self.node.object_dictionary[index]
+
+    def __iter__(self):
+        return iter(self.node.object_dictionary)
+
+    def __len__(self):
+        return len(self.node.object_dictionary)
+
+    def __contains__(self, key):
+        return key in self.node.object_dictionary
 
     def on_request(self, can_id, data, timestamp):
         command, = struct.unpack_from("B", data, 0)
@@ -53,6 +71,12 @@ class SdoServer(SdoBase):
             self.abort(exc.code)
         except KeyError as exc:
             self.abort(0x06020000)
+        except OdIndexError:
+            self.abort(0x06020000)
+        except OdSubIndexError:
+            self.abort(0x06090011)
+        except OdNoDataError:
+            self.abort(0x060A0023)
         except Exception as exc:
             self.abort()
             logger.exception(exc)
@@ -192,7 +216,7 @@ class SdoServer(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        return self._node.get_data(index, subindex)
+        return self.node.get_data(index, subindex)
 
     def download(self, index, subindex, data, force_segment=False):
         """May be called to make a write operation without an Object Dictionary.
@@ -207,4 +231,4 @@ class SdoServer(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        return self._node.set_data(index, subindex, data)
+        return self.node.set_data(index, subindex, data)

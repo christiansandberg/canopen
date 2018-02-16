@@ -177,7 +177,6 @@ class TestSDO(unittest.TestCase):
     def test_callbacks(self):
         self.local_node.add_read_callback(self._some_read_callback)
         self.local_node.add_write_callback(self._some_write_callback)
-
         data = self.remote_node.sdo.upload(0x1003, 5)
         self.assertEqual(data, b"\x01\x02\x00\x00")
         self.assertEqual(self._kwargs["index"], 0x1003)
