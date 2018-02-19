@@ -335,6 +335,8 @@ class Variable(object):
         self.value_descriptions = {}
         #: Dictionary of bitfield definitions
         self.bit_definitions = {}
+        #: A list of callbacks to be called in case of data changes
+        self.traps = []
 
     def __eq__(self, other):
         return (self.index == other.index and
@@ -345,6 +347,14 @@ class Variable(object):
             return self.STRUCT_TYPES[self.data_type].size * 8
         else:
             return 8
+
+    def add_callback(self, cbk):
+        if cbk not in self.traps:
+            self.traps.append(cbk)
+
+    def remove_callback(self, cbk):
+        if cbk in self.traps:
+            self.traps.remove(cbk)
 
     @property
     def bytes(self):
@@ -359,6 +369,8 @@ class Variable(object):
             logger.error("Setting raw value requires a bytes like object")
             return
         self.current = value
+        for callback in self.traps:
+            callback(self.index, self.subindex, value)
 
     @property
     def data(self):

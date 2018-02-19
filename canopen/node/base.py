@@ -1,4 +1,3 @@
-from collections import defaultdict
 from .. import objectdictionary
 
 
@@ -24,10 +23,6 @@ class BaseNode(object):
         self.object_dictionary = object_dictionary
         # The ID of the node which identifies it within the network
         self.id = node_id or self.object_dictionary.node_id
-        # Changing the values of entries in the object dictionary of a node
-        # usually entails a change of behaviour. The traps are a mechanism to
-        # invoke the behaviour changing functions
-        self.data_store_traps = defaultdict(list)
 
     def get_object(self, index, subindex):
         return self.object_dictionary.get_object(index, subindex)

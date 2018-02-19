@@ -41,6 +41,7 @@ class LocalNode(BaseNode):
         self.network.unsubscribe_nmt_cmd(self.id)
         for subscription in self.pdo.subscriptions:
             self.network.unsubscribe(subscription)
+        self.pdo.cleanup()
         self.network = None
         self.sdo.network = None
         self.pdo.network = None
@@ -74,10 +75,6 @@ class LocalNode(BaseNode):
         # Store data
         obj.bytes = data
 
-        # Execute the data change traps
-        for callback in self.data_store_traps[(index, subindex)]:
-            callback([(index, subindex, data)])
-
         # Try generic setter callbacks
         for callback in self._write_callbacks:
             callback(index=index, subindex=subindex, od=obj, data=data)
@@ -99,29 +96,6 @@ class LocalNode(BaseNode):
         # Store data
         obj.raw = value
 
-        # Execute the data change traps
-        for callback in self.data_store_traps[(index, subindex)]:
-            callback([(index, subindex, value)])
-
         # Try generic setter callbacks
         for callback in self._write_callbacks:
             callback(index=index, subindex=subindex, od=obj, data=value)
-
-    def data_transaction(self, transaction):
-        """Change the internal data atomically. The net result of this method
-        is identical to calling `set_data` for every data change found in the
-        transaction object. The difference is that the callbacks are only
-        called once at the end.
-
-        :param transaction: A list of (index, subindex, new_byte_data) tuples
-        """
-        callback_infos = defaultdict(list)
-        for index, subindex, data in transaction:
-            self.set_data(index, subindex, data)
-            for callback in self.data_store_traps[(index, subindex)]:
-                callback_infos[callback].append((index, subindex, data))
-
-        # Now call the callback, but once with the info about all changes of
-        # interest
-        for callback, callback_args in callback_infos.items():
-            callback(callback_args)

@@ -146,15 +146,16 @@ class PDOBase(object):
         map_entry = self.pdo_node.node.object_dictionary[self.map_index]
         com_info_count = com_entry[0].raw
         map_info_count = map_entry[0].raw
-        traps = self.pdo_node.node.data_store_traps
         # Makes sure the node is informed about communication parameter changes
         for com_subentry_index in range(0, com_info_count+1):
-            if self.on_config_change not in traps[(self.com_index, com_subentry_index)]:
-                traps[(self.com_index, com_subentry_index)].append(self.on_config_change)
+            obj = self.pdo_node.node.get_object(self.com_index,
+                                                com_subentry_index)
+            obj.add_callback(self.on_config_change)
         # Makes sure the node is informed about mapping parameter changes
         for map_subentry_index in range(0, map_info_count+1):
-            if self.on_config_change not in traps[(self.map_index, map_subentry_index)]:
-                traps[(self.map_index, map_subentry_index)].append(self.on_config_change)
+            obj = self.pdo_node.node.get_object(self.com_index,
+                                                com_subentry_index)
+            obj.add_callback(self.on_config_change)
         # Create info about how the contents of this PDO are mapped
         for map_entry_index in range(1, map_info_count+1):
             # The routing hex is 4 byte long and holds index (16bit), subindex
@@ -166,19 +167,34 @@ class PDOBase(object):
             self.map.append((index, subindex, length))
         logger.info("Internal map: {}".format(self.map))
 
-    def on_config_change(self, transaction):
+    def cleanup(self):
+        com_entry = self.pdo_node.node.object_dictionary[self.com_index]
+        map_entry = self.pdo_node.node.object_dictionary[self.map_index]
+        com_info_count = com_entry[0].raw
+        map_info_count = map_entry[0].raw
+        # Remove the node's callbacks from the objects
+        for com_subentry_index in range(0, com_info_count+1):
+            obj = self.pdo_node.node.get_object(self.com_index,
+                                                com_subentry_index)
+            obj.remove_callback(self.on_config_change)
+        # Remove the node's callbacks from the objects
+        for map_subentry_index in range(0, map_info_count+1):
+            obj = self.pdo_node.node.get_object(self.com_index,
+                                                com_subentry_index)
+            obj.remove_callback(self.on_config_change)
+
+    def on_config_change(self, index, subindex, data):
         logger.info("Change detected")
         com_index_already_updated = False
         map_index_already_updated = False
-        for index, _, _ in transaction:
-            if index == self.com_index and not com_index_already_updated:
-                com_index_already_updated = True
-                logger.info("Communication parameters for PDO "
-                            "0x%X have changed" % self.cob_id)
-            if index == self.map_index and not map_index_already_updated:
-                map_index_already_updated = True
-                logger.info("Mapping parameters for PDO "
-                            "0x%X have changed" % self.cob_id)
+        if index == self.com_index and not com_index_already_updated:
+            com_index_already_updated = True
+            logger.info("Communication parameters for PDO "
+                        "0x%X have changed" % self.cob_id)
+        if index == self.map_index and not map_index_already_updated:
+            map_index_already_updated = True
+            logger.info("Mapping parameters for PDO "
+                        "0x%X have changed" % self.cob_id)
 
     def __getitem__(self, key):
         if isinstance(key, int):
@@ -273,7 +289,7 @@ class TPDO(PDOBase):
         if self.trans_type & self.TT_SYNC_TRIGGERED:
             # Subscribe to the SYNC message
             self.pdo_node.network.subscribe(0x80, self.on_sync)
-            self..pdo_node.subscriptions.add(0x80)
+            self.pdo_node.subscriptions.add(0x80)
         if self.trans_type & self.TT_EVENT_TRIGGERED:
             # Register the traps to catch a change of data
             do_setup_data_traps = True
@@ -288,10 +304,10 @@ class TPDO(PDOBase):
 
         if do_setup_data_traps:
             logger.info("Setting up data traps for node")
-            traps = self.pdo_node.node.data_store_traps
             for index, subindex, _ in self.map:
-                if self.on_data_change not in traps[(index, subindex)]:
-                    traps[(index, subindex)].append(self.on_data_change)
+                obj = self.pdo_node.node.get_object(index, subindex)
+                if self.on_data_change not in obj.traps:
+                    obj.traps.append(self.on_data_change)
 
     def on_sync(self, can_id, data, timestamp):
         """This is the callback method for when this PDO receives a SYNC
@@ -378,7 +394,7 @@ class RPDO(PDOBase):
     def setup(self):
         PDOBase.setup(self)
         self.pdo_node.network.subscribe(self.cob_id, self.on_message)
-        self..pdo_node.subscriptions.add(self.cob_id)
+        self.pdo_node.subscriptions.add(self.cob_id)
 
     def on_message(self, can_id, data, timestamp):
         logger.info("Received PDO on COBID 0x%X" % can_id)
@@ -389,21 +405,18 @@ class RPDO(PDOBase):
                 self.data = data
                 self.timestamp = timestamp
                 self.receive_condition.notify_all()
-                self.data_transaction(data)
+                self.write_data(data)
 
-    def data_transaction(self, data):
+    def write_data(self, data):
         logger.info("Updating values in internal data store...")
         # Map the received byte data according to the mapping rules of this PDO
         data_start = 0
-        transaction = []
         for index, subindex, length in self.map:
             data_end = data_start + length
-            transaction.append((index, subindex,
-                                self.data[data_start:data_end]))
+            obj = self.pdo_node.node.get_object(index, subindex)
+            obj.bytes = data[data_start:data_end]
             data_start = data_end
-        # First execute the node data transaction
-        self.pdo_node.node.data_transaction(transaction)
-        # Then invoke the PDO specific callbacks
+        # Now invoke the PDO specific callbacks
         for callback in self.callbacks:
             callback(self)
 
