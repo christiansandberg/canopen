@@ -153,8 +153,8 @@ class PDOBase(object):
             obj.add_callback(self.on_config_change)
         # Makes sure the node is informed about mapping parameter changes
         for map_subentry_index in range(0, map_info_count+1):
-            obj = self.pdo_node.node.get_object(self.com_index,
-                                                com_subentry_index)
+            obj = self.pdo_node.node.get_object(self.map_index,
+                                                map_subentry_index)
             obj.add_callback(self.on_config_change)
         # Create info about how the contents of this PDO are mapped
         for map_entry_index in range(1, map_info_count+1):
@@ -179,8 +179,8 @@ class PDOBase(object):
             obj.remove_callback(self.on_config_change)
         # Remove the node's callbacks from the objects
         for map_subentry_index in range(0, map_info_count+1):
-            obj = self.pdo_node.node.get_object(self.com_index,
-                                                com_subentry_index)
+            obj = self.pdo_node.node.get_object(self.map_index,
+                                                map_subentry_index)
             obj.remove_callback(self.on_config_change)
 
     def on_config_change(self, index, subindex, data):

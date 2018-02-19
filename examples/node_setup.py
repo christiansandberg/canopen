@@ -1,5 +1,4 @@
 import canopen
-import struct
 import time
 import logging
 from pathlib import Path
