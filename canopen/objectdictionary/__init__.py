@@ -101,12 +101,14 @@ class ObjectDictionary(collections.MutableMapping):
             obj = self.names[index]
         else:
             # Index does not exist
-            raise OdIndexError(index)
+            raise OdIndexError("Index {} is not present in the "
+                               "object dictionary".format(index))
         if not isinstance(obj, Variable):
             # Group or array
             if subindex not in obj:
                 # Subindex does not exist
-                raise OdSubIndexError(subindex)
+                raise OdSubIndexError("Object at index {} does not have a "
+                                      "subindex {}".format(index, subindex))
             obj = obj[subindex]
         return obj
 

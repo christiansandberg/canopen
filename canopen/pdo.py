@@ -123,6 +123,11 @@ class LocalPdoNode(collections.Mapping):
             for pdo in pdos.values():
                 pdo.setup()
 
+    def cleanup(self):
+        for pdos in (self.rx, self.tx):
+            for pdo in pdos.values():
+                pdo.cleanup()
+
 
 class PDOBase(object):
     """One message which can have up to 8 bytes of variables mapped."""
@@ -144,41 +149,42 @@ class PDOBase(object):
             self.com_index, self.pdo_node.node.id))
         com_entry = self.pdo_node.node.object_dictionary[self.com_index]
         map_entry = self.pdo_node.node.object_dictionary[self.map_index]
-        com_info_count = com_entry[0].raw
-        map_info_count = map_entry[0].raw
         # Makes sure the node is informed about communication parameter changes
-        for com_subentry_index in range(0, com_info_count+1):
+        for com_subentry_index in com_entry:
             obj = self.pdo_node.node.get_object(self.com_index,
                                                 com_subentry_index)
             obj.add_callback(self.on_config_change)
         # Makes sure the node is informed about mapping parameter changes
-        for map_subentry_index in range(0, map_info_count+1):
+        for map_subentry_index in map_entry:
             obj = self.pdo_node.node.get_object(self.map_index,
                                                 map_subentry_index)
             obj.add_callback(self.on_config_change)
         # Create info about how the contents of this PDO are mapped
-        for map_entry_index in range(1, map_info_count+1):
-            # The routing hex is 4 byte long and holds index (16bit), subindex
-            # (8 bits) and bit length (8 bits)
-            routing_hex = map_entry[map_entry_index].raw
-            index = (routing_hex >> 16) & 0xFFFF
-            subindex = (routing_hex >> 8) & 0xFF
-            length = int((routing_hex & 0xFF) / 8)
-            self.map.append((index, subindex, length))
+        self.map = []
+        for map_entry_index in map_entry:
+            # The first subindex just holds the count
+            if map_entry_index != 0:
+                # The routing hex is 4 byte long and holds index (16bit),
+                # subindex (8 bits) and bit length (8 bits)
+                routing_hex = map_entry[map_entry_index].raw
+                index = (routing_hex >> 16) & 0xFFFF
+                subindex = (routing_hex >> 8) & 0xFF
+                length = int((routing_hex & 0xFF) / 8)
+                # Only if there is data to map, i.e. length > 0
+                if length > 0:
+                    self.map.append((index, subindex, length))
         logger.info("Internal map: {}".format(self.map))
 
     def cleanup(self):
         com_entry = self.pdo_node.node.object_dictionary[self.com_index]
         map_entry = self.pdo_node.node.object_dictionary[self.map_index]
-        com_info_count = com_entry[0].raw
-        map_info_count = map_entry[0].raw
         # Remove the node's callbacks from the objects
-        for com_subentry_index in range(0, com_info_count+1):
+        for com_subentry_index in com_entry:
             obj = self.pdo_node.node.get_object(self.com_index,
                                                 com_subentry_index)
             obj.remove_callback(self.on_config_change)
         # Remove the node's callbacks from the objects
-        for map_subentry_index in range(0, map_info_count+1):
+        for map_subentry_index in map_entry:
             obj = self.pdo_node.node.get_object(self.map_index,
                                                 map_subentry_index)
             obj.remove_callback(self.on_config_change)
