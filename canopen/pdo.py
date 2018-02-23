@@ -322,7 +322,7 @@ class TPDO(PDOBase):
                     self.pdo_node.node.id)
         self.transmit_once()
 
-    def on_data_change(self, transaction):
+    def on_data_change(self, index, subindex, value):
         """This is the callback method for when the internal data of the node
         has changed."""
         logger.info("Data change detected")
