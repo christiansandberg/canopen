@@ -56,8 +56,11 @@ class RemotePdoNode(collections.Mapping):
     def __init__(self, node):
         self.network = None
         self.node = node
-        self.rx = {}
-        self.tx = {}
+        self.subscriptions = set()
+        self.rx = create_pdos(0x1400, 0x1600, self, "Rx")
+        # We only want to observe(sniff) the PDOs of another note, so the
+        # transit PDOs are treated like receive PDOs too
+        self.tx = create_pdos(0x1800, 0x1A00, self, "Rx")
 
     def __iter__(self):
         raise StopIteration
@@ -72,11 +75,18 @@ class RemotePdoNode(collections.Mapping):
                 count += len(pdo_map)
         return count
 
-    def setup(self):
-        pass
-
     def stop(self):
         pass
+
+    def setup(self):
+        for pdos in (self.rx, self.tx):
+            for pdo in pdos.values():
+                pdo.setup()
+
+    def cleanup(self):
+        for pdos in (self.rx, self.tx):
+            for pdo in pdos.values():
+                pdo.cleanup()
 
 
 class LocalPdoNode(collections.Mapping):
@@ -426,9 +436,9 @@ class RPDO(PDOBase):
                 self.data = data
                 self.timestamp = timestamp
                 self.receive_condition.notify_all()
-                self.write_data(data)
+                self._write_data(data)
 
-    def write_data(self, data):
+    def _write_data(self, data):
         logger.info("Updating values in internal data store...")
         # Map the received byte data according to the mapping rules of this PDO
         data_start = 0
