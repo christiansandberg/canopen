@@ -143,24 +143,58 @@ class PDOBase(object):
         #: Time stamp of last sent or received message
         self.timestamp = 0
         self.callbacks = []
+        self.object_dictionary = pdo_node.node.object_dictionary
 
     def setup(self):
         logger.info("Setting up PDO 0x%X on node %d" % (
             self.com_index, self.pdo_node.node.id))
-        com_entry = self.pdo_node.node.object_dictionary[self.com_index]
-        map_entry = self.pdo_node.node.object_dictionary[self.map_index]
         # Makes sure the node is informed about communication parameter changes
-        for com_subentry_index in com_entry:
-            obj = self.pdo_node.node.get_object(self.com_index,
-                                                com_subentry_index)
-            obj.add_callback(self.on_config_change)
+        self.watch_index(self.com_index,
+                         self.object_dictionary,
+                         self.on_config_change)
         # Makes sure the node is informed about mapping parameter changes
-        for map_subentry_index in map_entry:
-            obj = self.pdo_node.node.get_object(self.map_index,
-                                                map_subentry_index)
-            obj.add_callback(self.on_config_change)
+        self.watch_index(self.map_index,
+                         self.object_dictionary,
+                         self.on_config_change)
         # Create info about how the contents of this PDO are mapped
-        self.map = []
+        self.map = self.create_mapping(self.map_index,
+                                       self.object_dictionary)
+        logger.info("Internal map: {}".format(self.map))
+
+    def cleanup(self):
+        # Remove the node's callbacks from the objects
+        self.unwatch_index(self.com_index,
+                           self.object_dictionary,
+                           self.on_config_change)
+        # Remove the node's callbacks from the objects
+        self.unwatch_index(self.map_index,
+                           self.object_dictionary,
+                           self.on_config_change)
+
+    @classmethod
+    def watch_index(cls, index, object_dictionary, callback):
+        entry = object_dictionary[index]
+        if isinstance(entry, objectdictionary.Variable):
+            entry.add_callback(callback)
+        else:
+            for subindex in entry:
+                obj = object_dictionary.get_object(index, subindex)
+                obj.add_callback(callback)
+
+    @classmethod
+    def unwatch_index(cls, index, object_dictionary, callback):
+        entry = object_dictionary[index]
+        if isinstance(entry, objectdictionary.Variable):
+            entry.remove_callback(callback)
+        else:
+            for subindex in entry:
+                obj = object_dictionary.get_object(index, subindex)
+                obj.remove_callback(callback)
+
+    @classmethod
+    def create_mapping(cls, map_index, object_dictionary):
+        map_entry = object_dictionary[map_index]
+        mapping = []
         for map_entry_index in map_entry:
             # The first subindex just holds the count
             if map_entry_index != 0:
@@ -172,54 +206,27 @@ class PDOBase(object):
                 length = int((routing_hex & 0xFF) / 8)
                 # Only if there is data to map, i.e. length > 0
                 if length > 0:
-                    self.map.append((index, subindex, length))
-        logger.info("Internal map: {}".format(self.map))
-
-    def cleanup(self):
-        com_entry = self.pdo_node.node.object_dictionary[self.com_index]
-        map_entry = self.pdo_node.node.object_dictionary[self.map_index]
-        # Remove the node's callbacks from the objects
-        for com_subentry_index in com_entry:
-            obj = self.pdo_node.node.get_object(self.com_index,
-                                                com_subentry_index)
-            obj.remove_callback(self.on_config_change)
-        # Remove the node's callbacks from the objects
-        for map_subentry_index in map_entry:
-            obj = self.pdo_node.node.get_object(self.map_index,
-                                                map_subentry_index)
-            obj.remove_callback(self.on_config_change)
+                    mapping.append((index, subindex, length))
+        return mapping
 
     def on_config_change(self, index, subindex, data):
         logger.info("Change detected")
-        com_index_already_updated = False
-        map_index_already_updated = False
-        if index == self.com_index and not com_index_already_updated:
-            com_index_already_updated = True
+        if index == self.com_index:
             logger.info("Communication parameters for PDO "
                         "0x%X have changed" % self.cob_id)
-        if index == self.map_index and not map_index_already_updated:
-            map_index_already_updated = True
+        if index == self.map_index:
             logger.info("Mapping parameters for PDO "
                         "0x%X have changed" % self.cob_id)
 
     def __getitem__(self, key):
-        if isinstance(key, int):
-            return self.map[key]
-        else:
-            raise TypeError("Lookup value must have type int")
+        index, subindex, _ = self.map[key]
+        return self.object_dictionary.get_object(index, subindex)
 
     def __iter__(self):
         return iter(self.map)
 
     def __len__(self):
         return len(self.map)
-
-    def _get_variable(self, index, subindex):
-        var = self.pdo_node.node.object_dictionary[index]
-        if isinstance(var, (objectdictionary.Record, objectdictionary.Array)):
-            var = var[subindex]
-        var.msg = self
-        return var
 
     def _update_data_size(self):
         total_length = sum([info[2] for info in self.map])
@@ -246,6 +253,14 @@ class PDOBase(object):
             argument, which will be the PDO class itself.
         """
         self.callbacks.append(callback)
+
+    def remove_callback(self, callback):
+        """Remove a callback from the currently registered callbacks.
+
+        :param callback:
+            The reference to the callback function.
+        """
+        self.callbacks.remove(callback)
 
     def clear(self):
         """Clear all variables from this map."""
