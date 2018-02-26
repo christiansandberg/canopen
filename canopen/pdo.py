@@ -1,6 +1,7 @@
-import threading
 import collections
+from itertools import chain
 import logging
+import threading
 
 from . import objectdictionary
 
@@ -14,9 +15,6 @@ logger = logging.getLogger(__name__)
 # TODO: Only send and receive messages when in state OPERATIONAL
 # TODO: Support the inhibit time constraint for transmission
 # TODO: Support more fine grained transmission types
-# TODO: Implement RemotePdoNode
-# TODO: Implement LocalPdoNode.__iter__
-# TODO: Implement LocalPdoNode.__getitem__
 # TODO: Implement LocalPdoNode.export
 # TODO: We need to handle dummy mapping entries
 # TODO: Implement update_com_config
@@ -51,29 +49,28 @@ def create_pdos(com_offset, map_offset, pdo_node, direction):
     return maps
 
 
-class RemotePdoNode(collections.Mapping):
+class RemotePdoBase(collections.Mapping):
     """Represents a slave unit."""
     def __init__(self, node):
         self.network = None
         self.node = node
         self.subscriptions = set()
-        self.rx = create_pdos(0x1400, 0x1600, self, "Rx")
-        # We only want to observe(sniff) the PDOs of another note, so the
-        # transit PDOs are treated like receive PDOs too
-        self.tx = create_pdos(0x1800, 0x1A00, self, "Rx")
+        self.rx = {}
+        self.tx = {}
 
     def __iter__(self):
-        raise StopIteration
+        return chain(iter(sorted(self.rx.keys())),
+                     iter(sorted(self.tx.keys())))
 
     def __getitem__(self, key):
+        if key in self.rx:
+            return self.rx[key]
+        if key in self.tx:
+            return self.tx[key]
         raise KeyError("%s was not found in any map" % key)
 
     def __len__(self):
-        count = 0
-        for pdo_maps in (self.rx, self.tx):
-            for pdo_map in pdo_maps.values():
-                count += len(pdo_map)
-        return count
+        return len(self.rx) + len(self.tx)
 
     def stop(self):
         pass
@@ -89,28 +86,23 @@ class RemotePdoNode(collections.Mapping):
                 pdo.cleanup()
 
 
-class LocalPdoNode(collections.Mapping):
+class RemotePdoNode(RemotePdoBase):
+    """Represents a slave unit."""
+    def __init__(self, node):
+        RemotePdoBase.__init__(self, node)
+        self.rx = create_pdos(0x1400, 0x1600, self, "Rx")
+        # We only want to observe(sniff) the PDOs of another note, so the
+        # transit PDOs are treated like receive PDOs too
+        self.tx = create_pdos(0x1800, 0x1A00, self, "Rx")
+
+
+class LocalPdoNode(RemotePdoBase):
     """Represents a slave unit."""
 
     def __init__(self, node):
-        self.network = None
-        self.node = node
-        self.subscriptions = set()
+        RemotePdoBase.__init__(self, node)
         self.rx = create_pdos(0x1400, 0x1600, self, "Rx")
         self.tx = create_pdos(0x1800, 0x1A00, self, "Tx")
-
-    def __iter__(self):
-        raise StopIteration
-
-    def __getitem__(self, key):
-        raise KeyError("%s was not found in any map" % key)
-
-    def __len__(self):
-        count = 0
-        for pdo_maps in (self.rx, self.tx):
-            for pdo_map in pdo_maps.values():
-                count += len(pdo_map)
-        return count
 
     def export(self, filename):
         """Export current configuration to a database file.
@@ -127,16 +119,6 @@ class LocalPdoNode(collections.Mapping):
         """Stop transmission of all TPDOs."""
         for tpdo in self.tx.values():
             tpdo.stop_cyclic_transmit()
-
-    def setup(self):
-        for pdos in (self.rx, self.tx):
-            for pdo in pdos.values():
-                pdo.setup()
-
-    def cleanup(self):
-        for pdos in (self.rx, self.tx):
-            for pdo in pdos.values():
-                pdo.cleanup()
 
 
 class PDOBase(object):
