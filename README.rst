@@ -84,12 +84,14 @@ Here are some quick examples of what you can do:
     network = canopen.Network()
 
     # Add some nodes with corresponding Object Dictionaries
-    node = network.add_node(6, '/path/to/object_dictionary.eds')
+    network.add_node(6, '/path/to/object_dictionary.eds')
+    node = network[6]
 
     # Connect to the CAN bus
     # Arguments are passed to python-can's can.interface.Bus() constructor
     # (see https://python-can.readthedocs.io/en/latest/bus.html).
-    network.connect(bustype='socketcan', channel='can0')
+    network.connect()
+    # network.connect(bustype='socketcan', channel='can0')
     # network.connect(bustype='kvaser', channel=0, bitrate=250000)
     # network.connect(bustype='pcan', channel='PCAN_USBBUS1', bitrate=250000)
     # network.connect(bustype='ixxat', channel=0, bitrate=250000)
