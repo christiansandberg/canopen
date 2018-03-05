@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 # TODO: Support more sophisticated trigger mechanisms
 # TODO: Support RTR trigger correctly
 # TODO: Invalid data changes shall be answered with an SDO abort
+# TODO: Implement PDO read/save methods
 
 
 def create_pdos(com_offset, map_offset, pdo_node, direction):
@@ -49,7 +50,7 @@ def create_pdos(com_offset, map_offset, pdo_node, direction):
     return maps
 
 
-class RemotePdoBase(collections.Mapping):
+class PdoNodeBase(collections.Mapping):
     """Represents a slave unit."""
     def __init__(self, node):
         self.network = None
@@ -85,22 +86,35 @@ class RemotePdoBase(collections.Mapping):
             for pdo in pdos.values():
                 pdo.cleanup()
 
+    def read(self):
+        """Read PDO configuration from node using SDO."""
+        for pdo_maps in (self.rx, self.tx):
+            for pdo_map in pdo_maps.values():
+                pdo_map.read()
 
-class RemotePdoNode(RemotePdoBase):
+    def save(self):
+        """Save PDO configuration to node using SDO."""
+        for pdo_maps in (self.rx, self.tx):
+            for pdo_map in pdo_maps.values():
+                pdo_map.save()
+        return len(self.rx) + len(self.tx)
+
+
+class RemotePdoNode(PdoNodeBase):
     """Represents a slave unit."""
     def __init__(self, node):
-        RemotePdoBase.__init__(self, node)
+        PdoNodeBase.__init__(self, node)
         self.rx = create_pdos(0x1400, 0x1600, self, "Rx")
         # We only want to observe(sniff) the PDOs of another note, so the
         # transit PDOs are treated like receive PDOs too
         self.tx = create_pdos(0x1800, 0x1A00, self, "Rx")
 
 
-class LocalPdoNode(RemotePdoBase):
+class LocalPdoNode(PdoNodeBase):
     """Represents a slave unit."""
 
     def __init__(self, node):
-        RemotePdoBase.__init__(self, node)
+        PdoNodeBase.__init__(self, node)
         self.rx = create_pdos(0x1400, 0x1600, self, "Rx")
         self.tx = create_pdos(0x1800, 0x1A00, self, "Tx")
 
@@ -118,7 +132,7 @@ class LocalPdoNode(RemotePdoBase):
     def stop(self):
         """Stop transmission of all TPDOs."""
         for tpdo in self.tx.values():
-            tpdo.stop_cyclic_transmit()
+            tpdo.stop()
 
 
 class PDOBase(object):
@@ -203,12 +217,21 @@ class PDOBase(object):
 
     def on_config_change(self, index, subindex, data):
         logger.info("Change detected")
+        rerun_setup = False
         if index == self.com_index:
             logger.info("Communication parameters for PDO "
                         "0x%X have changed" % self.cob_id)
-        if index == self.map_index:
+            rerun_setup = False
+        elif index == self.map_index:
             logger.info("Mapping parameters for PDO "
                         "0x%X have changed" % self.cob_id)
+            rerun_setup = False
+        else:
+            logger.warning("Bad config callback: Index 0x%X is neither the "
+                           "mapping nor the communication parameter of this "
+                           "PDO" % self.cob_id)
+        if rerun_setup:
+            self.setup()
 
     def __getitem__(self, key):
         index, subindex, _ = self.map[key]
@@ -258,6 +281,12 @@ class PDOBase(object):
         """Clear all variables from this map."""
         self.map = []
 
+    def read(self):
+        raise NotImplementedError
+
+    def save(self):
+        raise NotImplementedError
+
 
 class TPDO(PDOBase):
     """Transmit PDO specialization of the PDOBase class."""
@@ -270,7 +299,20 @@ class TPDO(PDOBase):
 
     def __init__(self, cob_id, pdo_node, com_index, map_index):
         PDOBase.__init__(self, cob_id, pdo_node, com_index, map_index)
-        com_entry = pdo_node.node.object_dictionary[com_index]
+        #: Is the remote transmit request (RTR) allowed for this PDO
+        self.rtr_allowed = True
+        #: Transmission type (0-255)
+        self.trans_type = self.TT_SYNC_TRIGGERED
+        self.inhibit_time = None
+        self.event_timer = None
+        #: Period of receive message transmission in seconds
+        self.period = None
+        self._task = None
+        self.data = bytearray()
+
+    def setup(self):
+        PDOBase.setup(self)
+        com_entry = self.object_dictionary[self.com_index]
         #: Is the remote transmit request (RTR) allowed for this PDO
         self.rtr_allowed = True
         #: Transmission type (0-255)
@@ -292,11 +334,6 @@ class TPDO(PDOBase):
         self.period = None
         if self.event_timer:
             self.period = self.event_timer.raw / 1000.0
-        self._task = None
-        self.data = bytes()
-
-    def setup(self):
-        PDOBase.setup(self)
         self.data = self._build_data()
         do_setup_data_traps = False
         if self.trans_type & self.TT_SYNC_TRIGGERED:
@@ -313,7 +350,7 @@ class TPDO(PDOBase):
         if self.trans_type & self.TT_CYCLIC:
             # Register the traps to catch a change of data
             do_setup_data_traps = True
-            self.start_cyclic_transmit()
+            self.start()
 
         if do_setup_data_traps:
             logger.info("Setting up data traps for node")
@@ -335,16 +372,18 @@ class TPDO(PDOBase):
         logger.info("Data change detected")
         logger.info("Old message content {}".format(self.data))
         # Parts of our data changed, the details don't matter, rebuild the data
-        self.data = self._build_data()
-        logger.info("New message content {}".format(self.data))
-        if self._task is not None:
-            self._task.update(self.data)
+        new_data = self._build_data()
+        if new_data != self.data:
+            logger.debug("New message content {}".format(new_data))
+            self.data = new_data
+            if self._task is not None:
+                self._task.update(self.data)
 
     def transmit_once(self):
         """Transmit the message once."""
         self.pdo_node.network.send_message(self.cob_id, self.data)
 
-    def start_cyclic_transmit(self, period=None):
+    def start(self, period=None):
         """Start periodic transmission of the TPDO in a background thread.
 
         :param float period: Transmission period in seconds
@@ -360,7 +399,7 @@ class TPDO(PDOBase):
         self._task = self.pdo_node.network.send_periodic(
             self.cob_id, self.data, self.period)
 
-    def stop_cyclic_transmit(self):
+    def stop(self):
         """Stop cyclic transmission."""
         if self._task is not None:
             self._task.stop()
@@ -389,7 +428,7 @@ class TPDO(PDOBase):
         return ttype_mapped
 
     def _build_data(self):
-        data = bytes()
+        data = bytearray()
         for index, subindex, length in self.map:
             entry_data = self.pdo_node.node.get_data(index, subindex)
             data += entry_data[:length]

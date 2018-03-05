@@ -13,11 +13,6 @@ from . import objecttypes as otype
 logger = logging.getLogger(__name__)
 
 
-od_main_index_regex = re.compile(r"^[0-9A-Fa-f]{4}$")
-od_main_index_with_name_regex = re.compile(r"^([0-9A-Fa-f]{4})Name")
-od_sub_index_regex = re.compile(r"^([0-9A-Fa-f]{4})sub([0-9A-Fa-f]+)$")
-
-
 def import_eds(source, node_id):
     eds = RawConfigParser()
     if hasattr(source, "read"):
@@ -38,7 +33,7 @@ def import_eds(source, node_id):
 
     for section in eds.sections():
         # Match main indexes
-        match = od_main_index_regex.match(section)
+        match = re.match(r"^[0-9A-Fa-f]{4}$", section)
         if match is not None:
             index = int(section, 16)
             name = eds.get(section, "ParameterName")
@@ -65,7 +60,7 @@ def import_eds(source, node_id):
             continue
 
         # Match subindexes
-        match = od_sub_index_regex.match(section)
+        match = re.match(r"^([0-9A-Fa-f]{4})sub([0-9A-Fa-f]+)$", section)
         if match is not None:
             index = int(match.group(1), 16)
             subindex = int(match.group(2), 16)
@@ -76,7 +71,7 @@ def import_eds(source, node_id):
                 entry.add_member(var)
 
         # Match [index]Name
-        match = od_main_index_with_name_regex.match(section)
+        match = re.match(r"^([0-9A-Fa-f]{4})Name", section)
         if match is not None:
             index = int(match.group(1), 16)
             num_of_entries = int(eds.get(section, "NrOfEntries"))

@@ -198,8 +198,6 @@ class Network(collections.MutableMapping):
         :raises can.CanError:
             When the message fails to be transmitted
         """
-        logger.info("Sending message with COB ID 0x%X" % can_id)
-        logger.info("Data: {}".format(data))
         if not self.bus:
             raise RuntimeError("Not connected to CAN bus")
         msg = can.Message(extended_id=False,

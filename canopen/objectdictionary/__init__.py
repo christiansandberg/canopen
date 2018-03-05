@@ -368,8 +368,7 @@ class Variable(object):
     @bytes.setter
     def bytes(self, value):
         if not isinstance(value, (bytes, bytearray)):
-            logger.error("Setting raw value requires a bytes like object")
-            return
+            raise TypeError("Setting raw value requires a bytes like object")
         self.current = value
         for callback in self.traps:
             callback(self.index, self.subindex, value)

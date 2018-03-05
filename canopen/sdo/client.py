@@ -170,7 +170,7 @@ class SdoClient(collections.Mapping):
         self.responses = queue.Queue()
 
     def __getitem__(self, index):
-        return DataProxy(self, self.node.object_dictionary[index])
+        return DataProxy(self, self.od[index])
 
     def __iter__(self):
         return iter(self.od)
