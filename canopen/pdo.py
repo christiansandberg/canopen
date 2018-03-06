@@ -4,6 +4,7 @@ import logging
 import threading
 
 from . import objectdictionary
+from .sdo.exceptions import SdoAbortedError
 
 
 PDO_NOT_VALID = 1 << 31
@@ -15,23 +16,26 @@ logger = logging.getLogger(__name__)
 # TODO: Only send and receive messages when in state OPERATIONAL
 # TODO: Support the inhibit time constraint for transmission
 # TODO: Support more fine grained transmission types
-# TODO: Implement LocalPdoNode.export
+# TODO: Implement LocalPdoNode export
 # TODO: We need to handle dummy mapping entries
-# TODO: Implement update_com_config
-# TODO: Implement update_map_config
 # TODO: Support more sophisticated trigger mechanisms
 # TODO: Support RTR trigger correctly
 # TODO: Invalid data changes shall be answered with an SDO abort
-# TODO: Implement PDO read/save methods
 
 
-def create_pdos(com_offset, map_offset, pdo_node, direction):
+def create_pdos(com_offset, map_offset, pdo_node, direction, is_remote):
     maps = {}
     direction_lower = direction.lower()
     if direction_lower in ["transmit", "tx"]:
-        PDO = TPDO
+        if is_remote:
+            PDO = RemoteTPDO
+        else:
+            PDO = LocalTPDO
     elif direction_lower in ["receive", "rx"]:
-        PDO = RPDO
+        if is_remote:
+            PDO = RemoteRPDO
+        else:
+            PDO = LocalRPDO
     else:
         logger.critical("Direction %s is not supported" % direction)
         return maps
@@ -104,10 +108,10 @@ class RemotePdoNode(PdoNodeBase):
     """Represents a slave unit."""
     def __init__(self, node):
         PdoNodeBase.__init__(self, node)
-        self.rx = create_pdos(0x1400, 0x1600, self, "Rx")
+        self.rx = create_pdos(0x1400, 0x1600, self, "Rx", is_remote=True)
         # We only want to observe(sniff) the PDOs of another note, so the
         # transit PDOs are treated like receive PDOs too
-        self.tx = create_pdos(0x1800, 0x1A00, self, "Rx")
+        self.tx = create_pdos(0x1800, 0x1A00, self, "Rx", is_remote=True)
 
 
 class LocalPdoNode(PdoNodeBase):
@@ -115,8 +119,8 @@ class LocalPdoNode(PdoNodeBase):
 
     def __init__(self, node):
         PdoNodeBase.__init__(self, node)
-        self.rx = create_pdos(0x1400, 0x1600, self, "Rx")
-        self.tx = create_pdos(0x1800, 0x1A00, self, "Tx")
+        self.rx = create_pdos(0x1400, 0x1600, self, "Rx", is_remote=False)
+        self.tx = create_pdos(0x1800, 0x1A00, self, "Tx", is_remote=False)
 
     def export(self, filename):
         """Export current configuration to a database file.
@@ -280,12 +284,6 @@ class PDOBase(object):
     def clear(self):
         """Clear all variables from this map."""
         self.map = []
-
-    def read(self):
-        raise NotImplementedError
-
-    def save(self):
-        raise NotImplementedError
 
 
 class TPDO(PDOBase):
@@ -483,3 +481,98 @@ class RPDO(PDOBase):
             self.is_received = False
             self.receive_condition.wait(timeout)
         return self.timestamp if self.is_received else None
+
+
+class ReadSave():
+    def read(self):
+        """Read PDO configuration for this PDO using SDO."""
+        com_record = self.pdo_node.node.sdo[self.com_index]
+        cob_id = com_record[1].raw
+        self.cob_id = cob_id & 0x7FF
+        logger.info("COB-ID is 0x%X", self.cob_id)
+        self.enabled = cob_id & PDO_NOT_VALID == 0
+        logger.info("PDO is %s", "enabled" if self.enabled else "disabled")
+        self.rtr_allowed = cob_id & RTR_NOT_ALLOWED == 0
+        logger.info("RTR is %s",
+                    "allowed" if self.rtr_allowed else "not allowed")
+        self.trans_type = com_record[2].raw
+        logger.info("Transmission type is %d", self.trans_type)
+        if self.trans_type >= 254:
+            try:
+                self.inhibit_time = com_record[3].raw
+            except (KeyError, SdoAbortedError) as e:
+                logger.info("Could not read inhibit time (%s)", e)
+            else:
+                logger.info("Inhibit time is set to %d ms", self.inhibit_time)
+
+            try:
+                self.event_timer = com_record[5].raw
+            except (KeyError, SdoAbortedError) as e:
+                logger.info("Could not read event timer (%s)", e)
+            else:
+                logger.info("Event timer is set to %d ms", self.event_timer)
+
+        self.clear()
+        map_array = self.pdo_node.node.sdo[self.map_index]
+        nof_entries = map_array[0].raw
+        for subindex in range(1, nof_entries + 1):
+            value = map_array[subindex].raw
+            index = value >> 16
+            subindex = (value >> 8) & 0xFF
+            length = int((value & 0xFF) / 8)
+            self.map.append((index, subindex, length))
+
+        if self.enabled:
+            self.pdo_node.network.subscribe(self.cob_id, self.on_message)
+
+    def save(self):
+        """Save PDO configuration for this PDO using SDO."""
+        logger.info("Setting COB-ID 0x%X and temporarily disabling PDO",
+                    self.cob_id)
+        com_record = self.pdo_node.node.sdo[self.com_index]
+        com_record[1].raw = self.cob_id | PDO_NOT_VALID
+        if self.trans_type is not None:
+            logger.info("Setting transmission type to %d", self.trans_type)
+            com_record[2].raw = self.trans_type
+        if self.inhibit_time is not None:
+            logger.info("Setting inhibit time to %d us",
+                        (self.inhibit_time * 100))
+            com_record[3].raw = self.inhibit_time
+        if self.event_timer is not None:
+            logger.info("Setting event timer to %d ms", self.event_timer)
+            com_record[5].raw = self.event_timer
+
+        map_array = self.pdo_node.node.sdo[self.map_index]
+        if self.map is not None:
+            map_array[0].raw = 0
+            map_index = 1
+            for index, subindex, length in self.map:
+                logger.info("Writing index 0x%X, subindex %d to PDO map",
+                            index, subindex)
+                map_array[map_index].raw = (index << 16 |
+                                            subindex << 8 |
+                                            (length * 8))
+                map_index += 1
+            map_array[0].raw = len(self.map)
+            self._update_data_size()
+
+        if self.enabled:
+            logger.info("Enabling PDO")
+            com_record[1].raw = self.cob_id
+            self.pdo_node.network.subscribe(self.cob_id, self.on_message)
+
+
+class LocalTPDO(TPDO):
+    pass
+
+
+class LocalRPDO(RPDO):
+    pass
+
+
+class RemoteTPDO(TPDO, ReadSave):
+    pass
+
+
+class RemoteRPDO(RPDO, ReadSave):
+    pass

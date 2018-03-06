@@ -316,14 +316,6 @@ class SdoClient(collections.Mapping):
         :returns:
             A file like object.
         """
-        try:
-            entry = self.od.get_object(index, subindex)
-        except OdIndexError:
-            raise SdoAbortedError(0x06020000)
-        except OdSubIndexError:
-            raise SdoAbortedError(0x06090011)
-        index = entry.index
-        subindex = entry.subindex
         buffer_size = buffering if buffering > 1 else io.DEFAULT_BUFFER_SIZE
         if "r" in mode:
             if block_transfer:
