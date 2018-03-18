@@ -53,6 +53,15 @@ class TestSDO(unittest.TestCase):
         ]
         trans_type = self.network[2].sdo[0x1400]['Transmission type RPDO 1'].raw
         self.assertEqual(trans_type, 254)
+    
+    def test_size_not_specified(self):
+        self.data = [
+            (TX, b'\x40\x00\x14\x02\x00\x00\x00\x00'),
+            (RX, b'\x42\x00\x14\x02\xfe\x00\x00\x00')
+        ]
+        # Make sure the size of the data is 1 byte
+        data = self.network[2].sdo.upload(0x1400, 2)
+        self.assertEqual(data, b'\xfe')
 
     def test_expedited_download(self):
         self.data = [

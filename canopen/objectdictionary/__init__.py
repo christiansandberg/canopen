@@ -92,6 +92,18 @@ class ObjectDictionary(collections.MutableMapping):
         self.indices[obj.index] = obj
         self.names[obj.name] = obj
 
+    def get_variable(self, index, subindex=0):
+        """Get the variable object at specified index (and subindex if applicable).
+
+        :return: Variable if found, else `None`
+        :rtype: canopen.objectdictionary.Variable
+        """
+        obj = self.get(index)
+        if isinstance(obj, Variable):
+            return obj
+        elif isinstance(obj, (Record, Array)):
+            return obj.get(subindex)
+
 
 class Record(collections.MutableMapping):
     """Groups multiple :class:`~canopen.objectdictionary.Variable` objects using
