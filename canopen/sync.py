@@ -13,7 +13,7 @@ class SyncProducer(object):
 
     def transmit(self, count=None):
         """Send out a SYNC message once.
-        
+
         :param int count:
             Counter to add in message.
         """
