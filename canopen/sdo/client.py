@@ -14,7 +14,6 @@ from ..network import CanError
 from .constants import *
 from .exceptions import *
 from ..objectdictionary import datatypes, Bits
-from ..objectdictionary.exceptions import OdIndexError, OdSubIndexError
 
 
 logger = logging.getLogger(__name__)

@@ -74,6 +74,9 @@ class PdoNodeBase(collections.Mapping):
             return self.tx[key]
         raise KeyError("%s was not found in any map" % key)
 
+    def __contains__(self, key):
+        return key in self.rx or key in self.tx
+
     def __len__(self):
         return len(self.rx) + len(self.tx)
 
