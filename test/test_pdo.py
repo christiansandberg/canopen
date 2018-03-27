@@ -16,20 +16,20 @@ logging.basicConfig(level=logging.WARNING)
 
 class TestPDO(unittest.TestCase):
 
-    def __init__(self, *args, **kwargs):
-        network = canopen.Network()
+    def setUp(self):
+        self.network = canopen.Network()
         # Connect to a virtual network to allow for OS independent tests
-        network.connect(channel="test", bustype="virtual")
-        sender_node = canopen.LocalNode(5, SENDER_EDS_PATH)
-        receiver_node = canopen.LocalNode(6, RECEIVER_EDS_PATH)
-        # Add the nodes to the network
-        sender_node.associate_network(network)
-        receiver_node.associate_network(network)
-        # Store the objects as test global data
-        self.network = network
-        self.sender_node = sender_node
-        self.receiver_node = receiver_node
-        unittest.TestCase.__init__(self, *args, **kwargs)
+        self.network.connect(channel="test", bustype="virtual",
+                             receive_own_messages=True)
+        self.sender_node = canopen.LocalNode(5, SENDER_EDS_PATH)
+        self.sender_node.associate_network(self.network)
+        self.receiver_node = canopen.LocalNode(6, RECEIVER_EDS_PATH)
+        self.receiver_node.associate_network(self.network)
+
+    def tearDown(self):
+        self.sender_node.remove_network()
+        self.receiver_node.remove_network()
+        self.network.disconnect()
 
     def test_pdo_0x1800_settings(self):
         # Get the class global data
@@ -107,14 +107,15 @@ class TestPDO(unittest.TestCase):
         self.assertEqual(pdo.map, expected_map_values)
 
     def test_pdo_0x1402_reconfigure_mapping(self):
+        # Helper function
         def set_mapping(map_entry, mapping):
             for map_subindex, (index, subindex, length) in enumerate(mapping,
                                                                      start=1):
                 new_value = (index << 16) | (subindex << 8) | (length*8)
                 map_entry[map_subindex].raw = new_value
+
         # Get the class global data
         receiver_node = self.receiver_node
-        # Choose the first receive PDO (iterator style)
         pdo = receiver_node.pdo[0x1402]
         # Create the new mapping data
         old_map = deepcopy(pdo.map)
@@ -185,31 +186,45 @@ class TestPDO(unittest.TestCase):
         self.assertEqual(old_cob_id, pdo._task.msg.arbitration_id)
 
     def test_send_receive(self):
-        # Give the periodic messages a chance to be transmitted
-        time.sleep(0.2)
         # Get the class global data
         sender_node = self.sender_node
         receiver_node = self.receiver_node
+
         send_pdo = sender_node.pdo[0x1802]
         recv_pdo = None
         for rpdo in receiver_node.pdo.rx.values():
             if rpdo.cob_id == send_pdo.cob_id:
                 recv_pdo = rpdo
                 break
+        var = receiver_node.get_object(0x6040)
         self.assertIsNotNone(recv_pdo)
         # Assert that we have the correct mapping settings
         self.assertEqual(send_pdo.map[0], (0x6041, 0, 2))
         self.assertEqual(send_pdo.map[1], (0x6064, 0, 4))
         self.assertEqual(recv_pdo.map[0], (0x6040, 0, 2))
         self.assertEqual(recv_pdo.map[1], (0x607A, 0, 4))
+        # Give the message a chance to be transmitted and received
+        time.sleep(0.1)
         current_sender_values = [
-            send_pdo.object_dictionary[0x6041].raw,
-            send_pdo.object_dictionary[0x6064].raw
+            sender_node.get_value(0x6041),
+            sender_node.get_value(0x6064)
         ]
         current_receiver_values = [
-            recv_pdo.object_dictionary[0x6040].raw,
-            recv_pdo.object_dictionary[0x607A].raw
+            receiver_node.get_value(0x6040),
+            receiver_node.get_value(0x607A)
         ]
+        self.assertEqual(current_sender_values, current_receiver_values)
+        # Change the process data of the sender node
+        old_sender_values = current_sender_values
+        current_sender_values = [x+10 for x in old_sender_values]
+        sender_node.set_value(0x6041, 0, current_sender_values[0])
+        sender_node.set_value(0x6064, 0, current_sender_values[1])
+        time.sleep(0.1)
+        current_receiver_values = [
+            receiver_node.get_value(0x6040),
+            receiver_node.get_value(0x607A)
+        ]
+        self.assertNotEqual(old_sender_values, current_receiver_values)
         self.assertEqual(current_sender_values, current_receiver_values)
 
 
