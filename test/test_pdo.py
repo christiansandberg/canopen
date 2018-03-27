@@ -15,6 +15,18 @@ logging.basicConfig(level=logging.WARNING)
 
 
 class TestPDO(unittest.TestCase):
+    """
+    A test class for the PDO support of canopen. Not that PDO are process data,
+    and are thus not sent via a request/response mechanism.
+
+    Instead a pdo supports several options to trigger a transmit, e.g. sending
+    a message periodically.
+
+    Because of this most of the test cases do not contain explicit send
+    instructions, but rather trigger these indirectly by either changing the
+    node's object dictionary data or just waiting long enough for periodic
+    transmits to happen.
+    """
 
     def setUp(self):
         self.network = canopen.Network()
