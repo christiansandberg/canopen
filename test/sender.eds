@@ -630,7 +630,7 @@ ObjectType=7
 DataType=7
 AccessType=RW
 PDOMapping=0
-DefaultValue=$NODEID+1152
+DefaultValue=0x445
 
 [1803sub2]
 ParameterName=Transmission type TPDO 3

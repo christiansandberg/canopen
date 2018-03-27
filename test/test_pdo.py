@@ -36,6 +36,7 @@ class TestPDO(unittest.TestCase):
         sender_node = self.sender_node
         # Choose the first transmit PDO of the sender node
         send_pdo = sender_node.pdo[0x1800]
+
         # Check that the values are as specified in the EDS file
         self.assertEqual(send_pdo.com_index, 0x1800)
         self.assertEqual(send_pdo.map_index, 0x1A00)
@@ -44,11 +45,13 @@ class TestPDO(unittest.TestCase):
                          | TPDO.TT_CYCLIC)
         self.assertEqual(send_pdo.inhibit_time.raw, 0)
         self.assertEqual(send_pdo.event_timer.raw, 100)
+
         # Careful: At the moment the length of the map is given in bytes, not
         # in bits!
         expected_map_values = [
             (0x6041, 0, 2),
         ]
+
         self.assertEqual(send_pdo.map, expected_map_values)
 
     def test_pdo_0x1803_settings(self):
@@ -56,20 +59,23 @@ class TestPDO(unittest.TestCase):
         sender_node = self.sender_node
         # Choose the first transmit PDO of the sender node
         pdo = sender_node.pdo[0x1803]
+
         # Check that the values are as specified in the EDS file
         self.assertEqual(pdo.com_index, 0x1803)
         self.assertEqual(pdo.map_index, 0x1A03)
-        self.assertEqual(pdo.cob_id, 1152 + pdo.pdo_node.node.id)
+        self.assertEqual(pdo.cob_id, 0x445)
         self.assertEqual(pdo.trans_type, TPDO.TT_SYNC_TRIGGERED
                          | TPDO.TT_CYCLIC)
         self.assertEqual(pdo.inhibit_time.raw, 0)
         self.assertEqual(pdo.event_timer.raw, 100)
+
         # Careful: At the moment the length of the map is given in bytes, not
         # in bits!
         expected_map_values = [
             (0x6041, 0, 2),
             (0x606c, 0, 4),
         ]
+
         self.assertEqual(pdo.map, expected_map_values)
 
     def test_pdo_0x1401_settings(self):
@@ -77,16 +83,19 @@ class TestPDO(unittest.TestCase):
         receiver_node = self.receiver_node
         # Choose the first transmit PDO of the sender node
         pdo = receiver_node.pdo[0x1401]
+
         # Check that the values are as specified in the EDS file
         self.assertEqual(pdo.com_index, 0x1401)
         self.assertEqual(pdo.map_index, 0x1601)
         self.assertEqual(pdo.cob_id, 768 + pdo.pdo_node.node.id)
+
         # Careful: At the moment the length of the map is given in bytes, not
         # in bits!
         expected_map_values = [
             (0x6040, 0, 2),
             (0x6060, 0, 1),
         ]
+
         self.assertEqual(pdo.map, expected_map_values)
 
     def test_pdo_0x1402_settings(self):
@@ -94,16 +103,19 @@ class TestPDO(unittest.TestCase):
         receiver_node = self.receiver_node
         # Choose the first transmit PDO of the sender node
         pdo = receiver_node.pdo[0x1402]
+
         # Check that the values are as specified in the EDS file
         self.assertEqual(pdo.com_index, 0x1402)
         self.assertEqual(pdo.map_index, 0x1602)
         self.assertEqual(pdo.cob_id, 0x422)
+
         # Careful: At the moment the length of the map is given in bytes, not
         # in bits!
         expected_map_values = [
             (0x6040, 0, 2),
             (0x607a, 0, 4),
         ]
+
         self.assertEqual(pdo.map, expected_map_values)
 
     def test_pdo_0x1402_reconfigure_mapping(self):
@@ -133,20 +145,27 @@ class TestPDO(unittest.TestCase):
         ]
         old_length = len(old_map)
         new_length = len(new_map)
+
         self.assertNotEqual(new_map, pdo.map)
+
         # Get the underlying object dictionary and make changes to it
         od = pdo.object_dictionary
         map_index = pdo.map_index
         map_entry = od[map_index]
         set_mapping(map_entry, new_map)
         map_entry[0].raw = new_length
+
         self.assertEqual(new_map, pdo.map)
+
         set_mapping(map_entry, wipe_out)
         map_entry[0].raw = new_length
+
         self.assertNotEqual(new_map, pdo.map)
         self.assertNotEqual(old_map, pdo.map)
+
         set_mapping(map_entry, old_map)
         map_entry[0].raw = old_length
+
         self.assertEqual(old_map, pdo.map)
 
     def test_pdo_0x1400_reconfigure_cobid(self):
@@ -157,13 +176,18 @@ class TestPDO(unittest.TestCase):
         # Create the new mapping data
         old_cob_id = pdo.cob_id
         new_cob_id = old_cob_id + 1
+
         self.assertNotEqual(new_cob_id, pdo.cob_id)
+
         # Get the underlying object dictionary and make changes to it
         od = pdo.object_dictionary
         com_entry = od[pdo.com_index]
         com_entry['COB-ID'].raw = new_cob_id
+
         self.assertEqual(new_cob_id, pdo.cob_id)
+
         com_entry['COB-ID'].raw = old_cob_id
+
         self.assertEqual(old_cob_id, pdo.cob_id)
 
     def test_pdo_0x1801_reconfigure_cobid(self):
@@ -174,14 +198,19 @@ class TestPDO(unittest.TestCase):
         # Create the new mapping data
         old_cob_id = pdo.cob_id
         new_cob_id = old_cob_id + 1
+
         self.assertNotEqual(new_cob_id, pdo.cob_id)
+
         # Get the underlying object dictionary and make changes to it
         od = pdo.object_dictionary
         com_entry = od[pdo.com_index]
         com_entry['COB-ID'].raw = new_cob_id
+
         self.assertEqual(new_cob_id, pdo.cob_id)
         self.assertEqual(new_cob_id, pdo._task.msg.arbitration_id)
+
         com_entry['COB-ID'].raw = old_cob_id
+
         self.assertEqual(old_cob_id, pdo.cob_id)
         self.assertEqual(old_cob_id, pdo._task.msg.arbitration_id)
 
@@ -196,15 +225,17 @@ class TestPDO(unittest.TestCase):
             if rpdo.cob_id == send_pdo.cob_id:
                 recv_pdo = rpdo
                 break
-        var = receiver_node.get_object(0x6040)
+
         self.assertIsNotNone(recv_pdo)
         # Assert that we have the correct mapping settings
         self.assertEqual(send_pdo.map[0], (0x6041, 0, 2))
         self.assertEqual(send_pdo.map[1], (0x6064, 0, 4))
         self.assertEqual(recv_pdo.map[0], (0x6040, 0, 2))
         self.assertEqual(recv_pdo.map[1], (0x607A, 0, 4))
+
         # Give the message a chance to be transmitted and received
         time.sleep(0.1)
+
         current_sender_values = [
             sender_node.get_value(0x6041),
             sender_node.get_value(0x6064)
@@ -213,19 +244,45 @@ class TestPDO(unittest.TestCase):
             receiver_node.get_value(0x6040),
             receiver_node.get_value(0x607A)
         ]
+
         self.assertEqual(current_sender_values, current_receiver_values)
         # Change the process data of the sender node
         old_sender_values = current_sender_values
         current_sender_values = [x+10 for x in old_sender_values]
         sender_node.set_value(0x6041, 0, current_sender_values[0])
         sender_node.set_value(0x6064, 0, current_sender_values[1])
+
         time.sleep(0.1)
+
         current_receiver_values = [
             receiver_node.get_value(0x6040),
             receiver_node.get_value(0x607A)
         ]
+
         self.assertNotEqual(old_sender_values, current_receiver_values)
         self.assertEqual(current_sender_values, current_receiver_values)
+
+    def write_cbk(self, pdo):
+        self.written[pdo.cob_id] = True
+
+    def test_write_callback(self):
+        self.written = {}
+        # Get the class global data
+        receiver_node = self.receiver_node
+        recv_pdo = receiver_node.pdo[0x1403]
+        recv_pdo.add_callback(self.write_cbk)
+
+        time.sleep(0.12)
+
+        self.assertIn(recv_pdo.cob_id, self.written)
+        self.assertTrue(self.written)
+
+        recv_pdo.remove_callback(self.write_cbk)
+        self.written = {}
+
+        time.sleep(0.12)
+
+        self.assertNotIn(recv_pdo.cob_id, self.written)
 
 
 if __name__ == "__main__":
