@@ -342,7 +342,7 @@ ObjectType=7
 DataType=7
 AccessType=RW
 PDOMapping=0
-DefaultValue=1614807056
+DefaultValue=0x60400010
 
 [1601sub2]
 ParameterName=RPDO 2 mapping information 2
@@ -350,7 +350,7 @@ ObjectType=7
 DataType=7
 AccessType=RW
 PDOMapping=0
-DefaultValue=1616904200
+DefaultValue=0x60600008
 
 [1601sub3]
 ParameterName=RPDO 2 mapping information 3
@@ -389,7 +389,7 @@ ObjectType=7
 DataType=7
 AccessType=RW
 PDOMapping=0
-DefaultValue=1614807056
+DefaultValue=0x60400010
 
 [1602sub2]
 ParameterName=RPDO 3 mapping information 2
@@ -397,7 +397,7 @@ ObjectType=7
 DataType=7
 AccessType=RW
 PDOMapping=0
-DefaultValue=1618608160
+DefaultValue=0x607a0020
 
 [1602sub3]
 ParameterName=RPDO 3 mapping information 3
@@ -527,7 +527,7 @@ LowLimit=2
 HighLimit=2
 
 [1801sub1]
-ParameterName=COB-ID use by TPDO 1
+ParameterName=COB-ID
 ObjectType=7
 DataType=7
 AccessType=RW
@@ -581,7 +581,7 @@ ObjectType=7
 DataType=7
 AccessType=RW
 PDOMapping=0
-DefaultValue=$NODEID+896
+DefaultValue=0x422
 
 [1802sub2]
 ParameterName=Transmission type TPDO 2

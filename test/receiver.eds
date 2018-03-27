@@ -158,7 +158,7 @@ LowLimit=2
 HighLimit=2
 
 [1400sub1]
-ParameterName=COB-ID use by RPDO 1
+ParameterName=COB-ID
 ObjectType=7
 DataType=7
 AccessType=RW
@@ -229,7 +229,7 @@ ObjectType=7
 DataType=7
 AccessType=RW
 PDOMapping=0
-DefaultValue=$NODEID+1024
+DefaultValue=0x422
 
 [1402sub2]
 ParameterName=Transmission type RPDO 3
@@ -389,7 +389,7 @@ ObjectType=7
 DataType=7
 AccessType=RW
 PDOMapping=0
-DefaultValue=1614807056
+DefaultValue=0x60400010
 
 [1602sub2]
 ParameterName=RPDO 3 mapping information 2
@@ -397,7 +397,7 @@ ObjectType=7
 DataType=7
 AccessType=RW
 PDOMapping=0
-DefaultValue=1618608160
+DefaultValue=0x607a0020
 
 [1602sub3]
 ParameterName=RPDO 3 mapping information 3
@@ -456,390 +456,6 @@ DefaultValue=0
 
 [1603sub4]
 ParameterName=RPDO 4 mapping information 4
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=0
-
-[1800]
-ParameterName=Transmit PDO 0 communication parameters
-ObjectType=9
-SubNumber=0x5
-
-[1800sub0]
-ParameterName=Number of Entries
-ObjectType=7
-DataType=5
-AccessType=ro
-PDOMapping=0
-DefaultValue=2
-LowLimit=2
-HighLimit=2
-
-[1800sub1]
-ParameterName=COB-ID use by TPDO 0
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=$NODEID+384
-
-[1800sub2]
-ParameterName=Transmission type TPDO 0
-ObjectType=7
-DataType=5
-AccessType=RW
-PDOMapping=0
-DefaultValue=255
-LowLimit=0
-HighLimit=255
-
-[1800sub3]
-ParameterName=Inhibit time TPDO 0
-ObjectType=0x7
-DataType=0x0006
-AccessType=ro
-DefaultValue=0x0
-PDOMapping=0x0
-
-[1800sub5]
-ParameterName=Event timer TPDO 0
-ObjectType=0x7
-DataType=0x0006
-AccessType=ro
-DefaultValue=0x64
-PDOMapping=0x0
-
-[1801]
-ParameterName=Transmit PDO 1 communication parameters
-ObjectType=9
-SubNumber=0x5
-
-[1801sub0]
-ParameterName=Number of Entries
-ObjectType=7
-DataType=5
-AccessType=ro
-PDOMapping=0
-DefaultValue=2
-LowLimit=2
-HighLimit=2
-
-[1801sub1]
-ParameterName=COB-ID use by TPDO 1
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=$NODEID+640
-
-[1801sub2]
-ParameterName=Transmission type TPDO 1
-ObjectType=7
-DataType=5
-AccessType=RW
-PDOMapping=0
-DefaultValue=255
-LowLimit=0
-HighLimit=255
-
-[1801sub3]
-ParameterName=Inhibit time TPDO 1
-ObjectType=0x7
-DataType=0x0006
-AccessType=ro
-DefaultValue=0x0
-PDOMapping=0x0
-
-[1801sub5]
-ParameterName=Event timer TPDO 1
-ObjectType=0x7
-DataType=0x0006
-AccessType=ro
-DefaultValue=0x64
-PDOMapping=0x0
-
-[1802]
-ParameterName=Transmit PDO 2 communication parameters
-ObjectType=9
-SubNumber=0x5
-
-[1802sub0]
-ParameterName=Number of Entries
-ObjectType=7
-DataType=5
-AccessType=ro
-PDOMapping=0
-DefaultValue=2
-LowLimit=2
-HighLimit=2
-
-[1802sub1]
-ParameterName=COB-ID use by TPDO 2
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=$NODEID+896
-
-[1802sub2]
-ParameterName=Transmission type TPDO 2
-ObjectType=7
-DataType=5
-AccessType=RW
-PDOMapping=0
-DefaultValue=0
-LowLimit=0
-HighLimit=255
-
-[1802sub3]
-ParameterName=Inhibit time TPDO 2
-ObjectType=0x7
-DataType=0x0006
-AccessType=ro
-DefaultValue=0x0
-PDOMapping=0x0
-
-[1802sub5]
-ParameterName=Event timer TPDO 2
-ObjectType=0x7
-DataType=0x0006
-AccessType=ro
-DefaultValue=0x64
-PDOMapping=0x0
-
-[1803]
-ParameterName=Transmit PDO 3 communication parameters
-ObjectType=9
-SubNumber=0x5
-
-[1803sub0]
-ParameterName=Number of Entries
-ObjectType=7
-DataType=5
-AccessType=ro
-PDOMapping=0
-DefaultValue=2
-LowLimit=2
-HighLimit=2
-
-[1803sub1]
-ParameterName=COB-ID use by TPDO 3
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=$NODEID+1152
-
-[1803sub2]
-ParameterName=Transmission type TPDO 3
-ObjectType=7
-DataType=5
-AccessType=RW
-PDOMapping=0
-DefaultValue=0
-LowLimit=0
-HighLimit=255
-
-[1803sub3]
-ParameterName=Inhibit time TPDO 3
-ObjectType=0x7
-DataType=0x0006
-AccessType=ro
-DefaultValue=0x0
-PDOMapping=0x0
-
-[1803sub5]
-ParameterName=Event timer TPDO 3
-ObjectType=0x7
-DataType=0x0006
-AccessType=ro
-DefaultValue=0x64
-PDOMapping=0x0
-
-[1a00]
-ParameterName=Transmit PDO 0 mapping parameter
-ObjectType=9
-SubNumber=5
-
-[1a00sub0]
-ParameterName=Number of mapped objects TPDO 0
-ObjectType=7
-DataType=5
-AccessType=RW
-PDOMapping=0
-DefaultValue=1
-LowLimit=0
-HighLimit=4
-
-[1a00sub1]
-ParameterName=TPDO 0 mapping information 1
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=0x60410010
-
-[1a00sub2]
-ParameterName=TPDO 0 mapping information 2
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=0
-
-[1a00sub3]
-ParameterName=TPDO 0 mapping information 3
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=0
-
-[1a00sub4]
-ParameterName=TPDO 0 mapping information 4
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=0
-
-[1a01]
-ParameterName=Transmit PDO 1 mapping parameter
-ObjectType=9
-SubNumber=5
-
-[1a01sub0]
-ParameterName=Number of mapped objects TPDO 1
-ObjectType=7
-DataType=5
-AccessType=RW
-PDOMapping=0
-DefaultValue=2
-LowLimit=0
-HighLimit=4
-
-[1a01sub1]
-ParameterName=TPDO 1 mapping information 1
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=0x60410010
-
-[1a01sub2]
-ParameterName=TPDO 1 mapping information 2
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=0x60610008
-
-[1a01sub3]
-ParameterName=TPDO 1 mapping information 3
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=0
-
-[1a01sub4]
-ParameterName=TPDO 1 mapping information 4
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=0
-
-[1a02]
-ParameterName=Transmit PDO 2 mapping parameter
-ObjectType=9
-SubNumber=5
-
-[1a02sub0]
-ParameterName=Number of mapped objects TPDO 2
-ObjectType=7
-DataType=5
-AccessType=RW
-PDOMapping=0
-DefaultValue=2
-LowLimit=0
-HighLimit=4
-
-[1a02sub1]
-ParameterName=TPDO 2 mapping information 1
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=0x60410010
-
-[1a02sub2]
-ParameterName=TPDO 2 mapping information 2
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=0x60640020
-
-[1a02sub3]
-ParameterName=TPDO 2 mapping information 3
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=0
-
-[1a02sub4]
-ParameterName=TPDO 2 mapping information 4
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=0
-
-[1a03]
-ParameterName=Transmit PDO 3 mapping parameter
-ObjectType=9
-SubNumber=5
-
-[1a03sub0]
-ParameterName=Number of mapped objects TPDO 3
-ObjectType=7
-DataType=5
-AccessType=RW
-PDOMapping=0
-DefaultValue=2
-LowLimit=0
-HighLimit=4
-
-[1a03sub1]
-ParameterName=TPDO 3 mapping information 1
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=0x60410010
-
-[1a03sub2]
-ParameterName=TPDO 3 mapping information 2
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=0x606c0020
-
-[1a03sub3]
-ParameterName=TPDO 3 mapping information 3
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=0
-
-[1a03sub4]
-ParameterName=TPDO 3 mapping information 4
 ObjectType=7
 DataType=7
 AccessType=RW
@@ -977,6 +593,14 @@ PDOMapping=0
 
 [607A]
 ParameterName=Process Data 7
+ObjectType=0x7
+DataType=0x0004
+AccessType=rw
+DefaultValue=123456
+PDOMapping=0
+
+[607B]
+ParameterName=Process Data 8
 ObjectType=0x7
 DataType=0x0004
 AccessType=rw
