@@ -94,7 +94,7 @@ class ObjectDictionary(collections.MutableMapping):
         self.indices[obj.index] = obj
         self.names[obj.name] = obj
 
-    def get_object(self, index, subindex):
+    def get_object(self, index, subindex=0):
         if index in self.indices:
             obj = self.indices[index]
         elif index in self.names:

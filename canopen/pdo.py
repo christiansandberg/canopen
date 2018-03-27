@@ -381,14 +381,15 @@ class TPDO(PDOBase):
     def on_data_change(self, index, subindex, value):
         """This is the callback method for when the internal data of the node
         has changed."""
-        logger.info("Data change detected")
-        logger.info("Old message content {}".format(self.data))
         # Parts of our data changed, the details don't matter, rebuild the data
         new_data = self._build_data()
         if new_data != self.data:
+            logger.debug("Data change detected")
+            logger.debug("Old message content {}".format(self.data))
             logger.debug("New message content {}".format(new_data))
             self.data = new_data
             if self._task is not None:
+                logger.debug("Updating sender task")
                 self._task.update(self.data)
 
     def transmit_once(self):
@@ -466,8 +467,8 @@ class RPDO(PDOBase):
         PDOBase.cleanup(self)
 
     def on_message(self, can_id, data, timestamp):
-        logger.info("Received PDO on COBID 0x%X" % can_id)
-        logger.info("Data: {}".format(data))
+        logger.debug("Received PDO on COBID 0x%X" % can_id)
+        logger.debug("Data: {}".format(data))
         if can_id == self.cob_id:
             with self.receive_condition:
                 self.is_received = True
@@ -477,7 +478,7 @@ class RPDO(PDOBase):
                 self._write_data(data)
 
     def _write_data(self, data):
-        logger.info("Updating values in internal data store...")
+        logger.debug("Updating values in internal data store...")
         # Map the received byte data according to the mapping rules of this PDO
         data_start = 0
         for index, subindex, length in self.map:

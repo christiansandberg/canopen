@@ -24,5 +24,5 @@ class BaseNode(object):
         # The ID of the node which identifies it within the network
         self.id = node_id or self.object_dictionary.node_id
 
-    def get_object(self, index, subindex):
+    def get_object(self, index, subindex=0):
         return self.object_dictionary.get_object(index, subindex)

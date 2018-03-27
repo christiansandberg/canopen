@@ -54,7 +54,6 @@ class Network(collections.MutableMapping):
         self.lss.network = self
         self.subscribe(self.lss.LSS_RX_COBID, self.lss.on_message_received)
 
-
     def subscribe(self, can_id, callback):
         """Listen for messages with a specific CAN ID.
 
@@ -69,7 +68,8 @@ class Network(collections.MutableMapping):
 
     def unsubscribe(self, can_id):
         """Stop listening for message."""
-        del self.subscribers[can_id]
+        if can_id in self.subscribers:
+            del self.subscribers[can_id]
 
     def subscribe_nmt_cmd(self, node_id, callback):
         """Listen for nmt commands to a specific node.
@@ -117,7 +117,7 @@ class Network(collections.MutableMapping):
                     kwargs["bitrate"] = node.object_dictionary.bitrate
                     break
         # Try to filter out only 11-bit IDs
-        #kwargs.setdefault("can_filters",
+        # kwargs.setdefault("can_filters",
         #                  [{"can_id": 0, "can_mask": 0x1FFFF800}])
         self.bus = can.interface.Bus(*args, **kwargs)
         logger.info("Connected to '%s'", self.bus.channel_info)
@@ -395,4 +395,3 @@ class NodeScanner(object):
         sdo_req = b"\x40\x00\x10\x00\x00\x00\x00\x00"
         for node_id in range(1, limit + 1):
             self.network.send_message(0x600 + node_id, sdo_req)
-
