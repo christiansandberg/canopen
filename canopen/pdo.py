@@ -43,14 +43,7 @@ def create_pdos(com_offset, map_offset, pdo_node, direction, is_remote):
         com_index = com_offset + idx
         map_index = map_offset + idx
         if com_index in pdo_node.node.object_dictionary:
-            com_entry = pdo_node.node.object_dictionary[com_index]
-            if com_entry.subindices[1].raw:
-                cob_id = com_entry.subindices[1].raw
-            else:
-                logger.warning("Don't know how to handle communication "
-                               "index 0x{:X}".format(com_index))
-                continue
-            maps[com_index] = PDO(cob_id, pdo_node, com_index, map_index)
+            maps[com_index] = PDO(pdo_node, com_index, map_index)
     return maps
 
 
@@ -145,8 +138,7 @@ class LocalPdoNode(PdoNodeBase):
 class PDOBase(object):
     """One message which can have up to 8 bytes of variables mapped."""
 
-    def __init__(self, cob_id, pdo_node, com_index, map_index):
-        self.cob_id = cob_id
+    def __init__(self, pdo_node, com_index, map_index):
         self.pdo_node = pdo_node
         self.com_index = com_index
         self.map_index = map_index
@@ -161,6 +153,12 @@ class PDOBase(object):
     def setup(self):
         logger.info("Setting up PDO 0x%X on node %d" % (
             self.com_index, self.pdo_node.node.id))
+        com_entry = self.object_dictionary[self.com_index]
+        if 1 in com_entry:
+            self.cob_id = com_entry[1].raw
+        else:
+            logger.error("The PDO at index 0x{:X} does not specify a "
+                         "COD-ID".format(self.com_index))
         # Makes sure the node is informed about communication parameter changes
         self.watch_index(self.com_index,
                          self.object_dictionary,
@@ -175,6 +173,7 @@ class PDOBase(object):
         logger.info("Internal map: {}".format(self.map))
 
     def cleanup(self):
+        self.map = []
         # Remove the node's callbacks from the objects
         self.unwatch_index(self.com_index,
                            self.object_dictionary,
@@ -183,6 +182,10 @@ class PDOBase(object):
         self.unwatch_index(self.map_index,
                            self.object_dictionary,
                            self.on_config_change)
+
+    def reconfigure(self):
+        self.cleanup()
+        self.setup()
 
     @classmethod
     def watch_index(cls, index, object_dictionary, callback):
@@ -224,21 +227,21 @@ class PDOBase(object):
 
     def on_config_change(self, index, subindex, data):
         logger.info("Change detected")
-        rerun_setup = False
+        do_reconfigure = False
         if index == self.com_index:
             logger.info("Communication parameters for PDO "
                         "0x%X have changed" % self.cob_id)
-            rerun_setup = False
+            do_reconfigure = True
         elif index == self.map_index:
             logger.info("Mapping parameters for PDO "
                         "0x%X have changed" % self.cob_id)
-            rerun_setup = False
+            do_reconfigure = True
         else:
             logger.warning("Bad config callback: Index 0x%X is neither the "
                            "mapping nor the communication parameter of this "
                            "PDO" % self.cob_id)
-        if rerun_setup:
-            self.setup()
+        if do_reconfigure:
+            self.reconfigure()
 
     def __getitem__(self, key):
         index, subindex, _ = self.map[key]
@@ -298,8 +301,8 @@ class TPDO(PDOBase):
     TT_SYNC_TRIGGERED = 0x04
     TT_CYCLIC = 0x08
 
-    def __init__(self, cob_id, pdo_node, com_index, map_index):
-        PDOBase.__init__(self, cob_id, pdo_node, com_index, map_index)
+    def __init__(self, pdo_node, com_index, map_index):
+        PDOBase.__init__(self, pdo_node, com_index, map_index)
         #: Is the remote transmit request (RTR) allowed for this PDO
         self.rtr_allowed = True
         #: Transmission type (0-255)
@@ -359,6 +362,14 @@ class TPDO(PDOBase):
                 obj = self.pdo_node.node.get_object(index, subindex)
                 if self.on_data_change not in obj.traps:
                     obj.traps.append(self.on_data_change)
+
+    def cleanup(self):
+        self.stop()
+        for index, subindex, _ in self.map:
+            obj = self.pdo_node.node.get_object(index, subindex)
+            if self.on_data_change in obj.traps:
+                obj.traps.remove(self.on_data_change)
+        PDOBase.cleanup(self)
 
     def on_sync(self, can_id, data, timestamp):
         """This is the callback method for when this PDO receives a SYNC
@@ -439,8 +450,8 @@ class TPDO(PDOBase):
 class RPDO(PDOBase):
     """Receive PDO specialization of the PDOBase class."""
 
-    def __init__(self, cob_id, pdo_node, com_index, map_index):
-        PDOBase.__init__(self, cob_id, pdo_node, com_index, map_index)
+    def __init__(self, pdo_node, com_index, map_index):
+        PDOBase.__init__(self, pdo_node, com_index, map_index)
         self.receive_condition = threading.Condition()
         self.is_received = False
 
@@ -448,6 +459,11 @@ class RPDO(PDOBase):
         PDOBase.setup(self)
         self.pdo_node.network.subscribe(self.cob_id, self.on_message)
         self.pdo_node.subscriptions.add(self.cob_id)
+
+    def cleanup(self):
+        self.pdo_node.network.unsubscribe(self.cob_id)
+        self.pdo_node.subscriptions.remove(self.cob_id)
+        PDOBase.cleanup(self)
 
     def on_message(self, can_id, data, timestamp):
         logger.info("Received PDO on COBID 0x%X" % can_id)
