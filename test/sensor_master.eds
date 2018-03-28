@@ -95,7 +95,7 @@ ParameterName=Product code
 ObjectType=0x7
 DataType=0x0007
 AccessType=ro
-DefaultValue=0x1001
+DefaultValue=0x1002
 PDOMapping=0
 
 [1018sub3]
@@ -103,7 +103,7 @@ ParameterName=Revision number
 ObjectType=0x7
 DataType=0x0007
 AccessType=ro
-DefaultValue=3
+DefaultValue=4
 PDOMapping=0
 
 [1018sub4]
@@ -111,7 +111,7 @@ ParameterName=Serial number
 ObjectType=0x7
 DataType=0x0007
 AccessType=ro
-DefaultValue=533457
+DefaultValue=533464
 PDOMapping=0
 
 [OptionalObjects]
@@ -141,65 +141,9 @@ ParameterName=Producer heartbeat time
 ObjectType=0x7
 DataType=0x0006
 AccessType=rw
-DefaultValue=0x64
+DefaultValue=0x0000
 PDOMapping=0
 ParameterValue=0x0000
-
-[1400]
-ParameterName=RPDO0_Comm
-ObjectType=9
-SubNumber=3
-
-[1400sub0]
-ParameterName=n_Entries
-ObjectType=7
-DataType=5
-AccessType=ro
-PDOMapping=0
-DefaultValue=2
-LowLimit=2
-HighLimit=2
-
-[1400sub1]
-ParameterName=COB-ID
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=0x222
-
-[1400sub2]
-ParameterName=Transmission_Type
-ObjectType=7
-DataType=5
-AccessType=RW
-PDOMapping=0
-DefaultValue=255
-LowLimit=0
-HighLimit=255
-
-[1600]
-ParameterName=RPDO0_Mapping
-ObjectType=9
-SubNumber=2
-
-[1600sub0]
-ParameterName=n_Entries
-ObjectType=7
-DataType=5
-AccessType=RW
-PDOMapping=0
-DefaultValue=1
-LowLimit=0
-HighLimit=4
-
-[1600sub1]
-ParameterName=RPDO0_Map1
-ObjectType=7
-DataType=7
-AccessType=RW
-PDOMapping=0
-DefaultValue=0x60400020
 
 [1800]
 ParameterName=TPDO0_Comm
@@ -219,7 +163,7 @@ ObjectType=7
 DataType=7
 AccessType=RW
 PDOMapping=0
-DefaultValue=$NODEID+1024
+DefaultValue=0x222
 
 [1800sub2]
 ParameterName=Transmission_Type
@@ -265,26 +209,7 @@ ObjectType=7
 DataType=7
 AccessType=RW
 PDOMapping=0
-DefaultValue=0x60410010
-
-[3000]
-ParameterName=Sensor Sampling Rate (Hz)
-ObjectType=0x7
-DataType=0x0008
-AccessType=ro
-DefaultValue=5.2
-PDOMapping=0
-LowLimit=4.5
-ParameterValue=5.200000
-
-[3001]
-CompactSubObj=3
-ParameterName=Sensor Status
-ObjectType=8
-DataType=0x0006
-AccessType=ro
-DefaultValue=3
-PDOMapping=0
+DefaultValue=0x60400020
 
 [6040]
 ParameterName=Correction_Factor
@@ -292,12 +217,4 @@ ObjectType=0x7
 DataType=0x0008
 AccessType=rw
 DefaultValue=1.0
-PDOMapping=0
-
-[6041]
-ParameterName=Sensor_Value
-ObjectType=0x7
-DataType=0x0003
-AccessType=rw
-DefaultValue=75
 PDOMapping=0
