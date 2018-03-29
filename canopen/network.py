@@ -44,6 +44,7 @@ class Network(collections.MutableMapping):
         self.nodes = {}
         self.subscribers = {}
         self.nmt_cmd_subscribers = {}
+        self.pdo_cmd_subscribers = {}
         self.send_lock = threading.Lock()
         self.sync = SyncProducer(self)
         self.time = TimeProducer(self)
@@ -87,9 +88,31 @@ class Network(collections.MutableMapping):
         """Stop listening for nmt commands."""
         del self.nmt_cmd_subscribers[node_id]
 
+    def subscribe_pdo(self, node_id, callback):
+        """Listen for pdo activity on the given node ID.
+
+        More than one callback can be used per node ID.
+
+        :param int node_id:
+            The Node ID to listen for.
+        :param callback:
+            Function to call when message is received.
+        """
+        if node_id in self.pdo_cmd_subscribers:
+            self.pdo_cmd_subscribers[node_id].append(callback)
+        else:
+            self.pdo_cmd_subscribers[node_id] = [callback]
+
+    def unsubscribe_pdo(self, node_id, callback):
+        """Stop notifying a callback about pdo activity of the given node ID"""
+        if node_id in self.pdo_cmd_subscribers:
+            if callback in self.pdo_cmd_subscribers[node_id]:
+                self.pdo_cmd_subscribers[node_id].remove(callback)
+
     def unsubscribe_all(self):
         self.subscribers = {}
         self.nmt_cmd_subscribers = {}
+        self.pdo_cmd_subscribers = {}
 
     def connect(self, *args, **kwargs):
         """Connect to CAN bus using python-can.
@@ -255,6 +278,9 @@ class Network(collections.MutableMapping):
             if can_id in self.subscribers:
                 callback = self.subscribers[can_id]
                 callback(can_id, data, timestamp)
+            if can_id in self.pdo_cmd_subscribers:
+                for callback in self.pdo_cmd_subscribers[can_id]:
+                    callback(can_id, data, timestamp)
             self.scanner.on_message_received(can_id)
 
     def check(self):

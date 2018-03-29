@@ -1,5 +1,5 @@
 import collections
-from itertools import chain
+from itertools import chain as iter_chain
 import logging
 import threading
 
@@ -57,8 +57,8 @@ class PdoNodeBase(collections.Mapping):
         self.tx = {}
 
     def __iter__(self):
-        return chain(iter(sorted(self.rx.keys())),
-                     iter(sorted(self.tx.keys())))
+        return iter_chain(iter(sorted(self.rx.keys())),
+                          iter(sorted(self.tx.keys())))
 
     def __getitem__(self, key):
         if key in self.rx:
@@ -106,7 +106,7 @@ class RemotePdoNode(PdoNodeBase):
         PdoNodeBase.__init__(self, node)
         self.rx = create_pdos(0x1400, 0x1600, self, "Rx", is_remote=True)
         # We only want to observe(sniff) the PDOs of another note, so the
-        # transit PDOs are treated like receive PDOs too
+        # transmit PDOs are treated like receive PDOs too
         self.tx = create_pdos(0x1800, 0x1A00, self, "Rx", is_remote=True)
 
 
@@ -342,8 +342,8 @@ class TPDO(PDOBase):
         do_setup_data_traps = False
         if self.trans_type & self.TT_SYNC_TRIGGERED:
             # Subscribe to the SYNC message
-            self.pdo_node.network.subscribe(0x80, self.on_sync)
-            self.pdo_node.subscriptions.add(0x80)
+            self.pdo_node.network.subscribe_pdo(0x80, self.on_sync)
+            self.pdo_node.subscriptions.add((0x80, self.on_sync))
         if self.trans_type & self.TT_EVENT_TRIGGERED:
             # Register the traps to catch a change of data
             do_setup_data_traps = True
@@ -458,12 +458,12 @@ class RPDO(PDOBase):
 
     def setup(self):
         PDOBase.setup(self)
-        self.pdo_node.network.subscribe(self.cob_id, self.on_message)
-        self.pdo_node.subscriptions.add(self.cob_id)
+        self.pdo_node.network.subscribe_pdo(self.cob_id, self.on_message)
+        self.pdo_node.subscriptions.add((self.cob_id, self.on_message))
 
     def cleanup(self):
-        self.pdo_node.network.unsubscribe(self.cob_id)
-        self.pdo_node.subscriptions.remove(self.cob_id)
+        self.pdo_node.network.unsubscribe_pdo(self.cob_id, self.on_message)
+        self.pdo_node.subscriptions.remove((self.cob_id, self.on_message))
         PDOBase.cleanup(self)
 
     def on_message(self, can_id, data, timestamp):
@@ -543,7 +543,7 @@ class ReadSave():
             self.map.append((index, subindex, length))
 
         if self.enabled:
-            self.pdo_node.network.subscribe(self.cob_id, self.on_message)
+            self.pdo_node.network.subscribe_pdo(self.cob_id, self.on_message)
 
     def save(self):
         """Save PDO configuration for this PDO using SDO."""
@@ -579,7 +579,7 @@ class ReadSave():
         if self.enabled:
             logger.info("Enabling PDO")
             com_record[1].raw = self.cob_id
-            self.pdo_node.network.subscribe(self.cob_id, self.on_message)
+            self.pdo_node.network.subscribe_pdo(self.cob_id, self.on_message)
 
 
 class LocalTPDO(TPDO):

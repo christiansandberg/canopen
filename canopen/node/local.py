@@ -1,5 +1,5 @@
 import logging
-from collections import defaultdict
+import time
 
 from .base import BaseNode
 from ..sdo import SdoServer
@@ -37,11 +37,16 @@ class LocalNode(BaseNode):
         self.pdo.setup()
 
     def remove_network(self):
+        self.nmt.stop_heartbeat()
+        self.pdo.cleanup()
         self.network.unsubscribe(self.sdo.rx_cobid)
         self.network.unsubscribe_nmt_cmd(self.id)
-        for subscription in self.pdo.subscriptions:
-            self.network.unsubscribe(subscription)
-        self.pdo.cleanup()
+        for cob_id, callback in self.pdo.subscriptions:
+            self.network.unsubscribe_pdo(cob_id, callback)
+        # This is required to give the spawned threads enough time to clean
+        # themselves up, otherwise they try to access network, which will be
+        # None -> exceptions
+        time.sleep(0.05)
         self.network = None
         self.sdo.network = None
         self.pdo.network = None

@@ -236,8 +236,9 @@ class NmtSlave(object):
             stop_event.wait(self._heartbeat_time_ms / 1000.0)
             logger.debug("Sending heartbeat, NMT state is  %s", NMT_STATES[self._state])
 
+            can_id = 0x700 + self._id
             try:
-                self.network.send_message(0x700 + self._id, [self._state])
+                self.network.send_message(can_id, [self._state])
             except CanError as e:
                 # We will just try again
-                logger.info("Failed to send heartbeat due to: %s", str(e))
+                logger.warning("Failed to send heartbeat due to: %s", str(e))

@@ -42,10 +42,9 @@ class RemoteNode(BaseNode):
         self.network.unsubscribe(self.sdo.tx_cobid)
         self.network.unsubscribe(0x700 + self.id)
         self.network.unsubscribe(0x80 + self.id)
-        for pdos in (self.pdo.rx, self.pdo.tx):
-            for pdo in pdos.values():
-                for subscription in pdo.subscriptions:
-                    self.network.unsubscribe(subscription)
+        for cob_id, callback in self.pdo.subscriptions:
+            self.network.unsubscribe_pdo(cob_id, callback)
+        self.pdo.cleanup()
         self.network = None
         self.sdo.network = None
         self.pdo.network = None

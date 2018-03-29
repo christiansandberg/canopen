@@ -158,8 +158,8 @@ class SdoClient(collections.Mapping):
             COB-ID that the server receives on (usually 0x600 + node ID)
         :param int tx_cobid:
             COB-ID that the server responds with (usually 0x580 + node ID)
-        :param canopen.ObjectDictionary od:
-            Object Dictionary to use for communication
+        :param canopen.node.RemoteNode node:
+            The node object this SDO belongs to
         """
         self.rx_cobid = rx_cobid
         self.tx_cobid = tx_cobid
