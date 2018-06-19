@@ -56,14 +56,13 @@ class Network(collections.MutableMapping):
     def subscribe(self, can_id, callback):
         """Listen for messages with a specific CAN ID.
 
-        Only one callback can be used per CAN ID.
-
         :param int can_id:
             The CAN ID to listen for.
         :param callback:
             Function to call when message is received.
         """
-        self.subscribers[can_id] = callback
+        self.subscribers.setdefault(can_id, list())
+        self.subscribers[can_id].append(callback)
 
     def unsubscribe(self, can_id):
         """Stop listening for message."""
@@ -196,8 +195,9 @@ class Network(collections.MutableMapping):
             Timestamp of the message, preferably as a Unix timestamp
         """
         if can_id in self.subscribers:
-            callback = self.subscribers[can_id]
-            callback(can_id, data, timestamp)
+            callbacks = self.subscribers[can_id]
+            for callback in callbacks:
+                callback(can_id, data, timestamp)
         self.scanner.on_message_received(can_id)
 
     def check(self):
