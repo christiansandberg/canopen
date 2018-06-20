@@ -237,6 +237,8 @@ class Map(object):
 
     def read(self):
         """Read PDO configuration for this map using SDO."""
+        nof_entries = self.com_record[0].raw
+        logger.info("Fetching %d communication record entries", nof_entries)
         cob_id = self.com_record[1].raw
         self.cob_id = cob_id & 0x7FF
         logger.info("COB-ID is 0x%X", self.cob_id)
@@ -246,7 +248,7 @@ class Map(object):
         logger.info("RTR is %s", "allowed" if self.rtr_allowed else "not allowed")
         self.trans_type = self.com_record[2].raw
         logger.info("Transmission type is %d", self.trans_type)
-        if self.trans_type >= 254:
+        if self.trans_type >= 254 and nof_entries > 2:
             try:
                 self.inhibit_time = self.com_record[3].raw
             except (KeyError, SdoAbortedError) as e:
@@ -270,6 +272,7 @@ class Map(object):
 
         self.clear()
         nof_entries = self.map_array[0].raw
+        logger.info("Fetching %d mapping entries", nof_entries)
         for subindex in range(1, nof_entries + 1):
             value = self.map_array[subindex].raw
             index = value >> 16
