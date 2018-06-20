@@ -154,6 +154,8 @@ class Map(object):
         self.inhibit_time = None
         #: Event timer (optional) (in ms)
         self.event_timer = None
+        #: Ignores SYNC objects up to this SYNC counter value (optional)
+        self.sync_start_value = None
         #: List of variables mapped to this PDO
         self.map = []
         self.length = 0
@@ -259,6 +261,13 @@ class Map(object):
             else:
                 logger.info("Event timer is set to %d ms", self.event_timer)
 
+            try:
+                self.sync_start_value = self.com_record[6].raw
+            except (KeyError, SdoAbortedError) as e:
+                logger.info("Could not read SYNC start value (%s)", e)
+            else:
+                logger.info("SYNC start value is set to %d ms", self.sync_start_value)
+
         self.clear()
         nof_entries = self.map_array[0].raw
         for subindex in range(1, nof_entries + 1):
@@ -291,6 +300,9 @@ class Map(object):
         if self.event_timer is not None:
             logger.info("Setting event timer to %d ms", self.event_timer)
             self.com_record[5].raw = self.event_timer
+        if self.sync_start_value is not None:
+            logger.info("Setting SYNC start value to %d", self.sync_start_value)
+            self.com_record[6].raw = self.sync_start_value
 
         if self.map is not None:
             self.map_array[0].raw = 0
