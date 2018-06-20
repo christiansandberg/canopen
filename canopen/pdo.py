@@ -297,8 +297,8 @@ class Map(object):
             self.map_array[0].raw = 0
             subindex = 1
             for var in self.map:
-                logger.info("Writing %s (0x%X:%d) to PDO map",
-                            var.name, var.od.index, var.od.subindex)
+                logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
+                            var.name, var.od.index, var.od.subindex, var.length)
                 self.map_array[subindex].raw = (var.od.index << 16 |
                                                 var.od.subindex << 8 |
                                                 var.length)
@@ -332,8 +332,8 @@ class Map(object):
         if length is not None:
             # Custom bit length
             var.length = length
-        logger.info("Adding %s (0x%X:%d) to PDO map",
-                    var.name, var.od.index, var.od.subindex)
+        logger.info("Adding %s (0x%X:%d, %d bits) to PDO map",
+                    var.name, var.od.index, var.od.subindex, var.length)
         self.map.append(var)
         self.length += var.length
         self._update_data_size()
