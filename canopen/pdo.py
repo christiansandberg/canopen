@@ -174,9 +174,10 @@ class Map(object):
         else:
             valid_values = []
             for var in self.map:
-                valid_values.append(var.name)
-                if var.name == key:
-                    return var
+                if var.length:
+                    valid_values.append(var.name)
+                    if var.name == key:
+                        return var
         raise KeyError("%s not found in map. Valid entries are %s" % (
             key, ", ".join(valid_values)))
 
