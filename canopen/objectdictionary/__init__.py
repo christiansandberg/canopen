@@ -285,6 +285,9 @@ class Variable(object):
             return data.decode("utf_16_le")
         elif self.data_type in self.STRUCT_TYPES:
             try:
+                needed_bytes = self.STRUCT_TYPES[self.data_type].size
+                if needed_bytes < len(data):
+                    data = bytearray(data)[0:needed_bytes]
                 value, = self.STRUCT_TYPES[self.data_type].unpack(data)
                 return value
             except struct.error:
