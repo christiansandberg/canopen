@@ -74,6 +74,7 @@ class SdoClient(collections.Mapping):
         self.tx_cobid = tx_cobid
         self.network = None
         self.od = od
+        self.pause_before_send = 0.0
         self.responses = queue.Queue()
 
     def on_response(self, can_id, data, timestamp):
@@ -83,6 +84,8 @@ class SdoClient(collections.Mapping):
         retries_left = self.MAX_RETRIES
         while True:
             try:
+                if self.pause_before_send:
+                    time.sleep(self.pause_before_send)
                 self.network.send_message(self.rx_cobid, request)
             except CanError as e:
                 # Could be a buffer overflow. Wait some time before trying again
