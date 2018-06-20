@@ -266,7 +266,8 @@ class Map(object):
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
-            self.add_variable(index, subindex, size)
+            if index and size:
+                self.add_variable(index, subindex, size)
 
         if self.enabled:
             self.pdo_node.network.subscribe(self.cob_id, self.on_message)
