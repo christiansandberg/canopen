@@ -276,6 +276,10 @@ class Map(object):
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
+            if self.pdo_node.node.curtis_hack: # Curtis HACK: mixed up field order
+                index = value & 0xFFFF
+                subindex = (value >> 16) & 0xFF
+                size = (value >> 24) & 0xFF
             if index and size:
                 self.add_variable(index, subindex, size)
 
@@ -312,9 +316,14 @@ class Map(object):
             for var in self.map:
                 logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
                             var.name, var.index, var.subindex, var.length)
-                self.map_array[subindex].raw = (var.index << 16 |
-                                                var.subindex << 8 |
-                                                var.length)
+                if self.pdo_node.node.curtis_hack: # Curtis HACK: mixed up field order
+                    self.map_array[subindex].raw = (var.index |
+                                                    var.subindex << 16 |
+                                                    var.length << 24)
+                else:
+                    self.map_array[subindex].raw = (var.index << 16 |
+                                                    var.subindex << 8 |
+                                                    var.length)
                 subindex += 1
             self.map_array[0].raw = len(self.map)
             self._update_data_size()
