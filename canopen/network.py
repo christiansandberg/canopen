@@ -64,9 +64,19 @@ class Network(collections.MutableMapping):
         self.subscribers.setdefault(can_id, list())
         self.subscribers[can_id].append(callback)
 
-    def unsubscribe(self, can_id):
-        """Stop listening for message."""
-        del self.subscribers[can_id]
+    def unsubscribe(self, can_id, callback=None):
+        """Stop listening for message.
+
+        :param int can_id:
+            The CAN ID from which to unsubscribe.
+        :param callback:
+            If given, remove only this callback.  Otherwise all callbacks for
+            the CAN ID.
+        """
+        if callback is None:
+            del self.subscribers[can_id]
+        else:
+            self.subscribers[can_id].remove(callback)
 
     def connect(self, *args, **kwargs):
         """Connect to CAN bus using python-can.
