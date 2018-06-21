@@ -341,6 +341,9 @@ class Map(object):
         :rtype: canopen.pdo.Variable
         """
         var = self._get_variable(index, subindex)
+        if subindex:
+            # Force given subindex upon variable mapping, for misguided implementations
+            var.subindex = subindex
         var.offset = self.length
         if length is not None:
             # Custom bit length
