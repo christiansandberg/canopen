@@ -287,7 +287,7 @@ class Variable(object):
             try:
                 needed_bytes = self.STRUCT_TYPES[self.data_type].size
                 if needed_bytes < len(data):
-                    data = bytearray(data)[0:needed_bytes]
+                    data = data[0:needed_bytes]
                 value, = self.STRUCT_TYPES[self.data_type].unpack(data)
                 return value
             except struct.error:
