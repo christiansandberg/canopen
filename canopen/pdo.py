@@ -197,6 +197,14 @@ class Map(object):
         var.msg = self
         return var
 
+    def _fill_map(self, needed):
+        logger.info("Filling up fixed-length mapping array")
+        while len(self.map) < needed:
+            obj = objectdictionary.Variable('Dummy', 0, 0)
+            var = Variable(obj)
+            var.length = 0
+            self.map.append(var)
+
     def _update_data_size(self):
         self.data = bytearray(int(math.ceil(self.length / 8.0)))
 
@@ -307,7 +315,11 @@ class Map(object):
             self.com_record[6].raw = self.sync_start_value
 
         if self.map is not None:
-            self.map_array[0].raw = 0
+            try:
+                self.map_array[0].raw = 0
+            except SdoAbortedError:
+                # Curtis HACK: Cannot set array count, fill up with dummy entries
+                self._fill_map(self.map_array[0].raw)
             subindex = 1
             for var in self.map:
                 logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
@@ -316,7 +328,12 @@ class Map(object):
                                                 var.od.subindex << 8 |
                                                 var.length)
                 subindex += 1
-            self.map_array[0].raw = len(self.map)
+            try:
+                self.map_array[0].raw = len(self.map)
+            except SdoAbortedError as e:
+                # Curtis HACK: Cannot set array count
+                if e.code != 0x06010002:
+                    raise
             self._update_data_size()
 
         if self.enabled:
