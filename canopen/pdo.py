@@ -413,10 +413,22 @@ class Variable(common.Variable):
         self.offset = None
         self.name = od.name
         self.length = len(od)
+        self._override_subindex = None
         if isinstance(od.parent, (objectdictionary.Record,
                                   objectdictionary.Array)):
             self.name = od.parent.name + "." + self.name
         common.Variable.__init__(self, od)
+
+    @property
+    def subindex(self):
+        if self._override_subindex is not None:
+            return self._override_subindex
+        else:
+            return self.od.subindex
+
+    @subindex.setter
+    def subindex(self, subindex):
+        self._override_subindex = subindex
 
     def get_data(self):
         """Reads the PDO variable from the last received message.
