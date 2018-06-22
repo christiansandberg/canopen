@@ -62,7 +62,8 @@ class Network(collections.MutableMapping):
             Function to call when message is received.
         """
         self.subscribers.setdefault(can_id, list())
-        self.subscribers[can_id].append(callback)
+        if callback not in self.subscribers[can_id]:
+            self.subscribers[can_id].append(callback)
 
     def unsubscribe(self, can_id, callback=None):
         """Stop listening for message.
