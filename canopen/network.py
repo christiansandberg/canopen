@@ -269,14 +269,13 @@ class PeriodicMessageTask(object):
             New data to transmit
         """
         new_data = bytearray(data)
-        if new_data != self.msg.data:
-            self.msg.data = new_data
-            if hasattr(self._task, "modify_data"):
-                self._task.modify_data(self.msg)
-            else:
-                # Stop and start (will mess up period unfortunately)
-                self._task.stop()
-                self._start()
+        self.msg.data = new_data
+        if hasattr(self._task, "modify_data"):
+            self._task.modify_data(self.msg)
+        elif new_data != self.msg.data:
+            # Stop and start (will mess up period unfortunately)
+            self._task.stop()
+            self._start()
 
 
 class MessageListener(Listener):
