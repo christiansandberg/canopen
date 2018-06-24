@@ -148,8 +148,9 @@ class SdoClient(collections.Mapping):
             When node responds with an error.
         """
         with ReadableStream(self, index, subindex) as fp:
+            size = fp.size
             data = fp.read()
-            if fp.size is None:
+            if size is None:
                 # Node did not specify how many bytes to use
                 # Try to find out using Object Dictionary
                 var = self.od.get_variable(index, subindex)
@@ -158,9 +159,11 @@ class SdoClient(collections.Mapping):
                     # If this is a data type (string, domain etc) the size is
                     # unknown anyway so keep the data as is
                     if var.data_type not in objectdictionary.DATA_TYPES:
-                        # Truncate to the number of bytes of the data type
+                        # Get the size in bytes for this variable
                         size = len(var) // 8
-                        data = data[0:size]
+            if size is not None and len(data) > size:
+                # Got more data than expected. Truncate it to specified size.
+                data = data[0:size]
             return data
 
     def download(self, index, subindex, data, force_segment=False):
