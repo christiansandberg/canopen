@@ -176,9 +176,10 @@ class Map(object):
         else:
             valid_values = []
             for var in self.map:
-                valid_values.append(var.name)
-                if var.name == key:
-                    return var
+                if var.length:
+                    valid_values.append(var.name)
+                    if var.name == key:
+                        return var
         raise KeyError("%s not found in map. Valid entries are %s" % (
             key, ", ".join(valid_values)))
 
@@ -275,7 +276,8 @@ class Map(object):
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
-            self.add_variable(index, subindex, size)
+            if index and size:
+                self.add_variable(index, subindex, size)
 
         if self.enabled:
             self.pdo_node.network.subscribe(self.cob_id, self.on_message)
@@ -308,8 +310,8 @@ class Map(object):
             self.map_array[0].raw = 0
             subindex = 1
             for var in self.map:
-                logger.info("Writing %s (0x%X:%d) to PDO map",
-                            var.name, var.od.index, var.od.subindex)
+                logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
+                            var.name, var.od.index, var.od.subindex, var.length)
                 self.map_array[subindex].raw = (var.od.index << 16 |
                                                 var.od.subindex << 8 |
                                                 var.length)
@@ -343,8 +345,8 @@ class Map(object):
         if length is not None:
             # Custom bit length
             var.length = length
-        logger.info("Adding %s (0x%X:%d) to PDO map",
-                    var.name, var.od.index, var.od.subindex)
+        logger.info("Adding %s (0x%X:%d, %d bits) to PDO map",
+                    var.name, var.od.index, var.od.subindex, var.length)
         self.map.append(var)
         self.length += var.length
         self._update_data_size()
