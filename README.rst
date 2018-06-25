@@ -5,7 +5,7 @@ A Python implementation of the CANopen_ standard.
 The aim of the project is to support the most common parts of the CiA 301
 standard for a master node wrapped in a Pythonic interface.
 
-The library supports Python 2.7 and 3.3+ and runs on Windows, Linux and Mac.
+The library supports Python 2.7 and 3.4+ and runs on Windows, Linux and Mac.
 
 
 Features
@@ -55,17 +55,7 @@ Hardware support
 ----------------
 
 This library supports multiple hardware and drivers through the python-can_ package.
-At the time of writing this includes:
-
-* SocketCAN on Linux
-* Kvaser
-* Peak CAN
-* IXXAT
-* Vector
-* isCAN
-* USB2CAN
-* NI-CAN
-* neoVI
+See `the list of supported devices <https://python-can.readthedocs.io/en/stable/configuration.html#interface-names>`_.
 
 It is also possible to integrate this library with a custom backend.
 
@@ -109,8 +99,9 @@ Here are some quick examples of what you can do:
     node.pdo.read()
     # Re-map TxPDO1
     node.pdo.tx[1].clear()
-    node.pdo.tx[1].add_variable('Application Status', 'Status All')
-    node.pdo.tx[1].add_variable('Actual Speed')
+    node.pdo.tx[1].add_variable('Statusword')
+    node.pdo.tx[1].add_variable('Velocity actual value')
+    node.pdo.tx[1].add_variable('Some group', 'Some subindex')
     node.pdo.tx[1].trans_type = 254
     node.pdo.tx[1].event_timer = 10
     node.pdo.tx[1].enabled = True
@@ -125,7 +116,8 @@ Here are some quick examples of what you can do:
 
     # Read a value from TxPDO1
     node.pdo.tx[1].wait_for_reception()
-    speed = node.pdo['Actual Speed'].phys
+    speed = node.pdo['Velocity actual value'].phys
+    val = node.pdo['Some group.Some subindex'].raw
 
     # Disconnect from CAN bus
     network.sync.stop()
@@ -142,16 +134,6 @@ logging_ level:
 
     import logging
     logging.basicConfig(level=logging.DEBUG)
-
-
-TODO
-----
-
-There are a lot of things that still needs implementing and fixing.
-Pull requests are most welcome!
-
-* More unit test coverage
-* XDD support
 
 
 .. _PyPI: https://pypi.python.org/pypi/canopen
