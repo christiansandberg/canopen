@@ -61,6 +61,9 @@ class SdoClient(collections.Mapping):
     #: Max number of request retries before raising error
     MAX_RETRIES = 1
 
+    #: Seconds to wait before sending a request, for rate limiting
+    PAUSE_BEFORE_SEND = 0.0
+
     def __init__(self, rx_cobid, tx_cobid, od):
         """
         :param int rx_cobid:
@@ -83,6 +86,8 @@ class SdoClient(collections.Mapping):
         retries_left = self.MAX_RETRIES
         while True:
             try:
+                if self.PAUSE_BEFORE_SEND:
+                    time.sleep(self.PAUSE_BEFORE_SEND)
                 self.network.send_message(self.rx_cobid, request)
             except CanError as e:
                 # Could be a buffer overflow. Wait some time before trying again
