@@ -9,6 +9,12 @@ class Variable(object):
 
     def __init__(self, od):
         self.od = od
+        #: Description of this variable from Object Dictionary, overridable
+        self.name = od.name
+        if isinstance(od.parent, (objectdictionary.Record,
+                                  objectdictionary.Array)):
+            # Include the parent object's name for subentries
+            self.name = od.parent.name + "." + od.name
 
     def get_data(self):
         raise NotImplementedError("Variable is not readable")
