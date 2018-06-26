@@ -258,11 +258,11 @@ class Variable(common.Variable):
         common.Variable.__init__(self, od)
 
     def get_data(self):
-        return self.sdo_node.upload(self.od.index, self.od.subindex)
+        return self.sdo_node.upload(self.index, self.subindex)
 
     def set_data(self, data):
         force_segment = self.od.data_type == objectdictionary.DOMAIN
-        self.sdo_node.download(self.od.index, self.od.subindex, data, force_segment)
+        self.sdo_node.download(self.index, self.subindex, data, force_segment)
 
     def read(self, fmt="raw"):
         """Alternative way of reading using a function instead of attributes.
@@ -336,10 +336,10 @@ class Variable(common.Variable):
         if "r" in mode:
             if block_transfer:
                 raw_stream = BlockUploadStream(
-                    self.sdo_node, self.od.index, self.od.subindex)
+                    self.sdo_node, self.index, self.subindex)
             else:
                 raw_stream = ReadableStream(
-                    self.sdo_node, self.od.index, self.od.subindex)
+                    self.sdo_node, self.index, self.subindex)
             if buffering:
                 buffered_stream = io.BufferedReader(raw_stream, buffer_size=buffer_size)
             else:
@@ -347,10 +347,10 @@ class Variable(common.Variable):
         if "w" in mode:
             if block_transfer:
                 raw_stream = BlockDownloadStream(
-                    self.sdo_node, self.od.index, self.od.subindex, size)
+                    self.sdo_node, self.index, self.subindex, size)
             else:
                 raw_stream = WritableStream(
-                    self.sdo_node, self.od.index, self.od.subindex, size)
+                    self.sdo_node, self.index, self.subindex, size)
             if buffering:
                 buffered_stream = io.BufferedWriter(raw_stream, buffer_size=buffer_size)
             else:
