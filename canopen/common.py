@@ -1,6 +1,8 @@
 import logging
 import collections
 
+from . import objectdictionary
+
 
 logger = logging.getLogger(__name__)
 
