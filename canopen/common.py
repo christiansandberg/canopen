@@ -75,7 +75,7 @@ class Variable(object):
         """
         value = self.od.decode_raw(self.data)
         text = "Value of %s (0x%X:%d) is %r" % (
-            self.od.name, self.index,
+            self.name, self.index,
             self.subindex, value)
         if value in self.od.value_descriptions:
             text += " (%s)" % self.od.value_descriptions[value]
@@ -85,7 +85,7 @@ class Variable(object):
     @raw.setter
     def raw(self, value):
         logger.debug("Writing %s (0x%X:%d) = %r",
-                     self.od.name, self.index,
+                     self.name, self.index,
                      self.subindex, value)
         self.data = self.od.encode_raw(value)
 
