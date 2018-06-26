@@ -410,11 +410,7 @@ class Variable(common.Variable):
         self.msg = None
         #: Location of variable in the message in bits
         self.offset = None
-        self.name = od.name
         self.length = len(od)
-        if isinstance(od.parent, (objectdictionary.Record,
-                                  objectdictionary.Array)):
-            self.name = od.parent.name + "." + self.name
         common.Variable.__init__(self, od)
 
     def get_data(self):
