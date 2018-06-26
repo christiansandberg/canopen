@@ -26,10 +26,9 @@ class PdoNode(collections.Mapping):
         self.tx = Maps(0x1800, 0x1A00, self)
 
     def __iter__(self):
-        for pdo_maps in (self.rx, self.tx):
-            for pdo_map in pdo_maps.values():
-                for var in pdo_map.map:
-                    yield var.name
+        for pdo_map in self.rx.values() + self.tx.values():
+            for var in pdo_map.map:
+                yield var.name
 
     def __getitem__(self, key):
         for pdo_map in self.rx.values() + self.tx.values():
@@ -40,22 +39,19 @@ class PdoNode(collections.Mapping):
 
     def __len__(self):
         count = 0
-        for pdo_maps in (self.rx, self.tx):
-            for pdo_map in pdo_maps.values():
-                count += len(pdo_map)
+        for pdo_map in self.rx.values() + self.tx.values():
+            count += len(pdo_map)
         return count
 
     def read(self):
         """Read PDO configuration from node using SDO."""
-        for pdo_maps in (self.rx, self.tx):
-            for pdo_map in pdo_maps.values():
-                pdo_map.read()
+        for pdo_map in self.rx.values() + self.tx.values():
+            pdo_map.read()
 
     def save(self):
         """Save PDO configuration to node using SDO."""
-        for pdo_maps in (self.rx, self.tx):
-            for pdo_map in pdo_maps.values():
-                pdo_map.save()
+        for pdo_map in self.rx.values() + self.tx.values():
+            pdo_map.save()
 
     def export(self, filename):
         """Export current configuration to a database file.
@@ -70,39 +66,38 @@ class PdoNode(collections.Mapping):
         from canmatrix import formats
 
         db = canmatrix.CanMatrix()
-        for pdo_maps in (self.rx, self.tx):
-            for pdo_map in pdo_maps.values():
-                if pdo_map.cob_id is None:
-                    continue
-                frame = canmatrix.Frame(pdo_map.name,
-                                        Id=pdo_map.cob_id,
-                                        extended=0)
-                for var in pdo_map.map:
-                    is_signed = var.od.data_type in objectdictionary.SIGNED_TYPES
-                    is_float = var.od.data_type in objectdictionary.FLOAT_TYPES
-                    min_value = var.od.min
-                    max_value = var.od.max
-                    if min_value is not None:
-                        min_value *= var.od.factor
-                    if max_value is not None:
-                        max_value *= var.od.factor
-                    name = var.name
-                    name = name.replace(" ", "_")
-                    name = name.replace(".", "_")
-                    signal = canmatrix.Signal(name,
-                                              startBit=var.offset,
-                                              signalSize=var.length,
-                                              is_signed=is_signed,
-                                              is_float=is_float,
-                                              factor=var.od.factor,
-                                              min=min_value,
-                                              max=max_value,
-                                              unit=var.od.unit)
-                    for value, desc in var.od.value_descriptions.items():
-                        signal.addValues(value, desc)
-                    frame.addSignal(signal)
-                frame.calcDLC()
-                db.frames.addFrame(frame)
+        for pdo_map in self.rx.values() + self.tx.values():
+            if pdo_map.cob_id is None:
+                continue
+            frame = canmatrix.Frame(pdo_map.name,
+                                    Id=pdo_map.cob_id,
+                                    extended=0)
+            for var in pdo_map.map:
+                is_signed = var.od.data_type in objectdictionary.SIGNED_TYPES
+                is_float = var.od.data_type in objectdictionary.FLOAT_TYPES
+                min_value = var.od.min
+                max_value = var.od.max
+                if min_value is not None:
+                    min_value *= var.od.factor
+                if max_value is not None:
+                    max_value *= var.od.factor
+                name = var.name
+                name = name.replace(" ", "_")
+                name = name.replace(".", "_")
+                signal = canmatrix.Signal(name,
+                                          startBit=var.offset,
+                                          signalSize=var.length,
+                                          is_signed=is_signed,
+                                          is_float=is_float,
+                                          factor=var.od.factor,
+                                          min=min_value,
+                                          max=max_value,
+                                          unit=var.od.unit)
+                for value, desc in var.od.value_descriptions.items():
+                    signal.addValues(value, desc)
+                frame.addSignal(signal)
+            frame.calcDLC()
+            db.frames.addFrame(frame)
         formats.dumpp({"": db}, filename)
         return db
 
