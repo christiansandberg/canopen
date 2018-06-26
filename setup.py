@@ -5,6 +5,10 @@ exec(open('canopen/version.py').read())
 description = open("README.rst").read()
 # Change links to stable documentation
 description = description.replace("/latest/", "/stable/")
+# Change pip install to this exact version
+description = description.replace(
+    "pip install canopen",
+    "pip install canopen==" + __version__)
 
 setup(
     name="canopen",

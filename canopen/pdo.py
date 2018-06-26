@@ -310,9 +310,9 @@ class Map(object):
             subindex = 1
             for var in self.map:
                 logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
-                            var.name, var.od.index, var.od.subindex, var.length)
-                self.map_array[subindex].raw = (var.od.index << 16 |
-                                                var.od.subindex << 8 |
+                            var.name, var.index, var.subindex, var.length)
+                self.map_array[subindex].raw = (var.index << 16 |
+                                                var.subindex << 8 |
                                                 var.length)
                 subindex += 1
             self.map_array[0].raw = len(self.map)
@@ -340,12 +340,15 @@ class Map(object):
         :rtype: canopen.pdo.Variable
         """
         var = self._get_variable(index, subindex)
+        if subindex:
+            # Force given subindex upon variable mapping, for misguided implementations
+            var.subindex = subindex
         var.offset = self.length
         if length is not None:
             # Custom bit length
             var.length = length
         logger.info("Adding %s (0x%X:%d, %d bits) to PDO map",
-                    var.name, var.od.index, var.od.subindex, var.length)
+                    var.name, var.index, var.subindex, var.length)
         self.map.append(var)
         self.length += var.length
         self._update_data_size()
