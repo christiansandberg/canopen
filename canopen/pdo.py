@@ -32,11 +32,10 @@ class PdoNode(collections.Mapping):
                     yield var.name
 
     def __getitem__(self, key):
-        for pdo_maps in (self.rx, self.tx):
-            for pdo_map in pdo_maps.values():
-                for var in pdo_map.map:
-                    if var.name == key:
-                        return var
+        for pdo_map in self.rx.values() + self.tx.values():
+            for var in pdo_map.map:
+                if var.length and var.name == key:
+                    return var
         raise KeyError("%s was not found in any map" % key)
 
     def __len__(self):
@@ -414,11 +413,7 @@ class Variable(common.Variable):
         self.msg = None
         #: Location of variable in the message in bits
         self.offset = None
-        self.name = od.name
         self.length = len(od)
-        if isinstance(od.parent, (objectdictionary.Record,
-                                  objectdictionary.Array)):
-            self.name = od.parent.name + "." + self.name
         common.Variable.__init__(self, od)
 
     def get_data(self):
