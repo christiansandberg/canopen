@@ -32,7 +32,7 @@ class PdoNode(collections.Mapping):
                     yield var.name
 
     def __getitem__(self, key):
-        for pdo_map in (self.rx.values() + self.tx.values()):
+        for pdo_map in self.rx.values() + self.tx.values():
             for var in pdo_map.map:
                 if var.length and var.name == key:
                     return var
