@@ -5,7 +5,7 @@ A Python implementation of the CANopen_ standard.
 The aim of the project is to support the most common parts of the CiA 301
 standard for a master node wrapped in a Pythonic interface.
 
-The library supports Python 2.7 and 3.4+ and runs on Windows, Linux and Mac.
+The library supports Python 2.7 and 3.4+.
 
 
 Features
@@ -136,7 +136,7 @@ logging_ level:
     logging.basicConfig(level=logging.DEBUG)
 
 
-.. _PyPI: https://pypi.python.org/pypi/canopen
+.. _PyPI: https://pypi.org/project/canopen/
 .. _CANopen: https://en.wikipedia.org/wiki/CANopen
 .. _python-can: https://python-can.readthedocs.org/en/stable/
 .. _Sphinx: http://www.sphinx-doc.org/
