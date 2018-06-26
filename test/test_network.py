@@ -48,6 +48,7 @@ class TestNetwork(unittest.TestCase):
             msg = bus.recv(0)
         self.assertIsNotNone(msg)
         self.assertSequenceEqual(msg.data, [4, 5, 6])
+        task.stop()
 
 
 class TestScanner(unittest.TestCase):
