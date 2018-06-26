@@ -9,6 +9,10 @@ class Variable(object):
 
     def __init__(self, od):
         self.od = od
+        #: Holds a local, overridable copy of the Object Index
+        self.index = od.index
+        #: Holds a local, overridable copy of the Object Subindex
+        self.subindex = od.subindex
 
     def get_data(self):
         raise NotImplementedError("Variable is not readable")
@@ -63,8 +67,8 @@ class Variable(object):
         """
         value = self.od.decode_raw(self.data)
         text = "Value of %s (0x%X:%d) is %r" % (
-            self.od.name, self.od.index,
-            self.od.subindex, value)
+            self.od.name, self.index,
+            self.subindex, value)
         if value in self.od.value_descriptions:
             text += " (%s)" % self.od.value_descriptions[value]
         logger.debug(text)
@@ -73,8 +77,8 @@ class Variable(object):
     @raw.setter
     def raw(self, value):
         logger.debug("Writing %s (0x%X:%d) = %r",
-                     self.od.name, self.od.index,
-                     self.od.subindex, value)
+                     self.od.name, self.index,
+                     self.subindex, value)
         self.data = self.od.encode_raw(value)
 
     @property
