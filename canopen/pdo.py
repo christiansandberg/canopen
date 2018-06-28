@@ -167,6 +167,8 @@ class Map(object):
         self.period = None
         self.callbacks = []
         self.receive_condition = threading.Condition()
+        #: Should this object subscribe to the COB ID
+        self.subscribe = True
         self.is_received = False
         self._task = None
 
@@ -235,6 +237,8 @@ class Map(object):
             :class:`~canopen.pdo.Map`.
         """
         self.callbacks.append(callback)
+        # Ensure message handler is registered for our COB ID when saving
+        self.subscribe = True
 
     def read(self):
         """Read PDO configuration for this map using SDO."""
@@ -279,7 +283,8 @@ class Map(object):
             if index and size:
                 self.add_variable(index, subindex, size)
 
-        if self.enabled:
+        if self.enabled and self.subscribe:
+            assert self.cob_id not in self.pdo_node.network.subscribers
             self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
     def save(self):
@@ -322,7 +327,9 @@ class Map(object):
         if self.enabled:
             logger.info("Enabling PDO")
             self.com_record[1].raw = self.cob_id
-            self.pdo_node.network.subscribe(self.cob_id, self.on_message)
+            if self.subscribe:
+                assert self.cob_id not in self.pdo_node.network.subscribers
+                self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
     def clear(self):
         """Clear all variables from this map."""
