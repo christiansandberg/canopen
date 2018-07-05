@@ -198,8 +198,10 @@ class Map(object):
         return var
 
     def _fill_map(self, needed):
+        """Fill up mapping array to required length."""
         logger.info("Filling up fixed-length mapping array")
         while len(self.map) < needed:
+            # Generate a dummy mapping for an invalid object with zero length.
             obj = objectdictionary.Variable('Dummy', 0, 0)
             var = Variable(obj)
             var.length = 0
@@ -318,7 +320,10 @@ class Map(object):
             try:
                 self.map_array[0].raw = 0
             except SdoAbortedError:
-                # Curtis HACK: Cannot set array count, fill up with dummy entries
+                # WORKAROUND for broken implementations: If the array has a
+                # fixed number of entries (count not writable), generate dummy
+                # mappings for an invalid object 0x0000:00 to overwrite any
+                # excess entries with all-zeros.
                 self._fill_map(self.map_array[0].raw)
             subindex = 1
             for var in self.map:
@@ -331,8 +336,12 @@ class Map(object):
             try:
                 self.map_array[0].raw = len(self.map)
             except SdoAbortedError as e:
-                # Curtis HACK: Cannot set array count
+                # WORKAROUND for broken implementations: If the array
+                # number-of-entries parameter is not writable, we have already
+                # generated the required number of mappings above.
                 if e.code != 0x06010002:
+                    # Abort codes other than "Attempt to write a read-only
+                    # object" should still be reported.
                     raise
             self._update_data_size()
 
