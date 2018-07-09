@@ -197,6 +197,16 @@ class Map(object):
         var.msg = self
         return var
 
+    def _fill_map(self, needed):
+        """Fill up mapping array to required length."""
+        logger.info("Filling up fixed-length mapping array")
+        while len(self.map) < needed:
+            # Generate a dummy mapping for an invalid object with zero length.
+            obj = objectdictionary.Variable('Dummy', 0, 0)
+            var = Variable(obj)
+            var.length = 0
+            self.map.append(var)
+
     def _update_data_size(self):
         self.data = bytearray(int(math.ceil(self.length / 8.0)))
 
@@ -307,7 +317,14 @@ class Map(object):
             self.com_record[6].raw = self.sync_start_value
 
         if self.map is not None:
-            self.map_array[0].raw = 0
+            try:
+                self.map_array[0].raw = 0
+            except SdoAbortedError:
+                # WORKAROUND for broken implementations: If the array has a
+                # fixed number of entries (count not writable), generate dummy
+                # mappings for an invalid object 0x0000:00 to overwrite any
+                # excess entries with all-zeros.
+                self._fill_map(self.map_array[0].raw)
             subindex = 1
             for var in self.map:
                 logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
@@ -316,7 +333,16 @@ class Map(object):
                                                 var.subindex << 8 |
                                                 var.length)
                 subindex += 1
-            self.map_array[0].raw = len(self.map)
+            try:
+                self.map_array[0].raw = len(self.map)
+            except SdoAbortedError as e:
+                # WORKAROUND for broken implementations: If the array
+                # number-of-entries parameter is not writable, we have already
+                # generated the required number of mappings above.
+                if e.code != 0x06010002:
+                    # Abort codes other than "Attempt to write a read-only
+                    # object" should still be reported.
+                    raise
             self._update_data_size()
 
         if self.enabled:
