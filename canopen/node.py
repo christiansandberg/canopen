@@ -27,6 +27,9 @@ class Node(object):
 
         self.id = node_id or self.object_dictionary.node_id
 
+        #: Enable WORKAROUND for reversed PDO mapping entries
+        self.curtis_hack = False
+
         self.sdo = SdoClient(0x600 + self.id, 0x580 + self.id, object_dictionary)
         self.pdo = PdoNode(self)
         self.nmt = NmtMaster(self.id)
