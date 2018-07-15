@@ -9,6 +9,7 @@ except ImportError:
     import Queue as queue
 
 from ..network import CanError
+from .. import objectdictionary
 
 from .base import SdoBase
 from .constants import *
@@ -115,7 +116,7 @@ class SdoClient(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        fp = self.open(index, subindex)
+        fp = self.open(index, subindex, buffering=0)
         size = fp.size
         data = fp.read()
         if size is None:

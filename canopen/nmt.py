@@ -152,7 +152,7 @@ class NmtSlave(object):
         self._heartbeat_time_ms = 0
         self._local_node = local_node
 
-    def on_command(self, data, timestamp):
+    def on_command(self, can_id, data, timestamp):
         (cmd, _) = struct.unpack_from("<BB", data)
 
         logger.info("Node %d received command %d", self._id, cmd)

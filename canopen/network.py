@@ -43,7 +43,6 @@ class Network(collections.MutableMapping):
         self.notifier = None
         self.nodes = {}
         self.subscribers = {}
-        self.nmt_cmd_subscribers = {}
         self.send_lock = threading.Lock()
         self.sync = SyncProducer(self)
         self.time = TimeProducer(self)
@@ -80,23 +79,6 @@ class Network(collections.MutableMapping):
             del self.subscribers[can_id]
         else:
             self.subscribers[can_id].remove(callback)
-
-    def subscribe_nmt_cmd(self, node_id, callback):
-        """Listen for nmt commands to a specific node.
-
-        Only one callback can be used per Node ID.
-
-        :param int node_id:
-            The Node ID to listen for.
-        :param callback:
-            Function to call when message is received.
-        """
-        self.nmt_cmd_subscribers[node_id] = callback
-
-    def unsubscribe_nmt_cmd(self, node_id):
-        """Stop listening for nmt commands."""
-        del self.nmt_cmd_subscribers[node_id]
-
 
     def connect(self, *args, **kwargs):
         """Connect to CAN bus using python-can.
