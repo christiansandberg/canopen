@@ -5,7 +5,7 @@ A Python implementation of the CANopen_ standard.
 The aim of the project is to support the most common parts of the CiA 301
 standard for a master node wrapped in a Pythonic interface.
 
-The library supports Python 2.7 and 3.3+ and runs on Windows, Linux and Mac.
+The library supports Python 2.7 and 3.4+.
 
 
 Features
@@ -55,17 +55,7 @@ Hardware support
 ----------------
 
 This library supports multiple hardware and drivers through the python-can_ package.
-At the time of writing this includes:
-
-* SocketCAN on Linux
-* Kvaser
-* Peak CAN
-* IXXAT
-* Vector
-* isCAN
-* USB2CAN
-* NI-CAN
-* neoVI
+See `the list of supported devices <https://python-can.readthedocs.io/en/stable/configuration.html#interface-names>`_.
 
 It is also possible to integrate this library with a custom backend.
 
@@ -84,13 +74,14 @@ Here are some quick examples of what you can do:
     network = canopen.Network()
 
     # Add some nodes with corresponding Object Dictionaries
-    node = network.add_node(6, '/path/to/object_dictionary.eds')
-    network.add_node(7, '/path/to/object_dictionary.eds')
+    network.add_node(6, '/path/to/object_dictionary.eds')
+    node = network[6]
 
     # Connect to the CAN bus
     # Arguments are passed to python-can's can.interface.Bus() constructor
     # (see https://python-can.readthedocs.io/en/latest/bus.html).
-    network.connect(bustype='socketcan', channel='can0')
+    network.connect()
+    # network.connect(bustype='socketcan', channel='can0')
     # network.connect(bustype='kvaser', channel=0, bitrate=250000)
     # network.connect(bustype='pcan', channel='PCAN_USBBUS1', bitrate=250000)
     # network.connect(bustype='ixxat', channel=0, bitrate=250000)
@@ -108,8 +99,9 @@ Here are some quick examples of what you can do:
     node.pdo.read()
     # Re-map TxPDO1
     node.pdo.tx[1].clear()
-    node.pdo.tx[1].add_variable('Application Status', 'Status All')
-    node.pdo.tx[1].add_variable('Actual Speed')
+    node.pdo.tx[1].add_variable('Statusword')
+    node.pdo.tx[1].add_variable('Velocity actual value')
+    node.pdo.tx[1].add_variable('Some group', 'Some subindex')
     node.pdo.tx[1].trans_type = 254
     node.pdo.tx[1].event_timer = 10
     node.pdo.tx[1].enabled = True
@@ -124,7 +116,8 @@ Here are some quick examples of what you can do:
 
     # Read a value from TxPDO1
     node.pdo.tx[1].wait_for_reception()
-    speed = node.pdo['Actual Speed'].phys
+    speed = node.pdo['Velocity actual value'].phys
+    val = node.pdo['Some group.Some subindex'].raw
 
     # Disconnect from CAN bus
     network.sync.stop()
@@ -135,27 +128,15 @@ Debugging
 ---------
 
 If you need to see what's going on in better detail, you can increase the
-logging_ level of this library and possibly for python-can as well:
+logging_ level:
 
 .. code-block:: python
 
     import logging
-    logging.getLogger('canopen').setLevel(logging.DEBUG)
-    logging.getLogger('can').setLevel(logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
 
 
-TODO
-----
-
-There are a lot of things that still needs implementing and fixing.
-Pull requests are most welcome!
-
-* More unit test coverage
-* Period transmits using python-can cyclic API
-* XDD support
-
-
-.. _PyPI: https://pypi.python.org/pypi/canopen
+.. _PyPI: https://pypi.org/project/canopen/
 .. _CANopen: https://en.wikipedia.org/wiki/CANopen
 .. _python-can: https://python-can.readthedocs.org/en/stable/
 .. _Sphinx: http://www.sphinx-doc.org/

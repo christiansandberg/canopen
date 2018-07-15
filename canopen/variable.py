@@ -1,6 +1,8 @@
 import logging
 import collections
 
+from . import objectdictionary
+
 
 logger = logging.getLogger(__name__)
 
@@ -9,6 +11,16 @@ class Variable(object):
 
     def __init__(self, od):
         self.od = od
+        #: Description of this variable from Object Dictionary, overridable
+        self.name = od.name
+        if isinstance(od.parent, (objectdictionary.Record,
+                                  objectdictionary.Array)):
+            # Include the parent object's name for subentries
+            self.name = od.parent.name + "." + od.name
+        #: Holds a local, overridable copy of the Object Index
+        self.index = od.index
+        #: Holds a local, overridable copy of the Object Subindex
+        self.subindex = od.subindex
 
     def get_data(self):
         raise NotImplementedError("Variable is not readable")
@@ -59,8 +71,8 @@ class Variable(object):
         """
         value = self.od.decode_raw(self.data)
         text = "Value of %s (0x%X:%d) is %r" % (
-            self.od.name, self.od.index,
-            self.od.subindex, value)
+            self.name, self.index,
+            self.subindex, value)
         if value in self.od.value_descriptions:
             text += " (%s)" % self.od.value_descriptions[value]
         logger.debug(text)
@@ -69,8 +81,8 @@ class Variable(object):
     @raw.setter
     def raw(self, value):
         logger.debug("Writing %s (0x%X:%d) = %r",
-                     self.od.name, self.od.index,
-                     self.od.subindex, value)
+                     self.name, self.index,
+                     self.subindex, value)
         self.data = self.od.encode_raw(value)
 
     @property

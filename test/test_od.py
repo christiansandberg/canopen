@@ -56,6 +56,7 @@ class TestDataConversions(unittest.TestCase):
         var = od.Variable("Test VISIBLE_STRING", 0x1000)
         var.data_type = od.VISIBLE_STRING
         self.assertEqual(var.decode_raw(b"abcdefg"), "abcdefg")
+        self.assertEqual(var.decode_raw(b"zero terminated\x00"), "zero terminated")
         self.assertEqual(var.encode_raw("testing"), b"testing")
 
 

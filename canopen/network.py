@@ -58,18 +58,28 @@ class Network(collections.MutableMapping):
     def subscribe(self, can_id, callback):
         """Listen for messages with a specific CAN ID.
 
-        Only one callback can be used per CAN ID.
-
         :param int can_id:
             The CAN ID to listen for.
         :param callback:
             Function to call when message is received.
         """
-        self.subscribers[can_id] = callback
+        self.subscribers.setdefault(can_id, list())
+        if callback not in self.subscribers[can_id]:
+            self.subscribers[can_id].append(callback)
 
-    def unsubscribe(self, can_id):
-        """Stop listening for message."""
-        del self.subscribers[can_id]
+    def unsubscribe(self, can_id, callback=None):
+        """Stop listening for message.
+
+        :param int can_id:
+            The CAN ID from which to unsubscribe.
+        :param callback:
+            If given, remove only this callback.  Otherwise all callbacks for
+            the CAN ID.
+        """
+        if callback is None:
+            del self.subscribers[can_id]
+        else:
+            self.subscribers[can_id].remove(callback)
 
     def subscribe_nmt_cmd(self, node_id, callback):
         """Listen for nmt commands to a specific node.
@@ -234,25 +244,11 @@ class Network(collections.MutableMapping):
         :param float timestamp:
             Timestamp of the message, preferably as a Unix timestamp
         """
-
-        # NMT commands is sent out with can_id = 0
-        if can_id == 0:
-            (_, node_id) = struct.unpack_from("<BB", data)
-
-            # Broadcast has node-id = 0
-            if node_id == 0:
-                for subscriber_id in self.nmt_cmd_subscribers:
-                    callback = self.nmt_cmd_subscribers[subscriber_id]
-                    callback(data, timestamp)
-
-            elif node_id in self.nmt_cmd_subscribers:
-                callback = self.nmt_cmd_subscribers[node_id]
-                callback(data, timestamp)
-        else:
-            if can_id in self.subscribers:
-                callback = self.subscribers[can_id]
+        if can_id in self.subscribers:
+            callbacks = self.subscribers[can_id]
+            for callback in callbacks:
                 callback(can_id, data, timestamp)
-            self.scanner.on_message_received(can_id)
+        self.scanner.on_message_received(can_id)
 
     def check(self):
         """Check that no fatal error has occurred in the receiving thread.
@@ -322,10 +318,12 @@ class PeriodicMessageTask(object):
         :param data:
             New data to transmit
         """
-        self.msg.data = bytearray(data)
+        new_data = bytearray(data)
+        old_data = self.msg.data
+        self.msg.data = new_data
         if hasattr(self._task, "modify_data"):
             self._task.modify_data(self.msg)
-        else:
+        elif new_data != old_data:
             # Stop and start (will mess up period unfortunately)
             self._task.stop()
             self._start()
