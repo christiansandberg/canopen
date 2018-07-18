@@ -46,7 +46,7 @@ def import_eds(source, node_id):
             except NoOptionError:
                 # DS306 4.6.3.2 object description
                 # If the keyword ObjectType is missing, this is regarded as
-                # “ObjectType=0x7” (=VAR).
+                # "ObjectType=0x7" (=VAR).
                 object_type = 7
 
             if object_type == VAR:
