@@ -47,7 +47,7 @@ def import_eds(source, node_id):
                 # DS306 4.6.3.2 object description
                 # If the keyword ObjectType is missing, this is regarded as
                 # "ObjectType=0x7" (=VAR).
-                object_type = 7
+                object_type = VAR
 
             if object_type == VAR:
                 var = build_variable(eds, section, node_id, index)
