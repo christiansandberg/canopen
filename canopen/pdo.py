@@ -22,8 +22,8 @@ class PdoNode(collections.Mapping):
     def __init__(self, node):
         self.network = None
         self.node = node
-        self.rx = Maps(0x1400, 0x1600, self)
-        self.tx = Maps(0x1800, 0x1A00, self)
+        self.rx = Maps(0x1400, 0x1600, self, 0x200)
+        self.tx = Maps(0x1800, 0x1A00, self, 0x180)
 
     def __iter__(self):
         for pdo_maps in (self.rx, self.tx):
@@ -116,14 +116,18 @@ class PdoNode(collections.Mapping):
 class Maps(collections.Mapping):
     """A collection of transmit or receive maps."""
 
-    def __init__(self, com_offset, map_offset, pdo_node):
+    def __init__(self, com_offset, map_offset, pdo_node, cob_base=None):
         self.maps = {}
         for map_no in range(128):
             if com_offset + map_no in pdo_node.node.object_dictionary:
-                self.maps[map_no + 1] = Map(
+                new_map = Map(
                     pdo_node,
                     pdo_node.node.sdo[com_offset + map_no],
                     pdo_node.node.sdo[map_offset + map_no])
+                # Generate default COB-IDs for predefined connection set
+                if cob_base is not None and map_no < 4:
+                    new_map.predefined_cob_id = cob_base + map_no * 0x100 + pdo_node.node.id
+                self.maps[map_no + 1] = new_map
 
     def __getitem__(self, key):
         return self.maps[key]
@@ -146,6 +150,8 @@ class Map(object):
         self.enabled = False
         #: COB-ID for this PDO
         self.cob_id = None
+        #: Default COB-ID if this PDO is part of the pre-defined connection set
+        self.predefined_cob_id = None
         #: Is the remote transmit request (RTR) allowed for this PDO
         self.rtr_allowed = True
         #: Transmission type (0-255)
