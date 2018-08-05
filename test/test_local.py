@@ -122,34 +122,6 @@ class TestSDO(unittest.TestCase):
         device_name = self.remote_node2.sdo["Manufacturer device name"].data
         self.assertEqual(device_name, b"Some cool device2")
 
-    def test_start_two_remote_nodes(self):
-        self.remote_node.nmt.state = 'OPERATIONAL'
-        # Line below is just so that we are sure the client have received the command
-        # before we do the check
-        time.sleep(0.1)
-        slave_state = self.local_node.nmt.state
-        self.assertEqual(slave_state, 'OPERATIONAL')
-
-        self.remote_node2.nmt.state = 'OPERATIONAL'
-        # Line below is just so that we are sure the client have received the command
-        # before we do the check
-        time.sleep(0.1)
-        slave_state = self.local_node2.nmt.state
-        self.assertEqual(slave_state, 'OPERATIONAL')
-
-    def test_stop_two_remote_nodes_using_broadcast(self):
-        # This is a NMT broadcast "Stop remote node"
-        # ie. set the node in STOPPED state
-        self.network1.send_message(0, [2, 0])
-
-        # Line below is just so that we are sure the slaves have received the command
-        # before we do the check
-        time.sleep(0.1)
-        slave_state = self.local_node.nmt.state
-        self.assertEqual(slave_state, 'STOPPED')
-        slave_state = self.local_node2.nmt.state
-        self.assertEqual(slave_state, 'STOPPED')
-
     def test_abort(self):
         with self.assertRaises(canopen.SdoAbortedError) as cm:
             _ = self.remote_node.sdo.upload(0x1234, 0)
@@ -187,6 +159,68 @@ class TestSDO(unittest.TestCase):
         self.assertEqual(self._kwargs["index"], 0x1003)
         self.assertEqual(self._kwargs["subindex"], 6)
         self.assertEqual(self._kwargs["data"], b"\x03\x04\x05\x06")
+
+
+
+class TestNMT(unittest.TestCase):
+    """
+    Test NMT slave.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.network1 = canopen.Network()
+        cls.network1.connect("test", bustype="virtual")
+        cls.remote_node = cls.network1.add_node(2, EDS_PATH)
+
+        cls.network2 = canopen.Network()
+        cls.network2.connect("test", bustype="virtual")
+        cls.local_node = cls.network2.create_node(2, EDS_PATH)
+
+        cls.remote_node2 = cls.network1.add_node(3, EDS_PATH)
+
+        cls.local_node2 = cls.network2.create_node(3, EDS_PATH)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.network1.disconnect()
+        cls.network2.disconnect()
+
+    def test_start_two_remote_nodes(self):
+        self.remote_node.nmt.state = 'OPERATIONAL'
+        # Line below is just so that we are sure the client have received the command
+        # before we do the check
+        time.sleep(0.1)
+        slave_state = self.local_node.nmt.state
+        self.assertEqual(slave_state, 'OPERATIONAL')
+
+        self.remote_node2.nmt.state = 'OPERATIONAL'
+        # Line below is just so that we are sure the client have received the command
+        # before we do the check
+        time.sleep(0.1)
+        slave_state = self.local_node2.nmt.state
+        self.assertEqual(slave_state, 'OPERATIONAL')
+
+    def test_stop_two_remote_nodes_using_broadcast(self):
+        # This is a NMT broadcast "Stop remote node"
+        # ie. set the node in STOPPED state
+        self.network1.send_message(0, [2, 0])
+
+        # Line below is just so that we are sure the slaves have received the command
+        # before we do the check
+        time.sleep(0.1)
+        slave_state = self.local_node.nmt.state
+        self.assertEqual(slave_state, 'STOPPED')
+        slave_state = self.local_node2.nmt.state
+        self.assertEqual(slave_state, 'STOPPED')
+
+    def test_heartbeat(self):
+        #self.assertEqual(self.remote_node.nmt.state, 'INITIALISING')
+        #self.assertEqual(self.local_node.nmt.state, 'INITIALISING')
+        self.local_node.nmt.state = 'OPERATIONAL'
+        self.local_node.sdo[0x1017].raw = 100
+        time.sleep(0.2)
+        self.assertEqual(self.remote_node.nmt.state, 'OPERATIONAL')
 
 
 if __name__ == "__main__":
