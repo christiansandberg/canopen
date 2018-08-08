@@ -136,7 +136,7 @@ class NmtMaster(object):
     def start_node_guarding(self, period):
         """Starts the node guarding mechanism."""        
         self._node_guarding_producer = self.network.send_periodic(0x700 + self.id, None, period, True)
-        
+
     def stop_node_guarding(self):
         """Stops the node guarding mechanism."""
         self._node_guarding_producer.stop()
