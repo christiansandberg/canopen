@@ -3,9 +3,9 @@ import io
 import logging
 import copy
 try:
-    from configparser import RawConfigParser
+    from configparser import RawConfigParser, NoOptionError
 except ImportError:
-    from ConfigParser import RawConfigParser
+    from ConfigParser import RawConfigParser, NoOptionError
 from canopen import objectdictionary
 from canopen.sdo import SdoClient
 
@@ -42,7 +42,13 @@ def import_eds(source, node_id):
         if match is not None:
             index = int(section, 16)
             name = eds.get(section, "ParameterName")
-            object_type = int(eds.get(section, "ObjectType"), 0)
+            try:
+                object_type = int(eds.get(section, "ObjectType"), 0)
+            except NoOptionError:
+                # DS306 4.6.3.2 object description
+                # If the keyword ObjectType is missing, this is regarded as
+                # "ObjectType=0x7" (=VAR).
+                object_type = VAR
 
             if object_type == VAR:
                 var = build_variable(eds, section, node_id, index)

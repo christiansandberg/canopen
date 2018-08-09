@@ -31,7 +31,10 @@ setup(
         "Intended Audience :: Developers",
         "Topic :: Scientific/Engineering"
     ],
-    install_requires=["python-can>=2.0.0", "canmatrix"],
+    install_requires=["python-can>=2.0.0"],
+    extras_require={
+        "db_export": ["canmatrix"]
+    },
     include_package_data=True,
 
     # Tests can be run using `python setup.py test`
