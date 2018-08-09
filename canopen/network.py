@@ -176,7 +176,7 @@ class Network(collections.MutableMapping):
             self.bus.send(msg)
         self.check()
 
-    def send_periodic(self, can_id, data, period):
+    def send_periodic(self, can_id, data, period, remote=False):
         """Start sending a message periodically.
 
         :param int can_id:
@@ -185,12 +185,14 @@ class Network(collections.MutableMapping):
             Data to be transmitted (anything that can be converted to bytes)
         :param float period:
             Seconds between each message
+        :param bool remote:
+            indicates if the message frame is a remote request to the slave node
 
         :return:
             An task object with a ``.stop()`` method to stop the transmission
         :rtype: canopen.network.PeriodicMessageTask
         """
-        return PeriodicMessageTask(can_id, data, period, self.bus)
+        return PeriodicMessageTask(can_id, data, period, self.bus, remote)
 
     def notify(self, can_id, data, timestamp):
         """Feed incoming message to this library.
@@ -247,7 +249,7 @@ class PeriodicMessageTask(object):
     CyclicSendTask
     """
 
-    def __init__(self, can_id, data, period, bus):
+    def __init__(self, can_id, data, period, bus, remote=False):
         """
         :param int can_id:
             CAN-ID of the message (always 11-bit)
@@ -262,7 +264,7 @@ class PeriodicMessageTask(object):
         self.period = period
         self.msg = can.Message(extended_id=False,
                                arbitration_id=can_id,
-                               data=data)
+                               data=data, is_remote_frame=remote)
         self._task = None
         self._start()
 
