@@ -9,6 +9,7 @@ except ImportError:
     import Queue as queue
 
 from ..network import CanError
+from .. import objectdictionary
 
 from .base import SdoBase
 from .constants import *
@@ -26,6 +27,9 @@ class SdoClient(SdoBase):
 
     #: Max number of request retries before raising error
     MAX_RETRIES = 1
+
+    #: Seconds to wait before sending a request, for rate limiting
+    PAUSE_BEFORE_SEND = 0.0
 
     def __init__(self, rx_cobid, tx_cobid, od):
         """
@@ -46,6 +50,8 @@ class SdoClient(SdoBase):
         retries_left = self.MAX_RETRIES
         while True:
             try:
+                if self.PAUSE_BEFORE_SEND:
+                    time.sleep(self.PAUSE_BEFORE_SEND)
                 self.network.send_message(self.rx_cobid, request)
             except CanError as e:
                 # Could be a buffer overflow. Wait some time before trying again
@@ -110,9 +116,23 @@ class SdoClient(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        fp = self.open(index, subindex)
+        fp = self.open(index, subindex, buffering=0)
+        size = fp.size
         data = fp.read()
-        fp.close()
+        if size is None:
+            # Node did not specify how many bytes to use
+            # Try to find out using Object Dictionary
+            var = self.od.get_variable(index, subindex)
+            if var is not None:
+                # Found a matching variable in OD
+                # If this is a data type (string, domain etc) the size is
+                # unknown anyway so keep the data as is
+                if var.data_type not in objectdictionary.DATA_TYPES:
+                    # Get the size in bytes for this variable
+                    size = len(var) // 8
+        if size is not None and len(data) > size:
+            # Got more data than expected. Truncate it to specified size.
+            data = data[0:size]
         return data
 
     def download(self, index, subindex, data, force_segment=False):

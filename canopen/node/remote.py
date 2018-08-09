@@ -19,6 +19,9 @@ class RemoteNode(BaseNode):
     def __init__(self, node_id, object_dictionary):
         super(RemoteNode, self).__init__(node_id, object_dictionary)
 
+        #: Enable WORKAROUND for reversed PDO mapping entries
+        self.curtis_hack = False
+
         self.sdo = SdoClient(0x600 + self.id, 0x580 + self.id,
                              self.object_dictionary)
         self.pdo = PdoNode(self)
@@ -35,9 +38,9 @@ class RemoteNode(BaseNode):
         network.subscribe(0x80 + self.id, self.emcy.on_emcy)
 
     def remove_network(self):
-        self.network.unsubscribe(self.sdo.tx_cobid)
-        self.network.unsubscribe(0x700 + self.id)
-        self.network.unsubscribe(0x80 + self.id)
+        self.network.unsubscribe(self.sdo.tx_cobid, self.sdo.on_response)
+        self.network.unsubscribe(0x700 + self.id, self.nmt.on_heartbeat)
+        self.network.unsubscribe(0x80 + self.id, self.emcy.on_emcy)
         self.network = None
         self.sdo.network = None
         self.pdo.network = None

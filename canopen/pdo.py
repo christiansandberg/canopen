@@ -22,8 +22,8 @@ class PdoNode(collections.Mapping):
     def __init__(self, node):
         self.network = None
         self.node = node
-        self.rx = Maps(0x1400, 0x1600, self)
-        self.tx = Maps(0x1800, 0x1A00, self)
+        self.rx = Maps(0x1400, 0x1600, self, 0x200)
+        self.tx = Maps(0x1800, 0x1A00, self, 0x180)
 
     def __iter__(self):
         for pdo_maps in (self.rx, self.tx):
@@ -35,7 +35,7 @@ class PdoNode(collections.Mapping):
         for pdo_maps in (self.rx, self.tx):
             for pdo_map in pdo_maps.values():
                 for var in pdo_map.map:
-                    if var.name == key:
+                    if var.length and var.name == key:
                         return var
         raise KeyError("%s was not found in any map" % key)
 
@@ -116,23 +116,18 @@ class PdoNode(collections.Mapping):
 class Maps(collections.Mapping):
     """A collection of transmit or receive maps."""
 
-    def __init__(self, com_offset, map_offset, pdo_node):
+    def __init__(self, com_offset, map_offset, pdo_node, cob_base=None):
         self.maps = {}
         for map_no in range(128):
             if com_offset + map_no in pdo_node.node.object_dictionary:
-                if com_offset == 0x1800:
-                    # Transmit PDO
-                    cob_id = 0x180
-                else:
-                    # Receive PDO
-                    cob_id = 0x200
-                cob_id += 0x100 * min(map_no, 3)
-                cob_id += pdo_node.node.id
-                self.maps[map_no + 1] = Map(
-                    cob_id,
+                new_map = Map(
                     pdo_node,
                     pdo_node.node.sdo[com_offset + map_no],
                     pdo_node.node.sdo[map_offset + map_no])
+                # Generate default COB-IDs for predefined connection set
+                if cob_base is not None and map_no < 4:
+                    new_map.predefined_cob_id = cob_base + map_no * 0x100 + pdo_node.node.id
+                self.maps[map_no + 1] = new_map
 
     def __getitem__(self, key):
         return self.maps[key]
@@ -147,14 +142,16 @@ class Maps(collections.Mapping):
 class Map(object):
     """One message which can have up to 8 bytes of variables mapped."""
 
-    def __init__(self, cob_id, pdo_node, com_record, map_array):
+    def __init__(self, pdo_node, com_record, map_array):
         self.pdo_node = pdo_node
         self.com_record = com_record
         self.map_array = map_array
         #: If this map is valid
         self.enabled = False
         #: COB-ID for this PDO
-        self.cob_id = cob_id
+        self.cob_id = None
+        #: Default COB-ID if this PDO is part of the pre-defined connection set
+        self.predefined_cob_id = None
         #: Is the remote transmit request (RTR) allowed for this PDO
         self.rtr_allowed = True
         #: Transmission type (0-255)
@@ -163,6 +160,8 @@ class Map(object):
         self.inhibit_time = None
         #: Event timer (optional) (in ms)
         self.event_timer = None
+        #: Ignores SYNC objects up to this SYNC counter value (optional)
+        self.sync_start_value = None
         #: List of variables mapped to this PDO
         self.map = []
         self.length = 0
@@ -183,9 +182,10 @@ class Map(object):
         else:
             valid_values = []
             for var in self.map:
-                valid_values.append(var.name)
-                if var.name == key:
-                    return var
+                if var.length:
+                    valid_values.append(var.name)
+                    if var.name == key:
+                        return var
         raise KeyError("%s not found in map. Valid entries are %s" % (
             key, ", ".join(valid_values)))
 
@@ -202,6 +202,16 @@ class Map(object):
         var = Variable(obj)
         var.msg = self
         return var
+
+    def _fill_map(self, needed):
+        """Fill up mapping array to required length."""
+        logger.info("Filling up fixed-length mapping array")
+        while len(self.map) < needed:
+            # Generate a dummy mapping for an invalid object with zero length.
+            obj = objectdictionary.Variable('Dummy', 0, 0)
+            var = Variable(obj)
+            var.length = 0
+            self.map.append(var)
 
     def _update_data_size(self):
         self.data = bytearray(int(math.ceil(self.length / 8.0)))
@@ -268,6 +278,13 @@ class Map(object):
             else:
                 logger.info("Event timer is set to %d ms", self.event_timer)
 
+            try:
+                self.sync_start_value = self.com_record[6].raw
+            except (KeyError, SdoAbortedError) as e:
+                logger.info("Could not read SYNC start value (%s)", e)
+            else:
+                logger.info("SYNC start value is set to %d ms", self.sync_start_value)
+
         self.clear()
         nof_entries = self.map_array[0].raw
         for subindex in range(1, nof_entries + 1):
@@ -275,7 +292,12 @@ class Map(object):
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
-            self.add_variable(index, subindex, size)
+            if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack: # Curtis HACK: mixed up field order
+                index = value & 0xFFFF
+                subindex = (value >> 16) & 0xFF
+                size = (value >> 24) & 0xFF
+            if index and size:
+                self.add_variable(index, subindex, size)
 
         if self.enabled:
             self.pdo_node.network.subscribe(self.cob_id, self.on_message)
@@ -294,18 +316,42 @@ class Map(object):
         if self.event_timer is not None:
             logger.info("Setting event timer to %d ms", self.event_timer)
             self.com_record[5].raw = self.event_timer
+        if self.sync_start_value is not None:
+            logger.info("Setting SYNC start value to %d", self.sync_start_value)
+            self.com_record[6].raw = self.sync_start_value
 
         if self.map is not None:
-            self.map_array[0].raw = 0
+            try:
+                self.map_array[0].raw = 0
+            except SdoAbortedError:
+                # WORKAROUND for broken implementations: If the array has a
+                # fixed number of entries (count not writable), generate dummy
+                # mappings for an invalid object 0x0000:00 to overwrite any
+                # excess entries with all-zeros.
+                self._fill_map(self.map_array[0].raw)
             subindex = 1
             for var in self.map:
-                logger.info("Writing %s (0x%X:%d) to PDO map",
-                            var.name, var.od.index, var.od.subindex)
-                self.map_array[subindex].raw = (var.od.index << 16 |
-                                                var.od.subindex << 8 |
-                                                var.length)
+                logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
+                            var.name, var.index, var.subindex, var.length)
+                if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack: # Curtis HACK: mixed up field order
+                    self.map_array[subindex].raw = (var.index |
+                                                    var.subindex << 16 |
+                                                    var.length << 24)
+                else:
+                    self.map_array[subindex].raw = (var.index << 16 |
+                                                    var.subindex << 8 |
+                                                    var.length)
                 subindex += 1
-            self.map_array[0].raw = len(self.map)
+            try:
+                self.map_array[0].raw = len(self.map)
+            except SdoAbortedError as e:
+                # WORKAROUND for broken implementations: If the array
+                # number-of-entries parameter is not writable, we have already
+                # generated the required number of mappings above.
+                if e.code != 0x06010002:
+                    # Abort codes other than "Attempt to write a read-only
+                    # object" should still be reported.
+                    raise
             self._update_data_size()
 
         if self.enabled:
@@ -331,20 +377,20 @@ class Map(object):
         """
         try:
             var = self._get_variable(index, subindex)
+            if subindex:
+                # Force given subindex upon variable mapping, for misguided implementations
+                var.subindex = subindex
             var.offset = self.length
             if length is not None:
                 # Custom bit length
                 var.length = length
-            else:
-                length = var.length
-            logger.info("Adding %s (0x%X:%d) to PDO map",
-                        var.name, var.od.index, var.od.subindex)
+            logger.info("Adding %s (0x%X:%d, %d bits) to PDO map",
+                        var.name, var.index, var.subindex, var.length)
             self.map.append(var)
+            self.length += var.length
         except KeyError as exc:
             logger.warning("%s", exc)
             var = None
-
-        self.length += length
         self._update_data_size()
         if self.length > 64:
             logger.warning("Max size of PDO exceeded (%d > 64)", self.length)
@@ -407,11 +453,7 @@ class Variable(variable.Variable):
         self.msg = None
         #: Location of variable in the message in bits
         self.offset = None
-        self.name = od.name
         self.length = len(od)
-        if isinstance(od.parent, (objectdictionary.Record,
-                                  objectdictionary.Array)):
-            self.name = od.parent.name + "." + self.name
         variable.Variable.__init__(self, od)
 
     def get_data(self):

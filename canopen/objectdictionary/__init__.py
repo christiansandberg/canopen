@@ -92,6 +92,18 @@ class ObjectDictionary(collections.MutableMapping):
         self.indices[obj.index] = obj
         self.names[obj.name] = obj
 
+    def get_variable(self, index, subindex=0):
+        """Get the variable object at specified index (and subindex if applicable).
+
+        :return: Variable if found, else `None`
+        :rtype: canopen.objectdictionary.Variable
+        """
+        obj = self.get(index)
+        if isinstance(obj, Variable):
+            return obj
+        elif isinstance(obj, (Record, Array)):
+            return obj.get(subindex)
+
 
 class Record(collections.MutableMapping):
     """Groups multiple :class:`~canopen.objectdictionary.Variable` objects using
@@ -279,10 +291,10 @@ class Variable(object):
 
     def decode_raw(self, data):
         if self.data_type == VISIBLE_STRING:
-            return data.decode("ascii")
+            return data.rstrip(b"\x00").decode("ascii", errors="ignore")
         elif self.data_type == UNICODE_STRING:
             # Is this correct?
-            return data.decode("utf_16_le")
+            return data.rstrip(b"\x00").decode("utf_16_le", errors="ignore")
         elif self.data_type in self.STRUCT_TYPES:
             try:
                 value, = self.STRUCT_TYPES[self.data_type].unpack(data)

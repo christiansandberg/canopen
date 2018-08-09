@@ -11,9 +11,14 @@ class SyncProducer(object):
         self.period = None
         self._task = None
 
-    def transmit(self):
-        """Send out a SYNC message once."""
-        self.network.send_message(self.cob_id, [])
+    def transmit(self, count=None):
+        """Send out a SYNC message once.
+
+        :param int count:
+            Counter to add in message.
+        """
+        data = [count] if count is not None else []
+        self.network.send_message(self.cob_id, data)
 
     def start(self, period=None):
         """Start periodic transmission of SYNC message in a background thread.

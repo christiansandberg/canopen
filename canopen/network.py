@@ -43,7 +43,6 @@ class Network(collections.MutableMapping):
         self.notifier = None
         self.nodes = {}
         self.subscribers = {}
-        self.nmt_cmd_subscribers = {}
         self.send_lock = threading.Lock()
         self.sync = SyncProducer(self)
         self.time = TimeProducer(self)
@@ -58,35 +57,28 @@ class Network(collections.MutableMapping):
     def subscribe(self, can_id, callback):
         """Listen for messages with a specific CAN ID.
 
-        Only one callback can be used per CAN ID.
-
         :param int can_id:
             The CAN ID to listen for.
         :param callback:
             Function to call when message is received.
         """
-        self.subscribers[can_id] = callback
+        self.subscribers.setdefault(can_id, list())
+        if callback not in self.subscribers[can_id]:
+            self.subscribers[can_id].append(callback)
 
-    def unsubscribe(self, can_id):
-        """Stop listening for message."""
-        del self.subscribers[can_id]
+    def unsubscribe(self, can_id, callback=None):
+        """Stop listening for message.
 
-    def subscribe_nmt_cmd(self, node_id, callback):
-        """Listen for nmt commands to a specific node.
-
-        Only one callback can be used per Node ID.
-
-        :param int node_id:
-            The Node ID to listen for.
+        :param int can_id:
+            The CAN ID from which to unsubscribe.
         :param callback:
-            Function to call when message is received.
+            If given, remove only this callback.  Otherwise all callbacks for
+            the CAN ID.
         """
-        self.nmt_cmd_subscribers[node_id] = callback
-
-    def unsubscribe_nmt_cmd(self, node_id):
-        """Stop listening for nmt commands."""
-        del self.nmt_cmd_subscribers[node_id]
-
+        if callback is None:
+            del self.subscribers[can_id]
+        else:
+            self.subscribers[can_id].remove(callback)
 
     def connect(self, *args, **kwargs):
         """Connect to CAN bus using python-can.
@@ -205,7 +197,7 @@ class Network(collections.MutableMapping):
             self.bus.send(msg)
         self.check()
 
-    def send_periodic(self, can_id, data, period):
+    def send_periodic(self, can_id, data, period, remote=False):
         """Start sending a message periodically.
 
         :param int can_id:
@@ -214,12 +206,14 @@ class Network(collections.MutableMapping):
             Data to be transmitted (anything that can be converted to bytes)
         :param float period:
             Seconds between each message
+        :param bool remote:
+            indicates if the message frame is a remote request to the slave node
 
         :return:
             An task object with a ``.stop()`` method to stop the transmission
         :rtype: canopen.network.PeriodicMessageTask
         """
-        return PeriodicMessageTask(can_id, data, period, self.bus)
+        return PeriodicMessageTask(can_id, data, period, self.bus, remote)
 
     def notify(self, can_id, data, timestamp):
         """Feed incoming message to this library.
@@ -234,25 +228,11 @@ class Network(collections.MutableMapping):
         :param float timestamp:
             Timestamp of the message, preferably as a Unix timestamp
         """
-
-        # NMT commands is sent out with can_id = 0
-        if can_id == 0:
-            (_, node_id) = struct.unpack_from("<BB", data)
-
-            # Broadcast has node-id = 0
-            if node_id == 0:
-                for subscriber_id in self.nmt_cmd_subscribers:
-                    callback = self.nmt_cmd_subscribers[subscriber_id]
-                    callback(data, timestamp)
-
-            elif node_id in self.nmt_cmd_subscribers:
-                callback = self.nmt_cmd_subscribers[node_id]
-                callback(data, timestamp)
-        else:
-            if can_id in self.subscribers:
-                callback = self.subscribers[can_id]
+        if can_id in self.subscribers:
+            callbacks = self.subscribers[can_id]
+            for callback in callbacks:
                 callback(can_id, data, timestamp)
-            self.scanner.on_message_received(can_id)
+        self.scanner.on_message_received(can_id)
 
     def check(self):
         """Check that no fatal error has occurred in the receiving thread.
@@ -290,7 +270,7 @@ class PeriodicMessageTask(object):
     CyclicSendTask
     """
 
-    def __init__(self, can_id, data, period, bus):
+    def __init__(self, can_id, data, period, bus, remote=False):
         """
         :param int can_id:
             CAN-ID of the message (always 11-bit)
@@ -305,7 +285,7 @@ class PeriodicMessageTask(object):
         self.period = period
         self.msg = can.Message(extended_id=False,
                                arbitration_id=can_id,
-                               data=data)
+                               data=data, is_remote_frame=remote)
         self._task = None
         self._start()
 
@@ -322,10 +302,12 @@ class PeriodicMessageTask(object):
         :param data:
             New data to transmit
         """
-        self.msg.data = bytearray(data)
+        new_data = bytearray(data)
+        old_data = self.msg.data
+        self.msg.data = new_data
         if hasattr(self._task, "modify_data"):
             self._task.modify_data(self.msg)
-        else:
+        elif new_data != old_data:
             # Stop and start (will mess up period unfortunately)
             self._task.stop()
             self._start()
