@@ -1,7 +1,7 @@
 from .sdo import SdoClient
 from .nmt import NmtMaster
 from .emcy import EmcyConsumer
-from .pdo import PdoNode
+from .pdo import PDO
 from . import objectdictionary
 
 
@@ -31,7 +31,7 @@ class Node(object):
         self.curtis_hack = False
 
         self.sdo = SdoClient(0x600 + self.id, 0x580 + self.id, object_dictionary)
-        self.pdo = PdoNode(self)
+        self.pdo = PDO(self)
         self.nmt = NmtMaster(self.id)
         self.emcy = EmcyConsumer()
 

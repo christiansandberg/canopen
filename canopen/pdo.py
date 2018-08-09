@@ -8,15 +8,34 @@ from .sdo import SdoAbortedError
 from . import objectdictionary
 from . import common
 
-
 PDO_NOT_VALID = 1 << 31
 RTR_NOT_ALLOWED = 1 << 30
-
 
 logger = logging.getLogger(__name__)
 
 
-class PdoNode(collections.Mapping):
+class TPDO(PdoNode):
+    """PDO specialization for the Transmit PDO enabling the transfer of data from the node to the master."""
+    
+    self.subscribers = {}
+    
+    def __init__(self, node):
+        super(TPDO, self).__init__(node)
+
+
+class RPDO(PdoNode):
+    """PDO specialization for the Receive PDO enabling the transfer of data from the master to the node."""
+
+    def __init__(self, node):
+        super(RPDO, self).__init__(node)
+
+    def stop(self):
+        """Stop transmission of all Rx PDOs."""
+        for pdo_map in self.rx.values():
+            pdo_map.stop()
+
+
+class PDO(collections.Mapping):
     """Represents a slave unit."""
 
     def __init__(self, node):
@@ -107,11 +126,6 @@ class PdoNode(collections.Mapping):
         formats.dumpp({"": db}, filename)
         return db
 
-    def stop(self):
-        """Stop transmission of all Rx PDOs."""
-        for pdo_map in self.rx.values():
-            pdo_map.stop()
-
 
 class Maps(collections.Mapping):
     """A collection of transmit or receive maps."""
@@ -146,30 +160,30 @@ class Map(object):
         self.pdo_node = pdo_node
         self.com_record = com_record
         self.map_array = map_array
-        #: If this map is valid
+        # : If this map is valid
         self.enabled = False
-        #: COB-ID for this PDO
+        # : COB-ID for this PDO
         self.cob_id = None
-        #: Default COB-ID if this PDO is part of the pre-defined connection set
+        # : Default COB-ID if this PDO is part of the pre-defined connection set
         self.predefined_cob_id = None
-        #: Is the remote transmit request (RTR) allowed for this PDO
+        # : Is the remote transmit request (RTR) allowed for this PDO
         self.rtr_allowed = True
-        #: Transmission type (0-255)
+        # : Transmission type (0-255)
         self.trans_type = None
-        #: Inhibit Time (optional) (in 100us)
+        # : Inhibit Time (optional) (in 100us)
         self.inhibit_time = None
-        #: Event timer (optional) (in ms)
+        # : Event timer (optional) (in ms)
         self.event_timer = None
-        #: Ignores SYNC objects up to this SYNC counter value (optional)
+        # : Ignores SYNC objects up to this SYNC counter value (optional)
         self.sync_start_value = None
-        #: List of variables mapped to this PDO
+        # : List of variables mapped to this PDO
         self.map = []
         self.length = 0
-        #: Current message data
+        # : Current message data
         self.data = bytearray()
-        #: Timestamp of last received message
+        # : Timestamp of last received message
         self.timestamp = 0
-        #: Period of receive message transmission in seconds
+        # : Period of receive message transmission in seconds
         self.period = None
         self.callbacks = []
         self.receive_condition = threading.Condition()
@@ -292,7 +306,7 @@ class Map(object):
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
-            if self.pdo_node.node.curtis_hack: # Curtis HACK: mixed up field order
+            if self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
                 index = value & 0xFFFF
                 subindex = (value >> 16) & 0xFF
                 size = (value >> 24) & 0xFF
@@ -339,13 +353,13 @@ class Map(object):
             for var in self.map:
                 logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
                             var.name, var.index, var.subindex, var.length)
-                if self.pdo_node.node.curtis_hack: # Curtis HACK: mixed up field order
-                    self.map_array[subindex].raw = (var.index |
-                                                    var.subindex << 16 |
+                if self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
+                    self.map_array[subindex].raw = (var.index | 
+                                                    var.subindex << 16 | 
                                                     var.length << 24)
                 else:
-                    self.map_array[subindex].raw = (var.index << 16 |
-                                                    var.subindex << 8 |
+                    self.map_array[subindex].raw = (var.index << 16 | 
+                                                    var.subindex << 8 | 
                                                     var.length)
                 subindex += 1
             try:
@@ -453,7 +467,7 @@ class Variable(common.Variable):
 
     def __init__(self, od):
         self.msg = None
-        #: Location of variable in the message in bits
+        # : Location of variable in the message in bits
         self.offset = None
         self.length = len(od)
         common.Variable.__init__(self, od)
