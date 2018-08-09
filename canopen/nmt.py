@@ -137,7 +137,7 @@ class NmtMaster(object):
         """Starts the node guarding mechanism.
         :param float period:
             frequency (in seconds) at which the node guarding should be advertised to the slave node.
-        """        
+        """
         self._node_guarding_producer = self.network.send_periodic(0x700 + self.id, None, period, True)
 
     def stop_node_guarding(self):
