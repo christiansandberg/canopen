@@ -223,5 +223,39 @@ class TestNMT(unittest.TestCase):
         self.assertEqual(self.remote_node.nmt.state, 'OPERATIONAL')
 
 
+
+class TestPDO(unittest.TestCase):
+    """
+    Test PDO slave.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.network1 = canopen.Network()
+        cls.network1.connect("test", bustype="virtual")
+        cls.remote_node = cls.network1.add_node(2, EDS_PATH)
+
+        cls.network2 = canopen.Network()
+        cls.network2.connect("test", bustype="virtual")
+        cls.local_node = cls.network2.create_node(2, EDS_PATH)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.network1.disconnect()
+        cls.network2.disconnect()
+
+    def test_read(self):
+        # TODO: Do some more checks here. Currently it only tests that they
+        # can be called without raising an error.
+        self.remote_node.pdo.read()
+        self.local_node.pdo.read()
+
+    def test_save(self):
+        # TODO: Do some more checks here. Currently it only tests that they
+        # can be called without raising an error.
+        self.remote_node.pdo.save()
+        self.local_node.pdo.save()
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -142,7 +142,7 @@ class Maps(collections.Mapping):
 class Map(object):
     """One message which can have up to 8 bytes of variables mapped."""
 
-    def __init__(self, cob_id, pdo_node, com_record, map_array):
+    def __init__(self, pdo_node, com_record, map_array):
         self.pdo_node = pdo_node
         self.com_record = com_record
         self.map_array = map_array
@@ -292,7 +292,7 @@ class Map(object):
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
-            if self.pdo_node.node.curtis_hack: # Curtis HACK: mixed up field order
+            if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack: # Curtis HACK: mixed up field order
                 index = value & 0xFFFF
                 subindex = (value >> 16) & 0xFF
                 size = (value >> 24) & 0xFF
@@ -333,7 +333,7 @@ class Map(object):
             for var in self.map:
                 logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
                             var.name, var.index, var.subindex, var.length)
-                if self.pdo_node.node.curtis_hack: # Curtis HACK: mixed up field order
+                if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack: # Curtis HACK: mixed up field order
                     self.map_array[subindex].raw = (var.index |
                                                     var.subindex << 16 |
                                                     var.length << 24)
@@ -387,10 +387,10 @@ class Map(object):
             logger.info("Adding %s (0x%X:%d, %d bits) to PDO map",
                         var.name, var.index, var.subindex, var.length)
             self.map.append(var)
+            self.length += var.length
         except KeyError as exc:
             logger.warning("%s", exc)
             var = None
-        self.length += var.length
         self._update_data_size()
         if self.length > 64:
             logger.warning("Max size of PDO exceeded (%d > 64)", self.length)
