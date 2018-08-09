@@ -273,6 +273,14 @@ class Variable(object):
         else:
             return 8
 
+    @property
+    def writable(self):
+        return "w" in self.access_type
+
+    @property
+    def readable(self):
+        return "r" in self.access_type or self.access_type == "const"
+
     def add_value_description(self, value, descr):
         """Associate a value with a string description.
 

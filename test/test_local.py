@@ -68,14 +68,14 @@ class TestSDO(unittest.TestCase):
         self.assertEqual(device_name, b"Some cool device")
 
     def test_expedited_download(self):
-        self.remote_node.sdo["Identity object"]["Vendor-ID"].raw = 0xfeff
-        vendor_id = self.local_node.sdo["Identity object"]["Vendor-ID"].raw
-        self.assertEqual(vendor_id, 0xfeff)
+        self.remote_node.sdo[0x2004].raw = 0xfeff
+        value = self.local_node.sdo[0x2004].raw
+        self.assertEqual(value, 0xfeff)
 
     def test_segmented_download(self):
-        self.remote_node.sdo["Manufacturer device name"].raw = "Another cool device"
-        device_name = self.local_node.sdo["Manufacturer device name"].data
-        self.assertEqual(device_name, b"Another cool device")
+        self.remote_node.sdo[0x2000].raw = "Another cool device"
+        value = self.local_node.sdo[0x2000].data
+        self.assertEqual(value, b"Another cool device")
 
     def test_slave_send_heartbeat(self):
         # Setting the heartbeat time should trigger hearbeating
@@ -155,10 +155,10 @@ class TestSDO(unittest.TestCase):
         self.assertEqual(self._kwargs["index"], 0x1003)
         self.assertEqual(self._kwargs["subindex"], 5)
 
-        self.remote_node.sdo.download(0x1003, 6, b"\x03\x04\x05\x06")
-        self.assertEqual(self._kwargs["index"], 0x1003)
-        self.assertEqual(self._kwargs["subindex"], 6)
-        self.assertEqual(self._kwargs["data"], b"\x03\x04\x05\x06")
+        self.remote_node.sdo.download(0x1017, 0, b"\x03\x04")
+        self.assertEqual(self._kwargs["index"], 0x1017)
+        self.assertEqual(self._kwargs["subindex"], 0)
+        self.assertEqual(self._kwargs["data"], b"\x03\x04")
 
 
 

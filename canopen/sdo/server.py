@@ -64,7 +64,7 @@ class SdoServer(SdoBase):
         res_command = RESPONSE_UPLOAD | SIZE_SPECIFIED
         response = bytearray(8)
 
-        data = self.upload(index, subindex)
+        data = self._node.get_data(index, subindex, check_readable=True)
         size = len(data)
         if size <= 4:
             logger.info("Expedited upload for 0x%X:%d", index, subindex)
@@ -124,6 +124,7 @@ class SdoServer(SdoBase):
         self.abort(0x05040001)
 
     def init_download(self, request):
+        # TODO: Check if writable
         command, index, subindex = SDO_STRUCT.unpack_from(request)
         self._index = index
         self._subindex = subindex
@@ -156,7 +157,10 @@ class SdoServer(SdoBase):
         self._buffer.extend(request[1:last_byte])
 
         if command & NO_MORE_DATA:
-            self.download(self._index, self._subindex, self._buffer)
+            self._node.set_data(self._index,
+                                self._subindex,
+                                self._buffer,
+                                check_writable=True)
 
         res_command = RESPONSE_SEGMENT_DOWNLOAD
         # Add toggle bit

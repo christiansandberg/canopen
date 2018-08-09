@@ -52,8 +52,11 @@ class LocalNode(BaseNode):
     def add_write_callback(self, callback):
         self._write_callbacks.append(callback)
 
-    def get_data(self, index, subindex):
+    def get_data(self, index, subindex, check_readable=False):
         obj = self._find_object(index, subindex)
+
+        if check_readable and not obj.readable:
+            raise SdoAbortedError(0x06010001)
 
         # Try callback
         for callback in self._read_callbacks:
@@ -72,16 +75,19 @@ class LocalNode(BaseNode):
                 raise SdoAbortedError(0x060A0023)
             return obj.encode_raw(obj.default)
 
-    def set_data(self, index, subindex, data):
+    def set_data(self, index, subindex, data, check_writable=False):
         obj = self._find_object(index, subindex)
 
-        # Store data
-        self.data_store.setdefault(index, {})
-        self.data_store[index][subindex] = bytes(data)
+        if check_writable and not obj.writable:
+            raise SdoAbortedError(0x06010002)
 
         # Try callbacks
         for callback in self._write_callbacks:
             callback(index=index, subindex=subindex, od=obj, data=data)
+
+        # Store data
+        self.data_store.setdefault(index, {})
+        self.data_store[index][subindex] = bytes(data)
 
     def _find_object(self, index, subindex):
         if index not in self.object_dictionary:
