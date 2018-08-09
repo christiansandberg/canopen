@@ -212,6 +212,14 @@ class SdoClient(collections.Mapping):
         return key in self.od
 
 
+class SdoServer(collections.Mapping):
+    """ Implements a SDO server"""
+    pass
+    # I think this is needed if we want to provide a Master Node with the same functionality as the slaves
+    # but the main aplication of the library I think is to communicate with slave nodes at the hardware level
+    # TODO - implement this
+
+
 class Record(collections.Mapping):
 
     def __init__(self, sdo_node, od):
