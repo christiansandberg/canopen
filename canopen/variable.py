@@ -31,14 +31,10 @@ class Variable(object):
     @property
     def data(self):
         """Byte representation of the object as :class:`bytes`."""
-        if self.od.access_type == "wo":
-            logger.warning("Variable is write only")
         return self.get_data()
 
     @data.setter
     def data(self, data):
-        if "w" not in self.od.access_type:
-            logger.warning("Variable is read only")
         self.set_data(data)
 
     @property
@@ -121,6 +117,45 @@ class Variable(object):
     def bits(self):
         """Access bits using integers, slices, or bit descriptions."""
         return Bits(self)
+
+    def read(self, fmt="raw"):
+        """Alternative way of reading using a function instead of attributes.
+
+        May be useful for asynchronous reading.
+
+        :param str fmt:
+            How to return the value
+             - 'raw'
+             - 'phys'
+             - 'desc'
+
+        :returns:
+            The value of the variable.
+        """
+        if fmt == "raw":
+            return self.raw
+        elif fmt == "phys":
+            return self.phys
+        elif fmt == "desc":
+            return self.desc
+
+    def write(self, value, fmt="raw"):
+        """Alternative way of writing using a function instead of attributes.
+
+        May be useful for asynchronous writing.
+
+        :param str fmt:
+            How to write the value
+             - 'raw'
+             - 'phys'
+             - 'desc'
+        """
+        if fmt == "raw":
+            self.raw = value
+        elif fmt == "phys":
+            self.phys = value
+        elif fmt == "desc":
+            self.desc = value
 
 
 class Bits(collections.Mapping):

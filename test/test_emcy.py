@@ -2,7 +2,7 @@ import unittest
 from canopen import emcy
 
 
-class TestEmcy(unittest.TestCase):
+class TestEmcyConsumer(unittest.TestCase):
 
     def test_emcy_list(self):
         emcy_node = emcy.EmcyConsumer()
@@ -41,3 +41,21 @@ class TestEmcy(unittest.TestCase):
 
         error = emcy.EmcyError(0x7100, 0x01, b'\x00\x01\x02\x03\x04', 1473418396.0)
         self.assertEqual(str(error), "Code 0x7100")
+
+
+class MockNetwork(object):
+
+    data = None
+
+    def send_message(self, can_id, data):
+        self.data = data
+
+
+class TestEmcyProducer(unittest.TestCase):
+
+    def test_send(self):
+        network = MockNetwork()
+        emcy_node = emcy.EmcyProducer(0x80 + 1)
+        emcy_node.network = network
+        emcy_node.send(0x2001, 0x2, b'\x00\x01\x02\x03\x04')
+        self.assertEqual(network.data, b'\x01\x20\x02\x00\x01\x02\x03\x04')
