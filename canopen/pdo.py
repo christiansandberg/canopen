@@ -162,7 +162,7 @@ class Map(object):
         self.map_array = map_array
         # : If this map is valid
         self.enabled = False
-        # : COB-ID for this PDO
+        #: COB-ID for this PDO
         self.cob_id = None
         #: Default COB-ID if this PDO is part of the pre-defined connection set
         self.predefined_cob_id = None
