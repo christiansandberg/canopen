@@ -1,6 +1,11 @@
 import canopen
+import sys
+import os
+import traceback
+
+from canopen import Node402, Network
+
 import time
-from canopen import Node402
 import signal
 
 try:
@@ -72,35 +77,36 @@ try:
     print 'node state 3) = {0}'.format(node.nmt.state)
 
     # Read PDO configuration from node
-    node.pdo.read()
+    node.tpdo.read()
     # Re-map TxPDO1
-    node.pdo.tx[1].clear()
-    node.pdo.tx[1].add_variable('Statusword')
-    node.pdo.tx[1].add_variable('Velocity actual value')
-    node.pdo.tx[1].trans_type = 254
-    node.pdo.tx[1].event_timer = 10
-    node.pdo.tx[1].enabled = True
+    node.tpdo[1].clear()
+    node.tpdo[1].add_variable('Statusword')
+    node.tpdo[1].add_variable('Velocity actual value')
+    node.tpdo[1].trans_type = 254
+    node.tpdo[1].event_timer = 10
+    node.tpdo[1].enabled = True
     # Save new PDO configuration to node
-    node.pdo.save()
+    node.tpdo.save()
     
     # publish the a value to the control word (in this case reset the fault at the motors)
     
-    node.pdo.rx[1]['Controlword'].raw = 0x80
-    node.pdo.rx[1].transmit()
-    node.pdo.rx[1]['Controlword'].raw = 0x81
-    node.pdo.rx[1].transmit()
+    node.rpdo.read()
+    node.rpdo[1]['Controlword'].raw = 0x80
+    node.rpdo[1].transmit()
+    node.rpdo[1]['Controlword'].raw = 0x81
+    node.rpdo[1].transmit()
     
     node.powerstate_402.state = 'READY TO SWITCH ON'
     node.powerstate_402.state = 'SWITCHED ON'
     
-    node.pdo.export('database.dbc')
+    node.rpdo.export('database.dbc')
     
     # -----------------------------------------------------------------------------------------
     
     print ('Node booted up')
     
     # wait for heart beat
-    # node.nmt.wait_for_heartbeat()
+    # .nmt.wait_for_heartbeat()
     
     node.powerstate_402.state = 'READY TO SWITCH ON'
     node.powerstate_402.state = 'SWITCHED ON'
@@ -109,17 +115,16 @@ try:
     print 'Node Status {0}'.format(node.powerstate_402.state)
     
     # -----------------------------------------------------------------------------------------
-    
+    node.nmt.start_node_guarding(0.01)
     while True:
-        node_guard = network.send_message(1827, None, True)
         try:    
             network.check()
         except:
             break
     
         # Read a value from TxPDO1
-        node.pdo.tx[1].wait_for_reception()
-        speed = node.pdo['Velocity actual value'].phys
+        node.tpdo[1].wait_for_reception()
+        speed = node.tpdo[1]['Velocity actual value'].phys
         
         # Read the state of the Statusword
         statusword = node.sdo[0x6041].raw
@@ -131,8 +136,11 @@ try:
 
 except KeyboardInterrupt:
     pass
-except Exception as ex:
-    print 'ERROR {0}'.format(ex)
+except Exception as e:
+    exc_type, exc_obj, exc_tb = sys.exc_info()
+    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+    print(exc_type, fname, exc_tb.tb_lineno)
+    traceback.print_exc()
 finally:
     # Disconnect from CAN bus
     print 'going to exit... stoping...'
@@ -141,9 +149,7 @@ finally:
         for node_id in network:
             node = network[node_id]
             node.nmt.state = 'PRE-OPERATIONAL'
-        # network.send_message(0x0, [0x82, 0])
-        # if node_guard:
-        #    node_guard.stop()
+            node.nmt.stop_node_guarding()
         network.sync.stop()
         network.disconnect()
 
