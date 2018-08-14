@@ -1,7 +1,7 @@
 from ..sdo import SdoClient
 from ..nmt import NmtMaster
 from ..emcy import EmcyConsumer
-from ..pdo import PdoNode
+from ..pdo import TPDO, RPDO
 from .base import BaseNode
 
 
@@ -24,14 +24,16 @@ class RemoteNode(BaseNode):
 
         self.sdo = SdoClient(0x600 + self.id, 0x580 + self.id,
                              self.object_dictionary)
-        self.pdo = PdoNode(self)
+        self.tpdo = TPDO(self)
+        self.rpdo = RPDO(self)
         self.nmt = NmtMaster(self.id)
         self.emcy = EmcyConsumer()
 
     def associate_network(self, network):
         self.network = network
         self.sdo.network = network
-        self.pdo.network = network
+        self.tpdo.network = network
+        self.rpdo.network = network
         self.nmt.network = network
         network.subscribe(self.sdo.tx_cobid, self.sdo.on_response)
         network.subscribe(0x700 + self.id, self.nmt.on_heartbeat)
@@ -43,7 +45,8 @@ class RemoteNode(BaseNode):
         self.network.unsubscribe(0x80 + self.id, self.emcy.on_emcy)
         self.network = None
         self.sdo.network = None
-        self.pdo.network = None
+        self.tpdo.network = None
+        self.rpdo.network = None
         self.nmt.network = None
 
     def store(self, subindex=1):
