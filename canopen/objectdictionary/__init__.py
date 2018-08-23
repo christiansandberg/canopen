@@ -230,23 +230,6 @@ class Variable(object):
         REAL64: struct.Struct("<d")
     }
 
-    #: Physical unit
-    unit = ""
-    #: Factor between physical unit and integer value
-    factor = 1
-    #: Minimum allowed value
-    min = None
-    #: Maximum allowed value
-    max = None
-    #: Default value at start-up
-    default = None
-    #: Data type according to the standard as an :class:`int`
-    data_type = None
-    #: Access type, should be "rw", "ro", "wo", or "const"
-    access_type = "rw"
-    #: Description of variable
-    description = ""
-
     def __init__(self, name, index, subindex=0):
         #: The :class:`~canopen.ObjectDictionary`,
         #: :class:`~canopen.objectdictionary.Record` or
@@ -258,6 +241,24 @@ class Variable(object):
         self.subindex = subindex
         #: String representation of the variable
         self.name = name
+        #: Physical unit
+        self.unit = ""
+        #: Factor between physical unit and integer value
+        self.factor = 1
+        #: Minimum allowed value
+        self.min = None
+        #: Maximum allowed value
+        self.max = None
+        #: Default value at start-up
+        self.default = None
+        #: The value of this variable stored in the object dictionary
+        self.value = None
+        #: Data type according to the standard as an :class:`int`
+        self.data_type = None
+        #: Access type, should be "rw", "ro", "wo", or "const"
+        self.access_type = "rw"
+        #: Description of variable
+        self.description = ""
         #: Dictionary of value descriptions
         self.value_descriptions = {}
         #: Dictionary of bitfield definitions
