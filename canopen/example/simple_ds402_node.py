@@ -16,10 +16,6 @@ try:
     # Connect to the CAN bus
     network.connect(bustype='kvaser', channel=0, bitrate=1000000)
     
-    
-    
-    print 'Bus-state {0}'.format(network.bus.state)
-    
     network.check()
     
     # Add some nodes with corresponding Object Dictionaries
@@ -27,8 +23,8 @@ try:
     network.add_node(node)
     # network.add_node(34, '/home/andre/Code/test/jupiter.eds')
     # node = network[34]
-    
-    print '\n\n ##########################################'.format()
+
+    # list the object dictionary    
     '''
     for obj in node.object_dictionary.values():
         print('0x%X: %s' % (obj.index, obj.name))
@@ -37,7 +33,6 @@ try:
                 print('  %d: %s' % (subobj.subindex, subobj.name))
 
     '''
-    print '\n\n ##########################################'.format()
 
     # Reset network
     #node.nmt.state = 'RESET COMMUNICATION'
