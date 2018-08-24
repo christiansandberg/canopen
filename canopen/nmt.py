@@ -3,6 +3,7 @@ import logging
 import struct
 import time
 
+from .network import CanError
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ COMMAND_TO_STATE = {
 }
 
 
-class NmtMaster(object):
+class NmtBase(object):
     """
     Can set the state of the node it controls using NMT commands and monitor
     the current state using the heartbeat protocol.
@@ -50,22 +51,17 @@ class NmtMaster(object):
         self.id = node_id
         self.network = None
         self._state = 0
-        self._state_received = None
-        #: Timestamp of last heartbeat message
-        self.timestamp = None
-        self.state_update = threading.Condition()
 
-    def on_heartbeat(self, can_id, data, timestamp):
-        with self.state_update:
-            self.timestamp = timestamp
-            new_state, = struct.unpack_from("B", data)
-            if new_state == 0:
-                # Boot-up, will go to PRE-OPERATIONAL automatically
-                self._state = 127
-            else:
+    def on_command(self, can_id, data, timestamp):
+        cmd, node_id = struct.unpack_from("BB", data)
+        if node_id in (self.id, 0):
+            logger.info("Node %d received command %d", self.id, cmd)
+            if cmd in COMMAND_TO_STATE:
+                new_state = COMMAND_TO_STATE[cmd]
+                if new_state != self._state:
+                    logger.info("New NMT state %s, old state %s",
+                                NMT_STATES[new_state], NMT_STATES[self._state])
                 self._state = new_state
-            self._state_received = new_state
-            self.state_update.notify_all()
 
     def send_command(self, code):
         """Send an NMT command code to the node.
@@ -73,12 +69,11 @@ class NmtMaster(object):
         :param int code:
             NMT command code.
         """
-        logger.info(
-            "Sending NMT command 0x%X to node %d", code, self.id)
-        self.network.send_message(0, [code, self.id])
         if code in COMMAND_TO_STATE:
-            self._state = COMMAND_TO_STATE[code]
-            logger.info("Changing NMT state to %s", self.state)
+            new_state = COMMAND_TO_STATE[code]
+            logger.info("Changing NMT state from %s to %s",
+                        NMT_STATES[self._state], NMT_STATES[new_state])
+            self._state = new_state
 
     @property
     def state(self):
@@ -110,6 +105,41 @@ class NmtMaster(object):
 
         self.send_command(code)
 
+
+class NmtMaster(NmtBase):
+
+    def __init__(self, node_id):
+        super(NmtMaster, self).__init__(node_id)
+        self._state_received = None
+        self._node_guarding_producer = None
+        #: Timestamp of last heartbeat message
+        self.timestamp = None
+        self.state_update = threading.Condition()
+
+    def on_heartbeat(self, can_id, data, timestamp):
+        with self.state_update:
+            self.timestamp = timestamp
+            new_state, = struct.unpack_from("B", data)
+            logger.info("Received heartbeat can-id %d, state is %d", can_id, new_state)
+            if new_state == 0:
+                # Boot-up, will go to PRE-OPERATIONAL automatically
+                self._state = 127
+            else:
+                self._state = new_state
+            self._state_received = new_state
+            self.state_update.notify_all()
+
+    def send_command(self, code):
+        """Send an NMT command code to the node.
+
+        :param int code:
+            NMT command code.
+        """
+        super(NmtMaster, self).send_command(code)
+        logger.info(
+            "Sending NMT command 0x%X to node %d", code, self.id)
+        self.network.send_message(0, [code, self.id])
+
     def wait_for_heartbeat(self, timeout=10):
         """Wait until a heartbeat message is received."""
         with self.state_update:
@@ -131,6 +161,88 @@ class NmtMaster(object):
                 raise NmtError("Timeout waiting for boot-up message")
             if self._state_received == 0:
                 break
+
+    def start_node_guarding(self, period):
+        """Starts the node guarding mechanism.
+        :param float period:
+            frequency (in seconds) at which the node guarding should be advertised to the slave node.
+        """
+        self._node_guarding_producer = self.network.send_periodic(0x700 + self.id, None, period, True)
+
+    def stop_node_guarding(self):
+        """Stops the node guarding mechanism."""
+        self._node_guarding_producer.stop()
+
+
+class NmtSlave(NmtBase):
+    """
+    Handles the NMT state and handles heartbeat NMT service.
+    """
+    def __init__(self, node_id, local_node):
+        super(NmtSlave, self).__init__(node_id)
+        self._send_task = None
+        self._heartbeat_time_ms = 0
+        self._local_node = local_node
+
+    def on_command(self, can_id, data, timestamp):
+        cmd, = struct.unpack_from("B", data)
+        logger.info("Node %d received command %d", self.id, cmd)
+        self.state = NMT_STATES[COMMAND_TO_STATE[cmd]]
+
+    def send_command(self, code):
+        """Send an NMT command code to the node.
+
+        :param int code:
+            NMT command code.
+        """
+        old_state = self._state
+        super(NmtSlave, self).send_command(code)
+
+        if self._state == 0:
+            logger.info("Sending boot-up message")
+            self.network.send_message(0x700 + self.id, [0])
+
+        # The heartbeat service should start on the transition
+        # between INITIALIZING and PRE-OPERATIONAL state
+        if old_state == 0 and self._state == 127:
+            heartbeat_time_ms = self._local_node.sdo[0x1017].raw
+            self.start_heartbeat(heartbeat_time_ms)
+        else:
+            self.update_heartbeat()
+
+    def on_write(self, index, data, **kwargs):
+        if index == 0x1017:
+            hearbeat_time, = struct.unpack_from("<H", data)
+            if hearbeat_time == 0:
+                self.stop_heartbeat()
+            else:
+                self.start_heartbeat(hearbeat_time)
+
+    def start_heartbeat(self, heartbeat_time_ms):
+        """Start the hearbeat service.
+
+        :param int hearbeat_time
+            The heartbeat time in ms. If the heartbeat time is 0
+            the heartbeating will not start.
+        """
+        self._heartbeat_time_ms = heartbeat_time_ms
+
+        self.stop_heartbeat()
+        if heartbeat_time_ms > 0:
+            logger.info("Start the hearbeat timer, interval is %d ms", self._heartbeat_time_ms)
+            self._send_task = self.network.send_periodic(
+                0x700 + self.id, [self._state], heartbeat_time_ms / 1000.0)
+
+    def stop_heartbeat(self):
+        """Stop the hearbeat service."""
+        if self._send_task is not None:
+            logger.info("Stop the heartbeat timer")
+            self._send_task.stop()
+            self._send_task = None
+
+    def update_heartbeat(self):
+        if self._send_task is not None:
+            self._send_task.update([self._state])
 
 
 class NmtError(Exception):

@@ -3,7 +3,7 @@ CANopen for Python
 
 A Python implementation of the CANopen_ standard.
 The aim of the project is to support the most common parts of the CiA 301
-standard for a master node wrapped in a Pythonic interface.
+standard in a Pythonic interface.
 
 The library supports Python 2.7 and 3.4+.
 
@@ -74,8 +74,8 @@ Here are some quick examples of what you can do:
     network = canopen.Network()
 
     # Add some nodes with corresponding Object Dictionaries
-    network.add_node(6, '/path/to/object_dictionary.eds')
-    node = network[6]
+    node = canopen.RemoteNode(6, '/path/to/object_dictionary.eds')
+    network.add_node(node)
 
     # Connect to the CAN bus
     # Arguments are passed to python-can's can.interface.Bus() constructor
@@ -137,7 +137,7 @@ logging_ level:
 
 
 .. _PyPI: https://pypi.org/project/canopen/
-.. _CANopen: https://en.wikipedia.org/wiki/CANopen
+.. _CANopen: https://www.can-cia.org/canopen/
 .. _python-can: https://python-can.readthedocs.org/en/stable/
 .. _Sphinx: http://www.sphinx-doc.org/
 .. _develop mode: https://packaging.python.org/distributing/#working-in-development-mode

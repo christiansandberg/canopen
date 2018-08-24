@@ -1,6 +1,6 @@
 # inspired by the NmtMaster code
 
-from canopen import Node
+from ..node import RemoteNode
 
 # status word 0x6041 bitmask and values in the list in the dictionary value
 POWER_STATES_402 = {
@@ -32,7 +32,7 @@ COMMAND_TO_POWER_STATE = {
     0x02: 'QUICK STOP ACTIVE'
 }
 
-class Node402(Node):
+class Node402(RemoteNode):
     """A CANopen CiA 402 profile slave node.
 
     :param int node_id:

@@ -137,6 +137,36 @@ API
        Return a list of objects (records, arrays and variables).
 
 
+.. autoclass:: canopen.sdo.SdoServer
+    :members:
+
+    .. py:attribute:: od
+
+       The :class:`canopen.ObjectDictionary` associated with this object.
+
+    .. describe:: c[index]
+
+       Return the SDO object for the specified index (as int) or name
+       (as string).
+
+    .. describe:: iter(c)
+
+       Return an iterator over the indexes from the object dictionary.
+
+    .. describe:: index in c
+
+       Return ``True`` if the index (as int) or name (as string) exists in
+       the object dictionary.
+
+    .. describe:: len(c)
+
+       Return the number of indexes in the object dictionary.
+
+    .. method:: values()
+
+       Return a list of objects (records, arrays and variables).
+
+
 .. autoclass:: canopen.sdo.Variable
     :members:
     :inherited-members:
@@ -211,23 +241,6 @@ API
        Return a list of :class:`canopen.sdo.Variable` in the array.
        This will make a SDO read operation on subindex 0 in order to get the
        actual length of the array.
-
-
-.. autoclass:: canopen.sdo.ReadableStream
-    :show-inheritance:
-    :members: read, readinto, readall, readline, readlines
-
-.. autoclass:: canopen.sdo.WritableStream
-    :show-inheritance:
-    :members: write, close
-
-.. autoclass:: canopen.sdo.BlockUploadStream
-    :show-inheritance:
-    :members: read, readinto, readall, readline, readlines
-
-.. autoclass:: canopen.sdo.BlockDownloadStream
-    :show-inheritance:
-    :members: write, close
 
 
 .. autoexception:: canopen.SdoAbortedError

@@ -6,7 +6,7 @@ import binascii
 
 from .sdo import SdoAbortedError
 from . import objectdictionary
-from . import common
+from . import variable
 
 
 PDO_NOT_VALID = 1 << 31
@@ -292,7 +292,7 @@ class Map(object):
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
-            if self.pdo_node.node.curtis_hack: # Curtis HACK: mixed up field order
+            if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack: # Curtis HACK: mixed up field order
                 index = value & 0xFFFF
                 subindex = (value >> 16) & 0xFF
                 size = (value >> 24) & 0xFF
@@ -304,12 +304,6 @@ class Map(object):
 
     def save(self):
         """Save PDO configuration for this map using SDO."""
-        cob_id = self.com_record[1].raw
-        if self.cob_id is None:
-            self.cob_id = cob_id & 0x7FF
-        if self.enabled is None:
-            # Need to check if the PDO is enabled or not
-            self.enabled = cob_id & PDO_NOT_VALID == 0
         logger.info("Setting COB-ID 0x%X and temporarily disabling PDO",
                     self.cob_id)
         self.com_record[1].raw = self.cob_id | PDO_NOT_VALID
@@ -339,7 +333,7 @@ class Map(object):
             for var in self.map:
                 logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
                             var.name, var.index, var.subindex, var.length)
-                if self.pdo_node.node.curtis_hack: # Curtis HACK: mixed up field order
+                if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack: # Curtis HACK: mixed up field order
                     self.map_array[subindex].raw = (var.index |
                                                     var.subindex << 16 |
                                                     var.length << 24)
@@ -381,18 +375,22 @@ class Map(object):
         :return: Variable that was added
         :rtype: canopen.pdo.Variable
         """
-        var = self._get_variable(index, subindex)
-        if subindex:
-            # Force given subindex upon variable mapping, for misguided implementations
-            var.subindex = subindex
-        var.offset = self.length
-        if length is not None:
-            # Custom bit length
-            var.length = length
-        logger.info("Adding %s (0x%X:%d, %d bits) to PDO map",
-                    var.name, var.index, var.subindex, var.length)
-        self.map.append(var)
-        self.length += var.length
+        try:
+            var = self._get_variable(index, subindex)
+            if subindex:
+                # Force given subindex upon variable mapping, for misguided implementations
+                var.subindex = subindex
+            var.offset = self.length
+            if length is not None:
+                # Custom bit length
+                var.length = length
+            logger.info("Adding %s (0x%X:%d, %d bits) to PDO map",
+                        var.name, var.index, var.subindex, var.length)
+            self.map.append(var)
+            self.length += var.length
+        except KeyError as exc:
+            logger.warning("%s", exc)
+            var = None
         self._update_data_size()
         if self.length > 64:
             logger.warning("Max size of PDO exceeded (%d > 64)", self.length)
@@ -448,7 +446,7 @@ class Map(object):
         return self.timestamp if self.is_received else None
 
 
-class Variable(common.Variable):
+class Variable(variable.Variable):
     """One object dictionary variable mapped to a PDO."""
 
     def __init__(self, od):
@@ -456,7 +454,7 @@ class Variable(common.Variable):
         #: Location of variable in the message in bits
         self.offset = None
         self.length = len(od)
-        common.Variable.__init__(self, od)
+        variable.Variable.__init__(self, od)
 
     def get_data(self):
         """Reads the PDO variable from the last received message.

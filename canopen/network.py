@@ -1,6 +1,7 @@
 import collections
 import logging
 import threading
+import struct
 
 try:
     import can
@@ -12,7 +13,7 @@ except ImportError:
     Listener = object
     CanError = Exception
 
-from .node import Node
+from .node import RemoteNode, LocalNode
 from .sync import SyncProducer
 from .timestamp import TimeProducer
 from .nmt import NmtMaster
@@ -117,14 +118,15 @@ class Network(collections.MutableMapping):
         Must be overridden in a subclass if a custom interface is used.
         """
         for node in self.nodes.values():
-            node.pdo.stop()
+            if hasattr(node, "pdo"):
+                node.pdo.stop()
         self.notifier.stop()
         self.bus.shutdown()
         self.bus = None
         self.check()
 
     def add_node(self, node, object_dictionary=None, upload_eds=False):
-        """Add a node to the network.
+        """Add a remote node to the network.
 
         :param node:
             Can be either an integer representing the node ID or a
@@ -138,15 +140,34 @@ class Network(collections.MutableMapping):
 
         :return:
             The Node object that was added.
-        :rtype: canopen.Node
+        :rtype: canopen.RemoteNode
         """
         if isinstance(node, int):
             if upload_eds:
                 logger.info("Trying to read EDS from node %d", node)
                 object_dictionary = import_from_node(node, self)
-            node = Node(node, object_dictionary)
-        self.nodes[node.id] = node
-        node.associate_network(self)
+            node = RemoteNode(node, object_dictionary)
+        self[node.id] = node
+        return node
+
+    def create_node(self, node, object_dictionary=None):
+        """Create a local node in the network.
+
+        :param node:
+            Can be either an integer representing the node ID or a
+            :class:`canopen.Node` object.
+        :param object_dictionary:
+            Can be either a string for specifying the path to an
+            Object Dictionary file or a
+            :class:`canopen.ObjectDictionary` object.
+
+        :return:
+            The Node object that was added.
+        :rtype: canopen.LocalNode
+        """
+        if isinstance(node, int):
+            node = LocalNode(node, object_dictionary)
+        self[node.id] = node
         return node
 
     def send_message(self, can_id, data, remote=False):
@@ -176,7 +197,7 @@ class Network(collections.MutableMapping):
             self.bus.send(msg)
         self.check()
 
-    def send_periodic(self, can_id, data, period):
+    def send_periodic(self, can_id, data, period, remote=False):
         """Start sending a message periodically.
 
         :param int can_id:
@@ -185,12 +206,14 @@ class Network(collections.MutableMapping):
             Data to be transmitted (anything that can be converted to bytes)
         :param float period:
             Seconds between each message
+        :param bool remote:
+            indicates if the message frame is a remote request to the slave node
 
         :return:
             An task object with a ``.stop()`` method to stop the transmission
         :rtype: canopen.network.PeriodicMessageTask
         """
-        return PeriodicMessageTask(can_id, data, period, self.bus)
+        return PeriodicMessageTask(can_id, data, period, self.bus, remote)
 
     def notify(self, can_id, data, timestamp):
         """Feed incoming message to this library.
@@ -247,7 +270,7 @@ class PeriodicMessageTask(object):
     CyclicSendTask
     """
 
-    def __init__(self, can_id, data, period, bus):
+    def __init__(self, can_id, data, period, bus, remote=False):
         """
         :param int can_id:
             CAN-ID of the message (always 11-bit)
@@ -262,7 +285,7 @@ class PeriodicMessageTask(object):
         self.period = period
         self.msg = can.Message(extended_id=False,
                                arbitration_id=can_id,
-                               data=data)
+                               data=data, is_remote_frame=remote)
         self._task = None
         self._start()
 
