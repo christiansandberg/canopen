@@ -16,6 +16,8 @@ try:
     # Connect to the CAN bus
     network.connect(bustype='kvaser', channel=0, bitrate=1000000)
     
+    
+    
     print 'Bus-state {0}'.format(network.bus.state)
     
     network.check()
@@ -38,8 +40,9 @@ try:
     print '\n\n ##########################################'.format()
 
     # Reset network
+    #node.nmt.state = 'RESET COMMUNICATION'
     node.nmt.state = 'RESET'
-    node.nmt.wait_for_bootup(30)
+    node.nmt.wait_for_bootup(15)
     
     print 'node state 1) = {0}'.format(node.nmt.state)
     
@@ -60,11 +63,18 @@ try:
     node.sdo[0x100d].raw = 3
     node.sdo[0x1014].raw = 163
     node.sdo[0x1003][0].raw = 0
+    
 
     # Transmit SYNC every 100 ms
     network.sync.start(0.1)
     
+    
+    node.load_configuration()
+    
+    print 'node state 3) = {0}'.format(node.nmt.state)
+    
     node.setup_402_state_machine()
+    
     
     device_name = node.sdo[0x1008].raw
     vendor_id = node.sdo[0x1018][1].raw
@@ -74,16 +84,19 @@ try:
     
     node.powerstate_402.state = 'SWITCH ON DISABLED'
     
-    print 'node state 3) = {0}'.format(node.nmt.state)
+    print 'node state 4) = {0}'.format(node.nmt.state)
 
+
+    
+    
     # Read PDO configuration from node
     node.tpdo.read()
     # Re-map TxPDO1
-    node.tpdo[1].clear()
-    node.tpdo[1].add_variable('Statusword')
+    #node.tpdo[1].clear()
+    #node.tpdo[1].add_variable('Statusword')
     node.tpdo[1].add_variable('Velocity actual value')
-    node.tpdo[1].trans_type = 254
-    node.tpdo[1].event_timer = 10
+    node.tpdo[1].trans_type = 1
+    node.tpdo[1].event_timer = 0
     node.tpdo[1].enabled = True
     # Save new PDO configuration to node
     node.tpdo.save()
@@ -99,18 +112,40 @@ try:
     node.powerstate_402.state = 'READY TO SWITCH ON'
     node.powerstate_402.state = 'SWITCHED ON'
     
+    
+    
+    
     node.rpdo.export('database.dbc')
     
     # -----------------------------------------------------------------------------------------
     
     print ('Node booted up')
+
     
-    # wait for heart beat
-    # .nmt.wait_for_heartbeat()
     
+    timeout = time.time() + 15
     node.powerstate_402.state = 'READY TO SWITCH ON'
+    while node.powerstate_402.state != 'READY TO SWITCH ON':
+        if time.time() > timeout:
+            raise Exception('Timeout when trying to change state')
+        time.sleep(0.001) 
+        
+    
+        
+    timeout = time.time() + 15
     node.powerstate_402.state = 'SWITCHED ON'
+    while node.powerstate_402.state != 'SWITCHED ON':
+        if time.time() > timeout:
+            raise Exception('Timeout when trying to change state')
+        time.sleep(0.001)
+
+    timeout = time.time() + 15        
     node.powerstate_402.state = 'OPERATION ENABLED'
+    while node.powerstate_402.state != 'OPERATION ENABLED':
+        if time.time() > timeout:
+            raise Exception('Timeout when trying to change state')
+        time.sleep(0.001)
+    
     
     print 'Node Status {0}'.format(node.powerstate_402.state)
     
