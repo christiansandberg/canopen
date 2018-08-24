@@ -62,3 +62,9 @@ target/
 
 # IDEs
 .vscode/
+
+canopen/example/database\.dbc
+
+\.project
+
+\.pydevproject
