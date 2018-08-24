@@ -63,7 +63,7 @@ target/
 # IDEs
 .vscode/
 
-canopen/example/database\.dbc
+*.dbc
 
 \.project
 

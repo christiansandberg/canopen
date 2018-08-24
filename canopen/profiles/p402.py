@@ -54,15 +54,15 @@ class Node402(RemoteNode):
         # first read the current PDO setup and only change TPDO1
         print(self.nmt.state)
         self.nmt.state = 'PRE-OPERATIONAL'
-        self.pdo.tx[1].read()
-        self.pdo.tx[1].clear()
+        self.tpdo[1].read()
+        self.tpdo[1].clear()
         # Use register as to stay manufacturer agnostic
-        self.pdo.tx[1].add_variable(0x6041)
+        self.tpdo[1].add_variable(0x6041)
         # add callback to listen to TPDO1 and change 402 state
-        self.pdo.tx[1].add_callback(self.powerstate_402.on_PDO1_callback)
-        self.pdo.tx[1].trans_type = 255
-        self.pdo.tx[1].enabled = True
-        self.pdo.tx[1].save()
+        self.tpdo[1].add_callback(self.powerstate_402.on_PDO1_callback)
+        self.tpdo[1].trans_type = 255
+        self.tpdo[1].enabled = True
+        self.tpdo[1].save()
         self.nmt.state = 'OPERATIONAL'
 
 class PowerStateMachine(object):

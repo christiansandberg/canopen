@@ -98,6 +98,10 @@ def import_eds(source, node_id):
 
 
 def import_from_node(node_id, network):
+    """ Download the configuration from the remote node
+    :param hex node_id: Identifier of the node
+    :param network: network object
+    """
     # Create temporary SDO client
     sdo_client = SdoClient(0x600 + node_id, 0x580 + node_id, None)
     sdo_client.network = network
@@ -117,6 +121,13 @@ def import_from_node(node_id, network):
 
 
 def build_variable(eds, section, node_id, index, subindex=0):
+    """Creates a object dictionary entry.
+    :param eds: String stream of the eds file
+    :param section: 
+    :param node_id: Node ID
+    :param index: Index of the CANOpen object
+    :param subindex: Subindex of the CANOpen object (if presente, else 0)
+    """
     name = eds.get(section, "ParameterName")
     var = objectdictionary.Variable(name, index, subindex)
     var.data_type = int(eds.get(section, "DataType"), 0)
@@ -152,6 +163,22 @@ def build_variable(eds, section, node_id, index, subindex=0):
                     var.default = int(default_value.replace('$NODEID+',''), 0) + node_id
                 else:
                     var.default = int(default_value, 0)
+        except ValueError:
+            pass
+    if eds.has_option(section, "ParameterValue"):
+        try:
+            parameter_value = eds.get(section, "ParameterValue")
+            
+            if var.data_type in objectdictionary.DATA_TYPES:
+                var.value = parameter_value
+            elif var.data_type in objectdictionary.DATA_TYPES:
+                var.value = float(parameter_value)
+            else:
+                #COB-ID can have a suffix of '$NODEID+' so replace this with node_id before converting
+                if '$NODEID+' in parameter_value and node_id is not None:
+                    var.value = int(parameter_value.replace('$NODEID+',''), 0) + node_id
+                else:
+                    var.value = int(parameter_value, 0)
         except ValueError:
             pass
     return var

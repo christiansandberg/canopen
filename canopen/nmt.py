@@ -51,6 +51,7 @@ class NmtBase(object):
         self.id = node_id
         self.network = None
         self._state = 0
+        self._node_guarding_producer = None
 
     def on_command(self, can_id, data, timestamp):
         cmd, node_id = struct.unpack_from("BB", data)
