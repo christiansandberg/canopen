@@ -36,35 +36,36 @@ starts at 1, not 0)::
     # Read current PDO configuration
     node.pdo.read()
 
-    # Do some changes to TxPDO4 and RxPDO4
-    node.pdo.tx[4].clear()
-    node.pdo.tx[4].add_variable('Application Status', 'Status All')
-    node.pdo.tx[4].add_variable('Application Status', 'Actual Speed')
-    node.pdo.tx[4].trans_type = 254
-    node.pdo.tx[4].event_timer = 10
-    node.pdo.tx[4].enabled = True
+    # Do some changes to TPDO4 and RPDO4
+    node.tpdo[4].clear()
+    node.tpdo[4].add_variable('Application Status', 'Status All')
+    node.tpdo[4].add_variable('Application Status', 'Actual Speed')
+    node.tpdo[4].trans_type = 254
+    node.tpdo[4].event_timer = 10
+    node.tpdo[4].enabled = True
 
-    node.pdo.rx[4].clear()
-    node.pdo.rx[4].add_variable('Application Commands', 'Command All')
-    node.pdo.rx[4].add_variable('Application Commands', 'Command Speed')
-    node.pdo.rx[4].enabled = True
+    node.rpdo[4].clear()
+    node.rpdo[4].add_variable('Application Commands', 'Command All')
+    node.rpdo[4].add_variable('Application Commands', 'Command Speed')
+    node.rpdo[4].enabled = True
 
     # Save new configuration (node must be in pre-operational)
     node.nmt.state = 'PRE-OPERATIONAL'
-    node.pdo.save()
+    node.tpdo.save()
+    node.rpdo.save()
     # Export a database file of PDO configuration
     node.pdo.export('database.dbc')
 
-    # Start RxPDO4 with an interval of 100 ms
-    node.pdo.rx[4]['Application Commands.Command Speed'].phys = 1000
-    node.pdo.rx[4].start(0.1)
+    # Start RPDO4 with an interval of 100 ms
+    node.rpdo[4]['Application Commands.Command Speed'].phys = 1000
+    node.rpdo[4].start(0.1)
     node.nmt.state = 'OPERATIONAL'
 
     # Read 50 values of speed and save to a file
     with open('output.txt', 'w') as f:
         for i in range(50):
             node.pdo.tx[4].wait_for_reception()
-            speed = node.pdo['Application Status.Actual Speed'].phys
+            speed = node.tpdo['Application Status.Actual Speed'].phys
             f.write('%s\n' % speed)
 
     # Using a callback to asynchronously receive values
@@ -77,22 +78,30 @@ starts at 1, not 0)::
     time.sleep(5)
 
     # Stop transmission of RxPDO
-    node.pdo.rx[4].stop()
+    node.rpdo[4].stop()
 
 
 API
 ---
 
-.. autoclass:: canopen.pdo.PdoNode
+.. autoclass:: canopen.pdo.PdoBase
    :members:
 
-   .. py:attribute:: rx
+   .. py:attribute:: map
 
-      The :class:`canopen.pdo.Maps` object representing the receive PDO maps.
+      The :class:`canopen.pdo.Mcps` object representing map associated with the instantiated PDO (transmit or receive).
 
-   .. py:attribute:: tx
 
-      The :class:`canopen.pdo.Maps` object representing the transmit PDO maps.
+.. autoclass:: canopen.pdo.RPDO
+   :members:
+
+   .. method:: stop()
+
+      Stop transmission of all Rx PDOs.
+
+
+.. autoclass:: canopen.pdo.TPDO
+   :members:
 
 
 .. autoclass:: canopen.pdo.Maps
