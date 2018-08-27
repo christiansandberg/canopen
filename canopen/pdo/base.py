@@ -15,11 +15,14 @@ logger = logging.getLogger(__name__)
 
 
 class PdoBase(collections.Mapping):
-    """Represents the base implemention for the PDO object."""
+    """Represents the base implemention for the PDO object.
+    :param object node:
+        Parent object associated with this PDO instance
+    """
 
     def __init__(self, node):
         """
-        :param node: Parent object associated with this PDO instance
+
         """
         self.network = None
         self.map = None
