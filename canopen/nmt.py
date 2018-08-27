@@ -48,7 +48,6 @@ class NmtBase(object):
         self.id = node_id
         self.network = None
         self._state = 0
-        self._node_guarding_producer = None
 
     def on_command(self, can_id, data, timestamp):
         cmd, node_id = struct.unpack_from("BB", data)
@@ -110,7 +109,7 @@ class NmtMaster(NmtBase):
         super(NmtMaster, self).__init__(node_id)
         self._state_received = None
         self._node_guarding_producer = None
-        # : Timestamp of last heartbeat message
+        #: Timestamp of last heartbeat message
         self.timestamp = None
         self.state_update = threading.Condition()
 
