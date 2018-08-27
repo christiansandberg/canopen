@@ -138,30 +138,30 @@ class Map(object):
         self.pdo_node = pdo_node
         self.com_record = com_record
         self.map_array = map_array
-        # : If this map is valid
+        #: If this map is valid
         self.enabled = False
-        # : COB-ID for this PDO
+        #: COB-ID for this PDO
         self.cob_id = None
-        # : Default COB-ID if this PDO is part of the pre-defined connection set
+        #: Default COB-ID if this PDO is part of the pre-defined connection set
         self.predefined_cob_id = None
-        # : Is the remote transmit request (RTR) allowed for this PDO
+        #: Is the remote transmit request (RTR) allowed for this PDO
         self.rtr_allowed = True
-        # : Transmission type (0-255)
+        #: Transmission type (0-255)
         self.trans_type = None
-        # : Inhibit Time (optional) (in 100us)
+        #: Inhibit Time (optional) (in 100us)
         self.inhibit_time = None
-        # : Event timer (optional) (in ms)
+        #: Event timer (optional) (in ms)
         self.event_timer = None
-        # : Ignores SYNC objects up to this SYNC counter value (optional)
+        #: Ignores SYNC objects up to this SYNC counter value (optional)
         self.sync_start_value = None
-        # : List of variables mapped to this PDO
+        #: List of variables mapped to this PDO
         self.map = []
         self.length = 0
-        # : Current message data
+        #: Current message data
         self.data = bytearray()
-        # : Timestamp of last received message
+        #: Timestamp of last received message
         self.timestamp = 0
-        # : Period of receive message transmission in seconds
+        #: Period of receive message transmission in seconds
         self.period = None
         self.callbacks = []
         self.receive_condition = threading.Condition()

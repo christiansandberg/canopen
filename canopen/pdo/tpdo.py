@@ -14,8 +14,10 @@ class TPDO(PdoBase):
         self.subscribers = {}
 
     def on_sync(self, can_id, data, timestamp):
+        # TODO
         pass
 
     def on_data_change(self):
+        # TODO
         pass
 
