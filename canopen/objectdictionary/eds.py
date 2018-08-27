@@ -97,7 +97,7 @@ def import_eds(source, node_id):
 
 def import_from_node(node_id, network):
     """ Download the configuration from the remote node
-    :param hex node_id: Identifier of the node
+    :param int node_id: Identifier of the node
     :param network: network object
     """
     # Create temporary SDO client
