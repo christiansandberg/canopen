@@ -26,6 +26,9 @@ class RemoteNode(BaseNode):
     def __init__(self, node_id, object_dictionary, load_od=False):
         super(RemoteNode, self).__init__(node_id, object_dictionary)
 
+        #: Enable WORKAROUND for reversed PDO mapping entries
+        self.curtis_hack = False
+
         self.sdo = SdoClient(0x600 + self.id, 0x580 + self.id,
                              self.object_dictionary)
         self.tpdo = TPDO(self)
