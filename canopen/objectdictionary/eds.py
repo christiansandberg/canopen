@@ -169,7 +169,7 @@ def build_variable(eds, section, node_id, index, subindex=0):
 
             if var.data_type in objectdictionary.DATA_TYPES:
                 var.value = parameter_value
-            elif var.data_type in objectdictionary.DATA_TYPES:
+            elif var.data_type in objectdictionary.FLOAT_TYPES:
                 var.value = float(parameter_value)
             else:
                 # COB-ID can have a suffix of '$NODEID+' so replace this with node_id before converting
