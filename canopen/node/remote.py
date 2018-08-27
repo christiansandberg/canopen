@@ -20,6 +20,9 @@ class RemoteNode(BaseNode):
     :param object_dictionary:
         Object dictionary as either a path to a file, an ``ObjectDictionary``
         or a file like object.
+    :param bool load_od:
+        Enable the Object Dictionary to be sent trought SDO's to the remote
+        node at startup.
     :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary`
     """
 
