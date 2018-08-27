@@ -96,17 +96,17 @@ Here are some quick examples of what you can do:
     node.sdo['Producer heartbeat time'].raw = 1000
 
     # Read PDO configuration from node
-    node.pdo.read()
-    # Re-map TxPDO1
-    node.pdo.tx[1].clear()
-    node.pdo.tx[1].add_variable('Statusword')
-    node.pdo.tx[1].add_variable('Velocity actual value')
-    node.pdo.tx[1].add_variable('Some group', 'Some subindex')
-    node.pdo.tx[1].trans_type = 254
-    node.pdo.tx[1].event_timer = 10
-    node.pdo.tx[1].enabled = True
+    node.tpdo.read()
+    # Re-map TPDO[1]
+    node.tpdo[1].clear()
+    node.tpdo[1].add_variable('Statusword')
+    node.tpdo[1].add_variable('Velocity actual value')
+    node.tpdo[1].add_variable('Some group', 'Some subindex')
+    node.tpdo[1].trans_type = 254
+    node.tpdo[1].event_timer = 10
+    node.tpdo[1].enabled = True
     # Save new PDO configuration to node
-    node.pdo.save()
+    node.tpdo.save()
 
     # Transmit SYNC every 100 ms
     network.sync.start(0.1)
@@ -114,10 +114,10 @@ Here are some quick examples of what you can do:
     # Change state to operational (NMT start)
     node.nmt.state = 'OPERATIONAL'
 
-    # Read a value from TxPDO1
-    node.pdo.tx[1].wait_for_reception()
-    speed = node.pdo['Velocity actual value'].phys
-    val = node.pdo['Some group.Some subindex'].raw
+    # Read a value from TPDO[1]
+    node.rpdo[1].wait_for_reception()
+    speed = node.tpdo[1]['Velocity actual value'].phys
+    val = node.tpdo['Some group.Some subindex'].raw
 
     # Disconnect from CAN bus
     network.sync.stop()
