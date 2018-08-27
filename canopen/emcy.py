@@ -3,7 +3,6 @@ import logging
 import threading
 import time
 
-
 # Error code, error register, vendor specific data
 EMCY_STRUCT = struct.Struct("<HB5s")
 
@@ -13,9 +12,9 @@ logger = logging.getLogger(__name__)
 class EmcyConsumer(object):
 
     def __init__(self):
-        #: Log of all received EMCYs for this node
+        # : Log of all received EMCYs for this node
         self.log = []
-        #: Only active EMCYs. Will be cleared on Error Reset
+        # : Only active EMCYs. Will be cleared on Error Reset
         self.active = []
         self.callbacks = []
         self.emcy_received = threading.Condition()
@@ -109,13 +108,13 @@ class EmcyError(Exception):
     ]
 
     def __init__(self, code, register, data, timestamp):
-        #: EMCY code
+        # : EMCY code
         self.code = code
-        #: Error register
+        # : Error register
         self.register = register
-        #: Vendor specific data
+        # : Vendor specific data
         self.data = data
-        #: Timestamp of message
+        # : Timestamp of message
         self.timestamp = timestamp
 
     def get_desc(self):

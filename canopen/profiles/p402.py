@@ -32,6 +32,7 @@ COMMAND_TO_POWER_STATE = {
     0x02: 'QUICK STOP ACTIVE'
 }
 
+
 class Node402(RemoteNode):
     """A CANopen CiA 402 profile slave node.
 
@@ -64,6 +65,7 @@ class Node402(RemoteNode):
         self.tpdo[1].enabled = True
         self.tpdo[1].save()
         self.nmt.state = 'OPERATIONAL'
+
 
 class PowerStateMachine(object):
     """A CANopen CiA 402 Power State machine. Listens to state changes

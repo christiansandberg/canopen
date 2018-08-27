@@ -8,7 +8,6 @@ from ..nmt import NmtSlave
 from ..emcy import EmcyProducer
 from .. import objectdictionary
 
-
 logger = logging.getLogger(__name__)
 
 

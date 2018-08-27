@@ -4,7 +4,6 @@ from .base import SdoBase
 from .constants import *
 from .exceptions import *
 
-
 logger = logging.getLogger(__name__)
 
 

@@ -6,7 +6,6 @@ try:
 except ImportError:
     import Queue as queue
 
-
 logger = logging.getLogger(__name__)
 
 CS_SWITCH_STATE_GLOBAL = 0x04
@@ -19,15 +18,15 @@ CS_SWITCH_STATE_SELECTIVE_PRODUCT_CODE = 0x41
 CS_SWITCH_STATE_SELECTIVE_REVISION_NUMBER = 0x42
 CS_SWITCH_STATE_SELECTIVE_SERIAL_NUMBER = 0x43
 CS_SWITCH_STATE_SELECTIVE_RESPONSE = 0x44
-CS_IDENTIFY_REMOTE_SLAVE_VENDOR_ID = 0x46               # m -> s
-CS_IDENTIFY_REMOTE_SLAVE_PRODUCT_CODE = 0x47            # m -> s
-CS_IDENTIFY_REMOTE_SLAVE_REVISION_NUMBER_LOW = 0x48     # m -> s
-CS_IDENTIFY_REMOTE_SLAVE_REVISION_NUMBER_HIGH = 0x49    # m -> s
-CS_IDENTIFY_REMOTE_SLAVE_SERIAL_NUMBER_LOW = 0x4A       # m -> s
-CS_IDENTIFY_REMOTE_SLAVE_SERIAL_NUMBER_HIGH = 0x4B      # m -> s
-CS_IDENTIFY_NON_CONFIGURED_REMOTE_SLAVE = 0x4C          # m -> s
-CS_IDENTIFY_SLAVE = 0x4F                                # s -> m
-CS_IDENTIFY_NON_CONFIGURED_SLAVE = 0x50                 # s -> m
+CS_IDENTIFY_REMOTE_SLAVE_VENDOR_ID = 0x46  # m -> s
+CS_IDENTIFY_REMOTE_SLAVE_PRODUCT_CODE = 0x47  # m -> s
+CS_IDENTIFY_REMOTE_SLAVE_REVISION_NUMBER_LOW = 0x48  # m -> s
+CS_IDENTIFY_REMOTE_SLAVE_REVISION_NUMBER_HIGH = 0x49  # m -> s
+CS_IDENTIFY_REMOTE_SLAVE_SERIAL_NUMBER_LOW = 0x4A  # m -> s
+CS_IDENTIFY_REMOTE_SLAVE_SERIAL_NUMBER_HIGH = 0x4B  # m -> s
+CS_IDENTIFY_NON_CONFIGURED_REMOTE_SLAVE = 0x4C  # m -> s
+CS_IDENTIFY_SLAVE = 0x4F  # s -> m
+CS_IDENTIFY_NON_CONFIGURED_SLAVE = 0x50  # s -> m
 CS_INQUIRE_VENDOR_ID = 0x5A
 CS_INQUIRE_PRODUCT_CODE = 0x5B
 CS_INQUIRE_REVISION_NUMBER = 0x5C
@@ -41,7 +40,6 @@ CONFIGURE_BIT_TIMING = 0x13
 STORE_CONFIGURATION = 0x17
 INQUIRE_NODE_ID = 0x5E
 
-
 ERROR_NONE = 0
 ERROR_INADMISSIBLE = 1
 
@@ -50,7 +48,6 @@ ERROR_STORE_NOT_SUPPORTED = 1
 ERROR_STORE_ACCESS_PROBLEM = 2
 
 ERROR_VENDOR_SPECIFIC = 0xff
-
 
 ListMessageNeedResponse = [
     CS_CONFIGURE_NODE_ID,
@@ -78,7 +75,7 @@ class LssMaster(object):
     NORMAL_MODE = 0x00
     CONFIGURATION_MODE = 0x01
 
-    #: Max time in seconds to wait for response from server
+    # : Max time in seconds to wait for response from server
     RESPONSE_TIMEOUT = 0.5
 
     def __init__(self):
@@ -86,7 +83,6 @@ class LssMaster(object):
         self._node_id = 0
         self._data = None
         self.responses = queue.Queue()
-
 
     def send_switch_state_global(self, mode):
         """switch mode to CONFIGURATION_STATE or WAITING_STATE
@@ -301,7 +297,7 @@ class LssMaster(object):
             raise LssError("Response message is not for the request")
 
         if error_code != ERROR_NONE:
-            error_msg = "LSS Error: %d" %error_code
+            error_msg = "LSS Error: %d" % error_code
             raise LssError(error_msg)
 
     def __send_command(self, message):
