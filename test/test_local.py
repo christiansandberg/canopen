@@ -6,7 +6,6 @@ import time
 
 # logging.basicConfig(level=logging.DEBUG)
 
-
 EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
 
 
@@ -161,7 +160,6 @@ class TestSDO(unittest.TestCase):
         self.assertEqual(self._kwargs["data"], b"\x03\x04\x05\x06")
 
 
-
 class TestNMT(unittest.TestCase):
     """
     Test NMT slave.
@@ -215,13 +213,12 @@ class TestNMT(unittest.TestCase):
         self.assertEqual(slave_state, 'STOPPED')
 
     def test_heartbeat(self):
-        #self.assertEqual(self.remote_node.nmt.state, 'INITIALISING')
-        #self.assertEqual(self.local_node.nmt.state, 'INITIALISING')
+        # self.assertEqual(self.remote_node.nmt.state, 'INITIALISING')
+        # self.assertEqual(self.local_node.nmt.state, 'INITIALISING')
         self.local_node.nmt.state = 'OPERATIONAL'
         self.local_node.sdo[0x1017].raw = 100
         time.sleep(0.2)
         self.assertEqual(self.remote_node.nmt.state, 'OPERATIONAL')
-
 
 
 class TestPDO(unittest.TestCase):

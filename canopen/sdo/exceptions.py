@@ -1,4 +1,5 @@
 
+
 class SdoError(Exception):
     pass
 
@@ -31,7 +32,7 @@ class SdoAbortedError(SdoError):
     }
 
     def __init__(self, code):
-        #: Abort code
+        # : Abort code
         self.code = code
 
     def __str__(self):

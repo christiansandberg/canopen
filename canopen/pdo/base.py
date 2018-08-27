@@ -14,20 +14,17 @@ RTR_NOT_ALLOWED = 1 << 30
 logger = logging.getLogger(__name__)
 
 
-
 class PdoBase(collections.Mapping):
     """Represents the base implemention for the PDO object."""
 
     def __init__(self, node):
         """
-        :param node: 
+        :param node:
         :param map:
         """
         self.network = None
         self.map = None
         self.node = node
-        
-        
 
     def __iter__(self):
         for var in self.map:
@@ -99,12 +96,13 @@ class PdoBase(collections.Mapping):
         formats.dumpp({"": db}, filename)
         return db
 
+
 class Maps(collections.Mapping):
     """A collection of transmit or receive maps."""
 
     def __init__(self, com_offset, map_offset, pdo_node, cob_base=None):
         """
-        :param com_offset: 
+        :param com_offset:
         :param map_offset:
         :param pdo_node:
         :param cob_base:
@@ -140,11 +138,11 @@ class Map(object):
         self.map_array = map_array
         # : If this map is valid
         self.enabled = False
-        #: COB-ID for this PdoBase
+        # : COB-ID for this PdoBase
         self.cob_id = None
-        #: Default COB-ID if this PdoBase is part of the pre-defined connection set
+        # : Default COB-ID if this PdoBase is part of the pre-defined connection set
         self.predefined_cob_id = None
-        #: Is the remote transmit request (RTR) allowed for this PdoBase
+        # : Is the remote transmit request (RTR) allowed for this PdoBase
         self.rtr_allowed = True
         # : Transmission type (0-255)
         self.trans_type = None
@@ -152,9 +150,9 @@ class Map(object):
         self.inhibit_time = None
         # : Event timer (optional) (in ms)
         self.event_timer = None
-        #: Ignores SYNC objects up to this SYNC counter value (optional)
+        # : Ignores SYNC objects up to this SYNC counter value (optional)
         self.sync_start_value = None
-        #: List of variables mapped to this PdoBase
+        # : List of variables mapped to this PdoBase
         self.map = []
         self.length = 0
         # : Current message data
@@ -284,7 +282,7 @@ class Map(object):
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
-            if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack: # Curtis HACK: mixed up field order
+            if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
                 index = value & 0xFFFF
                 subindex = (value >> 16) & 0xFF
                 size = (value >> 24) & 0xFF
@@ -325,7 +323,7 @@ class Map(object):
             for var in self.map:
                 logger.info("Writing %s (0x%X:%d, %d bits) to PdoBase map",
                             var.name, var.index, var.subindex, var.length)
-                if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack: # Curtis HACK: mixed up field order
+                if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
                     self.map_array[subindex].raw = (var.index |
                                                     var.subindex << 16 |
                                                     var.length << 24)

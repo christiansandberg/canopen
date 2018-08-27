@@ -20,7 +20,6 @@ from .nmt import NmtMaster
 from .lss import LssMaster
 from .objectdictionary.eds import import_from_node
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -32,13 +31,13 @@ class Network(collections.MutableMapping):
         :param can.BusABC bus:
             A python-can bus instance to re-use.
         """
-        #: A python-can :class:`can.BusABC` instance which is set after
-        #: :meth:`canopen.Network.connect` is called
+        # : A python-can :class:`can.BusABC` instance which is set after
+        # : :meth:`canopen.Network.connect` is called
         self.bus = bus
-        #: A :class:`~canopen.network.NodeScanner` for detecting nodes
+        # : A :class:`~canopen.network.NodeScanner` for detecting nodes
         self.scanner = NodeScanner(self)
-        #: List of :class:`can.Listener` objects.
-        #: Includes at least MessageListener.
+        # : List of :class:`can.Listener` objects.
+        # : Includes at least MessageListener.
         self.listeners = [MessageListener(self)]
         self.notifier = None
         self.nodes = {}
@@ -52,7 +51,6 @@ class Network(collections.MutableMapping):
         self.lss = LssMaster()
         self.lss.network = self
         self.subscribe(self.lss.LSS_RX_COBID, self.lss.on_message_received)
-
 
     def subscribe(self, can_id, callback):
         """Listen for messages with a specific CAN ID.
@@ -106,7 +104,7 @@ class Network(collections.MutableMapping):
                     kwargs["bitrate"] = node.object_dictionary.bitrate
                     break
         # Try to filter out only 11-bit IDs
-        #kwargs.setdefault("can_filters",
+        # kwargs.setdefault("can_filters",
         #                  [{"can_id": 0, "can_mask": 0x1FFFF800}])
         self.bus = can.interface.Bus(*args, **kwargs)
         logger.info("Connected to '%s'", self.bus.channel_info)
@@ -347,14 +345,14 @@ class NodeScanner(object):
         The network to use when doing active searching.
     """
 
-    #: Activate or deactivate scanning
+    # : Activate or deactivate scanning
     active = True
 
     SERVICES = (0x700, 0x580, 0x180, 0x280, 0x380, 0x480, 0x80)
 
     def __init__(self, network=None):
         self.network = network
-        #: A :class:`list` of nodes discovered
+        # : A :class:`list` of nodes discovered
         self.nodes = []
 
     def on_message_received(self, can_id):

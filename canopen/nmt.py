@@ -7,7 +7,6 @@ from .network import CanError
 
 logger = logging.getLogger(__name__)
 
-
 NMT_STATES = {
     0: 'INITIALISING',
     4: 'STOPPED',
@@ -16,7 +15,6 @@ NMT_STATES = {
     96: 'STANDBY',
     127: 'PRE-OPERATIONAL'
 }
-
 
 NMT_COMMANDS = {
     'OPERATIONAL': 1,
@@ -28,7 +26,6 @@ NMT_COMMANDS = {
     'RESET': 129,
     'RESET COMMUNICATION': 130
 }
-
 
 COMMAND_TO_STATE = {
     1: 5,
@@ -113,7 +110,7 @@ class NmtMaster(NmtBase):
         super(NmtMaster, self).__init__(node_id)
         self._state_received = None
         self._node_guarding_producer = None
-        #: Timestamp of last heartbeat message
+        # : Timestamp of last heartbeat message
         self.timestamp = None
         self.state_update = threading.Condition()
 
@@ -166,19 +163,21 @@ class NmtMaster(NmtBase):
     def start_node_guarding(self, period):
         """Starts the node guarding mechanism.
         :param float period:
-            frequency (in seconds) at which the node guarding should be advertised to the slave node.
+            Frequency (in seconds) at which the node guarding should be advertised to the slave node.
         """
         self._node_guarding_producer = self.network.send_periodic(0x700 + self.id, None, period, True)
 
     def stop_node_guarding(self):
         """Stops the node guarding mechanism."""
-        self._node_guarding_producer.stop()
+        if self._node_guarding_producer is not None:
+            self._node_guarding_producer.stop()
 
 
 class NmtSlave(NmtBase):
     """
     Handles the NMT state and handles heartbeat NMT service.
     """
+
     def __init__(self, node_id, local_node):
         super(NmtSlave, self).__init__(node_id)
         self._send_task = None

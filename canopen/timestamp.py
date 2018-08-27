@@ -1,11 +1,10 @@
 import time
 import struct
 
-
 # 1 Jan 1984
 OFFSET = 441763200
 
-ONE_DAY = 60*60*24
+ONE_DAY = 60 * 60 * 24
 
 TIME_OF_DAY_STRUCT = struct.Struct("<LH")
 
@@ -13,7 +12,7 @@ TIME_OF_DAY_STRUCT = struct.Struct("<LH")
 class TimeProducer(object):
     """Produces timestamp objects."""
 
-    #: COB-ID of the SYNC message
+    # : COB-ID of the SYNC message
     cob_id = 0x100
 
     def __init__(self, network):
