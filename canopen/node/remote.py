@@ -1,5 +1,4 @@
 import logging
-import time
 
 from ..sdo import SdoClient
 from ..nmt import NmtMaster
