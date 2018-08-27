@@ -19,8 +19,7 @@ class PdoBase(collections.Mapping):
 
     def __init__(self, node):
         """
-        :param node:
-        :param map:
+        :param node: Parent object associated with this PDO instance
         """
         self.network = None
         self.map = None
@@ -33,18 +32,18 @@ class PdoBase(collections.Mapping):
     def __getitem__(self, key):
         if isinstance(key, int):
             return self.map[key]
-        raise KeyError("PdoBase: {0} was not found in any map".format(key))
+        raise KeyError("PDO: {0} was not found in any map".format(key))
 
     def __len__(self):
         return len(self.map)
 
     def read(self):
-        """Read PdoBase configuration from node using SDO."""
+        """Read PDO configuration from node using SDO."""
         for pdo_map in self.map.values():
             pdo_map.read()
 
     def save(self):
-        """Save PdoBase configuration to node using SDO."""
+        """Save PDO configuration to node using SDO."""
         for pdo_map in self.map.values():
             pdo_map.save()
 
@@ -138,11 +137,11 @@ class Map(object):
         self.map_array = map_array
         # : If this map is valid
         self.enabled = False
-        # : COB-ID for this PdoBase
+        # : COB-ID for this PDO
         self.cob_id = None
-        # : Default COB-ID if this PdoBase is part of the pre-defined connection set
+        # : Default COB-ID if this PDO is part of the pre-defined connection set
         self.predefined_cob_id = None
-        # : Is the remote transmit request (RTR) allowed for this PdoBase
+        # : Is the remote transmit request (RTR) allowed for this PDO
         self.rtr_allowed = True
         # : Transmission type (0-255)
         self.trans_type = None
@@ -152,7 +151,7 @@ class Map(object):
         self.event_timer = None
         # : Ignores SYNC objects up to this SYNC counter value (optional)
         self.sync_start_value = None
-        # : List of variables mapped to this PdoBase
+        # : List of variables mapped to this PDO
         self.map = []
         self.length = 0
         # : Current message data
@@ -208,7 +207,7 @@ class Map(object):
 
     @property
     def name(self):
-        """A descriptive name of the PdoBase.
+        """A descriptive name of the PDO.
 
         Examples:
          * TxPDO1_node4
@@ -243,12 +242,12 @@ class Map(object):
         self.callbacks.append(callback)
 
     def read(self):
-        """Read PdoBase configuration for this map using SDO."""
+        """Read PDO configuration for this map using SDO."""
         cob_id = self.com_record[1].raw
         self.cob_id = cob_id & 0x7FF
         logger.info("COB-ID is 0x%X", self.cob_id)
         self.enabled = cob_id & PDO_NOT_VALID == 0
-        logger.info("PdoBase is %s", "enabled" if self.enabled else "disabled")
+        logger.info("PDO is %s", "enabled" if self.enabled else "disabled")
         self.rtr_allowed = cob_id & RTR_NOT_ALLOWED == 0
         logger.info("RTR is %s", "allowed" if self.rtr_allowed else "not allowed")
         self.trans_type = self.com_record[2].raw
@@ -293,8 +292,8 @@ class Map(object):
             self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
     def save(self):
-        """Save PdoBase configuration for this map using SDO."""
-        logger.info("Setting COB-ID 0x%X and temporarily disabling PdoBase",
+        """Save PDO configuration for this map using SDO."""
+        logger.info("Setting COB-ID 0x%X and temporarily disabling PDO",
                     self.cob_id)
         self.com_record[1].raw = self.cob_id | PDO_NOT_VALID
         if self.trans_type is not None:
@@ -321,7 +320,7 @@ class Map(object):
                 self._fill_map(self.map_array[0].raw)
             subindex = 1
             for var in self.map:
-                logger.info("Writing %s (0x%X:%d, %d bits) to PdoBase map",
+                logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
                             var.name, var.index, var.subindex, var.length)
                 if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
                     self.map_array[subindex].raw = (var.index |
@@ -345,7 +344,7 @@ class Map(object):
             self._update_data_size()
 
         if self.enabled:
-            logger.info("Enabling PdoBase")
+            logger.info("Enabling PDO")
             self.com_record[1].raw = self.cob_id
             self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
@@ -374,7 +373,7 @@ class Map(object):
             if length is not None:
                 # Custom bit length
                 var.length = length
-            logger.info("Adding %s (0x%X:%d, %d bits) to PdoBase map",
+            logger.info("Adding %s (0x%X:%d, %d bits) to PDO map",
                         var.name, var.index, var.subindex, var.length)
             self.map.append(var)
             self.length += var.length
@@ -383,7 +382,7 @@ class Map(object):
             var = None
         self._update_data_size()
         if self.length > 64:
-            logger.warning("Max size of PdoBase exceeded (%d > 64)", self.length)
+            logger.warning("Max size of PDO exceeded (%d > 64)", self.length)
         return var
 
     def transmit(self):
@@ -417,14 +416,14 @@ class Map(object):
             self._task.update(self.data)
 
     def remote_request(self):
-        """Send a remote request for the transmit PdoBase.
+        """Send a remote request for the transmit PDO.
         Silently ignore if not allowed.
         """
         if self.enabled and self.rtr_allowed:
             self.pdo_node.network.send_message(self.cob_id, None, remote=True)
 
     def wait_for_reception(self, timeout=10):
-        """Wait for the next transmit PdoBase.
+        """Wait for the next transmit PDO.
 
         :param float timeout: Max time to wait in seconds.
         :return: Timestamp of message received or None if timeout.
@@ -437,7 +436,7 @@ class Map(object):
 
 
 class Variable(variable.Variable):
-    """One object dictionary variable mapped to a PdoBase."""
+    """One object dictionary variable mapped to a PDO."""
 
     def __init__(self, od):
         self.msg = None
@@ -447,7 +446,7 @@ class Variable(variable.Variable):
         variable.Variable.__init__(self, od)
 
     def get_data(self):
-        """Reads the PdoBase variable from the last received message.
+        """Reads the PDO variable from the last received message.
 
         :return: Variable value as :class:`bytes`.
         :rtype: bytes
@@ -471,9 +470,9 @@ class Variable(variable.Variable):
         return data
 
     def set_data(self, data):
-        """Set for the given variable the PdoBase data.
+        """Set for the given variable the PDO data.
 
-        :param bytes data: Value for the PdoBase variable in the PdoBase message as :class:`bytes`.
+        :param bytes data: Value for the PDO variable in the PDO message as :class:`bytes`.
         """
         byte_offset, bit_offset = divmod(self.offset, 8)
         logger.debug("Updating %s to %s in message 0x%X",
