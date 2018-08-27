@@ -6,7 +6,6 @@ import traceback
 from canopen import Node402, Network
 
 import time
-import signal
 
 try:
 
@@ -24,16 +23,6 @@ try:
     # network.add_node(34, '/home/andre/Code/test/jupiter.eds')
     # node = network[34]
 
-    # list the object dictionary
-    '''
-    for obj in node.object_dictionary.values():
-        print('0x%X: %s' % (obj.index, obj.name))
-        if isinstance(obj, canopen.objectdictionary.Record):
-            for subobj in obj.values():
-                print('  %d: %s' % (subobj.subindex, subobj.name))
-
-    '''
-
     # Reset network
     # node.nmt.state = 'RESET COMMUNICATION'
     node.nmt.state = 'RESET'
@@ -44,7 +33,7 @@ try:
     # Iterate over arrays or records
     error_log = node.sdo[0x1003]
     for error in error_log.values():
-        print("Error 0x%X was found in the log" % error.raw)
+        print("Error {0} was found in the log".format(error.raw))
 
     for node_id in network:
         print(network[node_id])
@@ -135,7 +124,7 @@ try:
     while True:
         try:
             network.check()
-        except:
+        except Exception:
             break
 
         # Read a value from TxPDO1
