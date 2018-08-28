@@ -23,7 +23,7 @@ Finally, you can switch to LSS waiting state.
 
 
 .. note::
-    Fastscan is not supported.
+    Fastscan is supported as of August 2018.
 
 Examples
 --------
@@ -41,6 +41,10 @@ Or, you can call this method with 4 IDs if you want to switch only one slave::
     serialNumber = 0x00abcdef
     ret_bool = network.lss.send_switch_state_selective(vendorId, productCode,
                                         revisionNumber, serialNumber)
+
+Or, you can run fastscan procedure ::
+
+    ret_bool, lss_id_list = network.lss.fast_scan()
 
 You can read the current node id of the LSS slave::
 
