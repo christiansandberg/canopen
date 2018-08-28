@@ -12,15 +12,13 @@ class RPDO(PdoBase):
     def __init__(self, node):
         super(RPDO, self).__init__(node)
         self.map = Maps(0x1400, 0x1600, self, 0x200)
+        logger.debug('RPDO Map as {0}'.format(len(self.map)))
 
-    def stop(self):
-        """Stop transmission of all RPDOs."""
-        for pdo in self.map.values():
-            pdo.stop()
-
-    def get(self, index):
+    def get_rpdo(self, index):
         """Get PDO object through index
         :param int index: Index of the PDO mapping to retrive.
         """
         return self.map[index]
 
+    def get_rpdos(self):
+        return self.map

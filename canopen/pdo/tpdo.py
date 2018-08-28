@@ -12,12 +12,10 @@ class TPDO(PdoBase):
         super(TPDO, self).__init__(node)
         self.map = Maps(0x1800, 0x1A00, self, 0x180)
         self.subscribers = {}
+        logger.debug('TPDO Map as {0}'.format(len(self.map)))
 
-    def on_sync(self, can_id, data, timestamp):
-        # TODO
-        pass
-
-    def on_data_change(self):
-        # TODO
-        pass
+    def stop(self):
+        """Stop transmission of all TPDOs."""
+        for pdo in self.map.values():
+            pdo.stop()
 
