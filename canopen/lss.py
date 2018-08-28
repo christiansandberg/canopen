@@ -246,6 +246,15 @@ class LssMaster(object):
         self.__send_command(message)
 
     def fast_scan(self):
+        """This command sends a series of fastscan message 
+        to find unconfigured slave with lowest number of LSS idenities
+
+        :return:
+            True if a slave is found.
+            False if there is no candidate. 
+            list is the LSS identities [vendor_id, product_code, revision_number, seerial_number]
+        :rtype: bool, list
+        """
         lss_id = [0] * 4
         lss_bit_check = 128
         lss_sub = 0

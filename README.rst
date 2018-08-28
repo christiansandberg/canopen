@@ -18,6 +18,7 @@ Features
 * SYNC producer
 * EMCY consumer
 * TIME producer
+* LSS master
 
 
 Installation
