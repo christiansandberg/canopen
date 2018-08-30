@@ -33,6 +33,10 @@ class PdoBase(collections.Mapping):
     def __getitem__(self, key):
         if isinstance(key, int):
             return self.map[key]
+        else:
+            for var in self.map:
+                if var.length and var.name == key:
+                    return var
         raise KeyError("PDO: {0} was not found in any map".format(key))
 
     def __len__(self):
