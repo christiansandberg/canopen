@@ -8,6 +8,7 @@ from ..sdo import SdoAbortedError
 from .. import objectdictionary
 from .. import variable
 
+
 PDO_NOT_VALID = 1 << 31
 RTR_NOT_ALLOWED = 1 << 30
 
@@ -18,19 +19,16 @@ class PdoBase(collections.Mapping):
     """Represents the base implemention for the PDO object.
     :param object node:
         Parent object associated with this PDO instance
+    :param node_type: Type of the node  :class:`canopen.NODETYPE`
     """
 
     def __init__(self, node):
-        """
-
-        """
         self.network = None
         self.map = None
         self.node = node
 
     def __iter__(self):
-        for var in self.map:
-            yield var.name
+        return iter(self.map)
 
     def __getitem__(self, key):
         if isinstance(key, int):
@@ -443,7 +441,7 @@ class Variable(variable.Variable):
 
     def __init__(self, od):
         self.msg = None
-        # : Location of variable in the message in bits
+        #: Location of variable in the message in bits
         self.offset = None
         self.length = len(od)
         variable.Variable.__init__(self, od)

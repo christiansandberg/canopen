@@ -3,7 +3,7 @@ import logging
 from ..sdo import SdoClient
 from ..nmt import NmtMaster
 from ..emcy import EmcyConsumer
-from ..pdo import TPDO, RPDO
+from ..pdo import TPDO, RPDO, PDO
 from ..objectdictionary import Record, Array, Variable
 from .base import BaseNode
 
@@ -36,6 +36,7 @@ class RemoteNode(BaseNode):
                              self.object_dictionary)
         self.tpdo = TPDO(self)
         self.rpdo = RPDO(self)
+        self.pdo = PDO(self, self.rpdo, self.tpdo)
         self.nmt = NmtMaster(self.id)
         self.emcy = EmcyConsumer()
 
@@ -45,6 +46,7 @@ class RemoteNode(BaseNode):
     def associate_network(self, network):
         self.network = network
         self.sdo.network = network
+        self.pdo.network = network
         self.tpdo.network = network
         self.rpdo.network = network
         self.nmt.network = network
@@ -58,6 +60,7 @@ class RemoteNode(BaseNode):
         self.network.unsubscribe(0x80 + self.id, self.emcy.on_emcy)
         self.network = None
         self.sdo.network = None
+        self.pdo.network = None
         self.tpdo.network = None
         self.rpdo.network = None
         self.nmt.network = None

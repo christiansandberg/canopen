@@ -31,10 +31,12 @@ Examples
 A :class:`canopen.Node` has a ``.pdo`` attribute that can be used to interact
 with the node using PDOs. This is in turn divided in a ``.tx`` and a ``.rx``
 attribute which can be subindexed to specify which message to use (first map
-starts at 1, not 0)::
+starts at 1, not 0). The :class:`canopen.Node` also allow the user to access 
+the PDOs through the attributes ``.rpdo`` and ``.tpdo`` that provide a more
+direct way to access the configured PDOs (see example below)::
 
     # Read current PDO configuration
-    node.pdo.read()
+    node.pdo[4].read()
 
     # Do some changes to TPDO4 and RPDO4
     node.tpdo[4].clear()
@@ -64,7 +66,7 @@ starts at 1, not 0)::
     # Read 50 values of speed and save to a file
     with open('output.txt', 'w') as f:
         for i in range(50):
-            node.pdo.tx[4].wait_for_reception()
+            node.tpdo[4].wait_for_reception()
             speed = node.tpdo['Application Status.Actual Speed'].phys
             f.write('%s\n' % speed)
 
@@ -74,7 +76,7 @@ starts at 1, not 0)::
         for var in message:
             print('%s = %d' % (var.name, var.raw))
 
-    node.pdo.tx[4].add_callback(print_speed)
+    node.tpdo[4].add_callback(print_speed)
     time.sleep(5)
 
     # Stop transmission of RxPDO
@@ -92,17 +94,20 @@ API
       The :class:`canopen.pdo.Mcps` object representing map associated with the instantiated PDO (transmit or receive).
 
 
-.. autoclass:: canopen.pdo.RPDO
+.. autoclass:: canopen.pdo.PDO
    :members:
 
-   .. method:: stop()
 
-      Stop transmission of all Rx PDOs.
+.. autoclass:: canopen.pdo.RPDO
+   :members:
 
 
 .. autoclass:: canopen.pdo.TPDO
    :members:
 
+   .. method:: stop()
+
+      Stop transmission of all Tx PDOs.
 
 .. autoclass:: canopen.pdo.Maps
    :members:
