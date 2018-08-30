@@ -92,7 +92,7 @@ class RemoteNode(BaseNode):
         for obj in self.object_dictionary.values():
             if isinstance(obj, Record) or isinstance(obj, Array):
                 for subobj in obj.values():
-                    if isinstance(subobj, Variable) and (subobj.access_type == 'rw') and (subobj.value != None) :
+                    if isinstance(subobj, Variable) and (subobj.access_type == 'rw') and (subobj.value is not None) :
                         logger.debug(str('SDO [{index}][{subindex}]: {name}: {value}'.format(
                             index=subobj.index,
                             subindex=subobj.subindex,
@@ -108,6 +108,6 @@ class RemoteNode(BaseNode):
                             if e.code != 0x06010002:
                                 # Abort codes other than "Attempt to write a read-only object"
                                 # should still be reported.
-                                print ('[ERROR SETTING object {0}:{1}]  {2}'.format(subobj.index, subobj.subindex, str(e)))
+                                print('[ERROR SETTING object {0}:{1}]  {2}'.format(subobj.index, subobj.subindex, str(e)))
                                 logger.info(str(e))
                                 raise
