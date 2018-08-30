@@ -117,10 +117,10 @@ def import_from_node(node_id, network):
         network.unsubscribe(0x580 + node_id)
     return od
 
-def _convert_variable(node_id, var, type, value):
-    if type in objectdictionary.DATA_TYPES:
+def _convert_variable(node_id, var, var_type, value):
+    if var_type in objectdictionary.DATA_TYPES:
             var = value
-    elif type in objectdictionary.FLOAT_TYPES:
+    elif var_type in objectdictionary.FLOAT_TYPES:
         var = float(value)
     else:
         # COB-ID can have a suffix of '$NODEID+' so replace this with node_id before converting
@@ -169,7 +169,6 @@ def build_variable(eds, section, node_id, index, subindex=0):
         except ValueError:
             pass
     return var
-
 
 
 def copy_variable(eds, section, subindex, src_var):
