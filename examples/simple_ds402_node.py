@@ -3,8 +3,6 @@ import sys
 import os
 import traceback
 
-from canopen import Node402, Network
-
 import time
 
 try:
@@ -18,14 +16,14 @@ try:
     network.check()
 
     # Add some nodes with corresponding Object Dictionaries
-    node = Node402(35, '/home/andre/Code/test/jupiter.eds')
+    node = canopen.Node402(35, '/home/andre/Code/test/jupiter.eds')
     network.add_node(node)
     # network.add_node(34, '/home/andre/Code/test/jupiter.eds')
     # node = network[34]
 
     # Reset network
-    # node.nmt.state = 'RESET COMMUNICATION'
-    node.nmt.state = 'RESET'
+    node.nmt.state = 'RESET COMMUNICATION'
+    #node.nmt.state = 'RESET'
     node.nmt.wait_for_bootup(15)
 
     print 'node state 1) = {0}'.format(node.nmt.state)
@@ -72,7 +70,7 @@ try:
     # Re-map TxPDO1
     # node.tpdo[1].clear()
     # node.tpdo[1].add_variable('Statusword')
-    node.tpdo[1].add_variable('Velocity actual value')
+    node.pdo.tx[1].add_variable('Velocity actual value')
     node.tpdo[1].trans_type = 1
     node.tpdo[1].event_timer = 0
     node.tpdo[1].enabled = True
