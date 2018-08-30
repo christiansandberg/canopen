@@ -9,6 +9,7 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+# Command Specifier (CS)
 CS_SWITCH_STATE_GLOBAL = 0x04
 CS_CONFIGURE_NODE_ID = 0x11
 CS_CONFIGURE_BIT_TIMING = 0x13
@@ -28,6 +29,7 @@ CS_IDENTIFY_REMOTE_SLAVE_SERIAL_NUMBER_HIGH = 0x4B      # m -> s
 CS_IDENTIFY_NON_CONFIGURED_REMOTE_SLAVE = 0x4C          # m -> s
 CS_IDENTIFY_SLAVE = 0x4F                                # s -> m
 CS_IDENTIFY_NON_CONFIGURED_SLAVE = 0x50                 # s -> m
+CS_FAST_SCAN = 0x51                                     # m -> s
 CS_INQUIRE_VENDOR_ID = 0x5A
 CS_INQUIRE_PRODUCT_CODE = 0x5B
 CS_INQUIRE_REVISION_NUMBER = 0x5C
@@ -57,6 +59,7 @@ ListMessageNeedResponse = [
     CS_CONFIGURE_BIT_TIMING,
     CS_STORE_CONFIGURATION,
     CS_SWITCH_STATE_SELECTIVE_SERIAL_NUMBER,
+    CS_FAST_SCAN,
     CS_INQUIRE_VENDOR_ID,
     CS_INQUIRE_PRODUCT_CODE,
     CS_INQUIRE_REVISION_NUMBER,
@@ -186,10 +189,10 @@ class LssMaster(object):
         """
         self.__send_configure(CS_CONFIGURE_BIT_TIMING, 0, new_bit_timing)
 
-    def activate_bit_timing(self, switchDelayMs):
+    def activate_bit_timing(self, switch_delay_ms):
         """Activate the bit timing.
 
-        :param uint16_t switchDelayMs:
+        :param uint16_t switch_delay_ms:
             The slave that receives this message waits for switch delay,
             then activate the bit timing. But it shouldn't send any message
             until another switch delay is elapsed.
@@ -198,7 +201,7 @@ class LssMaster(object):
         message = bytearray(8)
 
         message[0] = CS_ACTIVATE_BIT_TIMING
-        message[1:3] = struct.pack('<H', switchDelayMs)
+        message[1:3] = struct.pack('<H', switch_delay_ms)
         self.__send_command(message)
 
     def store_configuration(self):
@@ -213,6 +216,7 @@ class LssMaster(object):
 
         """This command sends the range of LSS address to find the slave nodes
         in the specified range
+
         :param int vendorId:
         :param int productCode:
         :param int revisionNumberLow:
@@ -240,6 +244,60 @@ class LssMaster(object):
         message = bytearray(8)
         message[0] = CS_IDENTIFY_NON_CONFIGURED_REMOTE_SLAVE
         self.__send_command(message)
+
+    def fast_scan(self):
+        """This command sends a series of fastscan message 
+        to find unconfigured slave with lowest number of LSS idenities
+
+        :return:
+            True if a slave is found.
+            False if there is no candidate. 
+            list is the LSS identities [vendor_id, product_code, revision_number, seerial_number]
+        :rtype: bool, list
+        """
+        lss_id = [0] * 4
+        lss_bit_check = 128
+        lss_sub = 0
+        lss_next = 0
+
+        if self.__send_fast_scan_message(lss_id[0], lss_bit_check, lss_sub, lss_next):
+            time.sleep(0.01)
+            while lss_sub < 4:
+                lss_bit_check = 32
+                while lss_bit_check > 0:
+                    lss_bit_check -= 1
+
+                    if not self.__send_fast_scan_message(lss_id[lss_sub], lss_bit_check, lss_sub, lss_next):
+                        lss_id[lss_sub] |= 1<<lss_bit_check
+                    
+                    time.sleep(0.01)
+                    
+                lss_next = (lss_sub + 1) & 3
+                if not self.__send_fast_scan_message(lss_id[lss_sub], lss_bit_check, lss_sub, lss_next):
+                    return False, None
+
+                time.sleep(0.01)
+                
+                # Now the next 32 bits will be scanned
+                lss_sub += 1
+
+            # Now lss_id contains the entire 128 bits scanned
+            return True, lss_id
+        
+        return False, None
+
+    def __send_fast_scan_message(self, id_number, bit_checker, lss_sub, lss_next):
+        message = struct.pack('<BIBBB', CS_FAST_SCAN, id_number, bit_checker, lss_sub, lss_next)
+        try:
+            recv_msg = self.__send_command(message)
+        except LssError:
+            return False
+
+        if len(recv_msg) == 8:
+            if recv_msg[0] == CS_IDENTIFY_SLAVE:
+                return True
+        
+        return False
 
     def __send_lss_address(self, req_cs, number):
         message = bytearray(8)
@@ -318,11 +376,11 @@ class LssMaster(object):
 
         message_str = " ".join(["{:02x}".format(x) for x in message])
         logger.info(
-            "Sending LSS message %s", message_str)
+            "Sending LSS message {}".format(message_str))
 
         response = None
         if not self.responses.empty():
-            logger.warning("There were unexpected messages in the queue")
+            logger.info("There were unexpected messages in the queue")
             self.responses = queue.Queue()
 
         self.network.send_message(self.LSS_TX_COBID, message)
