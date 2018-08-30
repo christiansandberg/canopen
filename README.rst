@@ -104,6 +104,7 @@ The :code:`n` is the PDO index (normaly 1 to 4). The second form of access is fo
 
     # Read PDO configuration from node
     node.tpdo.read()
+    node.rpdo.read()
     # Re-map TPDO[1]
     node.tpdo[1].clear()
     node.tpdo[1].add_variable('Statusword')
@@ -113,7 +114,7 @@ The :code:`n` is the PDO index (normaly 1 to 4). The second form of access is fo
     node.tpdo[1].event_timer = 10
     node.tpdo[1].enabled = True
     # Save new PDO configuration to node
-    node.tpdo.save()
+    node.tpdo[1].save()
 
     # Transmit SYNC every 100 ms
     network.sync.start(0.1)
