@@ -1,6 +1,5 @@
 from .base import PdoBase, Maps, Map, Variable
 
-
 import logging
 import collections
 import itertools
@@ -15,7 +14,7 @@ class PDO(PdoBase):
     :param tpdo: TPDO object holding the Transmit PDO mappings
     """
 
-    def __init__(self,node, rpdo, tpdo):
+    def __init__(self, node, rpdo, tpdo):
         super(PDO, self).__init__(node)
         self.rx = rpdo.map
         self.tx = tpdo.map
@@ -31,10 +30,10 @@ class RPDO(PdoBase):
         super(RPDO, self).__init__(node)
         self.map = Maps(0x1400, 0x1600, self, 0x200)
         logger.debug('RPDO Map as {0}'.format(len(self.map)))
-        
+
     def stop(self):
         """Stop transmission of all RPDOs.
-        :raise TypeError: Exception is thrown if the node associated with the PDO does not 
+        :raise TypeError: Exception is thrown if the node associated with the PDO does not
         support this function"""
         if isinstance(canopen.RemoteNode, self.node):
             for pdo in self.map.values():
@@ -54,7 +53,7 @@ class TPDO(PdoBase):
 
     def stop(self):
         """Stop transmission of all TPDOs.
-        :raise TypeError: Exception is thrown if the node associated with the PDO does not 
+        :raise TypeError: Exception is thrown if the node associated with the PDO does not
         support this function"""
         if isinstance(canopen.LocalNode, self.node):
             for pdo in self.map.values():

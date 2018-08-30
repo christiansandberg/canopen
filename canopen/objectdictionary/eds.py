@@ -117,9 +117,10 @@ def import_from_node(node_id, network):
         network.unsubscribe(0x580 + node_id)
     return od
 
+
 def _convert_variable(node_id, var, var_type, value):
     if var_type in objectdictionary.DATA_TYPES:
-            var = value
+        var = value
     elif var_type in objectdictionary.FLOAT_TYPES:
         var = float(value)
     else:
@@ -128,6 +129,7 @@ def _convert_variable(node_id, var, var_type, value):
             var = int(value.replace('$NODEID+', ''), 0) + node_id
         else:
             var = int(value, 0)
+
 
 def build_variable(eds, section, node_id, index, subindex=0):
     """Creates a object dictionary entry.
