@@ -48,9 +48,9 @@ class ObjectDictionary(collections.MutableMapping):
     def __init__(self):
         self.indices = {}
         self.names = {}
-        # : Default bitrate if specified by file
+        #: Default bitrate if specified by file
         self.bitrate = None
-        # : Node ID if specified by file
+        #: Node ID if specified by file
         self.node_id = None
 
     def __getitem__(self, index):
@@ -110,15 +110,15 @@ class Record(collections.MutableMapping):
     subindices.
     """
 
-    # : Description for the whole record
+    #: Description for the whole record
     description = ""
 
     def __init__(self, name, index):
-        # : The :class:`~canopen.ObjectDictionary` owning the record.
+        #: The :class:`~canopen.ObjectDictionary` owning the record.
         self.parent = None
-        # : 16-bit address of the record
+        #: 16-bit address of the record
         self.index = index
-        # : Name of record
+        #: Name of record
         self.name = name
         self.subindices = {}
         self.names = {}
@@ -164,15 +164,15 @@ class Array(collections.Mapping):
     Actual length of array must be read from the node using SDO.
     """
 
-    # : Description for the whole array
+    #: Description for the whole array
     description = ""
 
     def __init__(self, name, index):
-        # : The :class:`~canopen.ObjectDictionary` owning the record.
+        #: The :class:`~canopen.ObjectDictionary` owning the record.
         self.parent = None
-        # : 16-bit address of the array
+        #: 16-bit address of the array
         self.index = index
-        # : Name of array
+        #: Name of array
         self.name = name
         self.subindices = {}
         self.names = {}
@@ -231,37 +231,37 @@ class Variable(object):
     }
 
     def __init__(self, name, index, subindex=0):
-        # : The :class:`~canopen.ObjectDictionary`,
-        # : :class:`~canopen.objectdictionary.Record` or
-        # : :class:`~canopen.objectdictionary.Array` owning the variable
+        #: The :class:`~canopen.ObjectDictionary`,
+        #: :class:`~canopen.objectdictionary.Record` or
+        #: :class:`~canopen.objectdictionary.Array` owning the variable
         self.parent = None
-        # : 16-bit address of the object in the dictionary
+        #: 16-bit address of the object in the dictionary
         self.index = index
-        # : 8-bit sub-index of the object in the dictionary
+        #: 8-bit sub-index of the object in the dictionary
         self.subindex = subindex
-        # : String representation of the variable
+        #: String representation of the variable
         self.name = name
-        # : Physical unit
+        #: Physical unit
         self.unit = ""
-        # : Factor between physical unit and integer value
+        #: Factor between physical unit and integer value
         self.factor = 1
-        # : Minimum allowed value
+        #: Minimum allowed value
         self.min = None
-        # : Maximum allowed value
+        #: Maximum allowed value
         self.max = None
-        # : Default value at start-up
+        #: Default value at start-up
         self.default = None
-        # : The value of this variable stored in the object dictionary
+        #: The value of this variable stored in the object dictionary
         self.value = None
-        # : Data type according to the standard as an :class:`int`
+        #: Data type according to the standard as an :class:`int`
         self.data_type = None
-        # : Access type, should be "rw", "ro", "wo", or "const"
+        #: Access type, should be "rw", "ro", "wo", or "const"
         self.access_type = "rw"
-        # : Description of variable
+        #: Description of variable
         self.description = ""
-        # : Dictionary of value descriptions
+        #: Dictionary of value descriptions
         self.value_descriptions = {}
-        # : Dictionary of bitfield definitions
+        #: Dictionary of bitfield definitions
         self.bit_definitions = {}
 
     def __eq__(self, other):

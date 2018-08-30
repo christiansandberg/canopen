@@ -31,13 +31,13 @@ class Network(collections.MutableMapping):
         :param can.BusABC bus:
             A python-can bus instance to re-use.
         """
-        # : A python-can :class:`can.BusABC` instance which is set after
-        # : :meth:`canopen.Network.connect` is called
+        #: A python-can :class:`can.BusABC` instance which is set after
+        #: :meth:`canopen.Network.connect` is called
         self.bus = bus
-        # : A :class:`~canopen.network.NodeScanner` for detecting nodes
+        #: A :class:`~canopen.network.NodeScanner` for detecting nodes
         self.scanner = NodeScanner(self)
-        # : List of :class:`can.Listener` objects.
-        # : Includes at least MessageListener.
+        #: List of :class:`can.Listener` objects.
+        #: Includes at least MessageListener.
         self.listeners = [MessageListener(self)]
         self.notifier = None
         self.nodes = {}
@@ -345,14 +345,14 @@ class NodeScanner(object):
         The network to use when doing active searching.
     """
 
-    # : Activate or deactivate scanning
+    #: Activate or deactivate scanning
     active = True
 
     SERVICES = (0x700, 0x580, 0x180, 0x280, 0x380, 0x480, 0x80)
 
     def __init__(self, network=None):
         self.network = network
-        # : A :class:`list` of nodes discovered
+        #: A :class:`list` of nodes discovered
         self.nodes = []
 
     def on_message_received(self, can_id):

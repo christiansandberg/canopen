@@ -3,7 +3,7 @@
 class SyncProducer(object):
     """Transmits a SYNC message periodically."""
 
-    # : COB-ID of the SYNC message
+    #: COB-ID of the SYNC message
     cob_id = 0x80
 
     def __init__(self, network):

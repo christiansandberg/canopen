@@ -21,13 +21,13 @@ logger = logging.getLogger(__name__)
 class SdoClient(SdoBase):
     """Handles communication with an SDO server."""
 
-    # : Max time in seconds to wait for response from server
+    #: Max time in seconds to wait for response from server
     RESPONSE_TIMEOUT = 0.3
 
-    # : Max number of request retries before raising error
+    #: Max number of request retries before raising error
     MAX_RETRIES = 1
 
-    # : Seconds to wait before sending a request, for rate limiting
+    #: Seconds to wait before sending a request, for rate limiting
     PAUSE_BEFORE_SEND = 0.0
 
     def __init__(self, rx_cobid, tx_cobid, od):
@@ -221,7 +221,7 @@ class SdoClient(SdoBase):
 class ReadableStream(io.RawIOBase):
     """File like object for reading from a variable."""
 
-    # : Total size of data or ``None`` if not specified
+    #: Total size of data or ``None`` if not specified
     size = None
 
     def __init__(self, sdo_client, index, subindex=0):
@@ -440,7 +440,7 @@ class WritableStream(io.RawIOBase):
 class BlockUploadStream(io.RawIOBase):
     """File like object for reading from a variable using block upload."""
 
-    # : Total size of data or ``None`` if not specified
+    #: Total size of data or ``None`` if not specified
     size = None
 
     blksize = 127

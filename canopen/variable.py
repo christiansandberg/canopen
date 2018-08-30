@@ -10,15 +10,15 @@ class Variable(object):
 
     def __init__(self, od):
         self.od = od
-        # : Description of this variable from Object Dictionary, overridable
+        #: Description of this variable from Object Dictionary, overridable
         self.name = od.name
         if isinstance(od.parent, (objectdictionary.Record,
                                   objectdictionary.Array)):
             # Include the parent object's name for subentries
             self.name = od.parent.name + "." + od.name
-        # : Holds a local, overridable copy of the Object Index
+        #: Holds a local, overridable copy of the Object Index
         self.index = od.index
-        # : Holds a local, overridable copy of the Object Subindex
+        #: Holds a local, overridable copy of the Object Subindex
         self.subindex = od.subindex
 
     def get_data(self):
