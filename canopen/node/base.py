@@ -12,22 +12,6 @@ class BaseNode(object):
     :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary`
     """
 
-    """PDO Transmission types.
-    For more information please refer to http://www.canopensolutions.com/english/about_canopen/pdo.shtml"""
-    PTT = {
-    # TPDO
-    'SYNCACYCLIC' : 0x00,
-    # SYNCCYLIC = 0x1 to 0xF0 (depends on the number of sync's)
-    # RESERVED = 0xF1 to 0xFB
-    'SYNCRTRONLY' : 0xFC,
-    'ASYNCRTRONLY' : 0xFD,
-    'EVENTDRIVEN' : 0xFF,
-
-    # RPDO
-    'SYNC' : 0x0,
-    'ASYNC' : 0xFF,
-    }
-
     def __init__(self, node_id, object_dictionary):
         self.network = None
 
