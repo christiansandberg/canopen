@@ -23,7 +23,7 @@ Finally, you can switch to LSS waiting state.
 
 
 .. note::
-    Fastscan is supported as of August 2018.
+    Fastscan is supported from v0.8.0.
 
 Examples
 --------
