@@ -6,7 +6,6 @@ try:
 except ImportError:
     import Queue as queue
 
-
 logger = logging.getLogger(__name__)
 
 # Command Specifier (CS)
@@ -43,7 +42,6 @@ CONFIGURE_BIT_TIMING = 0x13
 STORE_CONFIGURATION = 0x17
 INQUIRE_NODE_ID = 0x5E
 
-
 ERROR_NONE = 0
 ERROR_INADMISSIBLE = 1
 
@@ -52,7 +50,6 @@ ERROR_STORE_NOT_SUPPORTED = 1
 ERROR_STORE_ACCESS_PROBLEM = 2
 
 ERROR_VENDOR_SPECIFIC = 0xff
-
 
 ListMessageNeedResponse = [
     CS_CONFIGURE_NODE_ID,
@@ -89,7 +86,6 @@ class LssMaster(object):
         self._node_id = 0
         self._data = None
         self.responses = queue.Queue()
-
 
     def send_switch_state_global(self, mode):
         """switch mode to CONFIGURATION_STATE or WAITING_STATE
@@ -246,12 +242,12 @@ class LssMaster(object):
         self.__send_command(message)
 
     def fast_scan(self):
-        """This command sends a series of fastscan message 
+        """This command sends a series of fastscan message
         to find unconfigured slave with lowest number of LSS idenities
 
         :return:
             True if a slave is found.
-            False if there is no candidate. 
+            False if there is no candidate.
             list is the LSS identities [vendor_id, product_code, revision_number, seerial_number]
         :rtype: bool, list
         """
@@ -268,22 +264,22 @@ class LssMaster(object):
                     lss_bit_check -= 1
 
                     if not self.__send_fast_scan_message(lss_id[lss_sub], lss_bit_check, lss_sub, lss_next):
-                        lss_id[lss_sub] |= 1<<lss_bit_check
-                    
+                        lss_id[lss_sub] |= 1 << lss_bit_check
+
                     time.sleep(0.01)
-                    
+
                 lss_next = (lss_sub + 1) & 3
                 if not self.__send_fast_scan_message(lss_id[lss_sub], lss_bit_check, lss_sub, lss_next):
                     return False, None
 
                 time.sleep(0.01)
-                
+
                 # Now the next 32 bits will be scanned
                 lss_sub += 1
 
             # Now lss_id contains the entire 128 bits scanned
             return True, lss_id
-        
+
         return False, None
 
     def __send_fast_scan_message(self, id_number, bit_checker, lss_sub, lss_next):
@@ -296,7 +292,7 @@ class LssMaster(object):
         if len(recv_msg) == 8:
             if recv_msg[0] == CS_IDENTIFY_SLAVE:
                 return True
-        
+
         return False
 
     def __send_lss_address(self, req_cs, number):
@@ -359,7 +355,7 @@ class LssMaster(object):
             raise LssError("Response message is not for the request")
 
         if error_code != ERROR_NONE:
-            error_msg = "LSS Error: %d" %error_code
+            error_msg = "LSS Error: %d" % error_code
             raise LssError(error_msg)
 
     def __send_command(self, message):
