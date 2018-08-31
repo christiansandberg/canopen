@@ -35,7 +35,7 @@ class RPDO(PdoBase):
         """Stop transmission of all RPDOs.
         :raise TypeError: Exception is thrown if the node associated with the PDO does not
         support this function"""
-        if isinstance(canopen.RemoteNode, self.node):
+        if isinstance(self.node, canopen.RemoteNode):
             for pdo in self.map.values():
                 pdo.stop()
         else:
