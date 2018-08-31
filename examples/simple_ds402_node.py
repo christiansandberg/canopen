@@ -31,10 +31,10 @@ try:
     # Iterate over arrays or records
     error_log = node.sdo[0x1003]
     for error in error_log.values():
-        print("Error {0} was found in the log".format(error.raw))
+        print "Error {0} was found in the log".format(error.raw)
 
     for node_id in network:
-        print(network[node_id])
+        print network[node_id]
 
     print 'node state 2) = {0}'.format(node.nmt.state)
 
@@ -68,9 +68,9 @@ try:
     # Read PDO configuration from node
     node.tpdo.read()
     # Re-map TxPDO1
-    # node.tpdo[1].clear()
-    # node.tpdo[1].add_variable('Statusword')
-    node.pdo.tx[1].add_variable('Velocity actual value')
+    node.tpdo[1].clear()
+    node.tpdo[1].add_variable('Statusword')
+    node.tpdo[1].add_variable('Velocity actual value')
     node.tpdo[1].trans_type = 1
     node.tpdo[1].event_timer = 0
     node.tpdo[1].enabled = True
@@ -92,7 +92,7 @@ try:
 
     # -----------------------------------------------------------------------------------------
 
-    print ('Node booted up')
+    print 'Node booted up'
 
     timeout = time.time() + 15
     node.powerstate_402.state = 'READY TO SWITCH ON'
