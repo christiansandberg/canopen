@@ -120,7 +120,7 @@ def import_from_node(node_id, network):
 
 def _convert_variable(node_id, var_type, value):
     if var_type in objectdictionary.DATA_TYPES:
-        return  value
+        return value
     elif var_type in objectdictionary.FLOAT_TYPES:
         return float(value)
     else:
