@@ -118,17 +118,17 @@ def import_from_node(node_id, network):
     return od
 
 
-def _convert_variable(node_id, var, var_type, value):
+def _convert_variable(node_id, var_type, value):
     if var_type in objectdictionary.DATA_TYPES:
-        var = value
+        return  value
     elif var_type in objectdictionary.FLOAT_TYPES:
-        var = float(value)
+        return float(value)
     else:
         # COB-ID can have a suffix of '$NODEID+' so replace this with node_id before converting
         if '$NODEID+' in value and node_id is not None:
-            var = int(value.replace('$NODEID+', ''), 0) + node_id
+            return int(value.replace('$NODEID+', ''), 0) + node_id
         else:
-            var = int(value, 0)
+            return int(value, 0)
 
 
 def build_variable(eds, section, node_id, index, subindex=0):
@@ -162,12 +162,12 @@ def build_variable(eds, section, node_id, index, subindex=0):
             pass
     if eds.has_option(section, "DefaultValue"):
         try:
-            _convert_variable(node_id, var.default, var.data_type, eds.get(section, "DefaultValue"))
+            var.default = _convert_variable(node_id, var.data_type, eds.get(section, "DefaultValue"))
         except ValueError:
             pass
     if eds.has_option(section, "ParameterValue"):
         try:
-            _convert_variable(node_id, var.value, var.data_type, eds.get(section, "ParameterValue"))
+            var.value = _convert_variable(node_id, var.data_type, eds.get(section, "ParameterValue"))
         except ValueError:
             pass
     return var
