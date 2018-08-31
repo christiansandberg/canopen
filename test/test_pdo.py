@@ -30,6 +30,11 @@ class TestPDO(unittest.TestCase):
         self.assertEqual(map['INTEGER8 value'].raw, -2)
         self.assertEqual(map['INTEGER32 value'].raw, 0x01020304)
 
+        self.assertEqual(node.tpdo[1]['INTEGER16 value'].raw, -3)
+        self.assertEqual(node.tpdo[1]['UNSIGNED8 value'].raw, 0xf)
+        self.assertEqual(node.tpdo[1]['INTEGER8 value'].raw, -2)
+        self.assertEqual(node.tpdo[1]['INTEGER32 value'].raw, 0x01020304)
+
 
 if __name__ == "__main__":
     unittest.main()
