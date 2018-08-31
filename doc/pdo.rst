@@ -36,7 +36,7 @@ the PDOs through the attributes ``.rpdo`` and ``.tpdo`` that provide a more
 direct way to access the configured PDOs (see example below)::
 
     # Read current PDO configuration
-    node.pdo[4].read()
+    node.pdo.read()
 
     # Do some changes to TPDO4 and RPDO4
     node.tpdo[4].clear()
@@ -53,8 +53,8 @@ direct way to access the configured PDOs (see example below)::
 
     # Save new configuration (node must be in pre-operational)
     node.nmt.state = 'PRE-OPERATIONAL'
-    node.tpdo.save()
-    node.rpdo.save()
+    node.pdo.save()
+
     # Export a database file of PDO configuration
     node.pdo.export('database.dbc')
 
@@ -91,23 +91,7 @@ API
 
    .. py:attribute:: map
 
-      The :class:`canopen.pdo.Mcps` object representing map associated with the instantiated PDO (transmit or receive).
-
-
-.. autoclass:: canopen.pdo.PDO
-   :members:
-
-
-.. autoclass:: canopen.pdo.RPDO
-   :members:
-
-
-.. autoclass:: canopen.pdo.TPDO
-   :members:
-
-   .. method:: stop()
-
-      Stop transmission of all Tx PDOs.
+      The :class:`canopen.pdo.Maps` object representing map associated with the instantiated PDO (transmit or receive).
 
 .. autoclass:: canopen.pdo.Maps
    :members:
