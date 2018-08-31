@@ -100,6 +100,12 @@ class PdoBase(collections.Mapping):
         return db
 
 
+    def stop(self):
+        """Stop all running tasks."""
+        for pdo_map in self.map.values():
+            pdo_map.stop()
+
+
 class Maps(collections.Mapping):
     """A collection of transmit or receive maps."""
 
