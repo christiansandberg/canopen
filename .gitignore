@@ -62,3 +62,9 @@ target/
 
 # IDEs
 .vscode/
+
+*.dbc
+
+\.project
+
+\.pydevproject

@@ -4,59 +4,52 @@ import collections
 import logging
 import binascii
 
-from .sdo import SdoAbortedError
-from . import objectdictionary
-from . import variable
-
+from ..sdo import SdoAbortedError
+from .. import objectdictionary
+from .. import variable
 
 PDO_NOT_VALID = 1 << 31
 RTR_NOT_ALLOWED = 1 << 30
 
-
 logger = logging.getLogger(__name__)
 
 
-class PdoNode(collections.Mapping):
-    """Represents a slave unit."""
+class PdoBase(collections.Mapping):
+    """Represents the base implemention for the PDO object.
+    :param object node:
+        Parent object associated with this PDO instance
+    :param node_type: Type of the node  :class:`canopen.NODETYPE`
+    """
 
     def __init__(self, node):
         self.network = None
+        self.map = None
         self.node = node
-        self.rx = Maps(0x1400, 0x1600, self, 0x200)
-        self.tx = Maps(0x1800, 0x1A00, self, 0x180)
 
     def __iter__(self):
-        for pdo_maps in (self.rx, self.tx):
-            for pdo_map in pdo_maps.values():
-                for var in pdo_map.map:
-                    yield var.name
+        return iter(self.map)
 
     def __getitem__(self, key):
-        for pdo_maps in (self.rx, self.tx):
-            for pdo_map in pdo_maps.values():
-                for var in pdo_map.map:
-                    if var.length and var.name == key:
-                        return var
-        raise KeyError("%s was not found in any map" % key)
+        if isinstance(key, int):
+            return self.map[key]
+        else:
+            for var in self.map:
+                if var.length and var.name == key:
+                    return var
+        raise KeyError("PDO: {0} was not found in any map".format(key))
 
     def __len__(self):
-        count = 0
-        for pdo_maps in (self.rx, self.tx):
-            for pdo_map in pdo_maps.values():
-                count += len(pdo_map)
-        return count
+        return len(self.map)
 
     def read(self):
         """Read PDO configuration from node using SDO."""
-        for pdo_maps in (self.rx, self.tx):
-            for pdo_map in pdo_maps.values():
-                pdo_map.read()
+        for pdo_map in self.map.values():
+            pdo_map.read()
 
     def save(self):
         """Save PDO configuration to node using SDO."""
-        for pdo_maps in (self.rx, self.tx):
-            for pdo_map in pdo_maps.values():
-                pdo_map.save()
+        for pdo_map in self.map.values():
+            pdo_map.save()
 
     def export(self, filename):
         """Export current configuration to a database file.
@@ -71,45 +64,45 @@ class PdoNode(collections.Mapping):
         from canmatrix import formats
 
         db = canmatrix.CanMatrix()
-        for pdo_maps in (self.rx, self.tx):
-            for pdo_map in pdo_maps.values():
-                if pdo_map.cob_id is None:
-                    continue
-                frame = canmatrix.Frame(pdo_map.name,
-                                        Id=pdo_map.cob_id,
-                                        extended=0)
-                for var in pdo_map.map:
-                    is_signed = var.od.data_type in objectdictionary.SIGNED_TYPES
-                    is_float = var.od.data_type in objectdictionary.FLOAT_TYPES
-                    min_value = var.od.min
-                    max_value = var.od.max
-                    if min_value is not None:
-                        min_value *= var.od.factor
-                    if max_value is not None:
-                        max_value *= var.od.factor
-                    name = var.name
-                    name = name.replace(" ", "_")
-                    name = name.replace(".", "_")
-                    signal = canmatrix.Signal(name,
-                                              startBit=var.offset,
-                                              signalSize=var.length,
-                                              is_signed=is_signed,
-                                              is_float=is_float,
-                                              factor=var.od.factor,
-                                              min=min_value,
-                                              max=max_value,
-                                              unit=var.od.unit)
-                    for value, desc in var.od.value_descriptions.items():
-                        signal.addValues(value, desc)
-                    frame.addSignal(signal)
-                frame.calcDLC()
-                db.frames.addFrame(frame)
+        for pdo_map in self.map.values():
+            if pdo_map.cob_id is None:
+                continue
+            frame = canmatrix.Frame(pdo_map.name,
+                                    Id=pdo_map.cob_id,
+                                    extended=0)
+            for var in pdo_map.map:
+                is_signed = var.od.data_type in objectdictionary.SIGNED_TYPES
+                is_float = var.od.data_type in objectdictionary.FLOAT_TYPES
+                min_value = var.od.min
+                max_value = var.od.max
+                if min_value is not None:
+                    min_value *= var.od.factor
+                if max_value is not None:
+                    max_value *= var.od.factor
+                name = var.name
+                name = name.replace(" ", "_")
+                name = name.replace(".", "_")
+                signal = canmatrix.Signal(name,
+                                          startBit=var.offset,
+                                          signalSize=var.length,
+                                          is_signed=is_signed,
+                                          is_float=is_float,
+                                          factor=var.od.factor,
+                                          min=min_value,
+                                          max=max_value,
+                                          unit=var.od.unit)
+                for value, desc in var.od.value_descriptions.items():
+                    signal.addValues(value, desc)
+                frame.addSignal(signal)
+            frame.calcDLC()
+            db.frames.addFrame(frame)
         formats.dumpp({"": db}, filename)
         return db
 
+
     def stop(self):
-        """Stop transmission of all Rx PDOs."""
-        for pdo_map in self.rx.values():
+        """Stop all running tasks."""
+        for pdo_map in self.map.values():
             pdo_map.stop()
 
 
@@ -117,6 +110,12 @@ class Maps(collections.Mapping):
     """A collection of transmit or receive maps."""
 
     def __init__(self, com_offset, map_offset, pdo_node, cob_base=None):
+        """
+        :param com_offset:
+        :param map_offset:
+        :param pdo_node:
+        :param cob_base:
+        """
         self.maps = {}
         for map_no in range(128):
             if com_offset + map_no in pdo_node.node.object_dictionary:
@@ -292,7 +291,7 @@ class Map(object):
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
-            if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack: # Curtis HACK: mixed up field order
+            if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
                 index = value & 0xFFFF
                 subindex = (value >> 16) & 0xFF
                 size = (value >> 24) & 0xFF
@@ -333,7 +332,7 @@ class Map(object):
             for var in self.map:
                 logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
                             var.name, var.index, var.subindex, var.length)
-                if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack: # Curtis HACK: mixed up field order
+                if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
                     self.map_array[subindex].raw = (var.index |
                                                     var.subindex << 16 |
                                                     var.length << 24)

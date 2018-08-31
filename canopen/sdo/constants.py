@@ -1,9 +1,7 @@
 import struct
 
-
 # Command, index, subindex
 SDO_STRUCT = struct.Struct("<BHB")
-
 
 REQUEST_SEGMENT_DOWNLOAD = 0 << 5
 REQUEST_DOWNLOAD = 1 << 5

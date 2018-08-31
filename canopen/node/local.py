@@ -3,11 +3,10 @@ import struct
 
 from .base import BaseNode
 from ..sdo import SdoServer, SdoAbortedError
-from ..pdo import PdoNode
+from ..pdo import PDO, TPDO, RPDO
 from ..nmt import NmtSlave
 from ..emcy import EmcyProducer
 from .. import objectdictionary
-
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +21,9 @@ class LocalNode(BaseNode):
         self._write_callbacks = []
 
         self.sdo = SdoServer(0x600 + self.id, 0x580 + self.id, self)
-        self.pdo = PdoNode(self)
+        self.tpdo = TPDO(self)
+        self.rpdo = RPDO(self)
+        self.pdo = PDO(self, self.rpdo, self.tpdo)
         self.nmt = NmtSlave(self.id, self)
         # Let self.nmt handle writes for 0x1017
         self.add_write_callback(self.nmt.on_write)
@@ -31,7 +32,8 @@ class LocalNode(BaseNode):
     def associate_network(self, network):
         self.network = network
         self.sdo.network = network
-        self.pdo.network = network
+        self.tpdo.network = network
+        self.rpdo.network = network
         self.nmt.network = network
         self.emcy.network = network
         network.subscribe(self.sdo.rx_cobid, self.sdo.on_request)
@@ -42,7 +44,8 @@ class LocalNode(BaseNode):
         self.network.unsubscribe(0, self.nmt.on_command)
         self.network = None
         self.sdo.network = None
-        self.pdo.network = None
+        self.tpdo.network = None
+        self.rpdo.network = None
         self.nmt.network = None
         self.emcy.network = None
 

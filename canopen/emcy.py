@@ -3,7 +3,6 @@ import logging
 import threading
 import time
 
-
 # Error code, error register, vendor specific data
 EMCY_STRUCT = struct.Struct("<HB5s")
 

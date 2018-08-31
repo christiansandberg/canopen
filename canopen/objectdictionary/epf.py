@@ -5,9 +5,7 @@ except ImportError:
 import logging
 from canopen import objectdictionary
 
-
 logger = logging.getLogger(__name__)
-
 
 DATA_TYPES = {
     "BOOLEAN": objectdictionary.BOOLEAN,

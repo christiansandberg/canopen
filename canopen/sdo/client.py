@@ -15,7 +15,6 @@ from .base import SdoBase
 from .constants import *
 from .exceptions import *
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -78,7 +77,7 @@ class SdoClient(SdoBase):
     def request_response(self, sdo_request):
         retries_left = self.MAX_RETRIES
         if not self.responses.empty():
-            #logger.warning("There were unexpected messages in the queue")
+            # logger.warning("There were unexpected messages in the queue")
             self.responses = queue.Queue()
         while True:
             self.send_request(sdo_request)
