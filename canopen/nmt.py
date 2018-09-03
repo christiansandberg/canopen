@@ -115,12 +115,15 @@ class NmtMaster(NmtBase):
         #: Timestamp of last heartbeat message
         self.timestamp = None
         self.state_update = threading.Condition()
+        self._callbacks = []
 
     def on_heartbeat(self, can_id, data, timestamp):
         with self.state_update:
             self.timestamp = timestamp
             new_state, = struct.unpack_from("B", data)
             logger.info("Received heartbeat can-id %d, state is %d", can_id, new_state)
+            for callback in self._callbacks:
+                callback(new_state)
             if new_state == 0:
                 # Boot-up, will go to PRE-OPERATIONAL automatically
                 self._state = 127
@@ -162,8 +165,17 @@ class NmtMaster(NmtBase):
             if self._state_received == 0:
                 break
 
+    def add_hearbeat_callback(self, callback):
+        """Add function to be called on heartbeat reception.
+
+        :param callback:
+            Function that should accept an NMT state as only argument.
+        """
+        self._callbacks.append(callback)
+
     def start_node_guarding(self, period):
         """Starts the node guarding mechanism.
+
         :param float period:
             frequency (in seconds) at which the node guarding should be advertised to the slave node.
         """
@@ -183,11 +195,6 @@ class NmtSlave(NmtBase):
         self._send_task = None
         self._heartbeat_time_ms = 0
         self._local_node = local_node
-
-    def on_command(self, can_id, data, timestamp):
-        cmd, = struct.unpack_from("B", data)
-        logger.info("Node %d received command %d", self.id, cmd)
-        self.state = NMT_STATES[COMMAND_TO_STATE[cmd]]
 
     def send_command(self, code):
         """Send an NMT command code to the node.

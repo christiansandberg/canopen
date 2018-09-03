@@ -36,11 +36,13 @@ class RemoteNode(BaseNode):
         network.subscribe(self.sdo.tx_cobid, self.sdo.on_response)
         network.subscribe(0x700 + self.id, self.nmt.on_heartbeat)
         network.subscribe(0x80 + self.id, self.emcy.on_emcy)
+        network.subscribe(0, self.nmt.on_command)
 
     def remove_network(self):
         self.network.unsubscribe(self.sdo.tx_cobid, self.sdo.on_response)
         self.network.unsubscribe(0x700 + self.id, self.nmt.on_heartbeat)
         self.network.unsubscribe(0x80 + self.id, self.emcy.on_emcy)
+        self.network.unsubscribe(0, self.nmt.on_command)
         self.network = None
         self.sdo.network = None
         self.pdo.network = None

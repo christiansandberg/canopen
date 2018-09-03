@@ -88,6 +88,10 @@ class EmcyProducer(object):
         payload = EMCY_STRUCT.pack(code, register, data)
         self.network.send_message(self.cob_id, payload)
 
+    def reset(self, register=0, data=b""):
+        payload = EMCY_STRUCT.pack(0, register, data)
+        self.network.send_message(self.cob_id, payload)
+
 
 class EmcyError(Exception):
     """EMCY exception."""

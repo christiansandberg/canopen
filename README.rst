@@ -12,11 +12,11 @@ Features
 --------
 
 * Object Dictionary from EDS
-* NMT master
-* SDO client
+* NMT master/slave
+* SDO client/server
 * PDO producer/consumer
-* SYNC producer
-* EMCY consumer
+* SYNC producer/consumer
+* EMCY consumer/producer
 * TIME producer
 * LSS master
 
