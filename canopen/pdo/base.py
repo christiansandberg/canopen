@@ -23,7 +23,7 @@ class PdoBase(collections.Mapping):
 
     def __init__(self, node):
         self.network = None
-        self.map = None
+        self.map = None  # instance of Maps
         self.node = node
 
     def __iter__(self):
@@ -33,9 +33,10 @@ class PdoBase(collections.Mapping):
         if isinstance(key, int):
             return self.map[key]
         else:
-            for var in self.map:
-                if var.length and var.name == key:
-                    return var
+            for pdo_map in self.map.values():
+                for var in pdo_map.map:
+                    if var.length and var.name == key:
+                        return var
         raise KeyError("PDO: {0} was not found in any map".format(key))
 
     def __len__(self):
@@ -98,7 +99,6 @@ class PdoBase(collections.Mapping):
             db.frames.addFrame(frame)
         formats.dumpp({"": db}, filename)
         return db
-
 
     def stop(self):
         """Stop all running tasks."""
