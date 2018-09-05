@@ -71,12 +71,16 @@ class LocalNode(BaseNode):
         try:
             return self.data_store[index][subindex]
         except KeyError:
+            # Try ParameterValue in EDS
+            if obj.value is not None:
+                return obj.encode_raw(obj.value)
             # Try default value
-            if obj.default is None:
-                # Resource not available
-                logger.info("Resource unavailable for 0x%X:%d", index, subindex)
-                raise SdoAbortedError(0x060A0023)
-            return obj.encode_raw(obj.default)
+            if obj.default is not None:
+                return obj.encode_raw(obj.default)
+
+        # Resource not available
+        logger.info("Resource unavailable for 0x%X:%d", index, subindex)
+        raise SdoAbortedError(0x060A0023)
 
     def set_data(self, index, subindex, data, check_writable=False):
         obj = self._find_object(index, subindex)
