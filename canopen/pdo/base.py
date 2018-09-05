@@ -376,7 +376,7 @@ class Map(object):
         """
         try:
             var = self._get_variable(index, subindex)
-            if subindex:
+            if subindex and isinstance(subindex, int):
                 # Force given subindex upon variable mapping, for misguided implementations
                 var.subindex = subindex
             var.offset = self.length
