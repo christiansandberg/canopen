@@ -6,7 +6,6 @@ try:
 except ImportError:
     import Queue as queue
 
-
 logger = logging.getLogger(__name__)
 
 # Command Specifier (CS)
@@ -43,7 +42,6 @@ CONFIGURE_BIT_TIMING = 0x13
 STORE_CONFIGURATION = 0x17
 INQUIRE_NODE_ID = 0x5E
 
-
 ERROR_NONE = 0
 ERROR_INADMISSIBLE = 1
 
@@ -52,7 +50,6 @@ ERROR_STORE_NOT_SUPPORTED = 1
 ERROR_STORE_ACCESS_PROBLEM = 2
 
 ERROR_VENDOR_SPECIFIC = 0xff
-
 
 ListMessageNeedResponse = [
     CS_CONFIGURE_NODE_ID,
@@ -89,7 +86,6 @@ class LssMaster(object):
         self._node_id = 0
         self._data = None
         self.responses = queue.Queue()
-
 
     def send_switch_state_global(self, mode):
         """switch mode to CONFIGURATION_STATE or WAITING_STATE
@@ -359,7 +355,7 @@ class LssMaster(object):
             raise LssError("Response message is not for the request")
 
         if error_code != ERROR_NONE:
-            error_msg = "LSS Error: %d" %error_code
+            error_msg = "LSS Error: %d" % error_code
             raise LssError(error_msg)
 
     def __send_command(self, message):

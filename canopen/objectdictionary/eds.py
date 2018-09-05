@@ -9,9 +9,7 @@ except ImportError:
 from canopen import objectdictionary
 from canopen.sdo import SdoClient
 
-
 logger = logging.getLogger(__name__)
-
 
 VAR = 7
 ARR = 8
@@ -98,6 +96,10 @@ def import_eds(source, node_id):
 
 
 def import_from_node(node_id, network):
+    """ Download the configuration from the remote node
+    :param int node_id: Identifier of the node
+    :param network: network object
+    """
     # Create temporary SDO client
     sdo_client = SdoClient(0x600 + node_id, 0x580 + node_id, None)
     sdo_client.network = network
@@ -116,7 +118,27 @@ def import_from_node(node_id, network):
     return od
 
 
+def _convert_variable(node_id, var_type, value):
+    if var_type in objectdictionary.DATA_TYPES:
+        return value
+    elif var_type in objectdictionary.FLOAT_TYPES:
+        return float(value)
+    else:
+        # COB-ID can have a suffix of '$NODEID+' so replace this with node_id before converting
+        if '$NODEID+' in value and node_id is not None:
+            return int(value.replace('$NODEID+', ''), 0) + node_id
+        else:
+            return int(value, 0)
+
+
 def build_variable(eds, section, node_id, index, subindex=0):
+    """Creates a object dictionary entry.
+    :param eds: String stream of the eds file
+    :param section:
+    :param node_id: Node ID
+    :param index: Index of the CANOpen object
+    :param subindex: Subindex of the CANOpen object (if presente, else 0)
+    """
     name = eds.get(section, "ParameterName")
     var = objectdictionary.Variable(name, index, subindex)
     var.data_type = int(eds.get(section, "DataType"), 0)
@@ -140,21 +162,16 @@ def build_variable(eds, section, node_id, index, subindex=0):
             pass
     if eds.has_option(section, "DefaultValue"):
         try:
-            default_value = eds.get(section, "DefaultValue")
-
-            if var.data_type in objectdictionary.DATA_TYPES:
-                var.default = default_value
-            elif var.data_type in objectdictionary.FLOAT_TYPES:
-                var.default = float(default_value)
-            else:
-                #COB-ID can have a suffix of '$NODEID+' so replace this with node_id before converting
-                if '$NODEID+' in default_value and node_id is not None:
-                    var.default = int(default_value.replace('$NODEID+',''), 0) + node_id
-                else:
-                    var.default = int(default_value, 0)
+            var.default = _convert_variable(node_id, var.data_type, eds.get(section, "DefaultValue"))
+        except ValueError:
+            pass
+    if eds.has_option(section, "ParameterValue"):
+        try:
+            var.value = _convert_variable(node_id, var.data_type, eds.get(section, "ParameterValue"))
         except ValueError:
             pass
     return var
+
 
 def copy_variable(eds, section, subindex, src_var):
     name = eds.get(section, str(subindex))

@@ -20,7 +20,6 @@ from .nmt import NmtMaster
 from .lss import LssMaster
 from .objectdictionary.eds import import_from_node
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -52,7 +51,6 @@ class Network(collections.MutableMapping):
         self.lss = LssMaster()
         self.lss.network = self
         self.subscribe(self.lss.LSS_RX_COBID, self.lss.on_message_received)
-
 
     def subscribe(self, can_id, callback):
         """Listen for messages with a specific CAN ID.
@@ -106,7 +104,7 @@ class Network(collections.MutableMapping):
                     kwargs["bitrate"] = node.object_dictionary.bitrate
                     break
         # Try to filter out only 11-bit IDs
-        #kwargs.setdefault("can_filters",
+        # kwargs.setdefault("can_filters",
         #                  [{"can_id": 0, "can_mask": 0x1FFFF800}])
         self.bus = can.interface.Bus(*args, **kwargs)
         logger.info("Connected to '%s'", self.bus.channel_info)

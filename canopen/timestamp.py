@@ -1,11 +1,10 @@
 import time
 import struct
 
-
 # 1 Jan 1984
 OFFSET = 441763200
 
-ONE_DAY = 60*60*24
+ONE_DAY = 60 * 60 * 24
 
 TIME_OF_DAY_STRUCT = struct.Struct("<LH")
 

@@ -5,7 +5,6 @@ import canopen
 
 import can
 
-
 EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
 
 

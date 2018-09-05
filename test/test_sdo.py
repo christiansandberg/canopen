@@ -3,7 +3,6 @@ import unittest
 # import binascii
 import canopen
 
-
 EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
 
 TX = 1
@@ -24,11 +23,11 @@ class TestSDO(unittest.TestCase):
         """
         next_data = self.data.pop(0)
         self.assertEqual(next_data[0], TX, "No transmission was expected")
-        #print("> %s (%s)" % (binascii.hexlify(data), binascii.hexlify(next_data[1])))
+        # print("> %s (%s)" % (binascii.hexlify(data), binascii.hexlify(next_data[1])))
         self.assertSequenceEqual(data, next_data[1])
         self.assertEqual(can_id, 0x602)
         while self.data and self.data[0][0] == RX:
-            #print("< %s" % binascii.hexlify(self.data[0][1]))
+            # print("< %s" % binascii.hexlify(self.data[0][1]))
             self.network.notify(0x582, self.data.pop(0)[1], 0.0)
 
     def setUp(self):
@@ -53,7 +52,7 @@ class TestSDO(unittest.TestCase):
         ]
         trans_type = self.network[2].sdo[0x1400]['Transmission type RPDO 1'].raw
         self.assertEqual(trans_type, 254)
-    
+
     def test_size_not_specified(self):
         self.data = [
             (TX, b'\x40\x00\x14\x02\x00\x00\x00\x00'),
