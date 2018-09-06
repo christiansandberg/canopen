@@ -4,6 +4,7 @@ import os
 import traceback
 
 import time
+from canopen.profiles import p402
 
 try:
 
@@ -16,14 +17,14 @@ try:
     network.check()
 
     # Add some nodes with corresponding Object Dictionaries
-    node = canopen.Node402(35, '/home/andre/Code/test/jupiter.eds')
+    node = canopen.BaseNode402(35, '/home/andre/Code/test/jupiter.eds')
     network.add_node(node)
     # network.add_node(34, '/home/andre/Code/test/jupiter.eds')
     # node = network[34]
 
     # Reset network
     node.nmt.state = 'RESET COMMUNICATION'
-    #node.nmt.state = 'RESET'
+
     node.nmt.wait_for_bootup(15)
 
     print 'node state 1) = {0}'.format(node.nmt.state)
@@ -51,17 +52,16 @@ try:
 
     node.load_configuration()
 
-    print 'node state 3) = {0}'.format(node.nmt.state)
+    print 'node state 3) = {0}'.format(node.state)
 
     node.setup_402_state_machine()
+    node.op_mode = 'PROFILED POSITION'
 
     device_name = node.sdo[0x1008].raw
     vendor_id = node.sdo[0x1018][1].raw
 
     print device_name
     print vendor_id
-
-    node.powerstate_402.state = 'SWITCH ON DISABLED'
 
     print 'node state 4) = {0}'.format(node.nmt.state)
 
@@ -85,40 +85,26 @@ try:
     node.rpdo[1]['Controlword'].raw = 0x81
     node.rpdo[1].transmit()
 
-    node.powerstate_402.state = 'READY TO SWITCH ON'
-    node.powerstate_402.state = 'SWITCHED ON'
-
     node.rpdo.export('database.dbc')
 
     # -----------------------------------------------------------------------------------------
 
-    print 'Node booted up'
+    try:
+        node.state = 'OPERATION ENABLED'
 
-    timeout = time.time() + 15
-    node.powerstate_402.state = 'READY TO SWITCH ON'
-    while node.powerstate_402.state != 'READY TO SWITCH ON':
-        if time.time() > timeout:
-            raise Exception('Timeout when trying to change state')
-        time.sleep(0.001)
+    except RuntimeError as e:
+        print e
 
-    timeout = time.time() + 15
-    node.powerstate_402.state = 'SWITCHED ON'
-    while node.powerstate_402.state != 'SWITCHED ON':
-        if time.time() > timeout:
-            raise Exception('Timeout when trying to change state')
-        time.sleep(0.001)
-
-    timeout = time.time() + 15
-    node.powerstate_402.state = 'OPERATION ENABLED'
-    while node.powerstate_402.state != 'OPERATION ENABLED':
-        if time.time() > timeout:
-            raise Exception('Timeout when trying to change state')
-        time.sleep(0.001)
-
-    print 'Node Status {0}'.format(node.powerstate_402.state)
+    print 'Node Status {0}'.format(node.state)
 
     # -----------------------------------------------------------------------------------------
     node.nmt.start_node_guarding(0.01)
+
+    time_test = time.time()
+    reseted = False
+
+    node.homing()
+
     while True:
         try:
             network.check()
@@ -129,13 +115,15 @@ try:
         node.tpdo[1].wait_for_reception()
         speed = node.tpdo[1]['Velocity actual value'].phys
 
-        # Read the state of the Statusword
-        statusword = node.sdo[0x6041].raw
-
-        print 'statusword: {0}'.format(statusword)
+        print 'statusword: {0}'.format(node.statusword)
         print 'VEL: {0}'.format(speed)
 
-        time.sleep(0.01)
+        time.sleep(0.001)
+
+        if time.time() > time_test + 120 and not reseted:
+            print 'Test the reset function'
+            node.reset_from_fault()
+            reseted = True
 
 except KeyboardInterrupt:
     pass
@@ -147,12 +135,10 @@ except Exception as e:
 finally:
     # Disconnect from CAN bus
     print 'going to exit... stoping...'
-    if network:
-
+    if network is not None:
         for node_id in network:
             node = network[node_id]
             node.nmt.state = 'PRE-OPERATIONAL'
             node.nmt.stop_node_guarding()
-        network.sync.stop()
         network.disconnect()
 
