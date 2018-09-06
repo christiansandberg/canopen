@@ -175,18 +175,40 @@ class Map(object):
         self.is_received = False
         self._task = None
 
+    def __getitem_by_index(self, value):
+        valid_values = []
+        for var in self.map:
+            if var.length:
+                valid_values.append(var.index)
+                if var.index == value:
+                    return var
+        raise KeyError('{0} not found in map. Valid entries are {1}'.format(
+            value, ', '.join(str(v) for v in valid_values)))
+
+    def __getitem_by_name(self, value):
+        valid_values = []
+        for var in self.map:
+            if var.length:
+                valid_values.append(var.name)
+                if var.name == value:
+                    return var
+        raise KeyError('{0} not found in map. Valid entries are {1}'.format(
+            value, ', '.join(valid_values)))
+
     def __getitem__(self, key):
+        var = None
         if isinstance(key, int):
-            return self.map[key]
+            # there is a maximum available of 8 slots per PDO map
+            if key in range(0, 8):
+                var = self.map[key]
+            else:
+                var = self.__getitem_by_index(key)
         else:
-            valid_values = []
-            for var in self.map:
-                if var.length:
-                    valid_values.append(var.name)
-                    if var.name == key:
-                        return var
-        raise KeyError("%s not found in map. Valid entries are %s" % (
-            key, ", ".join(valid_values)))
+            try:
+                var = self.__getitem_by_index(int(key, 16))
+            except ValueError:
+                var = self.__getitem_by_name(key)
+        return var
 
     def __iter__(self):
         return iter(self.map)
