@@ -4,7 +4,6 @@ import os
 import traceback
 
 import time
-from canopen.profiles import p402
 
 try:
 
@@ -82,7 +81,7 @@ try:
     node.rpdo.read()
     node.rpdo[1]['Controlword'].raw = 0x80
     node.rpdo[1].transmit()
-    node.rpdo[1]['Controlword'].raw = 0x81
+    node.rpdo[1][0x6040].raw = 0x81
     node.rpdo[1].transmit()
 
     node.rpdo.export('database.dbc')

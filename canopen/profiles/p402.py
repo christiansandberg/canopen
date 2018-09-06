@@ -2,12 +2,12 @@
 import logging
 import time
 from ..node import RemoteNode
-from ..sdo import SdoAbortedError, SdoCommunicationError
+from ..sdo import SdoCommunicationError
 
 logger = logging.getLogger(__name__)
 
 
-class State402:
+class State402(object):
 
     # Control word 0x6040 commands
     CW_OPERATION_ENABLED = 0x0F
@@ -87,7 +87,7 @@ class State402:
     }
 
 
-class OperationMode:
+class OperationMode(object):
     PROFILED_POSITION = 1
     VELOCITY = 2
     PROFILED_VELOCITY = 3
@@ -143,7 +143,7 @@ class OperationMode:
     }
 
 
-class Homing:
+class Homing(object):
 
     CW_START = 0x10
     CW_HALT = 0x100
@@ -217,20 +217,19 @@ class BaseNode402(RemoteNode):
                 if not self.is_statusword_configured:
                     try:
                         # try to access the object, raise exception if does't exist
-                        ipdo[0x6041]
-                        ipdo.add_callback(self.on_statusword_callback)
+                        ipdo[0x6041].add_callback(self.on_statusword_callback)
                         # make sure only one statusword listner is configured by node
                         self.is_statusword_configured = True
-                    except KeyError as e:
+                    except KeyError:
                         pass
                 if not self.is_controlword_configured:
                     try:
                         # try to access the object, raise exception if does't exist
-                        ipdo[0x6040]
-                        self.cw_pdo = ipdo
+                        if ipdo[0x6040] is not None:
+                            self.cw_pdo = ipdo
                         # make sure only one controlword is configured in the node
                         self.is_controlword_configured = True
-                    except KeyError as e:
+                    except KeyError:
                         pass
         # Check if the Controlword is configured
         if not self.is_controlword_configured:
@@ -279,7 +278,7 @@ class BaseNode402(RemoteNode):
                     if bitmaskvalue == value[1]:
                         homingstatus = key
                 if homingstatus in ('INTERRUPTED', 'ERROR VELOCITY IS NOT ZERO', 'ERROR VELOCITY IS ZERO'):
-                   raise  RuntimeError ('Unable to home. Reason: {0}'.format(homingstatus))
+                    raise  RuntimeError ('Unable to home. Reason: {0}'.format(homingstatus))
                 time.sleep(0.001)
                 if time.time() > t:
                     raise RuntimeError('Unable to home, timeout reached')
@@ -293,7 +292,7 @@ class BaseNode402(RemoteNode):
             logger.info(str(e))
         finally:
             self.op_mode = previus_opm
-            return result
+        return result
 
     @property
     def op_mode(self):
@@ -347,12 +346,12 @@ class BaseNode402(RemoteNode):
                     raise RuntimeError('Timeout setting the new mode of operation at node {0}.'.format(self.id))
             result = True
         except SdoCommunicationError as e:
-            print('[SDO communication error] Cause: {0}'.format(str(e)))
+            logger.warning('[SDO communication error] Cause: {0}'.format(str(e)))
         except (RuntimeError, TypeError) as e:
-            print('{0}'.format(str(e)))
+            logger.warning('{0}'.format(str(e)))
         finally:
             self.state = state  # set to last known state
-            print('Mode of operation of the node {n} is {m}.'.format(n=self.id , m=mode))
+            logger.info('Mode of operation of the node {n} is {m}.'.format(n=self.id , m=mode))
         return result
 
     def is_op_mode_supported(self, mode):
@@ -362,17 +361,16 @@ class BaseNode402(RemoteNode):
         :rtype: bool
         """
         mode_support = (self.sdo[0x6502].raw & OperationMode.SUPPORTED[mode])
-        print 'MODE SUPPORT {0}'.format(mode_support)
         return mode_support == OperationMode.SUPPORTED[mode]
 
-    def __next_state_for_enabling(self, _from):
+    def _next_state_for_enabling(self, _from):
         """Returns the next state needed for reach the state Operation Enabled
         :param string target: Target state
         :return string: Next target to chagne
         """
-        for cond, next in State402.NEXTSTATE2ENABLE.items():
+        for cond, next_state in State402.NEXTSTATE2ENABLE.items():
             if _from in cond:
-                return next
+                return next_state
 
     @property
     def statusword(self):
@@ -392,7 +390,7 @@ class BaseNode402(RemoteNode):
         :param int value: State value to send in the message
         """
         if self.cw_pdo is not None:
-            self.pdo['Controlword'].raw = value
+            self.pdo[0x6040].raw = value
             self.cw_pdo.transmit()
         else:
             self.sdo[0x6040].raw = value
@@ -454,13 +452,13 @@ class BaseNode402(RemoteNode):
         while self.state != new_state:
             try:
                 if new_state == 'OPERATION ENABLED':
-                    next = self.__next_state_for_enabling(self.state)
+                    next_state = self.__next_state_for_enabling(self.state)
                 else:
-                    next = new_state
-                code = State402.TRANSITIONTABLE[ (self.state, next) ]
+                    next_state = new_state
+                code = State402.TRANSITIONTABLE[ (self.state, next_state) ]
                 self.controlword = code
                 it = time.time() + 1  # wait one second
-                while self.state != next:
+                while self.state != next_state:
                     if time.time() > it:
                         raise RuntimeError('Timeout when trying to change state')
                     time.sleep(0.00001)  # give some time to breathe
