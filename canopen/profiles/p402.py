@@ -217,18 +217,19 @@ class BaseNode402(RemoteNode):
                 if not self.is_statusword_configured:
                     try:
                         # try to access the object, raise exception if does't exist
-                        ipdo[0x6041].add_callback(self.on_statusword_callback)
-                        # make sure only one statusword listner is configured by node
-                        self.is_statusword_configured = True
+                        if ipdo["Statusword"] is not None:
+                            ipdo.add_callback(self.on_statusword_callback)
+                            # make sure only one statusword listner is configured by node
+                            self.is_statusword_configured = True
                     except KeyError:
                         pass
                 if not self.is_controlword_configured:
                     try:
                         # try to access the object, raise exception if does't exist
                         if ipdo[0x6040] is not None:
-                            self.cw_pdo = ipdo
-                        # make sure only one controlword is configured in the node
-                        self.is_controlword_configured = True
+                            self.cw_pdo = key
+                            # make sure only one controlword is configured in the node
+                            self.is_controlword_configured = True
                     except KeyError:
                         pass
         # Check if the Controlword is configured
@@ -363,7 +364,7 @@ class BaseNode402(RemoteNode):
         mode_support = (self.sdo[0x6502].raw & OperationMode.SUPPORTED[mode])
         return mode_support == OperationMode.SUPPORTED[mode]
 
-    def _next_state_for_enabling(self, _from):
+    def __next_state_for_enabling(self, _from):
         """Returns the next state needed for reach the state Operation Enabled
         :param string target: Target state
         :return string: Next target to chagne
@@ -390,8 +391,8 @@ class BaseNode402(RemoteNode):
         :param int value: State value to send in the message
         """
         if self.cw_pdo is not None:
-            self.pdo[0x6040].raw = value
-            self.cw_pdo.transmit()
+            self.pdo[self.cw_pdo][0x6040].raw = value
+            self.pdo[self.cw_pdo].transmit()
         else:
             self.sdo[0x6040].raw = value
 

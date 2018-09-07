@@ -117,6 +117,8 @@ try:
         print 'statusword: {0}'.format(node.statusword)
         print 'VEL: {0}'.format(speed)
 
+        print node.pdo['0x6041'].raw
+
         time.sleep(0.001)
 
         if time.time() > time_test + 120 and not reseted:
