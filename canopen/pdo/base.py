@@ -30,13 +30,18 @@ class PdoBase(collections.Mapping):
         return iter(self.map)
 
     def __getitem__(self, key):
-        if isinstance(key, int):
+        if isinstance(key, int) and key in list(set(range(0x1A00, 0x1A80) + # By TPDO ID
+                                                    range(0x1600, 0x1680) + # By RPDO ID
+                                                    range(0, 80))):         # By PDO Index
             return self.map[key]
         else:
             for pdo_map in self.map.values():
-                for var in pdo_map.map:
-                    if var.length and var.name == key:
-                        return var
+                try:
+                    var = pdo_map[key]
+                    return var
+                except KeyError:
+                    # ignore if one specific PDO does not have the key and try the next one
+                    continue            
         raise KeyError("PDO: {0} was not found in any map".format(key))
 
     def __len__(self):
