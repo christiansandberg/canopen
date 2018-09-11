@@ -127,8 +127,8 @@ class RemoteNode(BaseNode):
         for obj in self.object_dictionary.values():
             if isinstance(obj, Record) or isinstance(obj, Array):
                 for subobj in obj.values():
-                    if isinstance(subobj, Variable) and (subobj.access_type == 'rw') and (subobj.value is not None):
+                    if isinstance(subobj, Variable) and (subobj.access_type in ('rw', 'rww')) and (subobj.value is not None):
                         self.__load_configuration_helper(subobj.index, subobj.subindex, subobj.name, subobj.value)
-            elif isinstance(obj, Variable) and (obj.access_type == 'rw') and (obj.value is not None):
+            elif isinstance(obj, Variable) and (obj.access_type in ('rw', 'rww')) and (obj.value is not None):
                 self.__load_configuration_helper(obj.index, None, obj.name, obj.value)
 
