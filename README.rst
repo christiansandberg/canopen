@@ -66,11 +66,13 @@ Quick start
 
 Here are some quick examples of what you can do:
 
-The PDOs can be access by to forms:
+The PDOs can be access by three forms:
 
 **1st:** :code:`node.tpdo[n]` or :code:`node.rpdo[n]`
 
 **2nd:** :code:`node.pdo.tx[n]` or :code:`node.pdo.rx[n]`
+
+**3rd:** :code:`node.pdo[0x1A00]` or :code:`node.pdo[0x1600]`
 
 The :code:`n` is the PDO index (normaly 1 to 4). The second form of access is for backward compability.
 
