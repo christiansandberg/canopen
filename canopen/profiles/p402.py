@@ -214,24 +214,25 @@ class BaseNode402(RemoteNode):
 
         for key, ipdo in self.pdo.items():
             if ipdo.enabled:
-                if not self.is_statusword_configured:
-                    try:
-                        # try to access the object, raise exception if does't exist
-                        if ipdo["Statusword"] is not None:
-                            ipdo.add_callback(self.on_statusword_callback)
-                            # make sure only one statusword listner is configured by node
-                            self.is_statusword_configured = True
-                    except KeyError:
-                        pass
-                if not self.is_controlword_configured:
-                    try:
-                        # try to access the object, raise exception if does't exist
-                        if ipdo[0x6040] is not None:
-                            self.cw_pdo = key
-                            # make sure only one controlword is configured in the node
-                            self.is_controlword_configured = True
-                    except KeyError:
-                        pass
+                # try to find the statusword
+                try:
+                    # try to access the object, raise exception if does't exist
+                    if not self.is_statusword_configured and ipdo["Statusword"] is not None:
+                        ipdo.add_callback(self.on_statusword_callback)
+                        # make sure only one statusword listner is configured by node
+                        self.is_statusword_configured = True
+                except KeyError:
+                    pass
+                # try to find the controlword 
+                try:
+                    # try to access the object, raise exception if does't exist
+                    if not self.is_controlword_configured and ipdo[0x6040] is not None:
+                        self.cw_pdo = key
+                        # make sure only one controlword is configured in the node
+                        self.is_controlword_configured = True
+                except KeyError:
+                    pass
+                
         # Check if the Controlword is configured
         if not self.is_controlword_configured:
             logger.info('Controlword not configured in the PDOs of this node, using SDOs to set Controlword')
@@ -398,9 +399,10 @@ class BaseNode402(RemoteNode):
 
     @staticmethod
     def on_statusword_callback(mapobject):
-        # this function receives a map object.
-        # this map object is then used for changing the
-        # _state and _sw_last_value by reading the statusword
+        """This function receives a map object.
+        this map object is then used for changing the
+        :param mapobject: :class: `canopen.objectdictionary.Variable`
+        """
         try:
             statusword = mapobject[0x6041].raw
             mapobject.pdo_node.node._sw_last_value = statusword
