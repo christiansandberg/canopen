@@ -401,15 +401,17 @@ class BaseNode402(RemoteNode):
         # this function receives a map object.
         # this map object is then used for changing the
         # _state and _sw_last_value by reading the statusword
-        statusword = mapobject[0].raw
-        mapobject.pdo_node.node._sw_last_value = statusword
-
-        for key, value in State402.SW_MASK.items():
-            # check if the value after applying the bitmask (value[0])
-            # corresponds with the value[1] to determine the current status
-            bitmaskvalue = statusword & value[0]
-            if bitmaskvalue == value[1]:
-                mapobject.pdo_node.node._state = key
+        try:
+            statusword = mapobject[0x6041].raw
+            mapobject.pdo_node.node._sw_last_value = statusword
+            for key, value in State402.SW_MASK.items():
+                # check if the value after applying the bitmask (value[0])
+                # corresponds with the value[1] to determine the current status
+                bitmaskvalue = statusword & value[0]
+                if bitmaskvalue == value[1]:
+                    mapobject.pdo_node.node._state = key
+        except (KeyError, ValueError):
+                raise RuntimeError('The status word is not configured in this mapobject.')
 
     @property
     def state(self):
