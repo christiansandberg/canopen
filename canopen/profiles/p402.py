@@ -223,7 +223,7 @@ class BaseNode402(RemoteNode):
                         self.is_statusword_configured = True
                 except KeyError:
                     pass
-                # try to find the controlword 
+                # try to find the controlword
                 try:
                     # try to access the object, raise exception if does't exist
                     if not self.is_controlword_configured and ipdo[0x6040] is not None:
@@ -232,7 +232,6 @@ class BaseNode402(RemoteNode):
                         self.is_controlword_configured = True
                 except KeyError:
                     pass
-                
         # Check if the Controlword is configured
         if not self.is_controlword_configured:
             logger.info('Controlword not configured in the PDOs of this node, using SDOs to set Controlword')
@@ -413,7 +412,7 @@ class BaseNode402(RemoteNode):
                 if bitmaskvalue == value[1]:
                     mapobject.pdo_node.node._state = key
         except (KeyError, ValueError):
-                raise RuntimeError('The status word is not configured in this mapobject.')
+            raise RuntimeError('The status word is not configured in this mapobject.')
 
     @property
     def state(self):
