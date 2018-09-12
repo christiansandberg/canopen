@@ -385,7 +385,7 @@ class BaseNode402(RemoteNode):
                 # corresponds with the value[1] to determine the current status
                 bitmaskvalue = self._sw_last_value & value[0]
                 if bitmaskvalue == value[1]:
-                    mapobject.pdo_node.node._state = key
+                    self._state = key
         except (KeyError, ValueError):
             raise RuntimeError('The status word is not configured in this mapobject.')
 
