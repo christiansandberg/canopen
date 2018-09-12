@@ -373,6 +373,22 @@ class BaseNode402(RemoteNode):
             if _from in cond:
                 return next_state
 
+    def on_statusword_callback(self, mapobject):
+        """This function receives a map object.
+        this map object is then used for changing the
+        :param mapobject: :class: `canopen.objectdictionary.Variable`
+        """
+        try:
+            self._sw_last_value = mapobject[0x6041].raw
+            for key, value in State402.SW_MASK.items():
+                # check if the value after applying the bitmask (value[0])
+                # corresponds with the value[1] to determine the current status
+                bitmaskvalue = self._sw_last_value & value[0]
+                if bitmaskvalue == value[1]:
+                    mapobject.pdo_node.node._state = key
+        except (KeyError, ValueError):
+            raise RuntimeError('The status word is not configured in this mapobject.')
+
     @property
     def statusword(self):
         return self._sw_last_value
@@ -395,24 +411,6 @@ class BaseNode402(RemoteNode):
             self.pdo[self.cw_pdo].transmit()
         else:
             self.sdo[0x6040].raw = value
-
-    @staticmethod
-    def on_statusword_callback(mapobject):
-        """This function receives a map object.
-        this map object is then used for changing the
-        :param mapobject: :class: `canopen.objectdictionary.Variable`
-        """
-        try:
-            statusword = mapobject[0x6041].raw
-            mapobject.pdo_node.node._sw_last_value = statusword
-            for key, value in State402.SW_MASK.items():
-                # check if the value after applying the bitmask (value[0])
-                # corresponds with the value[1] to determine the current status
-                bitmaskvalue = statusword & value[0]
-                if bitmaskvalue == value[1]:
-                    mapobject.pdo_node.node._state = key
-        except (KeyError, ValueError):
-            raise RuntimeError('The status word is not configured in this mapobject.')
 
     @property
     def state(self):

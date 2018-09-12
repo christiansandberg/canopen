@@ -11,13 +11,11 @@ try:
     network = canopen.Network()
 
     # Connect to the CAN bus
-    
+
     kargs = {'bustype': 'kvaser', 'channel':0, 'bitrate': 1000000}
     network.connect(**kargs)
 
-    
     #network.connect(bustype='kvaser', channel=0, bitrate=1000000)
-
     network.check()
 
     # Add some nodes with corresponding Object Dictionaries
@@ -31,25 +29,7 @@ try:
 
     node.nmt.wait_for_bootup(15)
 
-    print 'node state 1) = {0}'.format(node.nmt.state)
-
-    # Iterate over arrays or records
-#    error_log = node.sdo[0x1003]
-#    for error in error_log.values():
-#        print "Error {0} was found in the log".format(error.raw)
-#
-#    for node_id in network:
-#        print network[node_id]
-#
-#    print 'node state 2) = {0}'.format(node.nmt.state)
-
-    # Read a variable using SDO
-
-#    node.sdo[0x1006].raw = 1
-#    node.sdo[0x100c].raw = 100
-#    node.sdo[0x100d].raw = 3
-#    node.sdo[0x1014].raw = 163
-#    node.sdo[0x1003][0].raw = 0
+    print('node state before bootup = {0}'.format(node.nmt.state))
 
     # Transmit SYNC every 100 ms
     network.sync.start(0.1)
@@ -60,38 +40,15 @@ try:
 
     node.load_configuration()
 
-    print 'node state 3) = {0}'.format(node.state)
+    print('node state 3) = {0}'.format(node.state))
 
-    
     node.op_mode = 'PROFILED POSITION'
 
     device_name = node.sdo[0x1008].raw
     vendor_id = node.sdo[0x1018][1].raw
 
-    print device_name
-    print vendor_id
-
-    print 'node state 4) = {0}'.format(node.nmt.state)
-
-#    # Read PDO configuration from node
-#    node.tpdo.read()
-#    # Re-map TxPDO1
-#    node.tpdo[1].clear()
-#    node.tpdo[1].add_variable('Statusword')
-#    node.tpdo[1].add_variable('Velocity actual value')
-#    node.tpdo[1].trans_type = 1
-#    node.tpdo[1].event_timer = 0
-#    node.tpdo[1].enabled = True
-#    # Save new PDO configuration to node
-#    node.tpdo.save()
-#
-#    # publish the a value to the control word (in this case reset the fault at the motors)
-#
-#    node.rpdo.read()
-#    node.rpdo[1]['Controlword'].raw = 0x80
-#    node.rpdo[1].transmit()
-#    node.rpdo[1][0x6040].raw = 0x81
-#    node.rpdo[1].transmit()
+    print('Device Name: {0}'.format(device_name))
+    print('Vendor ID: {0}'.format(vendor_id))
 
     node.rpdo.export('database.dbc')
 
@@ -103,7 +60,7 @@ try:
     except RuntimeError as e:
         print e
 
-    print 'Node Status {0}'.format(node.state)
+    print('Node status after operation enabled {0}'.format(node.state))
 
     # -----------------------------------------------------------------------------------------
     node.nmt.start_node_guarding(0.01)
@@ -123,15 +80,12 @@ try:
         node.tpdo[1].wait_for_reception()
         speed = node.tpdo[1]['Velocity actual value'].phys
 
-        print 'statusword: {0}'.format(node.statusword)
-        print 'VEL: {0}'.format(speed)
-
-        print node.pdo['0x6041'].raw
+        print('VEL: {0}'.format(speed))
+        print('Statusword: {0}'.format(node.pdo['0x6041'].raw))
 
         time.sleep(0.001)
 
         if time.time() > time_test + 120 and not reseted:
-            print 'Test the reset function'
             node.reset_from_fault()
             reseted = True
 
@@ -144,7 +98,6 @@ except Exception as e:
     traceback.print_exc()
 finally:
     # Disconnect from CAN bus
-    print 'going to exit... stoping...'
     if network is not None:
         for node_id in network:
             node = network[node_id]
