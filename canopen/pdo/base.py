@@ -41,7 +41,7 @@ class PdoBase(collections.Mapping):
                     return var
                 except KeyError:
                     # ignore if one specific PDO does not have the key and try the next one
-                    continue            
+                    continue
         raise KeyError("PDO: {0} was not found in any map".format(key))
 
     def __len__(self):
