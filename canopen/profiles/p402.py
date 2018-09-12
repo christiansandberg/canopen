@@ -217,7 +217,7 @@ class BaseNode402(RemoteNode):
                 # try to find the statusword
                 try:
                     # try to access the object, raise exception if does't exist
-                    if not self.is_statusword_configured and ipdo["Statusword"] is not None:
+                    if not self.is_statusword_configured and ipdo[0x6041] is not None:
                         ipdo.add_callback(self.on_statusword_callback)
                         # make sure only one statusword listner is configured by node
                         self.is_statusword_configured = True
