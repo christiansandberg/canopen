@@ -89,27 +89,46 @@ class RemoteNode(BaseNode):
         """
         self.sdo.download(0x1011, subindex, b"load")
 
+    def __load_configuration_helper(self, index, subindex, name, value):
+        """Helper function to send SDOs to the remote node
+        :param index: Object index
+        :param subindex: Object sub-index (if it does not exist e should be None)
+        :param name: Object name
+        :param value: Value to set in the object
+        """
+        try:
+            if subindex is not None:
+                logger.info(str('SDO [{index:#06x}][{subindex:#06x}]: {name}: {value:#06x}'.format(
+                    index=index,
+                    subindex=subindex,
+                    name=name,
+                    value=value)))
+                self.sdo[index][subindex].raw = value
+            else:
+                self.sdo[index].raw = value
+                logger.info(str('SDO [{index:#06x}]: {name}: {value:#06x}'.format(
+                    index=index,
+                    name=name,
+                    value=value)))
+        except canopen.SdoCommunicationError as e:
+            logger.warning(str(e))
+        except canopen.SdoAbortedError as e:
+            # WORKAROUND for broken implementations: the SDO is set but the error
+            # "Attempt to write a read-only object" is raised any way.
+            if e.code != 0x06010002:
+                # Abort codes other than "Attempt to write a read-only object"
+                # should still be reported.
+                logger.warning('[ERROR SETTING object {0:#06x}:{1:#06x}]  {2}'.format(index, subindex, str(e)))
+                raise
+        
+
     def load_configuration(self):
         ''' Load the configuration of the node from the object dictionary.'''
         for obj in self.object_dictionary.values():
             if isinstance(obj, Record) or isinstance(obj, Array):
                 for subobj in obj.values():
-                    if isinstance(subobj, Variable) and (subobj.access_type == 'rw') and (subobj.value is not None) :
-                        logger.debug(str('SDO [{index}][{subindex}]: {name}: {value}'.format(
-                            index=subobj.index,
-                            subindex=subobj.subindex,
-                            name=subobj.name,
-                            value=subobj.value)))
-                        try:
-                            self.sdo[subobj.index][subobj.subindex].raw = subobj.value
-                        except canopen.SdoCommunicationError as e:
-                            logger.info(str(e))
-                        except canopen.SdoAbortedError as e:
-                            # WORKAROUND for broken implementations: the SDO is set but the error
-                            # "Attempt to write a read-only object" is raised any way.
-                            if e.code != 0x06010002:
-                                # Abort codes other than "Attempt to write a read-only object"
-                                # should still be reported.
-                                print('[ERROR SETTING object {0}:{1}]  {2}'.format(subobj.index, subobj.subindex, str(e)))
-                                logger.info(str(e))
-                                raise
+                    if isinstance(subobj, Variable) and subobj.writable and (subobj.value is not None):
+                        self.__load_configuration_helper(subobj.index, subobj.subindex, subobj.name, subobj.value)
+            elif isinstance(obj, Variable) and obj.writable and (obj.value is not None):
+                self.__load_configuration_helper(obj.index, None, obj.name, obj.value)
+        self.pdo.read() # reads the new configuration from the driver
