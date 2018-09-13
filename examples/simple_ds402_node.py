@@ -29,7 +29,7 @@ try:
 
     node.nmt.wait_for_bootup(15)
 
-    print('node state before bootup = {0}'.format(node.nmt.state))
+    print 'node state before bootup = {0}'.format(node.nmt.state)
 
     # Transmit SYNC every 100 ms
     network.sync.start(0.1)
@@ -40,15 +40,15 @@ try:
 
     node.load_configuration()
 
-    print('node state 3) = {0}'.format(node.state))
+    print 'node state 3) = {0}'.format(node.state)
 
     node.op_mode = 'PROFILED POSITION'
 
     device_name = node.sdo[0x1008].raw
     vendor_id = node.sdo[0x1018][1].raw
 
-    print('Device Name: {0}'.format(device_name))
-    print('Vendor ID: {0}'.format(vendor_id))
+    print 'Device Name: {0}'.format(device_name)
+    print 'Vendor ID: {0}'.format(vendor_id)
 
     node.rpdo.export('database.dbc')
 
@@ -60,7 +60,7 @@ try:
     except RuntimeError as e:
         print e
 
-    print('Node status after operation enabled {0}'.format(node.state))
+    print 'Node status after operation enabled {0}'.format(node.state)
 
     # -----------------------------------------------------------------------------------------
     node.nmt.start_node_guarding(0.01)
@@ -80,8 +80,8 @@ try:
         node.tpdo[1].wait_for_reception()
         speed = node.tpdo[1]['Velocity actual value'].phys
 
-        print('VEL: {0}'.format(speed))
-        print('Statusword: {0}'.format(node.pdo['0x6041'].raw))
+        print 'VEL: {0}'.format(speed)
+        print 'Statusword: {0}'.format(node.pdo['0x6041'].raw)
 
         time.sleep(0.001)
 
