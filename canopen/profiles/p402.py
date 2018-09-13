@@ -53,7 +53,7 @@ class State402(object):
         ('FAULT', 'NOT READY TO SWITCH ON')                         : 'SWITCH ON DISABLED',
         ('SWITCH ON DISABLED')                                      : 'READY TO SWITCH ON',
         ('READY TO SWITCH ON')                                      : 'SWITCHED ON',
-        ('SWITCHED ON', 'QUICK_STOP_ACTIVE', 'OPERATION_ENABLED')   : 'OPERATION ENABLED',
+        ('SWITCHED ON', 'QUICK STOP ACTIVE', 'OPERATION ENABLED')   : 'OPERATION ENABLED',
         ('FAULT REACTION ACTIVE')                                   : 'FAULT'
     }
 
@@ -200,8 +200,6 @@ class BaseNode402(RemoteNode):
         self.cw_pdo = None
         self._sw_last_value = None
 
-        self.state_timeout = 5
-
     def setup_402_state_machine(self):
         """Configured the state machine by searching for the PDO that has the
         StatusWord mappend.
@@ -249,6 +247,14 @@ class BaseNode402(RemoteNode):
         """Reset node from fault and set it to Operation Enable state
         """
         if self.state == 'FAULT':
+            # particular case, it resets the Fault Reset bit (rising edge 0 -> 1)
+            self.controlword = State402.CW_DISABLE_VOLTAGE
+            timeout = time.time() + 0.4  # 400 milliseconds
+            # Check if the Fault Reset bit is still = 1
+            while self.statusword & State402.SW_MASK['FAULT'][0] == State402.SW_MASK['FAULT'][1]:
+                if time.time() > timeout:
+                    break
+                time.sleep(0.01)  # 10 milliseconds
             self.state = 'OPERATION ENABLED'
         else:
             logger.info('The node its not at fault. Doing nothing!')
@@ -348,7 +354,7 @@ class BaseNode402(RemoteNode):
             result = True
         except SdoCommunicationError as e:
             logger.warning('[SDO communication error] Cause: {0}'.format(str(e)))
-        except (RuntimeError, TypeError) as e:
+        except (RuntimeError, ValueError) as e:
             logger.warning('{0}'.format(str(e)))
         finally:
             self.state = state  # set to last known state
@@ -373,19 +379,21 @@ class BaseNode402(RemoteNode):
             if _from in cond:
                 return next_state
 
-    def on_statusword_callback(self, mapobject):
+    @staticmethod
+    def on_statusword_callback(mapobject):
         """This function receives a map object.
         this map object is then used for changing the
         :param mapobject: :class: `canopen.objectdictionary.Variable`
         """
         try:
-            self._sw_last_value = mapobject[0x6041].raw
+            statusword = mapobject[0x6041].raw
+            mapobject.pdo_node.node._sw_last_value = statusword
             for key, value in State402.SW_MASK.items():
                 # check if the value after applying the bitmask (value[0])
                 # corresponds with the value[1] to determine the current status
-                bitmaskvalue = self._sw_last_value & value[0]
+                bitmaskvalue = statusword & value[0]
                 if bitmaskvalue == value[1]:
-                    self._state = key
+                    mapobject.pdo_node.node._state = key
         except (KeyError, ValueError):
             raise RuntimeError('The status word is not configured in this mapobject.')
 
@@ -406,6 +414,7 @@ class BaseNode402(RemoteNode):
         """Helper function enabling the node to send the state using PDO or SDO objects
         :param int value: State value to send in the message
         """
+
         if self.cw_pdo is not None:
             self.pdo[self.cw_pdo][0x6040].raw = value
             self.pdo[self.cw_pdo].transmit()
@@ -450,25 +459,27 @@ class BaseNode402(RemoteNode):
         :raise RuntimeError: Occurs when the time defined to change the state is reached
         :raise TypeError: Occurs when trying to execute a ilegal transition in the sate machine
         """
-        st = time.time() + self.state_timeout
+        t_to_new_state = time.time() + 0.8  # 800 milliseconds tiemout
         while self.state != new_state:
             try:
                 if new_state == 'OPERATION ENABLED':
                     next_state = self.__next_state_for_enabling(self.state)
                 else:
                     next_state = new_state
+                # get the code from the transition table
                 code = State402.TRANSITIONTABLE[ (self.state, next_state) ]
+                # set the control word
                 self.controlword = code
-                it = time.time() + 1  # wait one second
+                # timeout of 400 milliseconds to try set the next state
+                t_to_next_state = time.time() + 0.4
                 while self.state != next_state:
-                    if time.time() > it:
-                        raise RuntimeError('Timeout when trying to change state')
-                    time.sleep(0.00001)  # give some time to breathe
-            except RuntimeError as e:
-                logger.info(str(e))
+                    if time.time() > t_to_next_state:
+                        break
+                    time.sleep(0.01)  # 10 milliseconds of sleep
             except KeyError:
-                raise TypeError('Illegal transition from {f} to {t}'.format(f=self.state, t=new_state))
-            finally:
-                if time.time() > st:
-                    raise RuntimeError('Timeout when trying to change state')
+                raise ValueError('Illegal transition from {f} to {t}'.format(f=self.state, t=new_state))
+            # check the timeout
+            if time.time() > t_to_new_state:
+                raise RuntimeError('Timeout when trying to change state')
+            time.sleep(0.01)  # 10 miliseconds of sleep
 
