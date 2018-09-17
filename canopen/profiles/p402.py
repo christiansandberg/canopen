@@ -86,6 +86,16 @@ class State402(object):
         ('FAULT', 'SWITCH ON DISABLED'):                  CW_SWITCH_ON_DISABLED,  # transition 15
     }
 
+    @staticmethod
+    def next_state_for_enabling(_from):
+        """Returns the next state needed for reach the state Operation Enabled
+        :param string target: Target state
+        :return string: Next target to chagne
+        """
+        for cond, next_state in State402.NEXTSTATE2ENABLE.items():
+            if _from in cond:
+                return next_state
+
 
 class OperationMode(object):
     PROFILED_POSITION = 1
@@ -363,15 +373,6 @@ class BaseNode402(RemoteNode):
         mode_support = (self.sdo[0x6502].raw & OperationMode.SUPPORTED[mode])
         return mode_support == OperationMode.SUPPORTED[mode]
 
-    def __next_state_for_enabling(self, _from):
-        """Returns the next state needed for reach the state Operation Enabled
-        :param string target: Target state
-        :return string: Next target to chagne
-        """
-        for cond, next_state in State402.NEXTSTATE2ENABLE.items():
-            if _from in cond:
-                return next_state
-
     def on_TPDOs_update_callback(self, mapobject):
         """This function receives a map object.
         this map object is then used for changing the
@@ -382,7 +383,13 @@ class BaseNode402(RemoteNode):
 
     @property
     def statusword(self):
-        return self.tpdo_values[0x6041]
+        """Returns the last read value of the Statusword (0x6041) from the device.
+        :raise ValueError: The Object 0x6041 (Statusword) is not configured in this device.
+        """
+        try:
+            return self.tpdo_values[0x6041]
+        except KeyError:
+            raise KeyError('The object 0x6041 (Statusword) is not configured in this device.')
 
     @statusword.setter
     def statusword(self, value):
@@ -448,7 +455,7 @@ class BaseNode402(RemoteNode):
         while self.state != new_state:
             try:
                 if new_state == 'OPERATION ENABLED':
-                    next_state = self.__next_state_for_enabling(self.state)
+                    next_state = State402.next_state_for_enabling(self.state)
                 else:
                     next_state = new_state
                 # get the code from the transition table

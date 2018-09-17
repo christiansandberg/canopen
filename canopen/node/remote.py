@@ -120,7 +120,6 @@ class RemoteNode(BaseNode):
                 # should still be reported.
                 logger.warning('[ERROR SETTING object {0:#06x}:{1:#06x}]  {2}'.format(index, subindex, str(e)))
                 raise
-        
 
     def load_configuration(self):
         ''' Load the configuration of the node from the object dictionary.'''
