@@ -393,7 +393,7 @@ class BaseNode402(RemoteNode):
 
     @statusword.setter
     def statusword(self, value):
-        raise RuntimeError('This property has no setter.')
+        raise RuntimeError('This property has no setter. The value {0} will be discarded'.format(value))
 
     @property
     def controlword(self):
