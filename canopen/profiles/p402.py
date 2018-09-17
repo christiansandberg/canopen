@@ -377,9 +377,8 @@ class BaseNode402(RemoteNode):
         this map object is then used for changing the
         :param mapobject: :class: `canopen.objectdictionary.Variable`
         """
-
-        for map in mapobject:
-            self.tpdo_values[map.index] = map.raw
+        for obj in mapobject:
+            self.tpdo_values[obj.index] = obj.raw
 
     @property
     def statusword(self):
