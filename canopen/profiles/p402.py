@@ -232,7 +232,7 @@ class BaseNode402(RemoteNode):
             for obj in rpdo:
                 logger.debug('Configured RPDO: {0}'.format(obj.index))
                 if obj.index not in self.rpdo_pointers:
-                    self.rpdo_pointers[obj.index] = rpdo
+                    self.rpdo_pointers[obj.index] = obj
 
         # Check if the Controlword is configured
         if 0x6040 not in self.rpdo_pointers:
@@ -405,8 +405,8 @@ class BaseNode402(RemoteNode):
         :param int value: State value to send in the message
         """
         if 0x6040 in self.rpdo_pointers:
-            self.rpdo_pointers[0x6040][0x6040].raw = value
-            self.rpdo_pointers[0x6040].transmit()
+            self.rpdo_pointers[0x6040].raw = value
+            self.rpdo_pointers[0x6040].msg.transmit()
         else:
             self.sdo[0x6040].raw = value
 
