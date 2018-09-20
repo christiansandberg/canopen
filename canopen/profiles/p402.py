@@ -406,7 +406,7 @@ class BaseNode402(RemoteNode):
         """
         if 0x6040 in self.rpdo_pointers:
             self.rpdo_pointers[0x6040].raw = value
-            self.rpdo_pointers[0x6040].msg.transmit()
+            self.rpdo_pointers[0x6040].pdo_parent.transmit()
         else:
             self.sdo[0x6040].raw = value
 

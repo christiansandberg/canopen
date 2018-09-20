@@ -199,7 +199,7 @@ class Map(object):
         if isinstance(obj, (objectdictionary.Record, objectdictionary.Array)):
             obj = obj[subindex]
         var = Variable(obj)
-        var.msg = self
+        var.pdo_parent = self
         return var
 
     def _fill_map(self, needed):
@@ -449,7 +449,8 @@ class Variable(variable.Variable):
     """One object dictionary variable mapped to a PDO."""
 
     def __init__(self, od):
-        self.msg = None
+        #: PDO object that is associated with this Variable Object
+        self.pdo_parent = None
         #: Location of variable in the message in bits
         self.offset = None
         self.length = len(od)
@@ -466,7 +467,7 @@ class Variable(variable.Variable):
         if bit_offset or self.length % 8:
             # Need information of the current variable type (unsigned vs signed)
             od_struct = self.od.STRUCT_TYPES[self.od.data_type]
-            data = od_struct.unpack_from(self.msg.data, byte_offset)[0]
+            data = od_struct.unpack_from(self.pdo_parent.data, byte_offset)[0]
             # Shift and mask to get the correct values
             data = (data >> bit_offset) & ((1 << self.length) - 1)
             # Check if the variable is signed and if the data is negative prepend signedness
@@ -475,7 +476,7 @@ class Variable(variable.Variable):
                 data = data | (~((1 << self.length) - 1))
             data = od_struct.pack(data)
         else:
-            data = self.msg.data[byte_offset:byte_offset + len(self.od) // 8]
+            data = self.pdo_parent.data[byte_offset:byte_offset + len(self.od) // 8]
 
         return data
 
@@ -486,10 +487,10 @@ class Variable(variable.Variable):
         """
         byte_offset, bit_offset = divmod(self.offset, 8)
         logger.debug("Updating %s to %s in message 0x%X",
-                     self.name, binascii.hexlify(data), self.msg.cob_id)
+                     self.name, binascii.hexlify(data), self.pdo_parent.cob_id)
 
         if bit_offset or self.length % 8:
-            cur_msg_data = self.msg.data[byte_offset:byte_offset + len(self.od) // 8]
+            cur_msg_data = self.pdo_parent.data[byte_offset:byte_offset + len(self.od) // 8]
             # Need information of the current variable type (unsigned vs signed)
             od_struct = self.od.STRUCT_TYPES[self.od.data_type]
             cur_msg_data = od_struct.unpack(cur_msg_data)[0]
@@ -502,8 +503,8 @@ class Variable(variable.Variable):
             cur_msg_data = cur_msg_data & bitwise_not
             # Set the new data on the correct position
             data = (data << bit_offset) | cur_msg_data
-            data = od_struct.pack_into(self.msg.data, byte_offset, data)
+            data = od_struct.pack_into(self.pdo_parent.data, byte_offset, data)
         else:
-            self.msg.data[byte_offset:byte_offset + len(data)] = data
+            self.pdo_parent.data[byte_offset:byte_offset + len(data)] = data
 
-        self.msg.update()
+        self.pdo_parent.update()
