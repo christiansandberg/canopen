@@ -69,7 +69,7 @@ def import_eds(source, node_id):
             continue
 
         # Match subindexes
-        match = re.match(r"^([0-9A-Fa-f]{4})sub([0-9A-Fa-f]+)$", section)
+        match = re.match(r"^([0-9A-Fa-f]{4})[S|s]ub([0-9A-Fa-f]+)$", section)
         if match is not None:
             index = int(match.group(1), 16)
             subindex = int(match.group(2), 16)

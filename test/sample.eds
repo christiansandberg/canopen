@@ -862,3 +862,16 @@ DataType=0x0008
 AccessType=rw
 DefaultValue=
 PDOMapping=0
+
+[3010]
+ParameterName=ReadRawValue
+ObjectType=0x9
+SubNumber=1
+
+[3010Sub0]
+ParameterName=Temperature
+ObjectType=0x7
+DataType=0x0008
+AccessType=ro
+DefaultValue=0
+PDOMapping=1
