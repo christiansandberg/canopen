@@ -28,15 +28,14 @@ sure those RPDOs are mapped with the same COB-ID.
 Examples
 --------
 
-A :class:`canopen.Node` has a ``.pdo`` attribute that can be used to interact
-with the node using PDOs. This is in turn divided in a ``.tx`` and a ``.rx``
-attribute which can be subindexed to specify which message to use (first map
-starts at 1, not 0). The :class:`canopen.Node` also allow the user to access 
-the PDOs through the attributes ``.rpdo`` and ``.tpdo`` that provide a more
-direct way to access the configured PDOs (see example below)::
+A :class:`canopen.RemoteNode` has :class:`canopen.RemoteNode.rpdo` and
+:class:`canopen.RemoteNode.tpdo` attributes that can be used to interact
+with the node using PDOs. These can be subindexed to specify which map to use (first map
+starts at 1, not 0)::
 
     # Read current PDO configuration
-    node.pdo.read()
+    node.tpdo.read()
+    node.rpdo.read()
 
     # Do some changes to TPDO4 and RPDO4
     node.tpdo[4].clear()
@@ -53,10 +52,8 @@ direct way to access the configured PDOs (see example below)::
 
     # Save new configuration (node must be in pre-operational)
     node.nmt.state = 'PRE-OPERATIONAL'
-    node.pdo.save()
-
-    # Export a database file of PDO configuration
-    node.pdo.export('database.dbc')
+    node.tpdo.save()
+    node.rpdo.save()
 
     # Start RPDO4 with an interval of 100 ms
     node.rpdo[4]['Application Commands.Command Speed'].phys = 1000
@@ -71,6 +68,7 @@ direct way to access the configured PDOs (see example below)::
             f.write('%s\n' % speed)
 
     # Using a callback to asynchronously receive values
+    # Do not do any blocking operations here!
     def print_speed(message):
         print('%s received' % message.name)
         for var in message:
@@ -89,23 +87,16 @@ API
 .. autoclass:: canopen.pdo.PdoBase
    :members:
 
-   .. py:attribute:: map
-
-      The :class:`canopen.pdo.Maps` object representing map associated with the instantiated PDO (transmit or receive).
-
-.. autoclass:: canopen.pdo.Maps
-   :members:
-
-   .. describe:: maps[no]
+   .. describe:: pdo[no]
 
       Return the :class:`canopen.pdo.Map` for the specified map number.
       First map starts at 1.
 
-   .. describe:: iter(maps)
+   .. describe:: iter(pdo)
 
       Return an iterator of the available map numbers.
 
-   .. describe:: len(maps)
+   .. describe:: len(pdo)
 
       Return the number of supported maps.
 

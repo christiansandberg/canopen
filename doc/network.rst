@@ -5,9 +5,9 @@ The :class:`canopen.Network` represents a collection of nodes connected to the
 same CAN bus. This handles the sending and receiving of messages and dispatches
 messages to the nodes it knows about.
 
-Each node is represented using the :class:`canopen.Node` class. It is usually
-associated with an object dictionary and each service has its own attribute
-owned by this node.
+Each node is represented using the :class:`canopen.RemoteNode` or
+:class:`canopen.LocalNode` class. It is usually associated with an
+object dictionary and each service has its own attribute owned by this node.
 
 
 Examples
@@ -34,6 +34,9 @@ arguments passed to a the :class:`can.BusABC` constructor::
 Add nodes to the network using the :meth:`~canopen.Network.add_node` method::
 
     node = network.add_node(6, '/path/to/object_dictionary.eds')
+
+    local_node = canopen.LocalNode(1, '/path/to/master_dictionary.eds')
+    network.add_node(local_node)
 
 Nodes can also be accessed using the ``Network`` object as a Python dictionary::
 
@@ -75,7 +78,8 @@ API
 
    .. describe:: network[node_id]
 
-      Return the :class:`canopen.RemoteNode` for the specified node ID.
+      Return the :class:`canopen.RemoteNode` or :class:`canopen.LocalNode` for
+      the specified node ID.
 
    .. describe:: iter(network)
 
@@ -91,7 +95,8 @@ API
 
    .. method:: values()
 
-      Return a list of :class:`canopen.RemoteNode` handled by this network.
+      Return a list of :class:`canopen.RemoteNode` or :class:`canopen.LocalNode`
+      handled by this network.
 
 
 .. autoclass:: canopen.RemoteNode
@@ -106,9 +111,13 @@ API
 
        The :class:`canopen.sdo.SdoClient` associated with the node.
 
-    .. py:attribute:: pdo
+    .. py:attribute:: tpdo
 
-       The :class:`canopen.pdo.PdoNode` associated with the node.
+       The :class:`canopen.pdo.PdoBase` for TPDO associated with the node.
+
+    .. py:attribute:: rpdo
+
+       The :class:`canopen.pdo.PdoBase` for RPDO associated with the node.
 
     .. py:attribute:: nmt
 

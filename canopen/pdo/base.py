@@ -16,9 +16,9 @@ logger = logging.getLogger(__name__)
 
 class PdoBase(collections.Mapping):
     """Represents the base implemention for the PDO object.
+
     :param object node:
         Parent object associated with this PDO instance
-    :param node_type: Type of the node  :class:`canopen.NODETYPE`
     """
 
     def __init__(self, node):

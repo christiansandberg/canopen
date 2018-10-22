@@ -109,6 +109,7 @@ class Network(collections.MutableMapping):
         self.bus = can.interface.Bus(*args, **kwargs)
         logger.info("Connected to '%s'", self.bus.channel_info)
         self.notifier = can.Notifier(self.bus, self.listeners, 1)
+        return self
 
     def disconnect(self):
         """Disconnect from the CAN bus.
@@ -123,12 +124,18 @@ class Network(collections.MutableMapping):
         self.bus = None
         self.check()
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.disconnect()
+
     def add_node(self, node, object_dictionary=None, upload_eds=False):
         """Add a remote node to the network.
 
         :param node:
-            Can be either an integer representing the node ID or a
-            :class:`canopen.Node` object.
+            Can be either an integer representing the node ID, a
+            :class:`canopen.RemoteNode` or :class:`canopen.LocalNode` object.
         :param object_dictionary:
             Can be either a string for specifying the path to an
             Object Dictionary file or a
@@ -152,8 +159,7 @@ class Network(collections.MutableMapping):
         """Create a local node in the network.
 
         :param node:
-            Can be either an integer representing the node ID or a
-            :class:`canopen.Node` object.
+            An integer representing the node ID.
         :param object_dictionary:
             Can be either a string for specifying the path to an
             Object Dictionary file or a
