@@ -24,15 +24,16 @@ Finally, you can switch to LSS waiting state.
 
 .. note::
     Fastscan is supported from v0.8.0.
+    LSS identify slave service is not implemented.
 
 Examples
 --------
 
-Switch all the slave into CONFIGURATION state::
+Switch all the slave into CONFIGURATION state. There is no response for the mesage. ::
 
     network.lss.send_switch_state_global(network.lss.CONFIGURATION_STATE)
 
-There is no response for the mesage.
+
 Or, you can call this method with 4 IDs if you want to switch only one slave::
 
     vendorId = 0x00000022

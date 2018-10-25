@@ -283,14 +283,15 @@ class LssMaster(object):
         return False, None
 
     def __send_fast_scan_message(self, id_number, bit_checker, lss_sub, lss_next):
-        message = struct.pack('<BIBBB', CS_FAST_SCAN, id_number, bit_checker, lss_sub, lss_next)
+        message = bytearray(8)
+        message[0:8] = struct.pack('<BIBBB', CS_FAST_SCAN, id_number, bit_checker, lss_sub, lss_next)
         try:
             recv_msg = self.__send_command(message)
         except LssError:
             return False
 
-        if len(recv_msg) == 8:
-            if recv_msg[0] == CS_IDENTIFY_SLAVE:
+        cs = struct.unpack_from("<B", recv_msg)[0]
+        if cs == CS_IDENTIFY_SLAVE:
                 return True
         
         return False
