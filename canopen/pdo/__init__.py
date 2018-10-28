@@ -29,7 +29,7 @@ class PDO(PdoBase):
 
 class RPDO(PdoBase):
     """PDO specialization for the Receive PDO enabling the transfer of data from the master to the node.
-    Properties 0x1400 to 0x1403 | Mapping 0x1A00 to 0x1A03.
+    Properties 0x1400 to 0x1403 | Mapping 0x1600 to 0x1603.
     :param object node: Parent node for this object."""
 
     def __init__(self, node):
@@ -50,7 +50,7 @@ class RPDO(PdoBase):
 
 class TPDO(PdoBase):
     """PDO specialization for the Transmit PDO enabling the transfer of data from the node to the master.
-    Properties 0x1800 to 0x1803 | Mapping 0x1600 to 0x1603."""
+    Properties 0x1800 to 0x1803 | Mapping 0x1A00 to 0x1A03."""
 
     def __init__(self, node):
         super(TPDO, self).__init__(node)
