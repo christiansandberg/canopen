@@ -239,7 +239,7 @@ class BaseNode402(RemoteNode):
             self.controlword = State402.CW_DISABLE_VOLTAGE
             timeout = time.time() + 0.4  # 400 milliseconds
             # Check if the Fault Reset bit is still = 1
-            while self.statusword & State402.SW_MASK['FAULT'][0] == State402.SW_MASK['FAULT'][1]:
+            while self.statusword & (State402.SW_MASK['FAULT'][0] == State402.SW_MASK['FAULT'][1]):
                 if time.time() > timeout:
                     break
                 time.sleep(0.01)  # 10 milliseconds
