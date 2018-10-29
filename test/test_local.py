@@ -84,7 +84,7 @@ class TestSDO(unittest.TestCase):
         self.local_node.nmt.stop_heartbeat()
         # The NMT master will change the state INITIALISING (0)
         # to PRE-OPERATIONAL (127)
-        self.assertEqual(state, canopen.nmt.NMT_STATES[127])
+        self.assertEqual(state, 'PRE-OPERATIONAL')
 
     def test_nmt_state_initializing_to_preoper(self):
         # Initialize the heartbeat timer
@@ -220,6 +220,7 @@ class TestNMT(unittest.TestCase):
         time.sleep(0.2)
         self.assertEqual(self.remote_node.nmt.state, 'OPERATIONAL')
 
+        self.local_node.nmt.stop_heartbeat()
 
 class TestPDO(unittest.TestCase):
     """
