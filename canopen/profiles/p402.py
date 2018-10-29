@@ -221,7 +221,7 @@ class BaseNode402(RemoteNode):
 
         # Check if the Controlword is configured
         if 0x6040 not in self.rpdo_pointers:
-            raise ValueError('Controlword not configured in the PDOs of this node, using SDOs to set Controlword')
+            logger.warning('Controlword not configured in the PDOs of this node, using SDOs to set Controlword')
 
         # Check if the Statusword is configured
         if 0x6041 not in self.tpdo_values:
