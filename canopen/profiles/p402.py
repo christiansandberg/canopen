@@ -116,12 +116,7 @@ class OperationMode(object):
         PROFILED_VELOCITY           : 'PROFILED VELOCITY',
         PROFILED_TORQUE             : 'PROFILED TORQUE',
         HOMING                      : 'HOMING',
-        INTERPOLATED_POSITION       : 'INTERPOLATED POSITION',
-        CYCLIC_SYNCHRONOUS_POSITION : 'CYCLIC SYNCHRONOUS POSITION',
-        CYCLIC_SYNCHRONOUS_VELOCITY : 'CYCLIC SYNCHRONOUS VELOCITY',
-        CYCLIC_SYNCHRONOUS_TORQUE   : 'CYCLIC SYNCHRONOUS TORQUE',
-        OPEN_LOOP_SCALAR_MODE       : 'OPEN LOOP SCALAR MODE',
-        OPEN_LOOP_VECTOR_MODE       : 'OPEN LOOP VECTOR MODE'
+        INTERPOLATED_POSITION       : 'INTERPOLATED POSITION'
     }
 
     NAME2CODE = {
@@ -130,12 +125,7 @@ class OperationMode(object):
         'PROFILED VELOCITY'             : PROFILED_VELOCITY,
         'PROFILED TORQUE'               : PROFILED_TORQUE,
         'HOMING'                        : HOMING,
-        'INTERPOLATED POSITION'         : INTERPOLATED_POSITION,
-        'CYCLIC SYNCHRONOUS POSITION'   : CYCLIC_SYNCHRONOUS_POSITION,
-        'CYCLIC SYNCHRONOUS VELOCITY'   : CYCLIC_SYNCHRONOUS_VELOCITY,
-        'CYCLIC SYNCHRONOUS TORQUE'     : CYCLIC_SYNCHRONOUS_TORQUE,
-        'OPEN LOOP SCALAR MODE'         : OPEN_LOOP_SCALAR_MODE,
-        'OPEN LOOP VECTOR MODE'         : OPEN_LOOP_VECTOR_MODE
+        'INTERPOLATED POSITION'         : INTERPOLATED_POSITION
     }
 
     SUPPORTED = {
@@ -144,12 +134,7 @@ class OperationMode(object):
         'PROFILED VELOCITY'           : 0x4,
         'PROFILED TORQUE'             : 0x8,
         'HOMING'                      : 0x20,
-        'INTERPOLATED POSITION'       : 0x40,
-        'CYCLIC SYNCHRONOUS POSITION' : 0x80,
-        'CYCLIC SYNCHRONOUS VELOCITY' : 0x100,
-        'CYCLIC SYNCHRONOUS TORQUE'   : 0x200,
-        'OPEN LOOP SCALAR MODE'       : 0x10000,
-        'OPEN LOOP VECTOR MODE'       : 0x20000
+        'INTERPOLATED POSITION'       : 0x40
     }
 
 
@@ -236,7 +221,7 @@ class BaseNode402(RemoteNode):
 
         # Check if the Controlword is configured
         if 0x6040 not in self.rpdo_pointers:
-            raise ValueError('Controlword not configured in the PDOs of this node, using SDOs to set Controlword')
+            logger.warning('Controlword not configured in the PDOs of this node, using SDOs to set Controlword')
 
         # Check if the Statusword is configured
         if 0x6041 not in self.tpdo_values:
@@ -254,7 +239,7 @@ class BaseNode402(RemoteNode):
             self.controlword = State402.CW_DISABLE_VOLTAGE
             timeout = time.time() + 0.4  # 400 milliseconds
             # Check if the Fault Reset bit is still = 1
-            while self.statusword & State402.SW_MASK['FAULT'][0] == State402.SW_MASK['FAULT'][1]:
+            while self.statusword & (State402.SW_MASK['FAULT'][0] == State402.SW_MASK['FAULT'][1]):
                 if time.time() > timeout:
                     break
                 time.sleep(0.01)  # 10 milliseconds
