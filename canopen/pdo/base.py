@@ -30,9 +30,9 @@ class PdoBase(collections.Mapping):
         return iter(self.map)
 
     def __getitem__(self, key):
-        if isinstance(key, int) and (0x1A00 <= key <= 0x1A80 or   # By TPDO ID
-                                     0x1600 <= key <= 0x1680 or   # By RPDO ID
-                                     0 < key <= 80):              # By PDO Index
+        if isinstance(key, int) and (0x1A00 <= key <= 0x1BFF or   # By TPDO ID (512)
+                                     0x1600 <= key <= 0x17FF or   # By RPDO ID (512)
+                                     0 < key <= 512):             # By PDO Index
             return self.map[key]
         else:
             for pdo_map in self.map.values():
@@ -121,7 +121,7 @@ class Maps(collections.Mapping):
         :param cob_base:
         """
         self.maps = {}
-        for map_no in range(128):
+        for map_no in range(512):
             if com_offset + map_no in pdo_node.node.object_dictionary:
                 new_map = Map(
                     pdo_node,
