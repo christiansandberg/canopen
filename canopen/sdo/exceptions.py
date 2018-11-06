@@ -41,6 +41,7 @@ class SdoAbortedError(SdoError):
                      "because of the present device state"),
         0x08000023: ("Object dictionary dynamic generation fails or no object "
                      "dictionary is present"),
+        0x08000024: "No data available",
     }
 
     def __init__(self, code):
