@@ -36,4 +36,5 @@ class SyncProducer(object):
 
     def stop(self):
         """Stop periodic transmission of SYNC message."""
-        self._task.stop()
+        if self._task is not None:
+            self._task.stop()
