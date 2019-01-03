@@ -16,7 +16,7 @@ try:
     network.check()
 
     # Add some nodes with corresponding Object Dictionaries
-    node = canopen.Node402(35, '/home/andre/Code/test/jupiter.eds')
+    node = canopen.BaseNode402(35, '/home/andre/Code/test/jupiter.eds')
     network.add_node(node)
     # network.add_node(34, '/home/andre/Code/test/jupiter.eds')
     # node = network[34]
@@ -61,7 +61,7 @@ try:
     print device_name
     print vendor_id
 
-    node.powerstate_402.state = 'SWITCH ON DISABLED'
+    node.state = 'SWITCH ON DISABLED'
 
     print 'node state 4) = {0}'.format(node.nmt.state)
 
@@ -85,8 +85,8 @@ try:
     node.rpdo[1]['Controlword'].raw = 0x81
     node.rpdo[1].transmit()
 
-    node.powerstate_402.state = 'READY TO SWITCH ON'
-    node.powerstate_402.state = 'SWITCHED ON'
+    node.state = 'READY TO SWITCH ON'
+    node.state = 'SWITCHED ON'
 
     node.rpdo.export('database.dbc')
 
@@ -95,22 +95,22 @@ try:
     print 'Node booted up'
 
     timeout = time.time() + 15
-    node.powerstate_402.state = 'READY TO SWITCH ON'
-    while node.powerstate_402.state != 'READY TO SWITCH ON':
+    node.state = 'READY TO SWITCH ON'
+    while node.state != 'READY TO SWITCH ON':
         if time.time() > timeout:
             raise Exception('Timeout when trying to change state')
         time.sleep(0.001)
 
     timeout = time.time() + 15
-    node.powerstate_402.state = 'SWITCHED ON'
-    while node.powerstate_402.state != 'SWITCHED ON':
+    node.state = 'SWITCHED ON'
+    while node.state != 'SWITCHED ON':
         if time.time() > timeout:
             raise Exception('Timeout when trying to change state')
         time.sleep(0.001)
 
     timeout = time.time() + 15
-    node.powerstate_402.state = 'OPERATION ENABLED'
-    while node.powerstate_402.state != 'OPERATION ENABLED':
+    node.state = 'OPERATION ENABLED'
+    while node.state != 'OPERATION ENABLED':
         if time.time() > timeout:
             raise Exception('Timeout when trying to change state')
         time.sleep(0.001)
