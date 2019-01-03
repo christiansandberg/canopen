@@ -26,17 +26,17 @@ try:
     #node.nmt.state = 'RESET'
     node.nmt.wait_for_bootup(15)
 
-    print 'node state 1) = {0}'.format(node.nmt.state)
+    print('node state 1) = {0}'.format(node.nmt.state))
 
     # Iterate over arrays or records
     error_log = node.sdo[0x1003]
     for error in error_log.values():
-        print "Error {0} was found in the log".format(error.raw)
+        print("Error {0} was found in the log".format(error.raw))
 
     for node_id in network:
-        print network[node_id]
+        print(network[node_id])
 
-    print 'node state 2) = {0}'.format(node.nmt.state)
+    print('node state 2) = {0}'.format(node.nmt.state))
 
     # Read a variable using SDO
 
@@ -51,19 +51,19 @@ try:
 
     node.load_configuration()
 
-    print 'node state 3) = {0}'.format(node.nmt.state)
+    print('node state 3) = {0}'.format(node.nmt.state))
 
     node.setup_402_state_machine()
 
     device_name = node.sdo[0x1008].raw
     vendor_id = node.sdo[0x1018][1].raw
 
-    print device_name
-    print vendor_id
+    print(device_name)
+    print(vendor_id)
 
     node.state = 'SWITCH ON DISABLED'
 
-    print 'node state 4) = {0}'.format(node.nmt.state)
+    print('node state 4) = {0}'.format(node.nmt.state))
 
     # Read PDO configuration from node
     node.tpdo.read()
@@ -92,7 +92,7 @@ try:
 
     # -----------------------------------------------------------------------------------------
 
-    print 'Node booted up'
+    print('Node booted up')
 
     timeout = time.time() + 15
     node.state = 'READY TO SWITCH ON'
@@ -115,7 +115,7 @@ try:
             raise Exception('Timeout when trying to change state')
         time.sleep(0.001)
 
-    print 'Node Status {0}'.format(node.powerstate_402.state)
+    print('Node Status {0}'.format(node.powerstate_402.state))
 
     # -----------------------------------------------------------------------------------------
     node.nmt.start_node_guarding(0.01)
@@ -132,8 +132,8 @@ try:
         # Read the state of the Statusword
         statusword = node.sdo[0x6041].raw
 
-        print 'statusword: {0}'.format(statusword)
-        print 'VEL: {0}'.format(speed)
+        print('statusword: {0}'.format(statusword))
+        print('VEL: {0}'.format(speed))
 
         time.sleep(0.01)
 
@@ -146,7 +146,7 @@ except Exception as e:
     traceback.print_exc()
 finally:
     # Disconnect from CAN bus
-    print 'going to exit... stoping...'
+    print('going to exit... stoping...')
     if network:
 
         for node_id in network:
