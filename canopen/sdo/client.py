@@ -129,9 +129,8 @@ class SdoClient(SdoBase):
                 if var.data_type not in objectdictionary.DATA_TYPES:
                     # Get the size in bytes for this variable
                     size = len(var) // 8
-        if size is not None and len(data) > size:
-            # Got more data than expected. Truncate it to specified size.
-            data = data[0:size]
+                    # Truncate the data to specified size
+                    data = data[0:size]
         return data
 
     def download(self, index, subindex, data, force_segment=False):
