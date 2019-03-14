@@ -118,7 +118,7 @@ class NmtMaster(NmtBase):
         with self.state_update:
             self.timestamp = timestamp
             new_state, = struct.unpack_from("B", data)
-            logger.info("Received heartbeat can-id %d, state is %d", can_id, new_state)
+            logger.debug("Received heartbeat can-id %d, state is %d", can_id, new_state)
             for callback in self._callbacks:
                 callback(new_state)
             if new_state == 0:
