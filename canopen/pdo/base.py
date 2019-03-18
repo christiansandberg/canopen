@@ -1,6 +1,9 @@
 import threading
 import math
-import collections.abc
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 import logging
 import binascii
 
@@ -14,7 +17,7 @@ RTR_NOT_ALLOWED = 1 << 30
 logger = logging.getLogger(__name__)
 
 
-class PdoBase(collections.abc.Mapping):
+class PdoBase(Mapping):
     """Represents the base implemention for the PDO object.
 
     :param object node:
@@ -110,7 +113,7 @@ class PdoBase(collections.abc.Mapping):
             pdo_map.stop()
 
 
-class Maps(collections.abc.Mapping):
+class Maps(Mapping):
     """A collection of transmit or receive maps."""
 
     def __init__(self, com_offset, map_offset, pdo_node, cob_base=None):

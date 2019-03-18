@@ -1,4 +1,7 @@
-import collections.abc
+try:
+    from collections.abc import MutableMapping
+except ImportError:
+    from collections import MutableMapping
 import logging
 import threading
 import struct
@@ -23,7 +26,7 @@ from .objectdictionary.eds import import_from_node
 logger = logging.getLogger(__name__)
 
 
-class Network(collections.abc.MutableMapping):
+class Network(MutableMapping):
     """Representation of one CAN bus containing one or more nodes."""
 
     def __init__(self, bus=None):
