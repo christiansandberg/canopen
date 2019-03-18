@@ -1,6 +1,6 @@
 import threading
 import math
-import collections
+import collections.abc
 import logging
 import binascii
 
@@ -14,7 +14,7 @@ RTR_NOT_ALLOWED = 1 << 30
 logger = logging.getLogger(__name__)
 
 
-class PdoBase(collections.Mapping):
+class PdoBase(collections.abc.Mapping):
     """Represents the base implemention for the PDO object.
 
     :param object node:
@@ -110,7 +110,7 @@ class PdoBase(collections.Mapping):
             pdo_map.stop()
 
 
-class Maps(collections.Mapping):
+class Maps(collections.abc.Mapping):
     """A collection of transmit or receive maps."""
 
     def __init__(self, com_offset, map_offset, pdo_node, cob_base=None):
@@ -280,7 +280,7 @@ class Map(object):
     def read(self):
         """Read PDO configuration for this map using SDO."""
         cob_id = self.com_record[1].raw
-        self.cob_id = cob_id & 0x7FF
+        self.cob_id = cob_id & 0x1FFFFFFF
         logger.info("COB-ID is 0x%X", self.cob_id)
         self.enabled = cob_id & PDO_NOT_VALID == 0
         logger.info("PDO is %s", "enabled" if self.enabled else "disabled")

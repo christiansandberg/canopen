@@ -1,5 +1,5 @@
 import logging
-import collections
+import collections.abc
 
 from . import objectdictionary
 
@@ -157,7 +157,7 @@ class Variable(object):
             self.desc = value
 
 
-class Bits(collections.Mapping):
+class Bits(collections.abc.Mapping):
 
     def __init__(self, variable):
         self.variable = variable

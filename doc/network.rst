@@ -111,6 +111,10 @@ API
 
        The :class:`canopen.sdo.SdoClient` associated with the node.
 
+    .. py:attribute:: sdo_channels
+
+       List of available SDO channels (added with :meth:`add_sdo`).
+
     .. py:attribute:: tpdo
 
        The :class:`canopen.pdo.PdoBase` for TPDO associated with the node.

@@ -2,7 +2,7 @@
 Object Dictionary module
 """
 import struct
-import collections
+import collections.abc
 import logging
 
 from .datatypes import *
@@ -42,7 +42,7 @@ def import_od(source, node_id=None):
         raise NotImplementedError("No support for this format")
 
 
-class ObjectDictionary(collections.MutableMapping):
+class ObjectDictionary(collections.abc.MutableMapping):
     """Representation of the object dictionary as a Python dictionary."""
 
     def __init__(self):
@@ -105,7 +105,7 @@ class ObjectDictionary(collections.MutableMapping):
             return obj.get(subindex)
 
 
-class Record(collections.MutableMapping):
+class Record(collections.abc.MutableMapping):
     """Groups multiple :class:`~canopen.objectdictionary.Variable` objects using
     subindices.
     """
@@ -157,7 +157,7 @@ class Record(collections.MutableMapping):
         self.names[variable.name] = variable
 
 
-class Array(collections.Mapping):
+class Array(collections.abc.Mapping):
     """An array of :class:`~canopen.objectdictionary.Variable` objects using
     subindices.
 

@@ -1,10 +1,10 @@
-import collections
+import collections.abc
 
 from .. import objectdictionary
 from .. import variable
 
 
-class SdoBase(collections.Mapping):
+class SdoBase(collections.abc.Mapping):
 
     def __init__(self, rx_cobid, tx_cobid, od):
         """
@@ -39,7 +39,7 @@ class SdoBase(collections.Mapping):
         return key in self.od
 
 
-class Record(collections.Mapping):
+class Record(collections.abc.Mapping):
 
     def __init__(self, sdo_node, od):
         self.sdo_node = sdo_node
@@ -58,7 +58,7 @@ class Record(collections.Mapping):
         return subindex in self.od
 
 
-class Array(collections.Mapping):
+class Array(collections.abc.Mapping):
 
     def __init__(self, sdo_node, od):
         self.sdo_node = sdo_node

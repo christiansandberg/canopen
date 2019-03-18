@@ -32,8 +32,8 @@ class RemoteNode(BaseNode):
         #: Enable WORKAROUND for reversed PDO mapping entries
         self.curtis_hack = False
 
-        self.sdo = SdoClient(0x600 + self.id, 0x580 + self.id,
-                             self.object_dictionary)
+        self.sdo_channels = []
+        self.sdo = self.add_sdo(0x600 + self.id, 0x580 + self.id)
         self.tpdo = TPDO(self)
         self.rpdo = RPDO(self)
         self.pdo = PDO(self, self.rpdo, self.tpdo)
@@ -50,13 +50,15 @@ class RemoteNode(BaseNode):
         self.tpdo.network = network
         self.rpdo.network = network
         self.nmt.network = network
-        network.subscribe(self.sdo.tx_cobid, self.sdo.on_response)
+        for sdo in self.sdo_channels:
+            network.subscribe(sdo.tx_cobid, sdo.on_response)
         network.subscribe(0x700 + self.id, self.nmt.on_heartbeat)
         network.subscribe(0x80 + self.id, self.emcy.on_emcy)
         network.subscribe(0, self.nmt.on_command)
 
     def remove_network(self):
-        self.network.unsubscribe(self.sdo.tx_cobid, self.sdo.on_response)
+        for sdo in self.sdo_channels:
+            self.network.unsubscribe(sdo.tx_cobid, sdo.on_response)
         self.network.unsubscribe(0x700 + self.id, self.nmt.on_heartbeat)
         self.network.unsubscribe(0x80 + self.id, self.emcy.on_emcy)
         self.network.unsubscribe(0, self.nmt.on_command)
@@ -66,6 +68,25 @@ class RemoteNode(BaseNode):
         self.tpdo.network = None
         self.rpdo.network = None
         self.nmt.network = None
+
+    def add_sdo(self, rx_cobid, tx_cobid):
+        """Add an additional SDO channel.
+
+        The SDO client will be added to :attr:`sdo_channels`.
+
+        :param int rx_cobid:
+            COB-ID that the server receives on
+        :param int tx_cobid:
+            COB-ID that the server responds with
+
+        :return: The SDO client created
+        :rtype: canopen.sdo.SdoClient
+        """
+        client = SdoClient(rx_cobid, tx_cobid, self.object_dictionary)
+        self.sdo_channels.append(client)
+        if self.network is not None:
+            self.network.subscribe(client.tx_cobid, client.on_response)
+        return client
 
     def store(self, subindex=1):
         """Store parameters in non-volatile memory.
