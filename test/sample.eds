@@ -835,6 +835,16 @@ DataType=0x0001
 AccessType=rw
 PDOMapping=1
 
+[2020]
+ParameterName=Complex data type
+ObjectType=0x7
+AccessType=RW
+DataType=0x40
+DefaultValue=0x0
+LowLimit=0x3
+HighLimit=0x1
+PDOMapping=0
+
 [3002]
 ParameterName=Sensor Sampling Rate (Hz)
 ObjectType=0x7

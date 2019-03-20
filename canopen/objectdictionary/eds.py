@@ -3,9 +3,9 @@ import io
 import logging
 import copy
 try:
-    from configparser import RawConfigParser, NoOptionError
+    from configparser import RawConfigParser, NoOptionError, NoSectionError
 except ImportError:
-    from ConfigParser import RawConfigParser, NoOptionError
+    from ConfigParser import RawConfigParser, NoOptionError, NoSectionError
 from canopen import objectdictionary
 from canopen.sdo import SdoClient
 
@@ -149,7 +149,12 @@ def build_variable(eds, section, node_id, index, subindex=0):
         # This optional object is then placed in the eds under the section [A0] (start point, iterates for more)
         # The eds.get function gives us 0x00A0 now convert to String without hex representation and upper case
         # The sub2 part is then the section where the type parameter stands
-        var.data_type = int(eds.get("%Xsub1" % var.data_type, "DefaultValue"), 0)
+        try:
+            var.data_type = int(eds.get("%Xsub1" % var.data_type, "DefaultValue"), 0)
+        except NoSectionError:
+            logger.warning("%s has an unknown or unsupported data type (%X)", name, var.data_type)
+            # Assume DOMAIN to force application to interpret the byte data
+            var.data_type = objectdictionary.DOMAIN
 
     if eds.has_option(section, "LowLimit"):
         try:
