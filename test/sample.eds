@@ -821,6 +821,20 @@ DataType=0x0004
 AccessType=rw
 PDOMapping=1
 
+[2005]
+ParameterName=BOOLEAN value
+ObjectType=0x7
+DataType=0x0001
+AccessType=rw
+PDOMapping=1
+
+[2006]
+ParameterName=BOOLEAN value 2
+ObjectType=0x7
+DataType=0x0001
+AccessType=rw
+PDOMapping=1
+
 [3002]
 ParameterName=Sensor Sampling Rate (Hz)
 ObjectType=0x7

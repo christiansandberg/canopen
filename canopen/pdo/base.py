@@ -495,7 +495,11 @@ class Variable(variable.Variable):
 
         if bit_offset or self.length % 8:
             # Need information of the current variable type (unsigned vs signed)
-            od_struct = self.od.STRUCT_TYPES[self.od.data_type]
+            data_type = self.od.data_type
+            if data_type == objectdictionary.BOOLEAN:
+                # A boolean type needs to be treated as an U08
+                data_type = objectdictionary.UNSIGNED8
+            od_struct = self.od.STRUCT_TYPES[data_type]
             data = od_struct.unpack_from(self.pdo_parent.data, byte_offset)[0]
             # Shift and mask to get the correct values
             data = (data >> bit_offset) & ((1 << self.length) - 1)
@@ -521,7 +525,11 @@ class Variable(variable.Variable):
         if bit_offset or self.length % 8:
             cur_msg_data = self.pdo_parent.data[byte_offset:byte_offset + len(self.od) // 8]
             # Need information of the current variable type (unsigned vs signed)
-            od_struct = self.od.STRUCT_TYPES[self.od.data_type]
+            data_type = self.od.data_type
+            if data_type == objectdictionary.BOOLEAN:
+                # A boolean type needs to be treated as an U08
+                data_type = objectdictionary.UNSIGNED8
+            od_struct = self.od.STRUCT_TYPES[data_type]
             cur_msg_data = od_struct.unpack(cur_msg_data)[0]
             # data has to have the same size as old_data
             data = od_struct.unpack(data)[0]
