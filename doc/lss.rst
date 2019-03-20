@@ -47,7 +47,7 @@ Or, you can run fastscan procedure ::
 
     ret_bool, lss_id_list = network.lss.fast_scan()
 
-You can read the current node id of the LSS slave::
+Once one of sensors goes to CONFIGURATION state, you can read the current node id of the LSS slave::
 
     node_id = network.lss.inquire_node_id()
 
