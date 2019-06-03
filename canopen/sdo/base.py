@@ -8,8 +8,8 @@ from .. import objectdictionary
 from .. import variable
 
 
-class Crc16Ccitt(object):
-    """Mimics Crc16Ccitt from crccheck."""
+class CrcXmodem(object):
+    """Mimics CrcXmodem from crccheck."""
 
     def __init__(self):
         self._value = 0
@@ -24,7 +24,7 @@ class Crc16Ccitt(object):
 class SdoBase(Mapping):
 
     #: The CRC algorithm used for block transfers
-    crc_cls = Crc16Ccitt
+    crc_cls = CrcXmodem
 
     def __init__(self, rx_cobid, tx_cobid, od):
         """
