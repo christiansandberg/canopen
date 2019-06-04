@@ -1,7 +1,6 @@
 import struct
 import logging
 import io
-import binascii
 import time
 try:
     import queue
@@ -458,7 +457,7 @@ class BlockUploadStream(io.RawIOBase):
         self._done = False
         self.sdo_client = sdo_client
         self.pos = 0
-        self._crc = 0
+        self._crc = sdo_client.crc_cls()
         self._server_crc = None
         self._ackseq = 0
 
@@ -523,9 +522,9 @@ class BlockUploadStream(io.RawIOBase):
         else:
             data = response[1:8]
         if self.crc_supported:
-            self._crc = binascii.crc_hqx(data, self._crc)
+            self._crc.process(data)
             if self._done:
-                if self._server_crc != self._crc:
+                if self._server_crc != self._crc.final():
                     self.sdo_client.abort(0x05040004)
                     raise SdoCommunicationError("CRC is not OK")
                 logger.info("CRC is OK")
@@ -612,7 +611,7 @@ class BlockDownloadStream(io.RawIOBase):
         self.pos = 0
         self._done = False
         self._seqno = 0
-        self._crc = 0
+        self._crc = sdo_client.crc_cls()
         self._last_bytes_sent = 0
         command = REQUEST_BLOCK_DOWNLOAD | INITIATE_BLOCK_TRANSFER | CRC_SUPPORTED
         request = bytearray(8)
@@ -694,7 +693,7 @@ class BlockDownloadStream(io.RawIOBase):
         self.pos += len(b)
         if self.crc_supported:
             # Calculate CRC
-            self._crc = binascii.crc_hqx(b, self._crc)
+            self._crc.process(b)
         if self._seqno >= self._blksize:
             # End of this block, wait for ACK
             self._block_ack()
@@ -738,7 +737,7 @@ class BlockDownloadStream(io.RawIOBase):
         request[0] = command
         if self.crc_supported:
             # Add CRC
-            struct.pack_into("<H", request, 1, self._crc)
+            struct.pack_into("<H", request, 1, self._crc.final())
         logger.debug("Ending block transfer...")
         response = self.sdo_client.request_response(request)
         res_command, = struct.unpack_from("B", response)

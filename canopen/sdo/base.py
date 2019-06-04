@@ -1,3 +1,4 @@
+import binascii
 try:
     from collections.abc import Mapping
 except ImportError:
@@ -7,7 +8,23 @@ from .. import objectdictionary
 from .. import variable
 
 
+class CrcXmodem(object):
+    """Mimics CrcXmodem from crccheck."""
+
+    def __init__(self):
+        self._value = 0
+
+    def process(self, data):
+        self._value = binascii.crc_hqx(data, self._value)
+
+    def final(self):
+        return self._value
+
+
 class SdoBase(Mapping):
+
+    #: The CRC algorithm used for block transfers
+    crc_cls = CrcXmodem
 
     def __init__(self, rx_cobid, tx_cobid, od):
         """
