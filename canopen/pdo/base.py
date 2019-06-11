@@ -251,7 +251,10 @@ class Map(object):
         Examples:
          * TxPDO1_node4
          * RxPDO4_node1
+         * Unknown
         """
+        if not self.cob_id:
+            return "Unknown"
         direction = "Tx" if self.cob_id & 0x80 else "Rx"
         map_id = self.cob_id >> 8
         if direction == "Rx":
@@ -519,8 +522,8 @@ class Variable(variable.Variable):
         :param bytes data: Value for the PDO variable in the PDO message as :class:`bytes`.
         """
         byte_offset, bit_offset = divmod(self.offset, 8)
-        logger.debug("Updating %s to %s in message 0x%X",
-                     self.name, binascii.hexlify(data), self.pdo_parent.cob_id)
+        logger.debug("Updating %s to %s in %s",
+                     self.name, binascii.hexlify(data), self.pdo_parent.name)
 
         if bit_offset or self.length % 8:
             cur_msg_data = self.pdo_parent.data[byte_offset:byte_offset + len(self.od) // 8]
