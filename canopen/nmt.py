@@ -197,6 +197,10 @@ class NmtSlave(NmtBase):
         self._heartbeat_time_ms = 0
         self._local_node = local_node
 
+    def on_command(self, can_id, data, timestamp):
+        super(NmtSlave, self).on_command(can_id, data, timestamp)
+        self.update_heartbeat()
+
     def send_command(self, code):
         """Send an NMT command code to the node.
 
