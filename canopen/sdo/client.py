@@ -406,7 +406,8 @@ class WritableStream(io.RawIOBase):
             res_command, = struct.unpack("B", response[0:1])
             if res_command & 0xE0 != RESPONSE_SEGMENT_DOWNLOAD:
                 raise SdoCommunicationError(
-                    "Unexpected response 0x%02X (expected 0x%02X)" % res_command)
+                    "Unexpected response 0x%02X (expected 0x%02X)" %
+                    (res_command, RESPONSE_SEGMENT_DOWNLOAD))
         # Advance position
         self.pos += bytes_sent
         return bytes_sent
