@@ -415,8 +415,11 @@ class Map(object):
             if length is not None:
                 # Custom bit length
                 var.length = length
-            logger.info("Adding %s (0x%X:%d, %d bits) to PDO map",
-                        var.name, var.index, var.subindex, var.length)
+            # We want to see the bit fields within the PDO
+            start_bit = var.offset
+            end_bit = start_bit + var.length - 1
+            logger.info("Adding %s (0x%X:%d) at bits %d - %d to PDO map",
+                        var.name, var.index, var.subindex, start_bit, end_bit)
             self.map.append(var)
             self.length += var.length
         except KeyError as exc:
