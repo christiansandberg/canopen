@@ -369,12 +369,14 @@ class BaseNode402(RemoteNode):
     @property
     def statusword(self):
         """Returns the last read value of the Statusword (0x6041) from the device.
-        :raise ValueError: The Object 0x6041 (Statusword) is not configured in this device.
+        If the the object 0x6041 is not configured in any TPDO it will fallback to the SDO mechanism
+        and try to tget the value.
         """
         try:
             return self.tpdo_values[0x6041]
         except KeyError:
-            raise KeyError('The object 0x6041 (Statusword) is not configured in this device.')
+            logger.warning('The object 0x6041 is not supported by the PDO mechanism, fallback to SDO')
+            return self.sdo[0x6041].raw = value
 
     @property
     def controlword(self):
