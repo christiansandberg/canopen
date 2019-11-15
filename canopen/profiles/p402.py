@@ -375,8 +375,8 @@ class BaseNode402(RemoteNode):
         try:
             return self.tpdo_values[0x6041]
         except KeyError:
-            logger.warning('The object 0x6041 is not supported by the PDO mechanism, fallback to SDO')
-            return self.sdo[0x6041].raw = value
+            logger.warning('The object 0x6041 is not a configured TPDO, fallback to SDO')
+            return self.sdo[0x6041].raw
 
     @property
     def controlword(self):
