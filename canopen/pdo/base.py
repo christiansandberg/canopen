@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class PdoBase(Mapping):
-    """Represents the base implemention for the PDO object.
+    """Represents the base implementation for the PDO object.
 
     :param object node:
         Parent object associated with this PDO instance

@@ -74,7 +74,7 @@ The PDOs can be access by three forms:
 
 **3rd:** :code:`node.pdo[0x1A00]` or :code:`node.pdo[0x1600]`
 
-The :code:`n` is the PDO index (normaly 1 to 4). The second form of access is for backward compability.
+The :code:`n` is the PDO index (normally 1 to 4). The second form of access is for backward compatibility.
 
 .. code-block:: python
 

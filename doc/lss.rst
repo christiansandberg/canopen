@@ -29,7 +29,7 @@ Finally, you can switch to LSS waiting state.
 Examples
 --------
 
-Switch all the slave into CONFIGURATION state. There is no response for the mesage. ::
+Switch all the slave into CONFIGURATION state. There is no response for the message. ::
 
     network.lss.send_switch_state_global(network.lss.CONFIGURATION_STATE)
 

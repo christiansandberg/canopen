@@ -44,7 +44,7 @@ class TestPDO(unittest.TestCase):
         self.assertEqual(node.tpdo[1]['BOOLEAN value'].raw, False)
         self.assertEqual(node.tpdo[1]['BOOLEAN value 2'].raw, True)
 
-        # Test diferent types of access
+        # Test different types of access
         self.assertEqual(node.pdo[0x1600]['INTEGER16 value'].raw, -3)
         self.assertEqual(node.pdo['INTEGER16 value'].raw, -3)
         self.assertEqual(node.pdo.tx[1]['INTEGER16 value'].raw, -3)
