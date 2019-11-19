@@ -146,7 +146,7 @@ except Exception as e:
     traceback.print_exc()
 finally:
     # Disconnect from CAN bus
-    print('going to exit... stoping...')
+    print('going to exit... stopping...')
     if network:
 
         for node_id in network:

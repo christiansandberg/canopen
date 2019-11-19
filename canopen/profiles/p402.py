@@ -198,7 +198,7 @@ class BaseNode402(RemoteNode):
     def setup_402_state_machine(self):
         """Configured the state machine by searching for the PDO that has the
         StatusWord mappend.
-        :raise ValueError: If the the node can't finde a Statusword configured
+        :raise ValueError: If the the node can't find a Statusword configured
         in the any of the TPDOs
         """
         # the node needs to be in pre-operational mode
@@ -250,9 +250,9 @@ class BaseNode402(RemoteNode):
     def homing(self, timeout=30, set_new_home=True):
         """Function to execute the configured Homing Method on the node
         :param int timeout: Timeout value (default: 30)
-        :param bool set_new_home: Difines if the node should set the home offset
+        :param bool set_new_home: Defines if the node should set the home offset
         object (0x607C) to the current position after the homing procedure (default: true)
-        :return: If the homing was complet with success
+        :return: If the homing was complete with success
         :rtype: bool
         """
         result = False
@@ -324,7 +324,7 @@ class BaseNode402(RemoteNode):
             result = False
 
             if not self.is_op_mode_supported(mode):
-                raise TypeError('Operation mode not suppported by the node.')
+                raise TypeError('Operation mode not supported by the node.')
 
             if self.state == 'OPERATION ENABLED':
                 self.state = 'SWITCHED ON'
@@ -432,9 +432,9 @@ class BaseNode402(RemoteNode):
         :param string new_state: Target state
         :param int timeout:
         :raise RuntimeError: Occurs when the time defined to change the state is reached
-        :raise TypeError: Occurs when trying to execute a ilegal transition in the sate machine
+        :raise TypeError: Occurs when trying to execute a illegal transition in the state machine
         """
-        t_to_new_state = time.time() + 8  # 800 milliseconds tiemout
+        t_to_new_state = time.time() + 8  # 800 milliseconds timeout
         while self.state != new_state:
             try:
                 if new_state == 'OPERATION ENABLED':
@@ -456,5 +456,5 @@ class BaseNode402(RemoteNode):
             # check the timeout
             if time.time() > t_to_new_state:
                 raise RuntimeError('Timeout when trying to change state')
-            time.sleep(0.01)  # 10 miliseconds of sleep
+            time.sleep(0.01)  # 10 milliseconds of sleep
 
