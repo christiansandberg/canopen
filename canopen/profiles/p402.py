@@ -6,10 +6,8 @@ from ..sdo import SdoCommunicationError
 
 logger = logging.getLogger(__name__)
 
-
 class State402(object):
-
-    # Control word 0x6040 commands
+    # Controlword (0x6040) commands
     CW_OPERATION_ENABLED = 0x0F
     CW_SHUTDOWN = 0x06
     CW_SWITCH_ON = 0x07
@@ -47,7 +45,7 @@ class State402(object):
         'QUICK STOP ACTIVE'     : [0x6F, 0x07]
     }
 
-    # Transition path to enable the DS402 node
+    # Transition path to get to the 'OPERATION ENABLED' state
     NEXTSTATE2ENABLE = {
         ('START')                                                   : 'NOT READY TO SWITCH ON',
         ('FAULT', 'NOT READY TO SWITCH ON')                         : 'SWITCH ON DISABLED',
@@ -137,9 +135,7 @@ class OperationMode(object):
         'INTERPOLATED POSITION'       : 0x40
     }
 
-
 class Homing(object):
-
     CW_START = 0x10
     CW_HALT = 0x100
 
@@ -187,24 +183,28 @@ class BaseNode402(RemoteNode):
 
     def __init__(self, node_id, object_dictionary):
         super(BaseNode402, self).__init__(node_id, object_dictionary)
-
-        self.is_statusword_configured = False
-
-        #: List of values obtained by the configured TPDOs in a dictionary {object (hex), value}
-        self.tpdo_values = {}
-        #! list of mapped objects configured in the RPDOs in a dictionary {object (hex, pointer (RPDO object) }
-        self.rpdo_pointers = {}
+        self.tpdo_values = dict() # { index: TPDO_value }
+        self.rpdo_pointers = dict() # { index: RPDO_pointer }
 
     def setup_402_state_machine(self):
-        """Configured the state machine by searching for the PDO that has the
-        StatusWord mappend.
-        :raise ValueError: If the the node can't finde a Statusword configured
+        """Configure the state machine by searching for a TPDO that has the
+        StatusWord mapped.
+        :raise ValueError: If the the node can't find a Statusword configured
         in the any of the TPDOs
         """
-        # the node needs to be in pre-operational mode
-        self.nmt.state = 'PRE-OPERATIONAL'
-        self.pdo.read()  # read all the PDOs (TPDOs and RPDOs)
-        #
+        self.nmt.state = 'PRE-OPERATIONAL' # Why is this necessary?
+        self.setup_pdos()
+        self._check_controlword_configured()
+        self._check_statusword_configured()
+        self.nmt.state = 'OPERATIONAL'
+        self.state = 'SWITCH ON DISABLED' # Why change state?
+
+    def setup_pdos(self):
+        self.pdo.read() # TPDO and RPDO configurations
+        self._init_tpdo_values()
+        self._init_rpdo_pointers()
+
+    def _init_tpdo_values(self):
         for tpdo in self.tpdo.values():
             if tpdo.enabled:
                 tpdo.add_callback(self.on_TPDOs_update_callback)
@@ -212,40 +212,44 @@ class BaseNode402(RemoteNode):
                     logger.debug('Configured TPDO: {0}'.format(obj.index))
                     if obj.index not in self.tpdo_values:
                         self.tpdo_values[obj.index] = 0
-        #
+
+    def _init_rpdo_pointers(self):
+        # If RPDOs have overlapping indecies, rpdo_pointers will point to 
+        # the first RPDO that has that index configured.
         for rpdo in self.rpdo.values():
             for obj in rpdo:
                 logger.debug('Configured RPDO: {0}'.format(obj.index))
                 if obj.index not in self.rpdo_pointers:
-                    self.rpdo_pointers[obj.index] = obj
+                    self.rpdo_pointers[obj.index] = obj 
 
-        # Check if the Controlword is configured
-        if 0x6040 not in self.rpdo_pointers:
-            logger.warning('Controlword not configured in the PDOs of this node, using SDOs to set Controlword')
+    def _check_controlword_configured(self):
+        if 0x6040 not in self.rpdo_pointers: # Controlword
+            logger.warning(
+                "Controlword not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
+                    self.id))
 
-        # Check if the Statusword is configured
-        if 0x6041 not in self.tpdo_values:
-            raise ValueError('Statusword not configured in this node. Unable to access node status.')
-
-        # Set nmt state and set the DS402 not to switch on disabled
-        self.nmt.state = 'OPERATIONAL'
-        self.state = 'SWITCH ON DISABLED'
+    def _check_statusword_configured(self):
+        if 0x6041 not in self.tpdo_values: # Statusword
+            raise ValueError(
+                "Statusword not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
+                    self.id))
 
     def reset_from_fault(self):
         """Reset node from fault and set it to Operation Enable state
         """
         if self.state == 'FAULT':
-            # particular case, it resets the Fault Reset bit (rising edge 0 -> 1)
+            # Resets the Fault Reset bit (rising edge 0 -> 1)
             self.controlword = State402.CW_DISABLE_VOLTAGE
-            timeout = time.time() + 0.4  # 400 milliseconds
-            # Check if the Fault Reset bit is still = 1
-            while self.statusword & (State402.SW_MASK['FAULT'][0] == State402.SW_MASK['FAULT'][1]):
+            timeout = time.time() + 0.4  # 400 ms
+            
+            while self.is_faulted():
                 if time.time() > timeout:
                     break
-                time.sleep(0.01)  # 10 milliseconds
+                time.sleep(0.01)  # 10 ms
             self.state = 'OPERATION ENABLED'
-        else:
-            logger.info('The node its not at fault. Doing nothing!')
+    
+    def is_faulted(self):
+        return self.statusword & State402.SW_MASK['FAULT'][0] == State402.SW_MASK['FAULT'][1]
 
     def homing(self, timeout=30, set_new_home=True):
         """Function to execute the configured Homing Method on the node
@@ -255,8 +259,7 @@ class BaseNode402(RemoteNode):
         :return: If the homing was complet with success
         :rtype: bool
         """
-        result = False
-        previus_opm = self.op_mode
+        previus_op_mode = self.op_mode
         self.state = 'SWITCHED ON'
         self.op_mode = 'HOMING'
         # The homing process will initialize at operation enabled
@@ -278,16 +281,16 @@ class BaseNode402(RemoteNode):
                 if time.time() > t:
                     raise RuntimeError('Unable to home, timeout reached')
             if set_new_home:
-                offset = self.sdo[0x6063].raw
-                self.sdo[0x607C].raw = offset
-                logger.info('Homing offset set to {0}'.format(offset))
+                actual_position = self.sdo[0x6063].raw
+                self.sdo[0x607C].raw = actual_position # home offset (0x607C)
+                logger.info('Homing offset set to {0}'.format(actual_position))
             logger.info('Homing mode carried out successfully.')
-            result = True
+            return True
         except RuntimeError as e:
             logger.info(str(e))
         finally:
-            self.op_mode = previus_opm
-        return result
+            self.op_mode = previus_op_mode
+        return False
 
     @property
     def op_mode(self):
@@ -316,38 +319,43 @@ class BaseNode402(RemoteNode):
         - 'CYCLIC SYNCHRONOUS TORQUE'
         - 'OPEN LOOP SCALAR MODE'
         - 'OPEN LOOP VECTOR MODE'
-
         """
         try:
-            logger.info('Changing Operation Mode to {0}'.format(mode))
-            state = self.state
-            result = False
-
             if not self.is_op_mode_supported(mode):
-                raise TypeError('Operation mode not suppported by the node.')
+                raise TypeError(
+                    'Operation mode {0} not suppported on node {1}.'.format(mode, self.id))
+
+            start_state = self.state
 
             if self.state == 'OPERATION ENABLED':
-                self.state = 'SWITCHED ON'
-                # to make sure the node does not move with a old value in another mode
-                # we clean all the target values for the modes
-                self.sdo[0x60FF].raw = 0.0  # target velocity
-                self.sdo[0x607A].raw = 0.0  # target position
-                self.sdo[0x6071].raw = 0.0  # target torque
-            # set the operation mode in an agnostic way, accessing the SDO object by ID
+                self.state = 'SWITCHED ON' 
+                # ensure the node does not move with an old value
+                self._clear_target_values() # Shouldn't this happen before it's switched on?
+                
+            # operation mode
             self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
-            t = time.time() + 0.5  # timeout
+
+            timeout = time.time() + 0.5 # 500 ms
             while self.op_mode != mode:
-                if time.time() > t:
-                    raise RuntimeError('Timeout setting the new mode of operation at node {0}.'.format(self.id))
-            result = True
+                if time.time() > timeout:
+                    raise RuntimeError(
+                        "Timeout setting node {0}'s new mode of operation to {1}.".format(
+                            self.id, mode))
+            return True
         except SdoCommunicationError as e:
             logger.warning('[SDO communication error] Cause: {0}'.format(str(e)))
         except (RuntimeError, ValueError) as e:
             logger.warning('{0}'.format(str(e)))
         finally:
-            self.state = state  # set to last known state
-            logger.info('Mode of operation of the node {n} is {m}.'.format(n=self.id , m=mode))
-        return result
+            self.state = start_state # why?
+            logger.info('Set node {n} operation mode to {m}.'.format(n=self.id , m=mode))
+        return False
+
+    def _clear_target_values(self):
+        # [target velocity, target position, target torque]
+        for target_index in [0x60FF, 0x607A, 0x6071]:
+            if target_index in self.sdo.keys():
+                self.sdo[target_index].raw = 0
 
     def is_op_mode_supported(self, mode):
         """Function to check if the operation mode is supported by the node
@@ -355,7 +363,7 @@ class BaseNode402(RemoteNode):
         :return: If the operation mode is supported
         :rtype: bool
         """
-        mode_support = (self.sdo[0x6502].raw & OperationMode.SUPPORTED[mode])
+        mode_support = self.sdo[0x6502].raw & OperationMode.SUPPORTED[mode]
         return mode_support == OperationMode.SUPPORTED[mode]
 
     def on_TPDOs_update_callback(self, mapobject):
@@ -380,11 +388,11 @@ class BaseNode402(RemoteNode):
 
     @property
     def controlword(self):
-        raise RuntimeError('This property has no getter.')
+        raise RuntimeError('The Controlword is write-only.')
 
     @controlword.setter
     def controlword(self, value):
-        """Helper function enabling the node to send the state using PDO or SDO objects
+        """Send the state using PDO or SDO objects.
         :param int value: State value to send in the message
         """
         if 0x6040 in self.rpdo_pointers:
@@ -396,9 +404,7 @@ class BaseNode402(RemoteNode):
     @property
     def state(self):
         """Attribute to get or set node's state as a string for the DS402 State Machine.
-
         States of the node can be one of:
-
         - 'NOT READY TO SWITCH ON'
         - 'SWITCH ON DISABLED'
         - 'READY TO SWITCH ON'
@@ -407,54 +413,53 @@ class BaseNode402(RemoteNode):
         - 'FAULT'
         - 'FAULT REACTION ACTIVE'
         - 'QUICK STOP ACTIVE'
+        """
+        for state, mask_val_pair in State402.SW_MASK.items():
+            mask = mask_val_pair[0]
+            state_value = mask_val_pair[1]
+            masked_value = self.statusword & mask
+            if masked_value == state_value:
+                return state
+        return 'UNKNOWN'
 
+    @state.setter
+    def state(self, target_state):
+        """ Defines the state for the DS402 state machine
         States to switch to can be one of:
-
         - 'SWITCH ON DISABLED'
         - 'DISABLE VOLTAGE'
         - 'READY TO SWITCH ON'
         - 'SWITCHED ON'
         - 'OPERATION ENABLED'
         - 'QUICK STOP ACTIVE'
-
-        """
-        for key, value in State402.SW_MASK.items():
-            # check if the value after applying the bitmask (value[0])
-            # corresponds with the value[1] to determine the current status
-            bitmaskvalue = self.statusword & value[0]
-            if bitmaskvalue == value[1]:
-                return key
-        return 'UNKNOWN'
-
-    @state.setter
-    def state(self, new_state):
-        """ Defines the state for the DS402 state machine
-        :param string new_state: Target state
-        :param int timeout:
+        :param string target_state: Target state
         :raise RuntimeError: Occurs when the time defined to change the state is reached
-        :raise TypeError: Occurs when trying to execute a ilegal transition in the sate machine
+        :raise ValueError: Occurs when trying to execute a ilegal transition in the sate machine
         """
-        t_to_new_state = time.time() + 8  # 800 milliseconds tiemout
-        while self.state != new_state:
-            try:
-                if new_state == 'OPERATION ENABLED':
-                    next_state = State402.next_state_for_enabling(self.state)
-                else:
-                    next_state = new_state
-                # get the code from the transition table
-                code = State402.TRANSITIONTABLE[ (self.state, next_state) ]
-                # set the control word
-                self.controlword = code
-                # timeout of 400 milliseconds to try set the next state
-                t_to_next_state = time.time() + 0.4
-                while self.state != next_state:
-                    if time.time() > t_to_next_state:
-                        break
-                    time.sleep(0.01)  # 10 milliseconds of sleep
-            except KeyError:
-                raise ValueError('Illegal transition from {f} to {t}'.format(f=self.state, t=new_state))
-            # check the timeout
-            if time.time() > t_to_new_state:
+        timeout = time.time() + 0.8 # 800 ms
+        while self.state != target_state:
+            next_state = self._next_state(target_state)
+            if _change_state(next_state):
+                continue       
+            if time.time() > timeout:
                 raise RuntimeError('Timeout when trying to change state')
-            time.sleep(0.01)  # 10 miliseconds of sleep
+            time.sleep(0.01) # 10 ms
 
+    def _next_state(self, target_state):
+        if target_state == 'OPERATION ENABLED':
+            return State402.next_state_for_enabling(self.state)
+        else:
+            return target_state
+
+    def _change_state(self, target_state):
+        try:
+            self.controlword = State402.TRANSITIONTABLE[(self.state, target_state)]
+        except KeyError:
+            raise ValueError(
+                'Illegal state transition from {f} to {t}'.format(f=self.state, t=target_state))
+        timeout = time.time() + 0.4 # 400 ms
+        while self.state != target_state:
+            if time.time() > timeout:
+                return False
+            time.sleep(0.01) # 10 ms
+        return True
