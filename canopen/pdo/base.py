@@ -174,7 +174,7 @@ class Map(object):
         #: Current message data
         self.data = bytearray()
         #: Timestamp of last received message
-        self.timestamp = 0
+        self.timestamp = None
         #: Period of receive message transmission in seconds
         self.period = None
         self.callbacks = []
@@ -268,7 +268,7 @@ class Map(object):
             with self.receive_condition:
                 self.is_received = True
                 self.data = data
-                self.period = timestamp - self.timestamp
+                self.period = timestamp - self.timestamp if self.timestamp is not None else timestamp
                 self.timestamp = timestamp
                 self.receive_condition.notify_all()
                 for callback in self.callbacks:
