@@ -268,7 +268,8 @@ class Map(object):
             with self.receive_condition:
                 self.is_received = True
                 self.data = data
-                self.period = timestamp - self.timestamp if self.timestamp is not None else timestamp
+                if self.timestamp is not None:
+                    self.period = timestamp - self.timestamp
                 self.timestamp = timestamp
                 self.receive_condition.notify_all()
                 for callback in self.callbacks:
