@@ -244,10 +244,11 @@ class Network(MutableMapping):
         If an exception caused the thread to terminate, that exception will be
         raised.
         """
-        exc = self.notifier.exception
-        if exc is not None:
-            logger.error("An error has caused receiving of messages to stop")
-            raise exc
+        if self.notifier is not None:
+            exc = self.notifier.exception
+            if exc is not None:
+                logger.error("An error has caused receiving of messages to stop")
+                raise exc
 
     def __getitem__(self, node_id):
         return self.nodes[node_id]
