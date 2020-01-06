@@ -2,12 +2,12 @@ dist: xenial
 language: python
 python:
   - "2.7"
-  - "3.4"
+  - "3.5"
   - "3.7"
-  - "3.8-dev"
+  - "3.8"
   - "pypy3.5"
 install:
   - pip install -e .
   - pip install --upgrade pytest pytest-cov codacy-coverage
-script: py.test -v --color=yes --cov-report xml --cov=canopen test/
+script: pytest -v --color=yes --cov-report xml --cov=canopen test/
 after_script: python-codacy-coverage
