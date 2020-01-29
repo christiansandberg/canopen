@@ -39,7 +39,7 @@ LSS_SerialNumber=0
 [DummyUsage]
 Dummy0001=0
 Dummy0002=0
-Dummy0003=0
+Dummy0003=1
 Dummy0004=0
 Dummy0005=0
 Dummy0006=0
