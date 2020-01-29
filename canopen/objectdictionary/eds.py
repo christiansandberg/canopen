@@ -37,11 +37,11 @@ def import_eds(source, node_id):
 
     for section in eds.sections():
         # Match dummy definitions
-        match = re.match(r"^[D|d]ummy[U|u]sage$", section)
+        match = re.match(r"^[Dd]ummy[Uu]sage$", section)
         if match is not None:
-            for i in range(1,8):
+            for i in range(1, 8):
                 key = "Dummy%04d" % i
-                if eds.getint(section,key) == 1:
+                if eds.getint(section, key) == 1:
                     var = objectdictionary.Variable(key, i, 0)
                     var.data_type = i
                     var.access_type = "const"
