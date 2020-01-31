@@ -185,6 +185,7 @@ class BaseNode402(RemoteNode):
         super(BaseNode402, self).__init__(node_id, object_dictionary)
         self.tpdo_values = dict() # { index: TPDO_value }
         self.rpdo_pointers = dict() # { index: RPDO_pointer }
+        self.use_state_transition_16 = True
 
     def setup_402_state_machine(self):
         """Configure the state machine by searching for a TPDO that has the
@@ -259,7 +260,7 @@ class BaseNode402(RemoteNode):
         :return: If the homing was complet with success
         :rtype: bool
         """
-        previus_op_mode = self.op_mode
+        start_op_mode = self.op_mode
         self.state = 'SWITCHED ON'
         self.op_mode = 'HOMING'
         # The homing process will initialize at operation enabled
@@ -289,7 +290,7 @@ class BaseNode402(RemoteNode):
         except RuntimeError as e:
             logger.info(str(e))
         finally:
-            self.op_mode = previus_op_mode
+            self.op_mode = start_op_mode
         return False
 
     @property
@@ -320,42 +321,38 @@ class BaseNode402(RemoteNode):
         - 'OPEN LOOP SCALAR MODE'
         - 'OPEN LOOP VECTOR MODE'
         """
-        try:
-            if not self.is_op_mode_supported(mode):
-                raise TypeError(
-                    'Operation mode {0} not suppported on node {1}.'.format(mode, self.id))
+        if not self.is_op_mode_supported(mode):
+            raise TypeError(
+                'Operation mode {0} not suppported on node {1}.'.format(mode, self.id))
+            
+        if self.state == 'OPERATION ENABLED':
+            # ensure the node does not move with an old value
+            self._clear_target_values()
+        
+        self._try_set_op_mode(mode)
 
-            start_state = self.state
-
-            if self.state == 'OPERATION ENABLED':
-                self.state = 'SWITCHED ON' 
-                # ensure the node does not move with an old value
-                self._clear_target_values() # Shouldn't this happen before it's switched on?
-                
-            # operation mode
-            self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
-
-            timeout = time.time() + 0.5 # 500 ms
-            while self.op_mode != mode:
-                if time.time() > timeout:
-                    raise RuntimeError(
-                        "Timeout setting node {0}'s new mode of operation to {1}.".format(
-                            self.id, mode))
-            return True
-        except SdoCommunicationError as e:
-            logger.warning('[SDO communication error] Cause: {0}'.format(str(e)))
-        except (RuntimeError, ValueError) as e:
-            logger.warning('{0}'.format(str(e)))
-        finally:
-            self.state = start_state # why?
-            logger.info('Set node {n} operation mode to {m}.'.format(n=self.id , m=mode))
-        return False
+        timeout = time.time() + 0.5 # 500 ms
+        while self.op_mode != mode:
+            if time.time() > timeout:
+                raise RuntimeError(
+                    "Timeout setting node {0}'s new operation mode to {1}.".format(
+                        self.id, mode))
+        return True
 
     def _clear_target_values(self):
         # [target velocity, target position, target torque]
         for target_index in [0x60FF, 0x607A, 0x6071]:
             if target_index in self.sdo.keys():
                 self.sdo[target_index].raw = 0
+
+    def _try_set_op_mode(self, mode):
+        try:
+            self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
+            logger.info('Set node {n} operation mode to {m}.'.format(n=self.id , m=mode))
+        except SdoCommunicationError as e:
+            logger.warning('[SDO communication error] Cause: {0}'.format(str(e)))
+        except (RuntimeError, ValueError) as e:
+            logger.warning('{0}'.format(str(e)))
 
     def is_op_mode_supported(self, mode):
         """Function to check if the operation mode is supported by the node
@@ -440,14 +437,29 @@ class BaseNode402(RemoteNode):
         while self.state != target_state:
             next_state = self._next_state(target_state)
             if _change_state(next_state):
-                continue       
+                continue
+            elif (self._is_state_transition_16(next_state) 
+                    and self.use_state_transition_16):
+                if self._try_bypass_state_transition_16():
+                    # assume this transition is unavailable on this node
+                    self.use_state_transition_16 = False
+                    continue
+            elif next_state == 'QUICK STOP ACTIVE':
+                # Some drives transition automatically on quick-stop
+                if self.state == 'SWITCH ON DISABLED':
+                    return
             if time.time() > timeout:
                 raise RuntimeError('Timeout when trying to change state')
-            time.sleep(0.01) # 10 ms
 
     def _next_state(self, target_state):
         if target_state == 'OPERATION ENABLED':
-            return State402.next_state_for_enabling(self.state)
+            state = self.state
+            if state != 'QUICK STOP ACTIVE':
+                return State402.next_state_for_enabling(state)
+            elif self.use_state_transition_16:
+                return 'OPERATION ENABLED'
+            else:
+                return 'SWITCH ON DISABLED'
         else:
             return target_state
 
@@ -456,10 +468,23 @@ class BaseNode402(RemoteNode):
             self.controlword = State402.TRANSITIONTABLE[(self.state, target_state)]
         except KeyError:
             raise ValueError(
-                'Illegal state transition from {f} to {t}'.format(f=self.state, t=target_state))
+            'Illegal state transition from {f} to {t}'.format(f=self.state, t=target_state))
         timeout = time.time() + 0.4 # 400 ms
         while self.state != target_state:
             if time.time() > timeout:
                 return False
             time.sleep(0.01) # 10 ms
         return True
+
+    def _is_state_transition_16(self, target_state):
+        return (
+            target_state == 'OPERATION ENABLED' 
+            and self.state == 'QUICK STOP ACTIVE')
+
+    def _try_bypass_state_transition_16(self):
+        try:
+            return (
+                self._change_state('SWITCH ON DISABLED') 
+                and self._change_state('OPERATION ENABLED'))
+        except:
+            return False
