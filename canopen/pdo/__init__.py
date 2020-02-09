@@ -1,8 +1,7 @@
-from .base import PdoBase, Maps, Map, Variable
+from .base import PdoBase, Maps, Map, Variable  # noqa
 
 import logging
-import itertools
-import canopen
+from .. import node
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +39,7 @@ class RPDO(PdoBase):
         """Stop transmission of all RPDOs.
         :raise TypeError: Exception is thrown if the node associated with the PDO does not
         support this function"""
-        if isinstance(self.node, canopen.RemoteNode):
+        if isinstance(self.node, node.RemoteNode):
             for pdo in self.map.values():
                 pdo.stop()
         else:
@@ -60,7 +59,7 @@ class TPDO(PdoBase):
         """Stop transmission of all TPDOs.
         :raise TypeError: Exception is thrown if the node associated with the PDO does not
         support this function"""
-        if isinstance(canopen.LocalNode, self.node):
+        if isinstance(node.LocalNode, self.node):
             for pdo in self.map.values():
                 pdo.stop()
         else:

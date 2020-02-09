@@ -89,4 +89,4 @@ class TestEDS(unittest.TestCase):
 
     def test_dummy_variable_undefined(self):
         with self.assertRaises(KeyError):
-            var_undef = self.od['Dummy0001']
+            _ = self.od['Dummy0001']

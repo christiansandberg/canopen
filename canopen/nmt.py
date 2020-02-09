@@ -3,8 +3,6 @@ import logging
 import struct
 import time
 
-from .network import CanError
-
 logger = logging.getLogger(__name__)
 
 NMT_STATES = {

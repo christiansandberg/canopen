@@ -8,7 +8,7 @@ except ImportError:
     from collections import MutableMapping, Mapping
 import logging
 
-from .datatypes import *
+from . import datatypes
 
 logger = logging.getLogger(__name__)
 
@@ -220,17 +220,17 @@ class Variable(object):
     """Simple variable."""
 
     STRUCT_TYPES = {
-        BOOLEAN: struct.Struct("?"),
-        INTEGER8: struct.Struct("b"),
-        INTEGER16: struct.Struct("<h"),
-        INTEGER32: struct.Struct("<l"),
-        INTEGER64: struct.Struct("<q"),
-        UNSIGNED8: struct.Struct("B"),
-        UNSIGNED16: struct.Struct("<H"),
-        UNSIGNED32: struct.Struct("<L"),
-        UNSIGNED64: struct.Struct("<Q"),
-        REAL32: struct.Struct("<f"),
-        REAL64: struct.Struct("<d")
+        datatypes.BOOLEAN: struct.Struct("?"),
+        datatypes.INTEGER8: struct.Struct("b"),
+        datatypes.INTEGER16: struct.Struct("<h"),
+        datatypes.INTEGER32: struct.Struct("<l"),
+        datatypes.INTEGER64: struct.Struct("<q"),
+        datatypes.UNSIGNED8: struct.Struct("B"),
+        datatypes.UNSIGNED16: struct.Struct("<H"),
+        datatypes.UNSIGNED32: struct.Struct("<L"),
+        datatypes.UNSIGNED64: struct.Struct("<Q"),
+        datatypes.REAL32: struct.Struct("<f"),
+        datatypes.REAL64: struct.Struct("<d")
     }
 
     def __init__(self, name, index, subindex=0):
@@ -302,9 +302,9 @@ class Variable(object):
         self.bit_definitions[name] = bits
 
     def decode_raw(self, data):
-        if self.data_type == VISIBLE_STRING:
+        if self.data_type == datatypes.VISIBLE_STRING:
             return data.rstrip(b"\x00").decode("ascii", errors="ignore")
-        elif self.data_type == UNICODE_STRING:
+        elif self.data_type == datatypes.UNICODE_STRING:
             # Is this correct?
             return data.rstrip(b"\x00").decode("utf_16_le", errors="ignore")
         elif self.data_type in self.STRUCT_TYPES:
@@ -321,15 +321,15 @@ class Variable(object):
     def encode_raw(self, value):
         if isinstance(value, (bytes, bytearray)):
             return value
-        elif self.data_type == VISIBLE_STRING:
+        elif self.data_type == datatypes.VISIBLE_STRING:
             return value.encode("ascii")
-        elif self.data_type == UNICODE_STRING:
+        elif self.data_type == datatypes.UNICODE_STRING:
             # Is this correct?
             return value.encode("utf_16_le")
         elif self.data_type in self.STRUCT_TYPES:
-            if self.data_type in INTEGER_TYPES:
+            if self.data_type in datatypes.INTEGER_TYPES:
                 value = int(value)
-            if self.data_type in NUMBER_TYPES:
+            if self.data_type in datatypes.NUMBER_TYPES:
                 if self.min is not None and value < self.min:
                     logger.warning(
                         "Value %d is less than min value %d", value, self.min)
@@ -350,12 +350,12 @@ class Variable(object):
                     value, self.data_type))
 
     def decode_phys(self, value):
-        if self.data_type in INTEGER_TYPES:
+        if self.data_type in datatypes.INTEGER_TYPES:
             value *= self.factor
         return value
 
     def encode_phys(self, value):
-        if self.data_type in INTEGER_TYPES:
+        if self.data_type in datatypes.INTEGER_TYPES:
             value /= self.factor
             value = int(round(value))
         return value

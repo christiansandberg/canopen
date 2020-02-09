@@ -1,5 +1,4 @@
 import re
-import io
 import logging
 import copy
 try:

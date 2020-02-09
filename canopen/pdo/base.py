@@ -324,7 +324,8 @@ class Map(object):
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
-            if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
+            # Curtis HACK: mixed up field order
+            if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:
                 index = value & 0xFFFF
                 subindex = (value >> 16) & 0xFF
                 size = (value >> 24) & 0xFF
@@ -365,7 +366,8 @@ class Map(object):
             for var in self.map:
                 logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
                             var.name, var.index, var.subindex, var.length)
-                if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
+                # Curtis HACK: mixed up field order
+                if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:
                     self.map_array[subindex].raw = (var.index |
                                                     var.subindex << 16 |
                                                     var.length << 24)

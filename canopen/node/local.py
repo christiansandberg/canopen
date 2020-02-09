@@ -1,5 +1,4 @@
 import logging
-import struct
 
 from .base import BaseNode
 from ..sdo import SdoServer, SdoAbortedError

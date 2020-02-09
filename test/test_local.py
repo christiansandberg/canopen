@@ -1,7 +1,6 @@
 import os
 import unittest
 import canopen
-import logging
 import time
 
 # logging.basicConfig(level=logging.DEBUG)
@@ -222,10 +221,9 @@ class TestNMT(unittest.TestCase):
 
         self.local_node.nmt.stop_heartbeat()
 
+
 class TestPDO(unittest.TestCase):
-    """
-    Test PDO slave.
-    """
+    """Test PDO slave."""
 
     @classmethod
     def setUpClass(cls):

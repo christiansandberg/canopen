@@ -4,7 +4,6 @@ except ImportError:
     from collections import MutableMapping
 import logging
 import threading
-import struct
 
 try:
     import can
@@ -379,4 +378,3 @@ class NodeScanner(object):
         sdo_req = b"\x40\x00\x10\x00\x00\x00\x00\x00"
         for node_id in range(1, limit + 1):
             self.network.send_message(0x600 + node_id, sdo_req)
-
