@@ -15,10 +15,8 @@ class BaseNode(object):
     def __init__(self, node_id, object_dictionary):
         self.network = None
 
-        if not isinstance(object_dictionary,
-                          objectdictionary.ObjectDictionary):
-            object_dictionary = objectdictionary.import_od(
-                object_dictionary, node_id)
+        if not isinstance(object_dictionary, objectdictionary.ObjectDictionary):
+            object_dictionary = objectdictionary.import_od(object_dictionary, node_id)
         self.object_dictionary = object_dictionary
 
         self.id = node_id or self.object_dictionary.node_id

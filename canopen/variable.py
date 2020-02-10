@@ -1,4 +1,5 @@
 import logging
+
 try:
     from collections.abc import Mapping
 except ImportError:
@@ -10,13 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 class Variable(object):
-
     def __init__(self, od):
         self.od = od
         #: Description of this variable from Object Dictionary, overridable
         self.name = od.name
-        if isinstance(od.parent, (objectdictionary.Record,
-                                  objectdictionary.Array)):
+        if isinstance(od.parent, (objectdictionary.Record, objectdictionary.Array)):
             # Include the parent object's name for subentries
             self.name = od.parent.name + "." + od.name
         #: Holds a local, overridable copy of the Object Index
@@ -73,8 +72,11 @@ class Variable(object):
         """
         value = self.od.decode_raw(self.data)
         text = "Value of %s (0x%X:%d) is %r" % (
-            self.name, self.index,
-            self.subindex, value)
+            self.name,
+            self.index,
+            self.subindex,
+            value,
+        )
         if value in self.od.value_descriptions:
             text += " (%s)" % self.od.value_descriptions[value]
         logger.debug(text)
@@ -82,9 +84,9 @@ class Variable(object):
 
     @raw.setter
     def raw(self, value):
-        logger.debug("Writing %s (0x%X:%d) = %r",
-                     self.name, self.index,
-                     self.subindex, value)
+        logger.debug(
+            "Writing %s (0x%X:%d) = %r", self.name, self.index, self.subindex, value
+        )
         self.data = self.od.encode_raw(value)
 
     @property
@@ -161,7 +163,6 @@ class Variable(object):
 
 
 class Bits(Mapping):
-
     def __init__(self, variable):
         self.variable = variable
         self.read()
@@ -180,8 +181,7 @@ class Bits(Mapping):
         return self.variable.od.decode_bits(self.raw, self._get_bits(key))
 
     def __setitem__(self, key, value):
-        self.raw = self.variable.od.encode_bits(
-            self.raw, self._get_bits(key), value)
+        self.raw = self.variable.od.encode_bits(self.raw, self._get_bits(key), value)
         self.write()
 
     def __iter__(self):

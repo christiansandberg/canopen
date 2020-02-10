@@ -5,11 +5,10 @@ import canopen
 
 import can
 
-EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
+EDS_PATH = os.path.join(os.path.dirname(__file__), "sample.eds")
 
 
 class TestNetwork(unittest.TestCase):
-
     def setUp(self):
         network = canopen.Network()
         network.add_node(2, EDS_PATH)
@@ -25,10 +24,10 @@ class TestNetwork(unittest.TestCase):
 
     def test_notify(self):
         node = self.network[2]
-        self.network.notify(0x82, b'\x01\x20\x02\x00\x01\x02\x03\x04', 1473418396.0)
+        self.network.notify(0x82, b"\x01\x20\x02\x00\x01\x02\x03\x04", 1473418396.0)
         self.assertEqual(len(node.emcy.active), 1)
-        self.network.notify(0x702, b'\x05', 1473418396.0)
-        self.assertEqual(node.nmt.state, 'OPERATIONAL')
+        self.network.notify(0x702, b"\x05", 1473418396.0)
+        self.assertEqual(node.nmt.state, "OPERATIONAL")
         self.assertListEqual(self.network.scanner.nodes, [2])
 
     def test_send(self):
@@ -66,7 +65,7 @@ class TestNetwork(unittest.TestCase):
         # Update data
         task.update([4, 5, 6])
         time.sleep(0.02)
-        while msg is not None and msg.data == b'\x01\x02\x03':
+        while msg is not None and msg.data == b"\x01\x02\x03":
             msg = bus.recv(0)
         self.assertIsNotNone(msg)
         self.assertSequenceEqual(msg.data, [4, 5, 6])
@@ -77,7 +76,6 @@ class TestNetwork(unittest.TestCase):
 
 
 class TestScanner(unittest.TestCase):
-
     def test_passive_scanning(self):
         scanner = canopen.network.NodeScanner()
         scanner.on_message_received(0x586)

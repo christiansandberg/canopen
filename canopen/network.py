@@ -90,7 +90,7 @@ class Network(MutableMapping):
             Backend specific channel for the CAN interface.
         :param str bustype:
             Name of the interface. See
-            `python-can manual <https://python-can.readthedocs.io/en/latest/configuration.html#interface-names>`__
+            :ref:doc:`python-can manual <can:configuration>`
             for full list of supported interfaces.
         :param int bitrate:
             Bitrate in bit/s.
@@ -192,10 +192,12 @@ class Network(MutableMapping):
         """
         if not self.bus:
             raise RuntimeError("Not connected to CAN bus")
-        msg = can.Message(is_extended_id=can_id > 0x7FF,
-                          arbitration_id=can_id,
-                          data=data,
-                          is_remote_frame=remote)
+        msg = can.Message(
+            is_extended_id=can_id > 0x7FF,
+            arbitration_id=can_id,
+            data=data,
+            is_remote_frame=remote,
+        )
         with self.send_lock:
             self.bus.send(msg)
         self.check()
@@ -287,9 +289,12 @@ class PeriodicMessageTask(object):
         """
         self.bus = bus
         self.period = period
-        self.msg = can.Message(is_extended_id=can_id > 0x7FF,
-                               arbitration_id=can_id,
-                               data=data, is_remote_frame=remote)
+        self.msg = can.Message(
+            is_extended_id=can_id > 0x7FF,
+            arbitration_id=can_id,
+            data=data,
+            is_remote_frame=remote,
+        )
         self._task = None
         self._start()
 

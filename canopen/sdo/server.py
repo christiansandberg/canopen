@@ -29,7 +29,7 @@ class SdoServer(SdoBase):
         self.last_received_error = 0x00000000
 
     def on_request(self, can_id, data, timestamp):
-        command, = struct.unpack_from("B", data, 0)
+        (command,) = struct.unpack_from("B", data, 0)
         ccs = command & 0xE0
 
         try:
@@ -70,7 +70,7 @@ class SdoServer(SdoBase):
             logger.info("Expedited upload for 0x%X:%d", index, subindex)
             res_command |= constants.EXPEDITED
             res_command |= (4 - size) << 2
-            response[4:4 + size] = data
+            response[4 : 4 + size] = data
         else:
             logger.info("Initiating segmented upload for 0x%X:%d", index, subindex)
             struct.pack_into("<L", response, 4, size)
@@ -103,7 +103,7 @@ class SdoServer(SdoBase):
 
         response = bytearray(8)
         response[0] = res_command
-        response[1:1 + size] = data
+        response[1 : 1 + size] = data
         self.send_response(response)
 
     def block_upload(self, data):
@@ -116,7 +116,9 @@ class SdoServer(SdoBase):
     def request_aborted(self, data):
         _, index, subindex, code = struct.unpack_from("<BHBL", data)
         self.last_received_error = code
-        logger.info("Received request aborted for 0x%X:%d with code 0x%X", index, subindex, code)
+        logger.info(
+            "Received request aborted for 0x%X:%d with code 0x%X", index, subindex, code
+        )
 
     def block_download(self, data):
         # We currently don't support BLOCK DOWNLOAD
@@ -137,11 +139,11 @@ class SdoServer(SdoBase):
                 size = 4 - ((command >> 2) & 0x3)
             else:
                 size = 4
-            self.download(index, subindex, request[4:4 + size])
+            self.download(index, subindex, request[4 : 4 + size])
         else:
             logger.info("Initiating segmented download for 0x%X:%d", index, subindex)
             if command & constants.SIZE_SPECIFIED:
-                size, = struct.unpack_from("<L", request, 4)
+                (size,) = struct.unpack_from("<L", request, 4)
                 logger.info("Size is %d bytes", size)
             self._buffer = bytearray()
             self._toggle = 0
@@ -157,10 +159,9 @@ class SdoServer(SdoBase):
         self._buffer.extend(request[1:last_byte])
 
         if command & constants.NO_MORE_DATA:
-            self._node.set_data(self._index,
-                                self._subindex,
-                                self._buffer,
-                                check_writable=True)
+            self._node.set_data(
+                self._index, self._subindex, self._buffer, check_writable=True
+            )
 
         res_command = constants.RESPONSE_SEGMENT_DOWNLOAD
         # Add toggle bit
@@ -177,8 +178,9 @@ class SdoServer(SdoBase):
 
     def abort(self, abort_code=0x08000000):
         """Abort current transfer."""
-        data = struct.pack("<BHBL", constants.RESPONSE_ABORTED,
-                           self._index, self._subindex, abort_code)
+        data = struct.pack(
+            "<BHBL", constants.RESPONSE_ABORTED, self._index, self._subindex, abort_code
+        )
         self.send_response(data)
         # logger.error("Transfer aborted with code 0x{:08X}".format(abort_code))
 

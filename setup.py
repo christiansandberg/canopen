@@ -1,14 +1,14 @@
 from setuptools import setup, find_packages
 
-exec(open('canopen/version.py').read())
+exec(open("canopen/version.py").read())
 
 description = open("README.rst").read()
 # Change links to stable documentation
 description = description.replace("/latest/", "/stable/")
 # Change pip install to this exact version
 description = description.replace(
-    "pip install canopen",
-    "pip install canopen==" + __version__)
+    "pip install canopen", "pip install canopen==" + __version__
+)
 
 setup(
     name="canopen",
@@ -29,15 +29,12 @@ setup(
         "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 3",
         "Intended Audience :: Developers",
-        "Topic :: Scientific/Engineering"
+        "Topic :: Scientific/Engineering",
     ],
     install_requires=["python-can>=3.0.0"],
-    extras_require={
-        "db_export": ["canmatrix"]
-    },
+    extras_require={"db_export": ["canmatrix"]},
     include_package_data=True,
-
     # Tests can be run using `python setup.py test`
     test_suite="nose.collector",
-    tests_require=["nose"]
+    tests_require=["nose"],
 )

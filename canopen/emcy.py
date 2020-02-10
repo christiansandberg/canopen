@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 class EmcyConsumer(object):
-
     def __init__(self):
         #: Log of all received EMCYs for this node
         self.log = []
@@ -78,7 +77,6 @@ class EmcyConsumer(object):
 
 
 class EmcyProducer(object):
-
     def __init__(self, cob_id):
         self.network = None
         self.cob_id = cob_id
@@ -108,7 +106,7 @@ class EmcyError(Exception):
         (0x8000, 0xF000, "Monitoring"),
         (0x9000, 0xFF00, "External Error"),
         (0xF000, 0xFF00, "Additional Functions"),
-        (0xFF00, 0xFF00, "Device Specific")
+        (0xFF00, 0xFF00, "Device Specific"),
     ]
 
     def __init__(self, code, register, data, timestamp):

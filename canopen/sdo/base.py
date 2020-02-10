@@ -1,4 +1,5 @@
 import binascii
+
 try:
     from collections.abc import Mapping
 except ImportError:
@@ -60,7 +61,6 @@ class SdoBase(Mapping):
 
 
 class Record(Mapping):
-
     def __init__(self, sdo_node, od):
         self.sdo_node = sdo_node
         self.od = od
@@ -79,7 +79,6 @@ class Record(Mapping):
 
 
 class Array(Mapping):
-
     def __init__(self, sdo_node, od):
         self.sdo_node = sdo_node
         self.od = od
@@ -108,11 +107,17 @@ class Variable(variable.Variable):
         return self.sdo_node.upload(self.od.index, self.od.subindex)
 
     def set_data(self, data):
-        force_segment = self.od.data_type == objectdictionary.DOMAIN
+        force_segment = self.od.data_type == objectdictionary.datatypes.DOMAIN
         self.sdo_node.download(self.od.index, self.od.subindex, data, force_segment)
 
-    def open(self, mode="rb", encoding="ascii", buffering=1024, size=None,
-             block_transfer=False):
+    def open(
+        self,
+        mode="rb",
+        encoding="ascii",
+        buffering=1024,
+        size=None,
+        block_transfer=False,
+    ):
         """Open the data stream as a file like object.
 
         :param str mode:
@@ -140,5 +145,12 @@ class Variable(variable.Variable):
         :returns:
             A file like object.
         """
-        return self.sdo_node.open(self.od.index, self.od.subindex, mode,
-                                  encoding, buffering, size, block_transfer)
+        return self.sdo_node.open(
+            self.od.index,
+            self.od.subindex,
+            mode,
+            encoding,
+            buffering,
+            size,
+            block_transfer,
+        )

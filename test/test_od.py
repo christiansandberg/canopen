@@ -3,7 +3,6 @@ from canopen import objectdictionary as od
 
 
 class TestDataConversions(unittest.TestCase):
-
     def test_boolean(self):
         var = od.Variable("Test BOOLEAN", 0x1000)
         var.data_type = od.BOOLEAN
@@ -61,7 +60,6 @@ class TestDataConversions(unittest.TestCase):
 
 
 class TestAlternativeRepresentations(unittest.TestCase):
-
     def test_phys(self):
         var = od.Variable("Test INTEGER16", 0x1000)
         var.data_type = od.INTEGER16
@@ -72,7 +70,7 @@ class TestAlternativeRepresentations(unittest.TestCase):
 
     def test_desc(self):
         var = od.Variable("Test UNSIGNED8", 0x1000)
-        var.data_type = od.UNSIGNED8
+        var.data_type = od.datatypes.UNSIGNED8
         var.add_value_description(0, "Value 0")
         var.add_value_description(1, "Value 1")
         var.add_value_description(3, "Value 3")
@@ -83,20 +81,19 @@ class TestAlternativeRepresentations(unittest.TestCase):
 
     def test_bits(self):
         var = od.Variable("Test UNSIGNED8", 0x1000)
-        var.data_type = od.UNSIGNED8
+        var.data_type = od.datatypes.UNSIGNED8
         var.add_bit_definition("BIT 0", [0])
         var.add_bit_definition("BIT 2 and 3", [2, 3])
 
         self.assertEqual(var.decode_bits(1, "BIT 0"), 1)
         self.assertEqual(var.decode_bits(1, [1]), 0)
-        self.assertEqual(var.decode_bits(0xf, [0, 1, 2, 3]), 15)
+        self.assertEqual(var.decode_bits(0xF, [0, 1, 2, 3]), 15)
         self.assertEqual(var.decode_bits(8, "BIT 2 and 3"), 2)
-        self.assertEqual(var.encode_bits(0xf, [1], 0), 0xd)
+        self.assertEqual(var.encode_bits(0xF, [1], 0), 0xD)
         self.assertEqual(var.encode_bits(0, "BIT 0", 1), 1)
 
 
 class TestObjectDictionary(unittest.TestCase):
-
     def test_add_variable(self):
         test_od = od.ObjectDictionary()
         var = od.Variable("Test Variable", 0x1000)
@@ -124,11 +121,10 @@ class TestObjectDictionary(unittest.TestCase):
 
 
 class TestArray(unittest.TestCase):
-
     def test_subindexes(self):
         array = od.Array("Test Array", 0x1000)
         last_subindex = od.Variable("Last subindex", 0x1000, 0)
-        last_subindex.data_type = od.UNSIGNED8
+        last_subindex.data_type = od.datatypes.UNSIGNED8
         array.add_member(last_subindex)
         array.add_member(od.Variable("Test Variable", 0x1000, 1))
         array.add_member(od.Variable("Test Variable 2", 0x1000, 2))

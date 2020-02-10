@@ -1,6 +1,7 @@
 import logging
 import time
 import struct
+
 try:
     import queue
 except ImportError:
@@ -19,16 +20,16 @@ CS_SWITCH_STATE_SELECTIVE_PRODUCT_CODE = 0x41
 CS_SWITCH_STATE_SELECTIVE_REVISION_NUMBER = 0x42
 CS_SWITCH_STATE_SELECTIVE_SERIAL_NUMBER = 0x43
 CS_SWITCH_STATE_SELECTIVE_RESPONSE = 0x44
-CS_IDENTIFY_REMOTE_SLAVE_VENDOR_ID = 0x46               # m -> s
-CS_IDENTIFY_REMOTE_SLAVE_PRODUCT_CODE = 0x47            # m -> s
-CS_IDENTIFY_REMOTE_SLAVE_REVISION_NUMBER_LOW = 0x48     # m -> s
-CS_IDENTIFY_REMOTE_SLAVE_REVISION_NUMBER_HIGH = 0x49    # m -> s
-CS_IDENTIFY_REMOTE_SLAVE_SERIAL_NUMBER_LOW = 0x4A       # m -> s
-CS_IDENTIFY_REMOTE_SLAVE_SERIAL_NUMBER_HIGH = 0x4B      # m -> s
-CS_IDENTIFY_NON_CONFIGURED_REMOTE_SLAVE = 0x4C          # m -> s
-CS_IDENTIFY_SLAVE = 0x4F                                # s -> m
-CS_IDENTIFY_NON_CONFIGURED_SLAVE = 0x50                 # s -> m
-CS_FAST_SCAN = 0x51                                     # m -> s
+CS_IDENTIFY_REMOTE_SLAVE_VENDOR_ID = 0x46  # m -> s
+CS_IDENTIFY_REMOTE_SLAVE_PRODUCT_CODE = 0x47  # m -> s
+CS_IDENTIFY_REMOTE_SLAVE_REVISION_NUMBER_LOW = 0x48  # m -> s
+CS_IDENTIFY_REMOTE_SLAVE_REVISION_NUMBER_HIGH = 0x49  # m -> s
+CS_IDENTIFY_REMOTE_SLAVE_SERIAL_NUMBER_LOW = 0x4A  # m -> s
+CS_IDENTIFY_REMOTE_SLAVE_SERIAL_NUMBER_HIGH = 0x4B  # m -> s
+CS_IDENTIFY_NON_CONFIGURED_REMOTE_SLAVE = 0x4C  # m -> s
+CS_IDENTIFY_SLAVE = 0x4F  # s -> m
+CS_IDENTIFY_NON_CONFIGURED_SLAVE = 0x50  # s -> m
+CS_FAST_SCAN = 0x51  # m -> s
 CS_INQUIRE_VENDOR_ID = 0x5A
 CS_INQUIRE_PRODUCT_CODE = 0x5B
 CS_INQUIRE_REVISION_NUMBER = 0x5C
@@ -49,7 +50,7 @@ ERROR_STORE_NONE = 0
 ERROR_STORE_NOT_SUPPORTED = 1
 ERROR_STORE_ACCESS_PROBLEM = 2
 
-ERROR_VENDOR_SPECIFIC = 0xff
+ERROR_VENDOR_SPECIFIC = 0xFF
 
 ListMessageNeedResponse = [
     CS_CONFIGURE_NODE_ID,
@@ -107,8 +108,9 @@ class LssMaster(object):
         """obsolete"""
         self.send_switch_state_global(mode)
 
-    def send_switch_state_selective(self,
-                                    vendorId, productCode, revisionNumber, serialNumber):
+    def send_switch_state_selective(
+        self, vendorId, productCode, revisionNumber, serialNumber
+    ):
         """switch mode from WAITING_STATE to CONFIGURATION_STATE
         only if 128bits LSS address matches with the arguments.
         It sends 4 messages for each argument.
@@ -132,8 +134,12 @@ class LssMaster(object):
 
         self.__send_lss_address(CS_SWITCH_STATE_SELECTIVE_VENDOR_ID, vendorId)
         self.__send_lss_address(CS_SWITCH_STATE_SELECTIVE_PRODUCT_CODE, productCode)
-        self.__send_lss_address(CS_SWITCH_STATE_SELECTIVE_REVISION_NUMBER, revisionNumber)
-        response = self.__send_lss_address(CS_SWITCH_STATE_SELECTIVE_SERIAL_NUMBER, serialNumber)
+        self.__send_lss_address(
+            CS_SWITCH_STATE_SELECTIVE_REVISION_NUMBER, revisionNumber
+        )
+        response = self.__send_lss_address(
+            CS_SWITCH_STATE_SELECTIVE_SERIAL_NUMBER, serialNumber
+        )
 
         cs = struct.unpack_from("<B", response)[0]
         if cs == CS_SWITCH_STATE_SELECTIVE_RESPONSE:
@@ -197,7 +203,7 @@ class LssMaster(object):
         message = bytearray(8)
 
         message[0] = CS_ACTIVATE_BIT_TIMING
-        message[1:3] = struct.pack('<H', switch_delay_ms)
+        message[1:3] = struct.pack("<H", switch_delay_ms)
         self.__send_command(message)
 
     def store_configuration(self):
@@ -205,10 +211,15 @@ class LssMaster(object):
         """
         self.__send_configure(CS_STORE_CONFIGURATION)
 
-    def send_identify_remote_slave(self,
-                                   vendorId, productCode,
-                                   revisionNumberLow, revisionNumberHigh,
-                                   serialNumberLow, serialNumberHigh):
+    def send_identify_remote_slave(
+        self,
+        vendorId,
+        productCode,
+        revisionNumberLow,
+        revisionNumberHigh,
+        serialNumberLow,
+        serialNumberHigh,
+    ):
 
         """This command sends the range of LSS address to find the slave nodes
         in the specified range
@@ -230,10 +241,18 @@ class LssMaster(object):
 
         self.__send_lss_address(CS_IDENTIFY_REMOTE_SLAVE_VENDOR_ID, vendorId)
         self.__send_lss_address(CS_IDENTIFY_REMOTE_SLAVE_PRODUCT_CODE, productCode)
-        self.__send_lss_address(CS_IDENTIFY_REMOTE_SLAVE_REVISION_NUMBER_LOW, revisionNumberLow)
-        self.__send_lss_address(CS_IDENTIFY_REMOTE_SLAVE_REVISION_NUMBER_HIGH, revisionNumberHigh)
-        self.__send_lss_address(CS_IDENTIFY_REMOTE_SLAVE_SERIAL_NUMBER_LOW, serialNumberLow)
-        self.__send_lss_address(CS_IDENTIFY_REMOTE_SLAVE_SERIAL_NUMBER_HIGH, serialNumberHigh)
+        self.__send_lss_address(
+            CS_IDENTIFY_REMOTE_SLAVE_REVISION_NUMBER_LOW, revisionNumberLow
+        )
+        self.__send_lss_address(
+            CS_IDENTIFY_REMOTE_SLAVE_REVISION_NUMBER_HIGH, revisionNumberHigh
+        )
+        self.__send_lss_address(
+            CS_IDENTIFY_REMOTE_SLAVE_SERIAL_NUMBER_LOW, serialNumberLow
+        )
+        self.__send_lss_address(
+            CS_IDENTIFY_REMOTE_SLAVE_SERIAL_NUMBER_HIGH, serialNumberHigh
+        )
 
     def send_identify_non_configured_remote_slave(self):
         # TODO it should handle the multiple respones from slaves
@@ -248,7 +267,8 @@ class LssMaster(object):
         :return:
             True if a slave is found.
             False if there is no candidate.
-            list is the LSS identities [vendor_id, product_code, revision_number, seerial_number]
+            list is the LSS identities
+            [vendor_id, product_code, revision_number, seerial_number]
         :rtype: bool, list
         """
         lss_id = [0] * 4
@@ -263,13 +283,17 @@ class LssMaster(object):
                 while lss_bit_check > 0:
                     lss_bit_check -= 1
 
-                    if not self.__send_fast_scan_message(lss_id[lss_sub], lss_bit_check, lss_sub, lss_next):
+                    if not self.__send_fast_scan_message(
+                        lss_id[lss_sub], lss_bit_check, lss_sub, lss_next
+                    ):
                         lss_id[lss_sub] |= 1 << lss_bit_check
 
                     time.sleep(0.01)
 
                 lss_next = (lss_sub + 1) & 3
-                if not self.__send_fast_scan_message(lss_id[lss_sub], lss_bit_check, lss_sub, lss_next):
+                if not self.__send_fast_scan_message(
+                    lss_id[lss_sub], lss_bit_check, lss_sub, lss_next
+                ):
                     return False, None
 
                 time.sleep(0.01)
@@ -284,7 +308,9 @@ class LssMaster(object):
 
     def __send_fast_scan_message(self, id_number, bit_checker, lss_sub, lss_next):
         message = bytearray(8)
-        message[0:8] = struct.pack('<BIBBB', CS_FAST_SCAN, id_number, bit_checker, lss_sub, lss_next)
+        message[0:8] = struct.pack(
+            "<BIBBB", CS_FAST_SCAN, id_number, bit_checker, lss_sub, lss_next
+        )
         try:
             recv_msg = self.__send_command(message)
         except LssError:
@@ -300,7 +326,7 @@ class LssMaster(object):
         message = bytearray(8)
 
         message[0] = req_cs
-        message[1:5] = struct.pack('<I', number)
+        message[1:5] = struct.pack("<I", number)
         response = self.__send_command(message)
         # some device needs these delays between messages
         # because it can't handle messages arriving with no delay
@@ -372,8 +398,7 @@ class LssMaster(object):
         """
 
         message_str = " ".join(["{:02x}".format(x) for x in message])
-        logger.info(
-            "Sending LSS message {}".format(message_str))
+        logger.info("Sending LSS message {}".format(message_str))
 
         response = None
         if not self.responses.empty():
@@ -388,8 +413,7 @@ class LssMaster(object):
         # Wait for the slave to respond
         # TODO check if the response is LSS response message
         try:
-            response = self.responses.get(
-                block=True, timeout=self.RESPONSE_TIMEOUT)
+            response = self.responses.get(block=True, timeout=self.RESPONSE_TIMEOUT)
         except queue.Empty:
             raise LssError("No LSS response received")
 

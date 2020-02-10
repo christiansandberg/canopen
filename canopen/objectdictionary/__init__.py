@@ -2,6 +2,7 @@
 Object Dictionary module
 """
 import struct
+
 try:
     from collections.abc import MutableMapping, Mapping
 except ImportError:
@@ -9,6 +10,29 @@ except ImportError:
 import logging
 
 from . import datatypes
+from .datatypes import (
+    BOOLEAN,
+    INTEGER8,
+    INTEGER16,
+    INTEGER32,
+    INTEGER64,
+    UNSIGNED8,
+    UNSIGNED16,
+    UNSIGNED32,
+    UNSIGNED64,
+    REAL32,
+    REAL64,
+    VISIBLE_STRING,
+    OCTET_STRING,
+    UNICODE_STRING,
+    DOMAIN,
+    SIGNED_TYPES,
+    UNSIGNED_TYPES,
+    INTEGER_TYPES,
+    FLOAT_TYPES,
+    NUMBER_TYPES,
+    DATA_TYPES,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -34,12 +58,14 @@ def import_od(source, node_id=None):
     else:
         # Path to file
         filename = source
-    suffix = filename[filename.rfind("."):].lower()
+    suffix = filename[filename.rfind(".") :].lower()
     if suffix in (".eds", ".dcf"):
         from . import eds
+
         return eds.import_eds(source, node_id)
     elif suffix == ".epf":
         from . import epf
+
         return epf.import_epf(source)
     else:
         raise NotImplementedError("No support for this format")
@@ -191,9 +217,18 @@ class Array(Mapping):
             name = "%s_%x" % (template.name, subindex)
             var = Variable(name, self.index, subindex)
             var.parent = self
-            for attr in ("data_type", "unit", "factor", "min", "max", "default",
-                         "access_type", "description", "value_descriptions",
-                         "bit_definitions"):
+            for attr in (
+                "data_type",
+                "unit",
+                "factor",
+                "min",
+                "max",
+                "default",
+                "access_type",
+                "description",
+                "value_descriptions",
+                "bit_definitions",
+            ):
                 if attr in template.__dict__:
                     var.__dict__[attr] = template.__dict__[attr]
         else:
@@ -230,7 +265,7 @@ class Variable(object):
         datatypes.UNSIGNED32: struct.Struct("<L"),
         datatypes.UNSIGNED64: struct.Struct("<Q"),
         datatypes.REAL32: struct.Struct("<f"),
-        datatypes.REAL64: struct.Struct("<d")
+        datatypes.REAL64: struct.Struct("<d"),
     }
 
     def __init__(self, name, index, subindex=0):
@@ -268,8 +303,7 @@ class Variable(object):
         self.bit_definitions = {}
 
     def __eq__(self, other):
-        return (self.index == other.index and
-                self.subindex == other.subindex)
+        return self.index == other.index and self.subindex == other.subindex
 
     def __len__(self):
         if self.data_type in self.STRUCT_TYPES:
@@ -309,11 +343,12 @@ class Variable(object):
             return data.rstrip(b"\x00").decode("utf_16_le", errors="ignore")
         elif self.data_type in self.STRUCT_TYPES:
             try:
-                value, = self.STRUCT_TYPES[self.data_type].unpack(data)
+                (value,) = self.STRUCT_TYPES[self.data_type].unpack(data)
                 return value
             except struct.error:
                 raise ObjectDictionaryError(
-                    "Mismatch between expected and actual data size")
+                    "Mismatch between expected and actual data size"
+                )
         else:
             # Just return the data as is
             return data
@@ -332,12 +367,12 @@ class Variable(object):
             if self.data_type in datatypes.NUMBER_TYPES:
                 if self.min is not None and value < self.min:
                     logger.warning(
-                        "Value %d is less than min value %d", value, self.min)
+                        "Value %d is less than min value %d", value, self.min
+                    )
                 if self.max is not None and value > self.max:
                     logger.warning(
-                        "Value %d is greater than max value %d",
-                        value,
-                        self.max)
+                        "Value %d is greater than max value %d", value, self.max
+                    )
             try:
                 return self.STRUCT_TYPES[self.data_type].pack(value)
             except struct.error:
@@ -346,8 +381,9 @@ class Variable(object):
             raise ObjectDictionaryError("Data type has not been specified")
         else:
             raise TypeError(
-                "Do not know how to encode %r to data type %Xh" % (
-                    value, self.data_type))
+                "Do not know how to encode %r to data type %Xh"
+                % (value, self.data_type)
+            )
 
     def decode_phys(self, value):
         if self.data_type in datatypes.INTEGER_TYPES:
@@ -364,8 +400,7 @@ class Variable(object):
         if not self.value_descriptions:
             raise ObjectDictionaryError("No value descriptions exist")
         elif value not in self.value_descriptions:
-            raise ObjectDictionaryError(
-                "No value description exists for %d" % value)
+            raise ObjectDictionaryError("No value description exists for %d" % value)
         else:
             return self.value_descriptions[value]
 

@@ -5,7 +5,7 @@ import time
 
 # logging.basicConfig(level=logging.DEBUG)
 
-EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
+EDS_PATH = os.path.join(os.path.dirname(__file__), "sample.eds")
 
 
 class TestSDO(unittest.TestCase):
@@ -39,7 +39,7 @@ class TestSDO(unittest.TestCase):
 
     def test_block_upload_switch_to_expedite_upload(self):
         with self.assertRaises(canopen.SdoCommunicationError) as context:
-            self.remote_node.sdo[0x1008].open('r', block_transfer=True)
+            self.remote_node.sdo[0x1008].open("r", block_transfer=True)
         # We get this since the sdo client don't support the switch
         # from block upload to expedite upload
         self.assertEqual("Unexpected response 0x41", str(context.exception))
@@ -47,9 +47,7 @@ class TestSDO(unittest.TestCase):
     def test_block_download_not_supported(self):
         data = b"TEST DEVICE"
         with self.assertRaises(canopen.SdoAbortedError) as context:
-            self.remote_node.sdo[0x1008].open('wb',
-                                              size=len(data),
-                                              block_transfer=True)
+            self.remote_node.sdo[0x1008].open("wb", size=len(data), block_transfer=True)
         self.assertEqual(context.exception.code, 0x05040001)
 
     def test_expedited_upload_default_value_visible_string(self):
@@ -66,9 +64,9 @@ class TestSDO(unittest.TestCase):
         self.assertEqual(device_name, b"Some cool device")
 
     def test_expedited_download(self):
-        self.remote_node.sdo[0x2004].raw = 0xfeff
+        self.remote_node.sdo[0x2004].raw = 0xFEFF
         value = self.local_node.sdo[0x2004].raw
-        self.assertEqual(value, 0xfeff)
+        self.assertEqual(value, 0xFEFF)
 
     def test_segmented_download(self):
         self.remote_node.sdo[0x2000].raw = "Another cool device"
@@ -83,18 +81,18 @@ class TestSDO(unittest.TestCase):
         self.local_node.nmt.stop_heartbeat()
         # The NMT master will change the state INITIALISING (0)
         # to PRE-OPERATIONAL (127)
-        self.assertEqual(state, 'PRE-OPERATIONAL')
+        self.assertEqual(state, "PRE-OPERATIONAL")
 
     def test_nmt_state_initializing_to_preoper(self):
         # Initialize the heartbeat timer
         self.local_node.sdo["Producer heartbeat time"].raw = 1000
         self.local_node.nmt.stop_heartbeat()
         # This transition shall start the heartbeating
-        self.local_node.nmt.state = 'INITIALISING'
-        self.local_node.nmt.state = 'PRE-OPERATIONAL'
+        self.local_node.nmt.state = "INITIALISING"
+        self.local_node.nmt.state = "PRE-OPERATIONAL"
         state = self.remote_node.nmt.wait_for_heartbeat()
         self.local_node.nmt.stop_heartbeat()
-        self.assertEqual(state, 'PRE-OPERATIONAL')
+        self.assertEqual(state, "PRE-OPERATIONAL")
 
     def test_receive_abort_request(self):
         self.remote_node.sdo.abort(0x05040003)
@@ -104,12 +102,12 @@ class TestSDO(unittest.TestCase):
         self.assertEqual(self.local_node.sdo.last_received_error, 0x05040003)
 
     def test_start_remote_node(self):
-        self.remote_node.nmt.state = 'OPERATIONAL'
+        self.remote_node.nmt.state = "OPERATIONAL"
         # Line below is just so that we are sure the client have received the command
         # before we do the check
         time.sleep(0.1)
         slave_state = self.local_node.nmt.state
-        self.assertEqual(slave_state, 'OPERATIONAL')
+        self.assertEqual(slave_state, "OPERATIONAL")
 
     def test_two_nodes_on_the_bus(self):
         self.local_node.sdo["Manufacturer device name"].raw = "Some cool device"
@@ -184,19 +182,19 @@ class TestNMT(unittest.TestCase):
         cls.network2.disconnect()
 
     def test_start_two_remote_nodes(self):
-        self.remote_node.nmt.state = 'OPERATIONAL'
+        self.remote_node.nmt.state = "OPERATIONAL"
         # Line below is just so that we are sure the client have received the command
         # before we do the check
         time.sleep(0.1)
         slave_state = self.local_node.nmt.state
-        self.assertEqual(slave_state, 'OPERATIONAL')
+        self.assertEqual(slave_state, "OPERATIONAL")
 
-        self.remote_node2.nmt.state = 'OPERATIONAL'
+        self.remote_node2.nmt.state = "OPERATIONAL"
         # Line below is just so that we are sure the client have received the command
         # before we do the check
         time.sleep(0.1)
         slave_state = self.local_node2.nmt.state
-        self.assertEqual(slave_state, 'OPERATIONAL')
+        self.assertEqual(slave_state, "OPERATIONAL")
 
     def test_stop_two_remote_nodes_using_broadcast(self):
         # This is a NMT broadcast "Stop remote node"
@@ -207,17 +205,17 @@ class TestNMT(unittest.TestCase):
         # before we do the check
         time.sleep(0.1)
         slave_state = self.local_node.nmt.state
-        self.assertEqual(slave_state, 'STOPPED')
+        self.assertEqual(slave_state, "STOPPED")
         slave_state = self.local_node2.nmt.state
-        self.assertEqual(slave_state, 'STOPPED')
+        self.assertEqual(slave_state, "STOPPED")
 
     def test_heartbeat(self):
         # self.assertEqual(self.remote_node.nmt.state, 'INITIALISING')
         # self.assertEqual(self.local_node.nmt.state, 'INITIALISING')
-        self.local_node.nmt.state = 'OPERATIONAL'
+        self.local_node.nmt.state = "OPERATIONAL"
         self.local_node.sdo[0x1017].raw = 100
         time.sleep(0.2)
-        self.assertEqual(self.remote_node.nmt.state, 'OPERATIONAL')
+        self.assertEqual(self.remote_node.nmt.state, "OPERATIONAL")
 
         self.local_node.nmt.stop_heartbeat()
 

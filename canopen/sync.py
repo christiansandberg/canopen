@@ -1,5 +1,3 @@
-
-
 class SyncProducer(object):
     """Transmits a SYNC message periodically."""
 

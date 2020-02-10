@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class LocalNode(BaseNode):
-
     def __init__(self, node_id, object_dictionary):
         super(LocalNode, self).__init__(node_id, object_dictionary)
 

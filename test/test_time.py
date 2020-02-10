@@ -3,7 +3,6 @@ import canopen
 
 
 class TestTime(unittest.TestCase):
-
     def test_time_producer(self):
         network = canopen.Network()
         network.connect(bustype="virtual", receive_own_messages=True)
