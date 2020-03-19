@@ -137,6 +137,7 @@ def _convert_variable(node_id, var_type, value):
         return float(value)
     else:
         # COB-ID can have a suffix of '$NODEID+' so replace this with node_id before converting
+        value = value.replace(" ","").upper()
         if '$NODEID+' in value and node_id is not None:
             return int(value.replace('$NODEID+', ''), 0) + node_id
         else:
