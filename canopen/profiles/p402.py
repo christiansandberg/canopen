@@ -439,7 +439,7 @@ class BaseNode402(RemoteNode):
         timeout = time.time() + 0.8 # 800 ms
         while self.state != target_state:
             next_state = self._next_state(target_state)
-            if _change_state(next_state):
+            if self._change_state(next_state):
                 continue       
             if time.time() > timeout:
                 raise RuntimeError('Timeout when trying to change state')
