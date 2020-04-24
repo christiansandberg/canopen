@@ -96,6 +96,7 @@ class State402(object):
 
 
 class OperationMode(object):
+    NO_MODE = 0
     PROFILED_POSITION = 1
     VELOCITY = 2
     PROFILED_VELOCITY = 3
@@ -109,6 +110,7 @@ class OperationMode(object):
     OPEN_LOOP_VECTOR_MODE = -2
 
     CODE2NAME = {
+        NO_MODE                     : 'NO MODE',
         PROFILED_POSITION           : 'PROFILED POSITION',
         VELOCITY                    : 'VELOCITY',
         PROFILED_VELOCITY           : 'PROFILED VELOCITY',
@@ -118,6 +120,7 @@ class OperationMode(object):
     }
 
     NAME2CODE = {
+        'NO MODE'                       : NO_MODE,
         'PROFILED POSITION'             : PROFILED_POSITION,
         'VELOCITY'                      : VELOCITY,
         'PROFILED VELOCITY'             : PROFILED_VELOCITY,
@@ -127,6 +130,7 @@ class OperationMode(object):
     }
 
     SUPPORTED = {
+        'NO MODE'                     : 0x0,
         'PROFILED POSITION'           : 0x1,
         'VELOCITY'                    : 0x2,
         'PROFILED VELOCITY'           : 0x4,
@@ -308,6 +312,7 @@ class BaseNode402(RemoteNode):
         :rtype: bool
 
         The modes can be:
+        - 'NO MODE'
         - 'PROFILED POSITION'
         - 'VELOCITY'
         - 'PROFILED VELOCITY'
