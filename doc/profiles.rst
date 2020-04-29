@@ -17,7 +17,7 @@ Create a node with Node402::
     import canopen
     from canopen.profiles.p402 import Node402
 
-    some_node = canopen.Node402(3, 'someprofile.eds')
+    some_node = Node402(3, 'someprofile.eds')
     network = canopen.Network()
     network.add_node(some_node)
 
