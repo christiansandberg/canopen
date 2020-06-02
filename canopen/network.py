@@ -119,8 +119,10 @@ class Network(MutableMapping):
         for node in self.nodes.values():
             if hasattr(node, "pdo"):
                 node.pdo.stop()
-        self.notifier.stop()
-        self.bus.shutdown()
+        if self.notifier is not None:
+            self.notifier.stop()
+        if self.bus is not None:
+            self.bus.shutdown()
         self.bus = None
         self.check()
 
