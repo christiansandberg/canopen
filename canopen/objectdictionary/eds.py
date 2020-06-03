@@ -113,7 +113,7 @@ def import_from_node(node_id, network):
     :param network: network object
     """
     # Create temporary SDO client
-    sdo_client = SdoClient(0x600 + node_id, 0x580 + node_id, None)
+    sdo_client = SdoClient(0x600 + node_id, 0x580 + node_id, objectdictionary.ObjectDictionary())
     sdo_client.network = network
     # Subscribe to SDO responses
     network.subscribe(0x580 + node_id, sdo_client.on_response)
