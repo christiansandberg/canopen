@@ -136,10 +136,10 @@ def _convert_variable(node_id, var_type, value):
     elif var_type in objectdictionary.FLOAT_TYPES:
         return float(value)
     else:
-        # COB-ID can have a suffix of '$NODEID+' so replace this with node_id before converting
+        # COB-ID can contain '$NODEID+' so replace this with node_id before converting
         value = value.replace(" ","").upper()
-        if '$NODEID+' in value and node_id is not None:
-            return int(value.replace('$NODEID+', ''), 0) + node_id
+        if '$NODEID' in value and node_id is not None:
+            return int(re.sub(r'\+?\$NODEID\+?', '', value), 0) + node_id
         else:
             return int(value, 0)
 

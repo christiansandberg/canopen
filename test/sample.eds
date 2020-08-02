@@ -262,7 +262,7 @@ ObjectType=7
 DataType=7
 AccessType=RW
 PDOMapping=0
-DefaultValue=$NODEID+1280
+DefaultValue=1280+$NODEID
 
 [1403sub2]
 ParameterName=Transmission type RPDO 4
