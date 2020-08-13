@@ -221,10 +221,11 @@ class BaseNode402(RemoteNode):
         # If RPDOs have overlapping indecies, rpdo_pointers will point to 
         # the first RPDO that has that index configured.
         for rpdo in self.rpdo.values():
-            for obj in rpdo:
-                logger.debug('Configured RPDO: {0}'.format(obj.index))
-                if obj.index not in self.rpdo_pointers:
-                    self.rpdo_pointers[obj.index] = obj 
+            if rpdo.enabled:
+                for obj in rpdo:
+                    logger.debug('Configured RPDO: {0}'.format(obj.index))
+                    if obj.index not in self.rpdo_pointers:
+                        self.rpdo_pointers[obj.index] = obj
 
     def _check_controlword_configured(self):
         if 0x6040 not in self.rpdo_pointers: # Controlword
