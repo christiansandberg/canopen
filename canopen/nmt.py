@@ -118,7 +118,9 @@ class NmtMaster(NmtBase):
         with self.state_update:
             self.timestamp = timestamp
             new_state, = struct.unpack_from("B", data)
-            logger.info("Received heartbeat can-id %d, state is %d", can_id, new_state)
+            # Mask out toggle bit
+            new_state &= 0x7F
+            logger.debug("Received heartbeat can-id %d, state is %d", can_id, new_state)
             for callback in self._callbacks:
                 callback(new_state)
             if new_state == 0:
@@ -194,6 +196,10 @@ class NmtSlave(NmtBase):
         self._send_task = None
         self._heartbeat_time_ms = 0
         self._local_node = local_node
+
+    def on_command(self, can_id, data, timestamp):
+        super(NmtSlave, self).on_command(can_id, data, timestamp)
+        self.update_heartbeat()
 
     def send_command(self, code):
         """Send an NMT command code to the node.

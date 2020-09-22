@@ -39,7 +39,7 @@ LSS_SerialNumber=0
 [DummyUsage]
 Dummy0001=0
 Dummy0002=0
-Dummy0003=0
+Dummy0003=1
 Dummy0004=0
 Dummy0005=0
 Dummy0006=0
@@ -262,7 +262,7 @@ ObjectType=7
 DataType=7
 AccessType=RW
 PDOMapping=0
-DefaultValue=$NODEID+1280
+DefaultValue=1280+$NODEID
 
 [1403sub2]
 ParameterName=Transmission type RPDO 4
@@ -820,6 +820,30 @@ ObjectType=0x7
 DataType=0x0004
 AccessType=rw
 PDOMapping=1
+
+[2005]
+ParameterName=BOOLEAN value
+ObjectType=0x7
+DataType=0x0001
+AccessType=rw
+PDOMapping=1
+
+[2006]
+ParameterName=BOOLEAN value 2
+ObjectType=0x7
+DataType=0x0001
+AccessType=rw
+PDOMapping=1
+
+[2020]
+ParameterName=Complex data type
+ObjectType=0x7
+AccessType=RW
+DataType=0x40
+DefaultValue=0x0
+LowLimit=0x3
+HighLimit=0x1
+PDOMapping=0
 
 [3002]
 ParameterName=Sensor Sampling Rate (Hz)

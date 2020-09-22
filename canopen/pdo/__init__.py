@@ -1,7 +1,6 @@
 from .base import PdoBase, Maps, Map, Variable
 
 import logging
-import collections
 import itertools
 import canopen
 

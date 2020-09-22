@@ -1,4 +1,7 @@
-import collections
+try:
+    from collections.abc import MutableMapping
+except ImportError:
+    from collections import MutableMapping
 import logging
 import threading
 import struct
@@ -23,7 +26,7 @@ from .objectdictionary.eds import import_from_node
 logger = logging.getLogger(__name__)
 
 
-class Network(collections.MutableMapping):
+class Network(MutableMapping):
     """Representation of one CAN bus containing one or more nodes."""
 
     def __init__(self, bus=None):
@@ -103,9 +106,6 @@ class Network(collections.MutableMapping):
                 if node.object_dictionary.bitrate:
                     kwargs["bitrate"] = node.object_dictionary.bitrate
                     break
-        # Try to filter out only 11-bit IDs
-        # kwargs.setdefault("can_filters",
-        #                  [{"can_id": 0, "can_mask": 0x1FFFF800}])
         self.bus = can.interface.Bus(*args, **kwargs)
         logger.info("Connected to '%s'", self.bus.channel_info)
         self.notifier = can.Notifier(self.bus, self.listeners, 1)
@@ -119,8 +119,10 @@ class Network(collections.MutableMapping):
         for node in self.nodes.values():
             if hasattr(node, "pdo"):
                 node.pdo.stop()
-        self.notifier.stop()
-        self.bus.shutdown()
+        if self.notifier is not None:
+            self.notifier.stop()
+        if self.bus is not None:
+            self.bus.shutdown()
         self.bus = None
         self.check()
 
@@ -182,7 +184,7 @@ class Network(collections.MutableMapping):
         It is safe to call this from multiple threads.
 
         :param int can_id:
-            CAN-ID of the message (always 11-bit)
+            CAN-ID of the message
         :param data:
             Data to be transmitted (anything that can be converted to bytes)
         :param bool remote:
@@ -193,7 +195,7 @@ class Network(collections.MutableMapping):
         """
         if not self.bus:
             raise RuntimeError("Not connected to CAN bus")
-        msg = can.Message(extended_id=False,
+        msg = can.Message(is_extended_id=can_id > 0x7FF,
                           arbitration_id=can_id,
                           data=data,
                           is_remote_frame=remote)
@@ -205,7 +207,7 @@ class Network(collections.MutableMapping):
         """Start sending a message periodically.
 
         :param int can_id:
-            CAN-ID of the message (always 11-bit)
+            CAN-ID of the message
         :param data:
             Data to be transmitted (anything that can be converted to bytes)
         :param float period:
@@ -223,10 +225,10 @@ class Network(collections.MutableMapping):
         """Feed incoming message to this library.
 
         If a custom interface is used, this function must be called for each
-        11-bit standard message read from the CAN bus.
+        message read from the CAN bus.
 
         :param int can_id:
-            CAN-ID of the message (always 11-bit)
+            CAN-ID of the message
         :param bytearray data:
             Data part of the message (0 - 8 bytes)
         :param float timestamp:
@@ -244,10 +246,11 @@ class Network(collections.MutableMapping):
         If an exception caused the thread to terminate, that exception will be
         raised.
         """
-        exc = self.notifier.exception
-        if exc is not None:
-            logger.error("An error has caused receiving of messages to stop")
-            raise exc
+        if self.notifier is not None:
+            exc = self.notifier.exception
+            if exc is not None:
+                logger.error("An error has caused receiving of messages to stop")
+                raise exc
 
     def __getitem__(self, node_id):
         return self.nodes[node_id]
@@ -277,7 +280,7 @@ class PeriodicMessageTask(object):
     def __init__(self, can_id, data, period, bus, remote=False):
         """
         :param int can_id:
-            CAN-ID of the message (always 11-bit)
+            CAN-ID of the message
         :param data:
             Data to be transmitted (anything that can be converted to bytes)
         :param float period:
@@ -287,7 +290,7 @@ class PeriodicMessageTask(object):
         """
         self.bus = bus
         self.period = period
-        self.msg = can.Message(extended_id=False,
+        self.msg = can.Message(is_extended_id=can_id > 0x7FF,
                                arbitration_id=can_id,
                                data=data, is_remote_frame=remote)
         self._task = None

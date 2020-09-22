@@ -31,7 +31,7 @@ setup(
         "Intended Audience :: Developers",
         "Topic :: Scientific/Engineering"
     ],
-    install_requires=["python-can>=2.0.0"],
+    install_requires=["python-can>=3.0.0"],
     extras_require={
         "db_export": ["canmatrix"]
     },

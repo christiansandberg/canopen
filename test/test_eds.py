@@ -76,3 +76,17 @@ class TestEDS(unittest.TestCase):
     def test_sub_index_w_capital_s(self):
         name = self.od[0x3010][0].name
         self.assertEqual(name, 'Temperature')
+
+    def test_dummy_variable(self):
+        var = self.od['Dummy0003']
+        self.assertIsInstance(var, canopen.objectdictionary.Variable)
+        self.assertEqual(var.index, 0x0003)
+        self.assertEqual(var.subindex, 0)
+        self.assertEqual(var.name, 'Dummy0003')
+        self.assertEqual(var.data_type, canopen.objectdictionary.INTEGER16)
+        self.assertEqual(var.access_type, 'const')
+        self.assertEqual(len(var), 16)
+
+    def test_dummy_variable_undefined(self):
+        with self.assertRaises(KeyError):
+            var_undef = self.od['Dummy0001']

@@ -162,6 +162,10 @@ class TestSDO(unittest.TestCase):
             _ = self.network[2].sdo[0x1018][1].raw
         self.assertEqual(cm.exception.code, 0x06090011)
 
+    def test_add_sdo_channel(self):
+        client = self.network[2].add_sdo(0x123456, 0x234567)
+        self.assertIn(client, self.network[2].sdo_channels)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -11,14 +11,24 @@ The library supports Python 2.7 and 3.4+.
 Features
 --------
 
-* Object Dictionary from EDS
-* NMT master/slave
-* SDO client/server
+The library is mainly meant to be used as a master.
+
+* NMT master
+* SDO client
 * PDO producer/consumer
-* SYNC producer/consumer
-* EMCY consumer/producer
+* SYNC producer
+* EMCY consumer
 * TIME producer
 * LSS master
+* Object Dictionary from EDS
+
+Incomplete support for creating slave nodes also exists.
+
+* SDO server
+* PDO producer/consumer
+* NMT slave
+* EMCY producer
+* Object Dictionary from EDS
 
 
 Installation
@@ -74,7 +84,7 @@ The PDOs can be access by three forms:
 
 **3rd:** :code:`node.pdo[0x1A00]` or :code:`node.pdo[0x1600]`
 
-The :code:`n` is the PDO index (normaly 1 to 4). The second form of access is for backward compability.
+The :code:`n` is the PDO index (normally 1 to 4). The second form of access is for backward compatibility.
 
 .. code-block:: python
 

@@ -1,6 +1,9 @@
 import threading
 import math
-import collections
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 import logging
 import binascii
 
@@ -14,8 +17,8 @@ RTR_NOT_ALLOWED = 1 << 30
 logger = logging.getLogger(__name__)
 
 
-class PdoBase(collections.Mapping):
-    """Represents the base implemention for the PDO object.
+class PdoBase(Mapping):
+    """Represents the base implementation for the PDO object.
 
     :param object node:
         Parent object associated with this PDO instance
@@ -110,7 +113,7 @@ class PdoBase(collections.Mapping):
             pdo_map.stop()
 
 
-class Maps(collections.Mapping):
+class Maps(Mapping):
     """A collection of transmit or receive maps."""
 
     def __init__(self, com_offset, map_offset, pdo_node, cob_base=None):
@@ -171,7 +174,7 @@ class Map(object):
         #: Current message data
         self.data = bytearray()
         #: Timestamp of last received message
-        self.timestamp = 0
+        self.timestamp = None
         #: Period of receive message transmission in seconds
         self.period = None
         self.callbacks = []
@@ -248,7 +251,10 @@ class Map(object):
         Examples:
          * TxPDO1_node4
          * RxPDO4_node1
+         * Unknown
         """
+        if not self.cob_id:
+            return "Unknown"
         direction = "Tx" if self.cob_id & 0x80 else "Rx"
         map_id = self.cob_id >> 8
         if direction == "Rx":
@@ -262,7 +268,8 @@ class Map(object):
             with self.receive_condition:
                 self.is_received = True
                 self.data = data
-                self.period = timestamp - self.timestamp
+                if self.timestamp is not None:
+                    self.period = timestamp - self.timestamp
                 self.timestamp = timestamp
                 self.receive_condition.notify_all()
                 for callback in self.callbacks:
@@ -280,7 +287,7 @@ class Map(object):
     def read(self):
         """Read PDO configuration for this map using SDO."""
         cob_id = self.com_record[1].raw
-        self.cob_id = cob_id & 0x7FF
+        self.cob_id = cob_id & 0x1FFFFFFF
         logger.info("COB-ID is 0x%X", self.cob_id)
         self.enabled = cob_id & PDO_NOT_VALID == 0
         logger.info("PDO is %s", "enabled" if self.enabled else "disabled")
@@ -409,8 +416,11 @@ class Map(object):
             if length is not None:
                 # Custom bit length
                 var.length = length
-            logger.info("Adding %s (0x%X:%d, %d bits) to PDO map",
-                        var.name, var.index, var.subindex, var.length)
+            # We want to see the bit fields within the PDO
+            start_bit = var.offset
+            end_bit = start_bit + var.length - 1
+            logger.info("Adding %s (0x%X:%d) at bits %d - %d to PDO map",
+                        var.name, var.index, var.subindex, start_bit, end_bit)
             self.map.append(var)
             self.length += var.length
         except KeyError as exc:
@@ -492,7 +502,11 @@ class Variable(variable.Variable):
 
         if bit_offset or self.length % 8:
             # Need information of the current variable type (unsigned vs signed)
-            od_struct = self.od.STRUCT_TYPES[self.od.data_type]
+            data_type = self.od.data_type
+            if data_type == objectdictionary.BOOLEAN:
+                # A boolean type needs to be treated as an U08
+                data_type = objectdictionary.UNSIGNED8
+            od_struct = self.od.STRUCT_TYPES[data_type]
             data = od_struct.unpack_from(self.pdo_parent.data, byte_offset)[0]
             # Shift and mask to get the correct values
             data = (data >> bit_offset) & ((1 << self.length) - 1)
@@ -512,13 +526,17 @@ class Variable(variable.Variable):
         :param bytes data: Value for the PDO variable in the PDO message as :class:`bytes`.
         """
         byte_offset, bit_offset = divmod(self.offset, 8)
-        logger.debug("Updating %s to %s in message 0x%X",
-                     self.name, binascii.hexlify(data), self.pdo_parent.cob_id)
+        logger.debug("Updating %s to %s in %s",
+                     self.name, binascii.hexlify(data), self.pdo_parent.name)
 
         if bit_offset or self.length % 8:
             cur_msg_data = self.pdo_parent.data[byte_offset:byte_offset + len(self.od) // 8]
             # Need information of the current variable type (unsigned vs signed)
-            od_struct = self.od.STRUCT_TYPES[self.od.data_type]
+            data_type = self.od.data_type
+            if data_type == objectdictionary.BOOLEAN:
+                # A boolean type needs to be treated as an U08
+                data_type = objectdictionary.UNSIGNED8
+            od_struct = self.od.STRUCT_TYPES[data_type]
             cur_msg_data = od_struct.unpack(cur_msg_data)[0]
             # data has to have the same size as old_data
             data = od_struct.unpack(data)[0]

@@ -1,10 +1,30 @@
-import collections
+import binascii
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 
 from .. import objectdictionary
 from .. import variable
 
 
-class SdoBase(collections.Mapping):
+class CrcXmodem(object):
+    """Mimics CrcXmodem from crccheck."""
+
+    def __init__(self):
+        self._value = 0
+
+    def process(self, data):
+        self._value = binascii.crc_hqx(data, self._value)
+
+    def final(self):
+        return self._value
+
+
+class SdoBase(Mapping):
+
+    #: The CRC algorithm used for block transfers
+    crc_cls = CrcXmodem
 
     def __init__(self, rx_cobid, tx_cobid, od):
         """
@@ -39,7 +59,7 @@ class SdoBase(collections.Mapping):
         return key in self.od
 
 
-class Record(collections.Mapping):
+class Record(Mapping):
 
     def __init__(self, sdo_node, od):
         self.sdo_node = sdo_node
@@ -58,7 +78,7 @@ class Record(collections.Mapping):
         return subindex in self.od
 
 
-class Array(collections.Mapping):
+class Array(Mapping):
 
     def __init__(self, sdo_node, od):
         self.sdo_node = sdo_node

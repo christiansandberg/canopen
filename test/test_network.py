@@ -31,9 +31,32 @@ class TestNetwork(unittest.TestCase):
         self.assertEqual(node.nmt.state, 'OPERATIONAL')
         self.assertListEqual(self.network.scanner.nodes, [2])
 
+    def test_send(self):
+        bus = can.interface.Bus(bustype="virtual", channel=1)
+        self.network.connect(bustype="virtual", channel=1)
+
+        # Send standard ID
+        self.network.send_message(0x123, [1, 2, 3, 4, 5, 6, 7, 8])
+        msg = bus.recv(1)
+        self.assertIsNotNone(msg)
+        self.assertEqual(msg.arbitration_id, 0x123)
+        self.assertFalse(msg.is_extended_id)
+        self.assertSequenceEqual(msg.data, [1, 2, 3, 4, 5, 6, 7, 8])
+
+        # Send extended ID
+        self.network.send_message(0x12345, [])
+        msg = bus.recv(1)
+        self.assertIsNotNone(msg)
+        self.assertEqual(msg.arbitration_id, 0x12345)
+        self.assertTrue(msg.is_extended_id)
+
+        bus.shutdown()
+        self.network.disconnect()
+
     def test_send_perodic(self):
         bus = can.interface.Bus(bustype="virtual", channel=1)
         self.network.connect(bustype="virtual", channel=1)
+
         task = self.network.send_periodic(0x123, [1, 2, 3], 0.01)
         time.sleep(0.1)
         self.assertTrue(9 <= bus.queue.qsize() <= 11)
@@ -48,6 +71,9 @@ class TestNetwork(unittest.TestCase):
         self.assertIsNotNone(msg)
         self.assertSequenceEqual(msg.data, [4, 5, 6])
         task.stop()
+
+        bus.shutdown()
+        self.network.disconnect()
 
 
 class TestScanner(unittest.TestCase):
