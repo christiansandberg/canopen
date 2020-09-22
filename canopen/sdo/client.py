@@ -155,7 +155,7 @@ class SdoClient(SdoBase):
         fp.close()
 
     def open(self, index, subindex=0, mode="rb", encoding="ascii",
-             buffering=1024, size=None, block_transfer=False, force_segment=False):
+             buffering=1024, size=None, block_transfer=False, force_segment=False, block_callback=None):
         """Open the data stream as a file like object.
 
         :param int index:
@@ -185,7 +185,9 @@ class SdoClient(SdoBase):
             If block transfer should be used.
         :param bool force_segment:
             Force use of segmented download regardless of data size.
-
+        :param block_callback:
+            A callback function which can be used to update the status of the caller appliction
+            especially to indicate the amout read or written to e.g. update a progress bar for.
         :returns:
             A file like object.
         """
@@ -201,7 +203,7 @@ class SdoClient(SdoBase):
                 return raw_stream
         if "w" in mode:
             if block_transfer:
-                raw_stream = BlockDownloadStream(self, index, subindex, size)
+                raw_stream = BlockDownloadStream(self, index, subindex, size,block_callback)
             else:
                 raw_stream = WritableStream(self, index, subindex, size, force_segment)
             if buffering:
@@ -596,7 +598,7 @@ class BlockUploadStream(io.RawIOBase):
 class BlockDownloadStream(io.RawIOBase):
     """File like object for block download."""
 
-    def __init__(self, sdo_client, index, subindex=0, size=None):
+    def __init__(self, sdo_client, index, subindex=0, size=None,block_callback=None):
         """
         :param canopen.sdo.SdoClient sdo_client:
             The SDO client to use for communication.
@@ -609,6 +611,7 @@ class BlockDownloadStream(io.RawIOBase):
         """
         self.sdo_client = sdo_client
         self.size = size
+        self.callback = block_callback
         self.pos = 0
         self._done = False
         self._seqno = 0
@@ -697,6 +700,8 @@ class BlockDownloadStream(io.RawIOBase):
             self._crc.process(b)
         if self._seqno >= self._blksize:
             # End of this block, wait for ACK
+            if self.callback != None:
+                self.callback(self.pos,self.siz)
             self._block_ack()
 
     def tell(self):
