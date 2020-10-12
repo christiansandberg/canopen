@@ -701,7 +701,7 @@ class BlockDownloadStream(io.RawIOBase):
         if self._seqno >= self._blksize:
             # End of this block, wait for ACK
             if self.callback != None:
-                self.callback(self.pos,self.siz)
+                self.callback(self.pos,self.size)
             self._block_ack()
 
     def tell(self):
