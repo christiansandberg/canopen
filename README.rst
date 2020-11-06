@@ -3,9 +3,10 @@ CANopen for Python
 
 A Python implementation of the CANopen_ standard.
 The aim of the project is to support the most common parts of the CiA 301
-standard in a Pythonic interface.
+standard in a simple Pythonic interface. It is mainly targeted for testing and
+automation tasks rather than a standard compliant master implementation.
 
-The library supports Python 2.7 and 3.4+.
+The library supports Python 3.4+.
 
 
 Features
@@ -21,6 +22,7 @@ The library is mainly meant to be used as a master.
 * TIME producer
 * LSS master
 * Object Dictionary from EDS
+* 402 profile support
 
 Incomplete support for creating slave nodes also exists.
 
@@ -98,7 +100,7 @@ The :code:`n` is the PDO index (normally 1 to 4). The second form of access is f
     network.add_node(node)
 
     # Connect to the CAN bus
-    # Arguments are passed to python-can's can.interface.Bus() constructor
+    # Arguments are passed to python-can's can.Bus() constructor
     # (see https://python-can.readthedocs.io/en/latest/bus.html).
     network.connect()
     # network.connect(bustype='socketcan', channel='can0')
