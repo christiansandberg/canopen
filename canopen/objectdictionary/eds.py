@@ -62,7 +62,7 @@ def import_eds(source, node_id):
             try:
                 storage_location = eds.get(section, "StorageLocation")
             except NoOptionError:
-                storage_location = "Unknown"
+                storage_location = None
 
             if object_type in (VAR, DOMAIN):
                 var = build_variable(eds, section, node_id, index)
@@ -161,7 +161,7 @@ def build_variable(eds, section, node_id, index, subindex=0):
     try:
         var.storage_location = eds.get(section, "StorageLocation")
     except NoOptionError:
-        var.storage_location = "Unknown"
+        var.storage_location = None
     var.data_type = int(eds.get(section, "DataType"), 0)
     var.access_type = eds.get(section, "AccessType").lower()
     if var.data_type > 0x1B:
