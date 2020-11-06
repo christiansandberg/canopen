@@ -60,15 +60,15 @@ def import_eds(source, node_id):
                 # "ObjectType=0x7" (=VAR).
                 object_type = VAR
             try:
-                StorageLocation = eds.get(section, "StorageLocation")
+                storage_location = eds.get(section, "StorageLocation")
             except NoOptionError:
-                StorageLocation = "Unknown"
+                storage_location = "Unknown"
 
             if object_type in (VAR, DOMAIN):
                 var = build_variable(eds, section, node_id, index)
                 od.add_object(var)
             elif object_type == ARR and eds.has_option(section, "CompactSubObj"):
-                arr = objectdictionary.Array(name, index, StorageLocation)
+                arr = objectdictionary.Array(name, index, storage_location)
                 last_subindex = objectdictionary.Variable(
                     "Number of entries", index, 0)
                 last_subindex.data_type = objectdictionary.UNSIGNED8
@@ -76,10 +76,10 @@ def import_eds(source, node_id):
                 arr.add_member(build_variable(eds, section, node_id, index, 1))
                 od.add_object(arr)
             elif object_type == ARR:
-                arr = objectdictionary.Array(name, index, StorageLocation)
+                arr = objectdictionary.Array(name, index, storage_location)
                 od.add_object(arr)
             elif object_type == RECORD:
-                record = objectdictionary.Record(name, index, StorageLocation)
+                record = objectdictionary.Record(name, index, storage_location)
                 od.add_object(record)
 
             continue
@@ -159,9 +159,9 @@ def build_variable(eds, section, node_id, index, subindex=0):
     name = eds.get(section, "ParameterName")
     var = objectdictionary.Variable(name, index, subindex)
     try:
-        var.StorageLocation = eds.get(section, "StorageLocation")
+        var.storage_location = eds.get(section, "StorageLocation")
     except NoOptionError:
-        var.StorageLocation = "Unknown"
+        var.storage_location = "Unknown"
     var.data_type = int(eds.get(section, "DataType"), 0)
     var.access_type = eds.get(section, "AccessType").lower()
     if var.data_type > 0x1B:
