@@ -123,6 +123,8 @@ class Record(MutableMapping):
         self.index = index
         #: Name of record
         self.name = name
+        #: Storage location of index
+        self.storage_location = None
         self.subindices = {}
         self.names = {}
 
@@ -177,6 +179,8 @@ class Array(Mapping):
         self.index = index
         #: Name of array
         self.name = name
+        #: Storage location of index
+        self.storage_location = None
         self.subindices = {}
         self.names = {}
 
@@ -193,7 +197,7 @@ class Array(Mapping):
             var.parent = self
             for attr in ("data_type", "unit", "factor", "min", "max", "default",
                          "access_type", "description", "value_descriptions",
-                         "bit_definitions"):
+                         "bit_definitions", "storage_location"):
                 if attr in template.__dict__:
                     var.__dict__[attr] = template.__dict__[attr]
         else:
@@ -266,6 +270,8 @@ class Variable(object):
         self.value_descriptions = {}
         #: Dictionary of bitfield definitions
         self.bit_definitions = {}
+        #: Storage location of index
+        self.storage_location = None
 
     def __eq__(self, other):
         return (self.index == other.index and

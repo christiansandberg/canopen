@@ -59,6 +59,10 @@ def import_eds(source, node_id):
                 # If the keyword ObjectType is missing, this is regarded as
                 # "ObjectType=0x7" (=VAR).
                 object_type = VAR
+            try:
+                storage_location = eds.get(section, "StorageLocation")
+            except NoOptionError:
+                storage_location = None
 
             if object_type in (VAR, DOMAIN):
                 var = build_variable(eds, section, node_id, index)
@@ -70,12 +74,15 @@ def import_eds(source, node_id):
                 last_subindex.data_type = objectdictionary.UNSIGNED8
                 arr.add_member(last_subindex)
                 arr.add_member(build_variable(eds, section, node_id, index, 1))
+                arr.storage_location = storage_location
                 od.add_object(arr)
             elif object_type == ARR:
                 arr = objectdictionary.Array(name, index)
+                arr.storage_location = storage_location
                 od.add_object(arr)
             elif object_type == RECORD:
                 record = objectdictionary.Record(name, index)
+                record.storage_location = storage_location
                 od.add_object(record)
 
             continue
@@ -154,6 +161,10 @@ def build_variable(eds, section, node_id, index, subindex=0):
     """
     name = eds.get(section, "ParameterName")
     var = objectdictionary.Variable(name, index, subindex)
+    try:
+        var.storage_location = eds.get(section, "StorageLocation")
+    except NoOptionError:
+        var.storage_location = None
     var.data_type = int(eds.get(section, "DataType"), 0)
     var.access_type = eds.get(section, "AccessType").lower()
     if var.data_type > 0x1B:
