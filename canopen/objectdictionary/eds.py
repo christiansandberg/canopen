@@ -68,18 +68,21 @@ def import_eds(source, node_id):
                 var = build_variable(eds, section, node_id, index)
                 od.add_object(var)
             elif object_type == ARR and eds.has_option(section, "CompactSubObj"):
-                arr = objectdictionary.Array(name, index, storage_location)
+                arr = objectdictionary.Array(name, index)
                 last_subindex = objectdictionary.Variable(
                     "Number of entries", index, 0)
                 last_subindex.data_type = objectdictionary.UNSIGNED8
                 arr.add_member(last_subindex)
                 arr.add_member(build_variable(eds, section, node_id, index, 1))
+                arr.storage_location = storage_location
                 od.add_object(arr)
             elif object_type == ARR:
-                arr = objectdictionary.Array(name, index, storage_location)
+                arr = objectdictionary.Array(name, index)
+                arr.storage_location = storage_location
                 od.add_object(arr)
             elif object_type == RECORD:
-                record = objectdictionary.Record(name, index, storage_location)
+                record = objectdictionary.Record(name, index)
+                record.storage_location = storage_location
                 od.add_object(record)
 
             continue

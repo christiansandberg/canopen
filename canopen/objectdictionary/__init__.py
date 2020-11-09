@@ -116,14 +116,15 @@ class Record(MutableMapping):
     #: Description for the whole record
     description = ""
 
-    def __init__(self, name, index, storage_location):
+    def __init__(self, name, index):
         #: The :class:`~canopen.ObjectDictionary` owning the record.
         self.parent = None
         #: 16-bit address of the record
         self.index = index
         #: Name of record
         self.name = name
-        self.storage_location = storage_location
+        #: Storage location of index
+        self.storage_location = None
         self.subindices = {}
         self.names = {}
 
@@ -171,14 +172,15 @@ class Array(Mapping):
     #: Description for the whole array
     description = ""
 
-    def __init__(self, name, index, storage_location):
+    def __init__(self, name, index):
         #: The :class:`~canopen.ObjectDictionary` owning the record.
         self.parent = None
         #: 16-bit address of the array
         self.index = index
         #: Name of array
         self.name = name
-        self.storage_location = storage_location
+        #: Storage location of index
+        self.storage_location = None
         self.subindices = {}
         self.names = {}
 
