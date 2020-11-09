@@ -270,6 +270,8 @@ class Variable(object):
         self.value_descriptions = {}
         #: Dictionary of bitfield definitions
         self.bit_definitions = {}
+        #: Storage location of index
+        self.storage_location = None
 
     def __eq__(self, other):
         return (self.index == other.index and
