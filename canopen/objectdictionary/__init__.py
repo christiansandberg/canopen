@@ -197,7 +197,7 @@ class Array(Mapping):
             var.parent = self
             for attr in ("data_type", "unit", "factor", "min", "max", "default",
                          "access_type", "description", "value_descriptions",
-                         "bit_definitions"):
+                         "bit_definitions", "storage_location"):
                 if attr in template.__dict__:
                     var.__dict__[attr] = template.__dict__[attr]
         else:
