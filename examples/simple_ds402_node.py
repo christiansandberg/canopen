@@ -16,9 +16,9 @@ try:
     network.check()
 
     # Add some nodes with corresponding Object Dictionaries
-    node = canopen.BaseNode402(35, '/home/andre/Code/test/jupiter.eds')
+    node = canopen.BaseNode402(35, 'eds/e35.eds')
     network.add_node(node)
-    # network.add_node(34, '/home/andre/Code/test/jupiter.eds')
+    # network.add_node(34, 'eds/example34.eds')
     # node = network[34]
 
     # Reset network
