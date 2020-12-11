@@ -10,14 +10,14 @@ CiA 402 CANopen device profile for motion controllers and drives
 
 This device profile has a control state machine for controlling the behaviour
 of the drive. Therefore one needs to instantiate a node with the
-:class:`Node402` class
+:class:`BaseNode402` class
 
-Create a node with Node402::
+Create a node with BaseNode402::
 
     import canopen
-    from canopen.profiles.p402 import Node402
+    from canopen.profiles.p402 import BaseNode402
 
-    some_node = Node402(3, 'someprofile.eds')
+    some_node = BaseNode402(3, 'someprofile.eds')
     network = canopen.Network()
     network.add_node(some_node)
 
@@ -35,7 +35,7 @@ The current status can be read from the device by reading the register
 Changes in state can only be done in the 'OPERATIONAL' state of the NmtMaster
 
 TPDO1 needs to be set up correctly. For this, run the the
-`Node402.setup_402_state_machine()` method. Note that this setup
+`BaseNode402.setup_402_state_machine()` method. Note that this setup
 routine will change only TPDO1 and automatically go to the 'OPERATIONAL' state
 of the NmtMaster::
 
@@ -55,10 +55,10 @@ by the Controlword, for example a 'FAULT' state.
 Therefore the :class:`PowerStateMachine` class (in similarity to the :class:`NmtMaster`
 class) automatically monitors state changes of the Statusword which is sent
 by TPDO1. The available callback on thet TPDO1 will then extract the
-information and mirror the state change in the :attr:`Node402.powerstate_402`
+information and mirror the state change in the :attr:`BaseNode402.powerstate_402`
 attribute.
 
-Similar to the :class:`NmtMaster` class, the states of the :class:`Node402`
+Similar to the :class:`NmtMaster` class, the states of the :class:`BaseNode402`
 class :attr:`._state` attribute can be read and set (command) by a string::
 
     # command a state (an SDO message will be called)
