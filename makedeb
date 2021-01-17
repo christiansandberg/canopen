@@ -1,0 +1,49 @@
+#!/bin/sh
+
+py=python3
+name=canopen
+pkgname=$py-canopen
+description="CANopen stack implementation"
+
+
+version=`git tag |grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' |sort | tail -1  `
+maintainer=`git log -1 --pretty=format:'%an <%ae>'`
+arch=all
+
+echo version: $version
+echo maintainer: $maintainer
+
+cd $(dirname $0)
+package_dir=$PWD/build-deb/${pkgname}_$version-1_all
+fakeroot=$package_dir
+
+mkdir -p $fakeroot
+
+$py setup.py bdist >setup_py.log
+
+tar -f dist/*.tar.*  -C $fakeroot -x
+
+mkdir -p $fakeroot/usr/lib/$py/dist-packages/
+mv -f $(find $fakeroot -name $name -type d) $fakeroot/usr/lib/python3/dist-packages/
+
+cp -r $name.egg-info $fakeroot/usr/lib/python3/dist-packages/$name-$version.egg-info
+
+mkdir $package_dir/DEBIAN
+
+cat > $package_dir/DEBIAN/control <<control_end
+Package: $pkgname
+Version: $version
+Architecture: $arch
+Maintainer: $maintainer
+Description: $description
+Depends: $py, $py-can
+control_end
+
+
+dpkg-deb --build --root-owner-group $package_dir
+
+
+
+
+
+
