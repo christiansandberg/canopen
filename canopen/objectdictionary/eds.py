@@ -138,7 +138,9 @@ def import_from_node(node_id, network):
 
 
 def _convert_variable(node_id, var_type, value):
-    if var_type in objectdictionary.DATA_TYPES:
+    if var_type in (objectdictionary.OCTET_STRING, objectdictionary.DOMAIN):
+        return bytes.fromhex(value)
+    elif var_type in (objectdictionary.VISIBLE_STRING, objectdictionary.UNICODE_STRING):
         return value
     elif var_type in objectdictionary.FLOAT_TYPES:
         return float(value)
