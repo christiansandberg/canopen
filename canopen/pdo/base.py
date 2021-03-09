@@ -338,7 +338,7 @@ class Map(object):
         """Save PDO configuration for this map using SDO."""
         logger.info("Setting COB-ID 0x%X and temporarily disabling PDO",
                     self.cob_id)
-        self.com_record[1].raw = self.cob_id | PDO_NOT_VALID
+        self.com_record[1].raw = self.cob_id | PDO_NOT_VALID | (RTR_NOT_ALLOWED if not self.rtr_allowed else 0x0)
         if self.trans_type is not None:
             logger.info("Setting transmission type to %d", self.trans_type)
             self.com_record[2].raw = self.trans_type
@@ -388,7 +388,8 @@ class Map(object):
 
         if self.enabled:
             logger.info("Enabling PDO")
-            self.com_record[1].raw = self.cob_id
+            self.com_record[1].raw = self.cob_id | (RTR_NOT_ALLOWED if not self.rtr_allowed else 0x0)
+
             self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
     def clear(self):
