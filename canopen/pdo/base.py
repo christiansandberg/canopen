@@ -441,6 +441,10 @@ class Map(object):
 
         :param float period: Transmission period in seconds
         """
+        # Stop an already running transmission if we have one, otherwise we
+        # overwrite the reference and can lose our handle to shut it down
+        self.stop()
+
         if period is not None:
             self.period = period
 
