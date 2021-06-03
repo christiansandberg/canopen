@@ -86,6 +86,7 @@ class SdoClient(SdoBase):
             except SdoCommunicationError as e:
                 retries_left -= 1
                 if not retries_left:
+                    self.abort(0x5040000) 
                     raise
                 logger.warning(str(e))
 
