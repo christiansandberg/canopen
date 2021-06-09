@@ -123,6 +123,7 @@ class SdoServer(SdoBase):
         self.abort(0x05040001)
 
     def init_download(self, request):
+        # TODO: Check if writable (now would fail on end of segmented downloads)
         command, index, subindex = SDO_STRUCT.unpack_from(request)
         self._index = index
         self._subindex = subindex
