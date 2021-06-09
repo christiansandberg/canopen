@@ -156,7 +156,7 @@ class SdoClient(SdoBase):
         fp.close()
 
     def open(self, index, subindex=0, mode="rb", encoding="ascii",
-             buffering=1024, size=None, block_transfer=False, force_segment=False):
+             buffering=1024, size=None, block_transfer=False, force_segment=False, request_crc_support=True):
         """Open the data stream as a file like object.
 
         :param int index:
@@ -186,14 +186,16 @@ class SdoClient(SdoBase):
             If block transfer should be used.
         :param bool force_segment:
             Force use of segmented download regardless of data size.
-
+        :param bool request_crc_support:
+            If crc calculation should be requested when using block transfer
+        
         :returns:
             A file like object.
         """
         buffer_size = buffering if buffering > 1 else io.DEFAULT_BUFFER_SIZE
         if "r" in mode:
             if block_transfer:
-                raw_stream = BlockUploadStream(self, index, subindex)
+                raw_stream = BlockUploadStream(self, index, subindex, request_crc_support=request_crc_support)
             else:
                 raw_stream = ReadableStream(self, index, subindex)
             if buffering:
@@ -202,7 +204,7 @@ class SdoClient(SdoBase):
                 return raw_stream
         if "w" in mode:
             if block_transfer:
-                raw_stream = BlockDownloadStream(self, index, subindex, size)
+                raw_stream = BlockDownloadStream(self, index, subindex, size, request_crc_support=request_crc_support)
             else:
                 raw_stream = WritableStream(self, index, subindex, size, force_segment)
             if buffering:
@@ -447,7 +449,7 @@ class BlockUploadStream(io.RawIOBase):
 
     crc_supported = False
 
-    def __init__(self, sdo_client, index, subindex=0):
+    def __init__(self, sdo_client, index, subindex=0, request_crc_support=True):
         """
         :param canopen.sdo.SdoClient sdo_client:
             The SDO client to use for reading.
@@ -455,6 +457,8 @@ class BlockUploadStream(io.RawIOBase):
             Object dictionary index to read from.
         :param int subindex:
             Object dictionary sub-index to read from.
+        :param bool request_crc_support:
+            If crc calculation should be requested when using block transfer            
         """
         self._done = False
         self.sdo_client = sdo_client
@@ -467,7 +471,9 @@ class BlockUploadStream(io.RawIOBase):
                      sdo_client.rx_cobid - 0x600)
         # Initiate Block Upload
         request = bytearray(8)
-        command = REQUEST_BLOCK_UPLOAD | INITIATE_BLOCK_TRANSFER | CRC_SUPPORTED
+        command = REQUEST_BLOCK_UPLOAD | INITIATE_BLOCK_TRANSFER
+        if request_crc_support:
+            command |= CRC_SUPPORTED
         struct.pack_into("<BHBBB", request, 0,
                          command, index, subindex, self.blksize, 0)
         response = sdo_client.request_response(request)
@@ -597,7 +603,7 @@ class BlockUploadStream(io.RawIOBase):
 class BlockDownloadStream(io.RawIOBase):
     """File like object for block download."""
 
-    def __init__(self, sdo_client, index, subindex=0, size=None):
+    def __init__(self, sdo_client, index, subindex=0, size=None, request_crc_support=True):
         """
         :param canopen.sdo.SdoClient sdo_client:
             The SDO client to use for communication.
@@ -607,6 +613,8 @@ class BlockDownloadStream(io.RawIOBase):
             Object dictionary sub-index to read from.
         :param int size:
             Size of data in number of bytes if known in advance.
+        :param bool request_crc_support:
+            If crc calculation should be requested when using block transfer            
         """
         self.sdo_client = sdo_client
         self.size = size
@@ -615,7 +623,9 @@ class BlockDownloadStream(io.RawIOBase):
         self._seqno = 0
         self._crc = sdo_client.crc_cls()
         self._last_bytes_sent = 0
-        command = REQUEST_BLOCK_DOWNLOAD | INITIATE_BLOCK_TRANSFER | CRC_SUPPORTED
+        command = REQUEST_BLOCK_DOWNLOAD | INITIATE_BLOCK_TRANSFER
+        if request_crc_support:
+            command |= CRC_SUPPORTED
         request = bytearray(8)
         logger.info("Initiating block download for 0x%X:%d", index, subindex)
         if size is not None:
