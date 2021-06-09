@@ -210,4 +210,4 @@ class SdoServer(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        return self._node.set_data(index, subindex, data)
+        return self._node.set_data(index, subindex, data, check_writable=True)
