@@ -136,6 +136,8 @@ class Variable(variable.Variable):
             Size of data to that will be transmitted.
         :param bool block_transfer:
             If block transfer should be used.
+        :param bool request_crc_support:
+            If crc calculation should be requested when using block transfer
 
         :returns:
             A file like object.

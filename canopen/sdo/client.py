@@ -185,7 +185,9 @@ class SdoClient(SdoBase):
             If block transfer should be used.
         :param bool force_segment:
             Force use of segmented download regardless of data size.
-
+        :param bool request_crc_support:
+            If crc calculation should be requested when using block transfer
+        
         :returns:
             A file like object.
         """
@@ -454,6 +456,8 @@ class BlockUploadStream(io.RawIOBase):
             Object dictionary index to read from.
         :param int subindex:
             Object dictionary sub-index to read from.
+        :param bool request_crc_support:
+            If crc calculation should be requested when using block transfer            
         """
         self._done = False
         self.sdo_client = sdo_client
@@ -608,6 +612,8 @@ class BlockDownloadStream(io.RawIOBase):
             Object dictionary sub-index to read from.
         :param int size:
             Size of data in number of bytes if known in advance.
+        :param bool request_crc_support:
+            If crc calculation should be requested when using block transfer            
         """
         self.sdo_client = sdo_client
         self.size = size
