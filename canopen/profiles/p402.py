@@ -255,10 +255,9 @@ class BaseNode402(RemoteNode):
         if self.state == 'FAULT':
             # Resets the Fault Reset bit (rising edge 0 -> 1)
             self.controlword = State402.CW_DISABLE_VOLTAGE
-            timeout = time.time() + 0.4  # 400 ms
-            
+            timeout = time.monotonic() + 0.4  # seconds
             while self.is_faulted():
-                if time.time() > timeout:
+                if time.monotonic() > timeout:
                     break
                 time.sleep(0.01)  # 10 ms
             self.state = 'OPERATION ENABLED'
@@ -281,7 +280,7 @@ class BaseNode402(RemoteNode):
         self.state = 'OPERATION ENABLED'
         homingstatus = 'IN PROGRESS'
         self.controlword = State402.CW_OPERATION_ENABLED | Homing.CW_START
-        t = time.time() + timeout
+        t = time.monotonic() + timeout
         try:
             while homingstatus not in ('TARGET REACHED', 'ATTAINED'):
                 for key, value in Homing.STATES.items():
@@ -293,7 +292,7 @@ class BaseNode402(RemoteNode):
                 if homingstatus in ('INTERRUPTED', 'ERROR VELOCITY IS NOT ZERO', 'ERROR VELOCITY IS ZERO'):
                     raise  RuntimeError ('Unable to home. Reason: {0}'.format(homingstatus))
                 time.sleep(0.001)
-                if time.time() > t:
+                if time.monotonic() > t:
                     raise RuntimeError('Unable to home, timeout reached')
             if set_new_home:
                 actual_position = self.sdo[0x6063].raw
@@ -351,9 +350,9 @@ class BaseNode402(RemoteNode):
             # operation mode
             self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
 
-            timeout = time.time() + 0.5 # 500 ms
+            timeout = time.monotonic() + 0.5  # seconds
             while self.op_mode != mode:
-                if time.time() > timeout:
+                if time.monotonic() > timeout:
                     raise RuntimeError(
                         "Timeout setting node {0}'s new mode of operation to {1}.".format(
                             self.id, mode))
@@ -452,12 +451,12 @@ class BaseNode402(RemoteNode):
         :raise RuntimeError: Occurs when the time defined to change the state is reached
         :raise ValueError: Occurs when trying to execute a ilegal transition in the sate machine
         """
-        timeout = time.time() + 0.8 # 800 ms
+        timeout = time.monotonic() + 0.8  # seconds
         while self.state != target_state:
             next_state = self._next_state(target_state)
             if self._change_state(next_state):
                 continue       
-            if time.time() > timeout:
+            if time.monotonic() > timeout:
                 raise RuntimeError('Timeout when trying to change state')
             time.sleep(0.01) # 10 ms
 
@@ -473,9 +472,9 @@ class BaseNode402(RemoteNode):
         except KeyError:
             raise ValueError(
                 'Illegal state transition from {f} to {t}'.format(f=self.state, t=target_state))
-        timeout = time.time() + 0.4 # 400 ms
+        timeout = time.monotonic() + 0.4  # seconds
         while self.state != target_state:
-            if time.time() > timeout:
+            if time.monotonic() > timeout:
                 return False
             time.sleep(0.01) # 10 ms
         return True
