@@ -354,7 +354,6 @@ class BaseNode402(RemoteNode):
                 if homingstatus in ('INTERRUPTED', 'ERROR VELOCITY IS NOT ZERO',
                                     'ERROR VELOCITY IS ZERO'):
                     raise RuntimeError('Unable to home. Reason: {0}'.format(homingstatus))
-                time.sleep(self.INTERVAL_CHECK_STATE)
                 if timeout and time.monotonic() > t:
                     raise RuntimeError('Unable to home, timeout reached')
             logger.info('Homing mode carried out successfully.')
