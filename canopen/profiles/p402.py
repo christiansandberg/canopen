@@ -370,15 +370,8 @@ class BaseNode402(RemoteNode):
             if not self.is_op_mode_supported(mode):
                 raise TypeError(
                     'Operation mode {0} not suppported on node {1}.'.format(mode, self.id))
-
-            start_state = self.state
-
-            if self.state == 'OPERATION ENABLED':
-                self.state = 'SWITCHED ON'
-
             # operation mode
             self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
-
             timeout = time.monotonic() + self.TIMEOUT_SWITCH_OP_MODE
             while self.op_mode != mode:
                 if time.monotonic() > timeout:
@@ -390,7 +383,6 @@ class BaseNode402(RemoteNode):
         except (RuntimeError, ValueError) as e:
             logger.warning('{0}'.format(str(e)))
         finally:
-            self.state = start_state # why?
             logger.info('Set node {n} operation mode to {m}.'.format(n=self.id, m=mode))
 
     def _clear_target_values(self):
