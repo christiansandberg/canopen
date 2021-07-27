@@ -372,6 +372,8 @@ class BaseNode402(RemoteNode):
         if not hasattr(self, '_op_mode_support'):
             # Cache value only on first lookup, this object should never change.
             self._op_mode_support = self.sdo[0x6502].raw
+            logger.info('Caching node {n} supported operation modes 0x{m:04X}'.format(
+                n=self.id, m=self._op_mode_support))
         bits = OperationMode.SUPPORTED[mode]
         return self._op_mode_support & bits == bits
 
