@@ -369,8 +369,11 @@ class BaseNode402(RemoteNode):
         :return: If the operation mode is supported
         :rtype: bool
         """
-        mode_support = self.sdo[0x6502].raw & OperationMode.SUPPORTED[mode]
-        return mode_support == OperationMode.SUPPORTED[mode]
+        if not hasattr(self, '_op_mode_support'):
+            # Cache value only on first lookup, this object should never change.
+            self._op_mode_support = self.sdo[0x6502].raw
+        bits = OperationMode.SUPPORTED[mode]
+        return self._op_mode_support & bits == bits
 
     def on_TPDOs_update_callback(self, mapobject):
         """This function receives a map object.
