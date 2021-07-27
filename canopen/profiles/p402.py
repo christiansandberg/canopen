@@ -6,6 +6,7 @@ from ..sdo import SdoCommunicationError
 
 logger = logging.getLogger(__name__)
 
+
 class State402(object):
     # Controlword (0x6040) commands
     CW_OPERATION_ENABLED = 0x0F
@@ -175,12 +176,12 @@ class Homing(object):
     HM_ON_CURRENT_POSITION = 35
 
     STATES = {
-    'IN PROGRESS'                  : [0x3400, 0x0000],
-    'INTERRUPTED'                  : [0x3400, 0x0400],
-    'ATTAINED'                     : [0x3400, 0x1000],
-    'TARGET REACHED'               : [0x3400, 0x1400],
-    'ERROR VELOCITY IS NOT ZERO'   : [0x3400, 0x2000],
-    'ERROR VELOCITY IS ZERO'       : [0x3400, 0x2400]
+        'IN PROGRESS'                  : [0x3400, 0x0000],
+        'INTERRUPTED'                  : [0x3400, 0x0400],
+        'ATTAINED'                     : [0x3400, 0x1000],
+        'TARGET REACHED'               : [0x3400, 0x1400],
+        'ERROR VELOCITY IS NOT ZERO'   : [0x3400, 0x2000],
+        'ERROR VELOCITY IS ZERO'       : [0x3400, 0x2400]
     }
 
 
@@ -204,8 +205,8 @@ class BaseNode402(RemoteNode):
 
     def __init__(self, node_id, object_dictionary):
         super(BaseNode402, self).__init__(node_id, object_dictionary)
-        self.tpdo_values = dict() # { index: TPDO_value }
-        self.rpdo_pointers = dict() # { index: RPDO_pointer }
+        self.tpdo_values = dict()  # { index: TPDO_value }
+        self.rpdo_pointers = dict()  # { index: RPDO_pointer }
 
     def setup_402_state_machine(self):
         """Configure the state machine by searching for a TPDO that has the
@@ -221,7 +222,7 @@ class BaseNode402(RemoteNode):
         self.state = 'SWITCH ON DISABLED' # Why change state?
 
     def setup_pdos(self):
-        self.pdo.read() # TPDO and RPDO configurations
+        self.pdo.read()  # TPDO and RPDO configurations
         self._init_tpdo_values()
         self._init_rpdo_pointers()
 
@@ -235,7 +236,7 @@ class BaseNode402(RemoteNode):
                         self.tpdo_values[obj.index] = 0
 
     def _init_rpdo_pointers(self):
-        # If RPDOs have overlapping indecies, rpdo_pointers will point to 
+        # If RPDOs have overlapping indecies, rpdo_pointers will point to
         # the first RPDO that has that index configured.
         for rpdo in self.rpdo.values():
             if rpdo.enabled:
@@ -245,13 +246,13 @@ class BaseNode402(RemoteNode):
                         self.rpdo_pointers[obj.index] = obj
 
     def _check_controlword_configured(self):
-        if 0x6040 not in self.rpdo_pointers: # Controlword
+        if 0x6040 not in self.rpdo_pointers:  # Controlword
             logger.warning(
                 "Controlword not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
                     self.id))
 
     def _check_statusword_configured(self):
-        if 0x6041 not in self.tpdo_values: # Statusword
+        if 0x6041 not in self.tpdo_values:  # Statusword
             raise ValueError(
                 "Statusword not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
                     self.id))
@@ -268,7 +269,7 @@ class BaseNode402(RemoteNode):
                     break
                 time.sleep(self.INTERVAL_CHECK_STATE)
             self.state = 'OPERATION ENABLED'
-    
+
     def is_faulted(self):
         return self.statusword & State402.SW_MASK['FAULT'][0] == State402.SW_MASK['FAULT'][1]
 
@@ -296,14 +297,15 @@ class BaseNode402(RemoteNode):
                     bitmaskvalue = self.statusword & value[0]
                     if bitmaskvalue == value[1]:
                         homingstatus = key
-                if homingstatus in ('INTERRUPTED', 'ERROR VELOCITY IS NOT ZERO', 'ERROR VELOCITY IS ZERO'):
-                    raise  RuntimeError ('Unable to home. Reason: {0}'.format(homingstatus))
+                if homingstatus in ('INTERRUPTED', 'ERROR VELOCITY IS NOT ZERO',
+                                    'ERROR VELOCITY IS ZERO'):
+                    raise RuntimeError('Unable to home. Reason: {0}'.format(homingstatus))
                 time.sleep(self.INTERVAL_CHECK_STATE)
                 if time.monotonic() > t:
                     raise RuntimeError('Unable to home, timeout reached')
             if set_new_home:
                 actual_position = self.sdo[0x6063].raw
-                self.sdo[0x607C].raw = actual_position # home offset (0x607C)
+                self.sdo[0x607C].raw = actual_position  # Home Offset
                 logger.info('Homing offset set to {0}'.format(actual_position))
             logger.info('Homing mode carried out successfully.')
             return True
@@ -350,7 +352,7 @@ class BaseNode402(RemoteNode):
             start_state = self.state
 
             if self.state == 'OPERATION ENABLED':
-                self.state = 'SWITCHED ON' 
+                self.state = 'SWITCHED ON'
                 # ensure the node does not move with an old value
                 self._clear_target_values() # Shouldn't this happen before it's switched on?
                 
@@ -370,7 +372,7 @@ class BaseNode402(RemoteNode):
             logger.warning('{0}'.format(str(e)))
         finally:
             self.state = start_state # why?
-            logger.info('Set node {n} operation mode to {m}.'.format(n=self.id , m=mode))
+            logger.info('Set node {n} operation mode to {m}.'.format(n=self.id, m=mode))
         return False
 
     def _clear_target_values(self):
@@ -462,7 +464,7 @@ class BaseNode402(RemoteNode):
         while self.state != target_state:
             next_state = self._next_state(target_state)
             if self._change_state(next_state):
-                continue       
+                continue
             if time.monotonic() > timeout:
                 raise RuntimeError('Timeout when trying to change state')
             time.sleep(self.INTERVAL_CHECK_STATE)
