@@ -202,6 +202,7 @@ class BaseNode402(RemoteNode):
     TIMEOUT_SWITCH_STATE_SINGLE = 0.4   # seconds
     INTERVAL_CHECK_STATE = 0.01         # seconds
     TIMEOUT_HOMING_DEFAULT = 30         # seconds
+    INTERVAL_CHECK_HOMING = 0.1         # seconds
 
     def __init__(self, node_id, object_dictionary):
         super(BaseNode402, self).__init__(node_id, object_dictionary)
@@ -307,6 +308,7 @@ class BaseNode402(RemoteNode):
         t = time.monotonic() + timeout
         try:
             while homingstatus not in ('TARGET REACHED', 'ATTAINED'):
+                time.sleep(self.INTERVAL_CHECK_HOMING)
                 for key, value in Homing.STATES.items():
                     # check if the Statusword after applying the bitmask
                     # corresponds with the needed bits to determine the current status
@@ -316,7 +318,6 @@ class BaseNode402(RemoteNode):
                 if homingstatus in ('INTERRUPTED', 'ERROR VELOCITY IS NOT ZERO',
                                     'ERROR VELOCITY IS ZERO'):
                     raise RuntimeError('Unable to home. Reason: {0}'.format(homingstatus))
-                time.sleep(self.INTERVAL_CHECK_STATE)
                 if time.monotonic() > t:
                     raise RuntimeError('Unable to home, timeout reached')
             if set_new_home:
