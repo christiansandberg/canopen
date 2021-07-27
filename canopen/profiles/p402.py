@@ -295,14 +295,17 @@ class BaseNode402(RemoteNode):
             self.op_mode = previous_op_mode
         return homingstatus in ('TARGET REACHED', 'ATTAINED')
 
-    def homing(self, timeout=TIMEOUT_HOMING_DEFAULT):
+    def homing(self, timeout=TIMEOUT_HOMING_DEFAULT, restore_op_mode=False):
         """Execute the configured Homing method on the node.
 
         :param int timeout: Timeout value (default: 30).
+        :param bool restore_op_mode:
+            Switch back to the previous operation mode after homing (default: no).
         :return: If the homing was complete with success.
         :rtype: bool
         """
-        previus_op_mode = self.op_mode
+        if restore_op_mode:
+            previous_op_mode = self.op_mode
         self.state = 'SWITCHED ON'
         self.op_mode = 'HOMING'
         # The homing process will initialize at operation enabled
@@ -329,7 +332,8 @@ class BaseNode402(RemoteNode):
         except RuntimeError as e:
             logger.info(str(e))
         finally:
-            self.op_mode = previus_op_mode
+            if restore_op_mode:
+                self.op_mode = previous_op_mode
         return False
 
     @property
