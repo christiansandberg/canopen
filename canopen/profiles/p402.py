@@ -9,51 +9,51 @@ logger = logging.getLogger(__name__)
 
 class State402(object):
     # Controlword (0x6040) commands
-    CW_OPERATION_ENABLED = 0x0F
-    CW_SHUTDOWN = 0x06
-    CW_SWITCH_ON = 0x07
-    CW_QUICK_STOP = 0x02
-    CW_DISABLE_VOLTAGE = 0x00
-    CW_SWITCH_ON_DISABLED = 0x80
+    CW_OPERATION_ENABLED = 0x000F
+    CW_SHUTDOWN = 0x0006
+    CW_SWITCH_ON = 0x0007
+    CW_QUICK_STOP = 0x0002
+    CW_DISABLE_VOLTAGE = 0x0000
+    CW_SWITCH_ON_DISABLED = 0x0080
 
     CW_CODE_COMMANDS = {
-        CW_SWITCH_ON_DISABLED   : 'SWITCH ON DISABLED',
-        CW_DISABLE_VOLTAGE      : 'DISABLE VOLTAGE',
-        CW_SHUTDOWN             : 'READY TO SWITCH ON',
-        CW_SWITCH_ON            : 'SWITCHED ON',
-        CW_OPERATION_ENABLED    : 'OPERATION ENABLED',
-        CW_QUICK_STOP           : 'QUICK STOP ACTIVE'
+        CW_SWITCH_ON_DISABLED:          'SWITCH ON DISABLED',
+        CW_DISABLE_VOLTAGE:             'DISABLE VOLTAGE',
+        CW_SHUTDOWN:                    'READY TO SWITCH ON',
+        CW_SWITCH_ON:                   'SWITCHED ON',
+        CW_OPERATION_ENABLED:           'OPERATION ENABLED',
+        CW_QUICK_STOP:                  'QUICK STOP ACTIVE',
     }
 
     CW_COMMANDS_CODE = {
-        'SWITCH ON DISABLED'    : CW_SWITCH_ON_DISABLED,
-        'DISABLE VOLTAGE'       : CW_DISABLE_VOLTAGE,
-        'READY TO SWITCH ON'    : CW_SHUTDOWN,
-        'SWITCHED ON'           : CW_SWITCH_ON,
-        'OPERATION ENABLED'     : CW_OPERATION_ENABLED,
-        'QUICK STOP ACTIVE'     : CW_QUICK_STOP
+        'SWITCH ON DISABLED':           CW_SWITCH_ON_DISABLED,
+        'DISABLE VOLTAGE':              CW_DISABLE_VOLTAGE,
+        'READY TO SWITCH ON':           CW_SHUTDOWN,
+        'SWITCHED ON':                  CW_SWITCH_ON,
+        'OPERATION ENABLED':            CW_OPERATION_ENABLED,
+        'QUICK STOP ACTIVE':            CW_QUICK_STOP,
     }
 
     # Statusword 0x6041 bitmask and values in the list in the dictionary value
     SW_MASK = {
-        'NOT READY TO SWITCH ON': [0x4F, 0x00],
-        'SWITCH ON DISABLED'    : [0x4F, 0x40],
-        'READY TO SWITCH ON'    : [0x6F, 0x21],
-        'SWITCHED ON'           : [0x6F, 0x23],
-        'OPERATION ENABLED'     : [0x6F, 0x27],
-        'FAULT'                 : [0x4F, 0x08],
-        'FAULT REACTION ACTIVE' : [0x4F, 0x0F],
-        'QUICK STOP ACTIVE'     : [0x6F, 0x07]
+        'NOT READY TO SWITCH ON':       (0x4F, 0x00),
+        'SWITCH ON DISABLED':           (0x4F, 0x40),
+        'READY TO SWITCH ON':           (0x6F, 0x21),
+        'SWITCHED ON':                  (0x6F, 0x23),
+        'OPERATION ENABLED':            (0x6F, 0x27),
+        'FAULT':                        (0x4F, 0x08),
+        'FAULT REACTION ACTIVE':        (0x4F, 0x0F),
+        'QUICK STOP ACTIVE':            (0x6F, 0x07),
     }
 
     # Transition path to get to the 'OPERATION ENABLED' state
     NEXTSTATE2ENABLE = {
-        ('START')                                                   : 'NOT READY TO SWITCH ON',
-        ('FAULT', 'NOT READY TO SWITCH ON')                         : 'SWITCH ON DISABLED',
-        ('SWITCH ON DISABLED')                                      : 'READY TO SWITCH ON',
-        ('READY TO SWITCH ON')                                      : 'SWITCHED ON',
-        ('SWITCHED ON', 'QUICK STOP ACTIVE', 'OPERATION ENABLED')   : 'OPERATION ENABLED',
-        ('FAULT REACTION ACTIVE')                                   : 'FAULT'
+        ('START'):                                                      'NOT READY TO SWITCH ON',
+        ('FAULT', 'NOT READY TO SWITCH ON'):                            'SWITCH ON DISABLED',
+        ('SWITCH ON DISABLED'):                                         'READY TO SWITCH ON',
+        ('READY TO SWITCH ON'):                                         'SWITCHED ON',
+        ('SWITCHED ON', 'QUICK STOP ACTIVE', 'OPERATION ENABLED'):      'OPERATION ENABLED',
+        ('FAULT REACTION ACTIVE'):                                      'FAULT'
     }
 
     # Tansition table from the DS402 State Machine
@@ -111,42 +111,42 @@ class OperationMode(object):
     OPEN_LOOP_VECTOR_MODE = -2
 
     CODE2NAME = {
-        NO_MODE                     : 'NO MODE',
-        PROFILED_POSITION           : 'PROFILED POSITION',
-        VELOCITY                    : 'VELOCITY',
-        PROFILED_VELOCITY           : 'PROFILED VELOCITY',
-        PROFILED_TORQUE             : 'PROFILED TORQUE',
-        HOMING                      : 'HOMING',
-        INTERPOLATED_POSITION       : 'INTERPOLATED POSITION',
-        CYCLIC_SYNCHRONOUS_POSITION : 'CYCLIC SYNCHRONOUS POSITION',
-        CYCLIC_SYNCHRONOUS_VELOCITY : 'CYCLIC SYNCHRONOUS VELOCITY',
-        CYCLIC_SYNCHRONOUS_TORQUE   : 'CYCLIC SYNCHRONOUS TORQUE',
+        NO_MODE:                        'NO MODE',
+        PROFILED_POSITION:              'PROFILED POSITION',
+        VELOCITY:                       'VELOCITY',
+        PROFILED_VELOCITY:              'PROFILED VELOCITY',
+        PROFILED_TORQUE:                'PROFILED TORQUE',
+        HOMING:                         'HOMING',
+        INTERPOLATED_POSITION:          'INTERPOLATED POSITION',
+        CYCLIC_SYNCHRONOUS_POSITION:    'CYCLIC SYNCHRONOUS POSITION',
+        CYCLIC_SYNCHRONOUS_VELOCITY:    'CYCLIC SYNCHRONOUS VELOCITY',
+        CYCLIC_SYNCHRONOUS_TORQUE:      'CYCLIC SYNCHRONOUS TORQUE',
     }
 
     NAME2CODE = {
-        'NO MODE'                       : NO_MODE,
-        'PROFILED POSITION'             : PROFILED_POSITION,
-        'VELOCITY'                      : VELOCITY,
-        'PROFILED VELOCITY'             : PROFILED_VELOCITY,
-        'PROFILED TORQUE'               : PROFILED_TORQUE,
-        'HOMING'                        : HOMING,
-        'INTERPOLATED POSITION'         : INTERPOLATED_POSITION,
-        'CYCLIC SYNCHRONOUS POSITION'   : CYCLIC_SYNCHRONOUS_POSITION,
-        'CYCLIC SYNCHRONOUS VELOCITY'   : CYCLIC_SYNCHRONOUS_VELOCITY,
-        'CYCLIC SYNCHRONOUS TORQUE'     : CYCLIC_SYNCHRONOUS_TORQUE,
+        'NO MODE':                      NO_MODE,
+        'PROFILED POSITION':            PROFILED_POSITION,
+        'VELOCITY':                     VELOCITY,
+        'PROFILED VELOCITY':            PROFILED_VELOCITY,
+        'PROFILED TORQUE':              PROFILED_TORQUE,
+        'HOMING':                       HOMING,
+        'INTERPOLATED POSITION':        INTERPOLATED_POSITION,
+        'CYCLIC SYNCHRONOUS POSITION':  CYCLIC_SYNCHRONOUS_POSITION,
+        'CYCLIC SYNCHRONOUS VELOCITY':  CYCLIC_SYNCHRONOUS_VELOCITY,
+        'CYCLIC SYNCHRONOUS TORQUE':    CYCLIC_SYNCHRONOUS_TORQUE,
     }
 
     SUPPORTED = {
-        'NO MODE'                     : 0x0,
-        'PROFILED POSITION'           : 0x1,
-        'VELOCITY'                    : 0x2,
-        'PROFILED VELOCITY'           : 0x4,
-        'PROFILED TORQUE'             : 0x8,
-        'HOMING'                      : 0x20,
-        'INTERPOLATED POSITION'       : 0x40,
-        'CYCLIC SYNCHRONOUS POSITION' : 0x80,
-        'CYCLIC SYNCHRONOUS VELOCITY' : 0x100,
-        'CYCLIC SYNCHRONOUS TORQUE'   : 0x200,
+        'NO MODE':                      0x0000,
+        'PROFILED POSITION':            0x0001,
+        'VELOCITY':                     0x0002,
+        'PROFILED VELOCITY':            0x0004,
+        'PROFILED TORQUE':              0x0008,
+        'HOMING':                       0x0020,
+        'INTERPOLATED POSITION':        0x0040,
+        'CYCLIC SYNCHRONOUS POSITION':  0x0080,
+        'CYCLIC SYNCHRONOUS VELOCITY':  0x0100,
+        'CYCLIC SYNCHRONOUS TORQUE':    0x0200,
     }
 
 
@@ -165,23 +165,23 @@ class Homing(object):
     HM_NO_HOMING_OPERATION = 0
     HM_ON_THE_NEGATIVE_LIMIT_SWITCH_AND_INDEX_PULSE = 1
     HM_ON_THE_POSITIVE_LIMIT_SWITCH_AND_INDEX_PULSE = 2
-    HM_ON_THE_POSITIVE_HOME_SWITCH_AND_INDEX_PULSE = [3, 4]
-    HM_ON_THE_NEGATIVE_HOME_SWITCH_AND_INDEX_PULSE = [5, 6]
+    HM_ON_THE_POSITIVE_HOME_SWITCH_AND_INDEX_PULSE = (3, 4)
+    HM_ON_THE_NEGATIVE_HOME_SWITCH_AND_INDEX_PULSE = (5, 6)
     HM_ON_THE_NEGATIVE_LIMIT_SWITCH = 17
     HM_ON_THE_POSITIVE_LIMIT_SWITCH = 18
-    HM_ON_THE_POSITIVE_HOME_SWITCH = [19, 20]
-    HM_ON_THE_NEGATIVE_HOME_SWITCH = [21, 22]
+    HM_ON_THE_POSITIVE_HOME_SWITCH = (19, 20)
+    HM_ON_THE_NEGATIVE_HOME_SWITCH = (21, 22)
     HM_ON_NEGATIVE_INDEX_PULSE = 33
     HM_ON_POSITIVE_INDEX_PULSE = 34
     HM_ON_CURRENT_POSITION = 35
 
     STATES = {
-        'IN PROGRESS'                  : [0x3400, 0x0000],
-        'INTERRUPTED'                  : [0x3400, 0x0400],
-        'ATTAINED'                     : [0x3400, 0x1000],
-        'TARGET REACHED'               : [0x3400, 0x1400],
-        'ERROR VELOCITY IS NOT ZERO'   : [0x3400, 0x2000],
-        'ERROR VELOCITY IS ZERO'       : [0x3400, 0x2400]
+        'IN PROGRESS':                  (0x3400, 0x0000),
+        'INTERRUPTED':                  (0x3400, 0x0400),
+        'ATTAINED':                     (0x3400, 0x1000),
+        'TARGET REACHED':               (0x3400, 0x1400),
+        'ERROR VELOCITY IS NOT ZERO':   (0x3400, 0x2000),
+        'ERROR VELOCITY IS ZERO':       (0x3400, 0x2400),
     }
 
 
