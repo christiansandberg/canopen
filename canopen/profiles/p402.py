@@ -271,7 +271,8 @@ class BaseNode402(RemoteNode):
             self.state = 'OPERATION ENABLED'
 
     def is_faulted(self):
-        return self.statusword & State402.SW_MASK['FAULT'][0] == State402.SW_MASK['FAULT'][1]
+        bitmask, bits = State402.SW_MASK['FAULT']
+        return self.statusword & bitmask == bits
 
     def homing(self, timeout=TIMEOUT_HOMING_DEFAULT, set_new_home=True):
         """Function to execute the configured Homing Method on the node
@@ -292,10 +293,10 @@ class BaseNode402(RemoteNode):
         try:
             while homingstatus not in ('TARGET REACHED', 'ATTAINED'):
                 for key, value in Homing.STATES.items():
-                    # check if the value after applying the bitmask (value[0])
-                    # corresponds with the value[1] to determine the current status
-                    bitmaskvalue = self.statusword & value[0]
-                    if bitmaskvalue == value[1]:
+                    # check if the Statusword after applying the bitmask
+                    # corresponds with the needed bits to determine the current status
+                    bitmask, bits = value
+                    if self.statusword & bitmask == bits:
                         homingstatus = key
                 if homingstatus in ('INTERRUPTED', 'ERROR VELOCITY IS NOT ZERO',
                                     'ERROR VELOCITY IS ZERO'):
@@ -439,10 +440,8 @@ class BaseNode402(RemoteNode):
         - 'QUICK STOP ACTIVE'
         """
         for state, mask_val_pair in State402.SW_MASK.items():
-            mask = mask_val_pair[0]
-            state_value = mask_val_pair[1]
-            masked_value = self.statusword & mask
-            if masked_value == state_value:
+            bitmask, bits = mask_val_pair
+            if self.statusword & bitmask == bits:
                 return state
         return 'UNKNOWN'
 
