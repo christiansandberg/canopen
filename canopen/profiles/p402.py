@@ -338,7 +338,6 @@ class BaseNode402(RemoteNode):
         """
         if restore_op_mode:
             previous_op_mode = self.op_mode
-        self.state = 'SWITCHED ON'
         self.op_mode = 'HOMING'
         # The homing process will initialize at operation enabled
         self.state = 'OPERATION ENABLED'
