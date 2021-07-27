@@ -369,7 +369,7 @@ class BaseNode402(RemoteNode):
         try:
             if not self.is_op_mode_supported(mode):
                 raise TypeError(
-                    'Operation mode {0} not suppported on node {1}.'.format(mode, self.id))
+                    'Operation mode {m} not suppported on node {n}.'.format(n=self.id, m=mode))
             # operation mode
             self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
             timeout = time.monotonic() + self.TIMEOUT_SWITCH_OP_MODE
@@ -378,12 +378,11 @@ class BaseNode402(RemoteNode):
                     raise RuntimeError(
                         "Timeout setting node {0}'s new mode of operation to {1}.".format(
                             self.id, mode))
+            logger.info('Set node {n} operation mode to {m}.'.format(n=self.id, m=mode))
         except SdoCommunicationError as e:
             logger.warning('[SDO communication error] Cause: {0}'.format(str(e)))
         except (RuntimeError, ValueError) as e:
             logger.warning('{0}'.format(str(e)))
-        finally:
-            logger.info('Set node {n} operation mode to {m}.'.format(n=self.id, m=mode))
 
     def _clear_target_values(self):
         # [target velocity, target position, target torque]
