@@ -195,6 +195,13 @@ class BaseNode402(RemoteNode):
     :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary`
     """
 
+    TIMEOUT_RESET_FAULT = 0.4           # seconds
+    TIMEOUT_SWITCH_OP_MODE = 0.5        # seconds
+    TIMEOUT_SWITCH_STATE_FINAL = 0.8    # seconds
+    TIMEOUT_SWITCH_STATE_SINGLE = 0.4   # seconds
+    INTERVAL_CHECK_STATE = 0.01         # seconds
+    TIMEOUT_HOMING_DEFAULT = 30         # seconds
+
     def __init__(self, node_id, object_dictionary):
         super(BaseNode402, self).__init__(node_id, object_dictionary)
         self.tpdo_values = dict() # { index: TPDO_value }
@@ -255,17 +262,17 @@ class BaseNode402(RemoteNode):
         if self.state == 'FAULT':
             # Resets the Fault Reset bit (rising edge 0 -> 1)
             self.controlword = State402.CW_DISABLE_VOLTAGE
-            timeout = time.monotonic() + 0.4  # seconds
+            timeout = time.monotonic() + self.TIMEOUT_RESET_FAULT
             while self.is_faulted():
                 if time.monotonic() > timeout:
                     break
-                time.sleep(0.01)  # 10 ms
+                time.sleep(self.INTERVAL_CHECK_STATE)
             self.state = 'OPERATION ENABLED'
     
     def is_faulted(self):
         return self.statusword & State402.SW_MASK['FAULT'][0] == State402.SW_MASK['FAULT'][1]
 
-    def homing(self, timeout=30, set_new_home=True):
+    def homing(self, timeout=TIMEOUT_HOMING_DEFAULT, set_new_home=True):
         """Function to execute the configured Homing Method on the node
         :param int timeout: Timeout value (default: 30)
         :param bool set_new_home: Defines if the node should set the home offset
@@ -291,7 +298,7 @@ class BaseNode402(RemoteNode):
                         homingstatus = key
                 if homingstatus in ('INTERRUPTED', 'ERROR VELOCITY IS NOT ZERO', 'ERROR VELOCITY IS ZERO'):
                     raise  RuntimeError ('Unable to home. Reason: {0}'.format(homingstatus))
-                time.sleep(0.001)
+                time.sleep(self.INTERVAL_CHECK_STATE)
                 if time.monotonic() > t:
                     raise RuntimeError('Unable to home, timeout reached')
             if set_new_home:
@@ -350,7 +357,7 @@ class BaseNode402(RemoteNode):
             # operation mode
             self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
 
-            timeout = time.monotonic() + 0.5  # seconds
+            timeout = time.monotonic() + self.TIMEOUT_SWITCH_OP_MODE
             while self.op_mode != mode:
                 if time.monotonic() > timeout:
                     raise RuntimeError(
@@ -451,14 +458,14 @@ class BaseNode402(RemoteNode):
         :raise RuntimeError: Occurs when the time defined to change the state is reached
         :raise ValueError: Occurs when trying to execute a ilegal transition in the sate machine
         """
-        timeout = time.monotonic() + 0.8  # seconds
+        timeout = time.monotonic() + self.TIMEOUT_SWITCH_STATE_FINAL
         while self.state != target_state:
             next_state = self._next_state(target_state)
             if self._change_state(next_state):
                 continue       
             if time.monotonic() > timeout:
                 raise RuntimeError('Timeout when trying to change state')
-            time.sleep(0.01) # 10 ms
+            time.sleep(self.INTERVAL_CHECK_STATE)
 
     def _next_state(self, target_state):
         if target_state == 'OPERATION ENABLED':
@@ -472,9 +479,9 @@ class BaseNode402(RemoteNode):
         except KeyError:
             raise ValueError(
                 'Illegal state transition from {f} to {t}'.format(f=self.state, t=target_state))
-        timeout = time.monotonic() + 0.4  # seconds
+        timeout = time.monotonic() + self.TIMEOUT_SWITCH_STATE_SINGLE
         while self.state != target_state:
             if time.monotonic() > timeout:
                 return False
-            time.sleep(0.01) # 10 ms
+            time.sleep(self.INTERVAL_CHECK_STATE)
         return True
