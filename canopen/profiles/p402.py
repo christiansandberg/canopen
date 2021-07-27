@@ -375,9 +375,7 @@ class BaseNode402(RemoteNode):
 
             if self.state == 'OPERATION ENABLED':
                 self.state = 'SWITCHED ON'
-                # ensure the node does not move with an old value
-                self._clear_target_values() # Shouldn't this happen before it's switched on?
-                
+
             # operation mode
             self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
 
