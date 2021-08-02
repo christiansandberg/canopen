@@ -274,6 +274,21 @@ class BaseNode402(RemoteNode):
         bitmask, bits = State402.SW_MASK['FAULT']
         return self.statusword & bitmask == bits
 
+    def is_homed(self, restore_op_mode=False):
+        """Switch to homing mode and determine its status."""
+        previous_op_mode = self.op_mode
+        if previous_op_mode != 'HOMING':
+            logger.info('Switch to HOMING from %s', previous_op_mode)
+            self.op_mode = 'HOMING'
+        homingstatus = None
+        for key, value in Homing.STATES.items():
+            bitmask, bits = value
+            if self.statusword & bitmask == bits:
+                homingstatus = key
+        if restore_op_mode:
+            self.op_mode = previous_op_mode
+        return homingstatus in ('TARGET REACHED', 'ATTAINED')
+
     def homing(self, timeout=TIMEOUT_HOMING_DEFAULT, set_new_home=True):
         """Function to execute the configured Homing Method on the node
         :param int timeout: Timeout value (default: 30)
