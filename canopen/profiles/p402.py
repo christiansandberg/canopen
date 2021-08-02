@@ -281,6 +281,7 @@ class BaseNode402(RemoteNode):
         if previous_op_mode != 'HOMING':
             logger.info('Switch to HOMING from %s', previous_op_mode)
             self.op_mode = 'HOMING'
+        time.sleep(self.INTERVAL_CHECK_HOMING)
         homingstatus = None
         for key, value in Homing.STATES.items():
             bitmask, bits = value
