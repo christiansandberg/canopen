@@ -6,53 +6,54 @@ from ..sdo import SdoCommunicationError
 
 logger = logging.getLogger(__name__)
 
+
 class State402(object):
     # Controlword (0x6040) commands
-    CW_OPERATION_ENABLED = 0x0F
-    CW_SHUTDOWN = 0x06
-    CW_SWITCH_ON = 0x07
-    CW_QUICK_STOP = 0x02
-    CW_DISABLE_VOLTAGE = 0x00
-    CW_SWITCH_ON_DISABLED = 0x80
+    CW_OPERATION_ENABLED = 0x000F
+    CW_SHUTDOWN = 0x0006
+    CW_SWITCH_ON = 0x0007
+    CW_QUICK_STOP = 0x0002
+    CW_DISABLE_VOLTAGE = 0x0000
+    CW_SWITCH_ON_DISABLED = 0x0080
 
     CW_CODE_COMMANDS = {
-        CW_SWITCH_ON_DISABLED   : 'SWITCH ON DISABLED',
-        CW_DISABLE_VOLTAGE      : 'DISABLE VOLTAGE',
-        CW_SHUTDOWN             : 'READY TO SWITCH ON',
-        CW_SWITCH_ON            : 'SWITCHED ON',
-        CW_OPERATION_ENABLED    : 'OPERATION ENABLED',
-        CW_QUICK_STOP           : 'QUICK STOP ACTIVE'
+        CW_SWITCH_ON_DISABLED:          'SWITCH ON DISABLED',
+        CW_DISABLE_VOLTAGE:             'DISABLE VOLTAGE',
+        CW_SHUTDOWN:                    'READY TO SWITCH ON',
+        CW_SWITCH_ON:                   'SWITCHED ON',
+        CW_OPERATION_ENABLED:           'OPERATION ENABLED',
+        CW_QUICK_STOP:                  'QUICK STOP ACTIVE',
     }
 
     CW_COMMANDS_CODE = {
-        'SWITCH ON DISABLED'    : CW_SWITCH_ON_DISABLED,
-        'DISABLE VOLTAGE'       : CW_DISABLE_VOLTAGE,
-        'READY TO SWITCH ON'    : CW_SHUTDOWN,
-        'SWITCHED ON'           : CW_SWITCH_ON,
-        'OPERATION ENABLED'     : CW_OPERATION_ENABLED,
-        'QUICK STOP ACTIVE'     : CW_QUICK_STOP
+        'SWITCH ON DISABLED':           CW_SWITCH_ON_DISABLED,
+        'DISABLE VOLTAGE':              CW_DISABLE_VOLTAGE,
+        'READY TO SWITCH ON':           CW_SHUTDOWN,
+        'SWITCHED ON':                  CW_SWITCH_ON,
+        'OPERATION ENABLED':            CW_OPERATION_ENABLED,
+        'QUICK STOP ACTIVE':            CW_QUICK_STOP,
     }
 
     # Statusword 0x6041 bitmask and values in the list in the dictionary value
     SW_MASK = {
-        'NOT READY TO SWITCH ON': [0x4F, 0x00],
-        'SWITCH ON DISABLED'    : [0x4F, 0x40],
-        'READY TO SWITCH ON'    : [0x6F, 0x21],
-        'SWITCHED ON'           : [0x6F, 0x23],
-        'OPERATION ENABLED'     : [0x6F, 0x27],
-        'FAULT'                 : [0x4F, 0x08],
-        'FAULT REACTION ACTIVE' : [0x4F, 0x0F],
-        'QUICK STOP ACTIVE'     : [0x6F, 0x07]
+        'NOT READY TO SWITCH ON':       (0x4F, 0x00),
+        'SWITCH ON DISABLED':           (0x4F, 0x40),
+        'READY TO SWITCH ON':           (0x6F, 0x21),
+        'SWITCHED ON':                  (0x6F, 0x23),
+        'OPERATION ENABLED':            (0x6F, 0x27),
+        'FAULT':                        (0x4F, 0x08),
+        'FAULT REACTION ACTIVE':        (0x4F, 0x0F),
+        'QUICK STOP ACTIVE':            (0x6F, 0x07),
     }
 
     # Transition path to get to the 'OPERATION ENABLED' state
     NEXTSTATE2ENABLE = {
-        ('START')                                                   : 'NOT READY TO SWITCH ON',
-        ('FAULT', 'NOT READY TO SWITCH ON')                         : 'SWITCH ON DISABLED',
-        ('SWITCH ON DISABLED')                                      : 'READY TO SWITCH ON',
-        ('READY TO SWITCH ON')                                      : 'SWITCHED ON',
-        ('SWITCHED ON', 'QUICK STOP ACTIVE', 'OPERATION ENABLED')   : 'OPERATION ENABLED',
-        ('FAULT REACTION ACTIVE')                                   : 'FAULT'
+        ('START'):                                                      'NOT READY TO SWITCH ON',
+        ('FAULT', 'NOT READY TO SWITCH ON'):                            'SWITCH ON DISABLED',
+        ('SWITCH ON DISABLED'):                                         'READY TO SWITCH ON',
+        ('READY TO SWITCH ON'):                                         'SWITCHED ON',
+        ('SWITCHED ON', 'QUICK STOP ACTIVE', 'OPERATION ENABLED'):      'OPERATION ENABLED',
+        ('FAULT REACTION ACTIVE'):                                      'FAULT'
     }
 
     # Tansition table from the DS402 State Machine
@@ -110,34 +111,44 @@ class OperationMode(object):
     OPEN_LOOP_VECTOR_MODE = -2
 
     CODE2NAME = {
-        NO_MODE                     : 'NO MODE',
-        PROFILED_POSITION           : 'PROFILED POSITION',
-        VELOCITY                    : 'VELOCITY',
-        PROFILED_VELOCITY           : 'PROFILED VELOCITY',
-        PROFILED_TORQUE             : 'PROFILED TORQUE',
-        HOMING                      : 'HOMING',
-        INTERPOLATED_POSITION       : 'INTERPOLATED POSITION'
+        NO_MODE:                        'NO MODE',
+        PROFILED_POSITION:              'PROFILED POSITION',
+        VELOCITY:                       'VELOCITY',
+        PROFILED_VELOCITY:              'PROFILED VELOCITY',
+        PROFILED_TORQUE:                'PROFILED TORQUE',
+        HOMING:                         'HOMING',
+        INTERPOLATED_POSITION:          'INTERPOLATED POSITION',
+        CYCLIC_SYNCHRONOUS_POSITION:    'CYCLIC SYNCHRONOUS POSITION',
+        CYCLIC_SYNCHRONOUS_VELOCITY:    'CYCLIC SYNCHRONOUS VELOCITY',
+        CYCLIC_SYNCHRONOUS_TORQUE:      'CYCLIC SYNCHRONOUS TORQUE',
     }
 
     NAME2CODE = {
-        'NO MODE'                       : NO_MODE,
-        'PROFILED POSITION'             : PROFILED_POSITION,
-        'VELOCITY'                      : VELOCITY,
-        'PROFILED VELOCITY'             : PROFILED_VELOCITY,
-        'PROFILED TORQUE'               : PROFILED_TORQUE,
-        'HOMING'                        : HOMING,
-        'INTERPOLATED POSITION'         : INTERPOLATED_POSITION
+        'NO MODE':                      NO_MODE,
+        'PROFILED POSITION':            PROFILED_POSITION,
+        'VELOCITY':                     VELOCITY,
+        'PROFILED VELOCITY':            PROFILED_VELOCITY,
+        'PROFILED TORQUE':              PROFILED_TORQUE,
+        'HOMING':                       HOMING,
+        'INTERPOLATED POSITION':        INTERPOLATED_POSITION,
+        'CYCLIC SYNCHRONOUS POSITION':  CYCLIC_SYNCHRONOUS_POSITION,
+        'CYCLIC SYNCHRONOUS VELOCITY':  CYCLIC_SYNCHRONOUS_VELOCITY,
+        'CYCLIC SYNCHRONOUS TORQUE':    CYCLIC_SYNCHRONOUS_TORQUE,
     }
 
     SUPPORTED = {
-        'NO MODE'                     : 0x0,
-        'PROFILED POSITION'           : 0x1,
-        'VELOCITY'                    : 0x2,
-        'PROFILED VELOCITY'           : 0x4,
-        'PROFILED TORQUE'             : 0x8,
-        'HOMING'                      : 0x20,
-        'INTERPOLATED POSITION'       : 0x40
+        'NO MODE':                      0x0000,
+        'PROFILED POSITION':            0x0001,
+        'VELOCITY':                     0x0002,
+        'PROFILED VELOCITY':            0x0004,
+        'PROFILED TORQUE':              0x0008,
+        'HOMING':                       0x0020,
+        'INTERPOLATED POSITION':        0x0040,
+        'CYCLIC SYNCHRONOUS POSITION':  0x0080,
+        'CYCLIC SYNCHRONOUS VELOCITY':  0x0100,
+        'CYCLIC SYNCHRONOUS TORQUE':    0x0200,
     }
+
 
 class Homing(object):
     CW_START = 0x10
@@ -154,23 +165,23 @@ class Homing(object):
     HM_NO_HOMING_OPERATION = 0
     HM_ON_THE_NEGATIVE_LIMIT_SWITCH_AND_INDEX_PULSE = 1
     HM_ON_THE_POSITIVE_LIMIT_SWITCH_AND_INDEX_PULSE = 2
-    HM_ON_THE_POSITIVE_HOME_SWITCH_AND_INDEX_PULSE = [3, 4]
-    HM_ON_THE_NEGATIVE_HOME_SWITCH_AND_INDEX_PULSE = [5, 6]
+    HM_ON_THE_POSITIVE_HOME_SWITCH_AND_INDEX_PULSE = (3, 4)
+    HM_ON_THE_NEGATIVE_HOME_SWITCH_AND_INDEX_PULSE = (5, 6)
     HM_ON_THE_NEGATIVE_LIMIT_SWITCH = 17
     HM_ON_THE_POSITIVE_LIMIT_SWITCH = 18
-    HM_ON_THE_POSITIVE_HOME_SWITCH = [19, 20]
-    HM_ON_THE_NEGATIVE_HOME_SWITCH = [21, 22]
+    HM_ON_THE_POSITIVE_HOME_SWITCH = (19, 20)
+    HM_ON_THE_NEGATIVE_HOME_SWITCH = (21, 22)
     HM_ON_NEGATIVE_INDEX_PULSE = 33
     HM_ON_POSITIVE_INDEX_PULSE = 34
     HM_ON_CURRENT_POSITION = 35
 
     STATES = {
-    'IN PROGRESS'                  : [0x3400, 0x0000],
-    'INTERRUPTED'                  : [0x3400, 0x0400],
-    'ATTAINED'                     : [0x3400, 0x1000],
-    'TARGET REACHED'               : [0x3400, 0x1400],
-    'ERROR VELOCITY IS NOT ZERO'   : [0x3400, 0x2000],
-    'ERROR VELOCITY IS ZERO'       : [0x3400, 0x2400]
+        'IN PROGRESS':                  (0x3400, 0x0000),
+        'INTERRUPTED':                  (0x3400, 0x0400),
+        'ATTAINED':                     (0x3400, 0x1000),
+        'TARGET REACHED':               (0x3400, 0x1400),
+        'ERROR VELOCITY IS NOT ZERO':   (0x3400, 0x2000),
+        'ERROR VELOCITY IS ZERO':       (0x3400, 0x2400),
     }
 
 
@@ -185,10 +196,17 @@ class BaseNode402(RemoteNode):
     :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary`
     """
 
+    TIMEOUT_RESET_FAULT = 0.4           # seconds
+    TIMEOUT_SWITCH_OP_MODE = 0.5        # seconds
+    TIMEOUT_SWITCH_STATE_FINAL = 0.8    # seconds
+    TIMEOUT_SWITCH_STATE_SINGLE = 0.4   # seconds
+    INTERVAL_CHECK_STATE = 0.01         # seconds
+    TIMEOUT_HOMING_DEFAULT = 30         # seconds
+
     def __init__(self, node_id, object_dictionary):
         super(BaseNode402, self).__init__(node_id, object_dictionary)
-        self.tpdo_values = dict() # { index: TPDO_value }
-        self.rpdo_pointers = dict() # { index: RPDO_pointer }
+        self.tpdo_values = dict()  # { index: TPDO_value }
+        self.rpdo_pointers = dict()  # { index: RPDO_pointer }
 
     def setup_402_state_machine(self):
         """Configure the state machine by searching for a TPDO that has the
@@ -204,7 +222,7 @@ class BaseNode402(RemoteNode):
         self.state = 'SWITCH ON DISABLED' # Why change state?
 
     def setup_pdos(self):
-        self.pdo.read() # TPDO and RPDO configurations
+        self.pdo.read()  # TPDO and RPDO configurations
         self._init_tpdo_values()
         self._init_rpdo_pointers()
 
@@ -218,7 +236,7 @@ class BaseNode402(RemoteNode):
                         self.tpdo_values[obj.index] = 0
 
     def _init_rpdo_pointers(self):
-        # If RPDOs have overlapping indecies, rpdo_pointers will point to 
+        # If RPDOs have overlapping indecies, rpdo_pointers will point to
         # the first RPDO that has that index configured.
         for rpdo in self.rpdo.values():
             if rpdo.enabled:
@@ -228,13 +246,13 @@ class BaseNode402(RemoteNode):
                         self.rpdo_pointers[obj.index] = obj
 
     def _check_controlword_configured(self):
-        if 0x6040 not in self.rpdo_pointers: # Controlword
+        if 0x6040 not in self.rpdo_pointers:  # Controlword
             logger.warning(
                 "Controlword not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
                     self.id))
 
     def _check_statusword_configured(self):
-        if 0x6041 not in self.tpdo_values: # Statusword
+        if 0x6041 not in self.tpdo_values:  # Statusword
             raise ValueError(
                 "Statusword not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
                     self.id))
@@ -245,16 +263,16 @@ class BaseNode402(RemoteNode):
         if self.state == 'FAULT':
             # Resets the Fault Reset bit (rising edge 0 -> 1)
             self.controlword = State402.CW_DISABLE_VOLTAGE
-            timeout = time.time() + 0.4  # 400 ms
-            
+            timeout = time.monotonic() + self.TIMEOUT_RESET_FAULT
             while self.is_faulted():
-                if time.time() > timeout:
+                if time.monotonic() > timeout:
                     break
-                time.sleep(0.01)  # 10 ms
+                time.sleep(self.INTERVAL_CHECK_STATE)
             self.state = 'OPERATION ENABLED'
-    
+
     def is_faulted(self):
-        return self.statusword & State402.SW_MASK['FAULT'][0] == State402.SW_MASK['FAULT'][1]
+        bitmask, bits = State402.SW_MASK['FAULT']
+        return self.statusword & bitmask == bits
 
     def is_homed(self, restore_op_mode=False):
         """Switch to homing mode and determine its status."""
@@ -271,7 +289,7 @@ class BaseNode402(RemoteNode):
             self.op_mode = previous_op_mode
         return homingstatus in ('TARGET REACHED', 'ATTAINED')
 
-    def homing(self, timeout=30, set_new_home=True):
+    def homing(self, timeout=TIMEOUT_HOMING_DEFAULT, set_new_home=True):
         """Function to execute the configured Homing Method on the node
         :param int timeout: Timeout value (default: 30)
         :param bool set_new_home: Defines if the node should set the home offset
@@ -286,23 +304,24 @@ class BaseNode402(RemoteNode):
         self.state = 'OPERATION ENABLED'
         homingstatus = 'IN PROGRESS'
         self.controlword = State402.CW_OPERATION_ENABLED | Homing.CW_START
-        t = time.time() + timeout
+        t = time.monotonic() + timeout
         try:
             while homingstatus not in ('TARGET REACHED', 'ATTAINED'):
                 for key, value in Homing.STATES.items():
-                    # check if the value after applying the bitmask (value[0])
-                    # corresponds with the value[1] to determine the current status
-                    bitmaskvalue = self.statusword & value[0]
-                    if bitmaskvalue == value[1]:
+                    # check if the Statusword after applying the bitmask
+                    # corresponds with the needed bits to determine the current status
+                    bitmask, bits = value
+                    if self.statusword & bitmask == bits:
                         homingstatus = key
-                if homingstatus in ('INTERRUPTED', 'ERROR VELOCITY IS NOT ZERO', 'ERROR VELOCITY IS ZERO'):
-                    raise  RuntimeError ('Unable to home. Reason: {0}'.format(homingstatus))
-                time.sleep(0.001)
-                if time.time() > t:
+                if homingstatus in ('INTERRUPTED', 'ERROR VELOCITY IS NOT ZERO',
+                                    'ERROR VELOCITY IS ZERO'):
+                    raise RuntimeError('Unable to home. Reason: {0}'.format(homingstatus))
+                time.sleep(self.INTERVAL_CHECK_STATE)
+                if time.monotonic() > t:
                     raise RuntimeError('Unable to home, timeout reached')
             if set_new_home:
                 actual_position = self.sdo[0x6063].raw
-                self.sdo[0x607C].raw = actual_position # home offset (0x607C)
+                self.sdo[0x607C].raw = actual_position  # Home Offset
                 logger.info('Homing offset set to {0}'.format(actual_position))
             logger.info('Homing mode carried out successfully.')
             return True
@@ -349,16 +368,16 @@ class BaseNode402(RemoteNode):
             start_state = self.state
 
             if self.state == 'OPERATION ENABLED':
-                self.state = 'SWITCHED ON' 
+                self.state = 'SWITCHED ON'
                 # ensure the node does not move with an old value
                 self._clear_target_values() # Shouldn't this happen before it's switched on?
                 
             # operation mode
             self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
 
-            timeout = time.time() + 0.5 # 500 ms
+            timeout = time.monotonic() + self.TIMEOUT_SWITCH_OP_MODE
             while self.op_mode != mode:
-                if time.time() > timeout:
+                if time.monotonic() > timeout:
                     raise RuntimeError(
                         "Timeout setting node {0}'s new mode of operation to {1}.".format(
                             self.id, mode))
@@ -369,7 +388,7 @@ class BaseNode402(RemoteNode):
             logger.warning('{0}'.format(str(e)))
         finally:
             self.state = start_state # why?
-            logger.info('Set node {n} operation mode to {m}.'.format(n=self.id , m=mode))
+            logger.info('Set node {n} operation mode to {m}.'.format(n=self.id, m=mode))
         return False
 
     def _clear_target_values(self):
@@ -384,8 +403,13 @@ class BaseNode402(RemoteNode):
         :return: If the operation mode is supported
         :rtype: bool
         """
-        mode_support = self.sdo[0x6502].raw & OperationMode.SUPPORTED[mode]
-        return mode_support == OperationMode.SUPPORTED[mode]
+        if not hasattr(self, '_op_mode_support'):
+            # Cache value only on first lookup, this object should never change.
+            self._op_mode_support = self.sdo[0x6502].raw
+            logger.info('Caching node {n} supported operation modes 0x{m:04X}'.format(
+                n=self.id, m=self._op_mode_support))
+        bits = OperationMode.SUPPORTED[mode]
+        return self._op_mode_support & bits == bits
 
     def on_TPDOs_update_callback(self, mapobject):
         """This function receives a map object.
@@ -436,10 +460,8 @@ class BaseNode402(RemoteNode):
         - 'QUICK STOP ACTIVE'
         """
         for state, mask_val_pair in State402.SW_MASK.items():
-            mask = mask_val_pair[0]
-            state_value = mask_val_pair[1]
-            masked_value = self.statusword & mask
-            if masked_value == state_value:
+            bitmask, bits = mask_val_pair
+            if self.statusword & bitmask == bits:
                 return state
         return 'UNKNOWN'
 
@@ -457,14 +479,14 @@ class BaseNode402(RemoteNode):
         :raise RuntimeError: Occurs when the time defined to change the state is reached
         :raise ValueError: Occurs when trying to execute a ilegal transition in the sate machine
         """
-        timeout = time.time() + 0.8 # 800 ms
+        timeout = time.monotonic() + self.TIMEOUT_SWITCH_STATE_FINAL
         while self.state != target_state:
             next_state = self._next_state(target_state)
             if self._change_state(next_state):
-                continue       
-            if time.time() > timeout:
+                continue
+            if time.monotonic() > timeout:
                 raise RuntimeError('Timeout when trying to change state')
-            time.sleep(0.01) # 10 ms
+            time.sleep(self.INTERVAL_CHECK_STATE)
 
     def _next_state(self, target_state):
         if target_state == 'OPERATION ENABLED':
@@ -478,9 +500,9 @@ class BaseNode402(RemoteNode):
         except KeyError:
             raise ValueError(
                 'Illegal state transition from {f} to {t}'.format(f=self.state, t=target_state))
-        timeout = time.time() + 0.4 # 400 ms
+        timeout = time.monotonic() + self.TIMEOUT_SWITCH_STATE_SINGLE
         while self.state != target_state:
-            if time.time() > timeout:
+            if time.monotonic() > timeout:
                 return False
-            time.sleep(0.01) # 10 ms
+            time.sleep(self.INTERVAL_CHECK_STATE)
         return True

@@ -112,7 +112,7 @@ class Variable(variable.Variable):
         self.sdo_node.download(self.od.index, self.od.subindex, data, force_segment)
 
     def open(self, mode="rb", encoding="ascii", buffering=1024, size=None,
-             block_transfer=False):
+             block_transfer=False, request_crc_support=True):
         """Open the data stream as a file like object.
 
         :param str mode:
@@ -136,9 +136,11 @@ class Variable(variable.Variable):
             Size of data to that will be transmitted.
         :param bool block_transfer:
             If block transfer should be used.
+        :param bool request_crc_support:
+            If crc calculation should be requested when using block transfer
 
         :returns:
             A file like object.
         """
         return self.sdo_node.open(self.od.index, self.od.subindex, mode,
-                                  encoding, buffering, size, block_transfer)
+                                  encoding, buffering, size, block_transfer, request_crc_support=request_crc_support)
