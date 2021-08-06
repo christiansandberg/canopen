@@ -59,6 +59,17 @@ class PdoBase(Mapping):
         for pdo_map in self.map.values():
             pdo_map.save()
 
+    def subscribe(self):
+        """Register the node's PDOs for reception on the network.
+
+        This normally happens when the PDO configuration is read from
+        or saved to the node.  Use this method to avoid the SDO flood
+        associated with read() or save(), if the local PDO setup is
+        known to match what's stored on the node.
+        """
+        for pdo_map in self.map.values():
+            pdo_map.subscribe()
+
     def export(self, filename):
         """Export current configuration to a database file.
 
@@ -331,8 +342,7 @@ class Map(object):
             if index and size:
                 self.add_variable(index, subindex, size)
 
-        if self.enabled:
-            self.pdo_node.network.subscribe(self.cob_id, self.on_message)
+        self.subscribe()
 
     def save(self):
         """Save PDO configuration for this map using SDO."""
@@ -387,9 +397,19 @@ class Map(object):
             self._update_data_size()
 
         if self.enabled:
-            logger.info("Enabling PDO")
             self.com_record[1].raw = self.cob_id | (RTR_NOT_ALLOWED if not self.rtr_allowed else 0x0)
+            self.subscribe()
 
+    def subscribe(self):
+        """Register the PDO for reception on the network.
+
+        This normally happens when the PDO configuration is read from
+        or saved to the node.  Use this method to avoid the SDO flood
+        associated with read() or save(), if the local PDO setup is
+        known to match what's stored on the node.
+        """
+        if self.enabled:
+            logger.info("Subscribing to enabled PDO 0x%X on the network", self.cob_id)
             self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
     def clear(self):
