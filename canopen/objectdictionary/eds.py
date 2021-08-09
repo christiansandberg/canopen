@@ -9,16 +9,19 @@ except ImportError:
 from canopen import objectdictionary
 from canopen.sdo import SdoClient
 
+
+
 logger = logging.getLogger(__name__)
 
+# Object type. Don't confuse with Data type
 DOMAIN = 2
 VAR = 7
 ARR = 8
 RECORD = 9
 
-
 def import_eds(source, node_id):
     eds = RawConfigParser()
+    eds.optionxform = str
     if hasattr(source, "read"):
         fp = source
     else:
@@ -31,6 +34,32 @@ def import_eds(source, node_id):
         eds.readfp(fp)
     fp.close()
     od = objectdictionary.ObjectDictionary()
+
+    if eds.has_section("FileInfo"):
+        od.__edsFileInfo = { opt : eds.get("FileInfo", opt) for opt in eds.options("FileInfo") }
+
+    if eds.has_section("DeviceInfo"):
+        for rate in [10,20,50,125,250,500,800,1000]:
+            baudPossible = int(eds.get("DeviceInfo", "Baudrate_%i"%rate, fallback='0'), 0)
+            if baudPossible != 0:
+                od.deviceInformation.allowedBaudrates.add(rate*1000)
+
+        d = {"fallback": None}
+        od.deviceInformation.vendorName               = eds.get("DeviceInfo","VendorName"               , **d)
+        od.deviceInformation.vendorNumber             = eds.get("DeviceInfo","VendorNumber"             , **d)
+        od.deviceInformation.productName              = eds.get("DeviceInfo","ProductName"              , **d)
+        od.deviceInformation.productNumber            = eds.get("DeviceInfo","ProductNumber"            , **d)
+        od.deviceInformation.revisionNumber           = eds.get("DeviceInfo","RevisionNumber"           , **d)
+        od.deviceInformation.orderCode                = eds.get("DeviceInfo","OrderCode"                , **d)
+        od.deviceInformation.simpleBootUpMaster       = eds.get("DeviceInfo","SimpleBootUpMaster"       , **d)
+        od.deviceInformation.simpleBootUpSlave        = eds.get("DeviceInfo","SimpleBootUpSlave"        , **d)
+        od.deviceInformation.granularity              = eds.get("DeviceInfo","Granularity"              , **d)
+        od.deviceInformation.dynamicChannelsSupported = eds.get("DeviceInfo","DynamicChannelsSupported" , **d)
+        od.deviceInformation.groupMessaging           = eds.get("DeviceInfo","GroupMessaging"           , **d)
+        od.deviceInformation.nrOfRXPDO                = eds.get("DeviceInfo","NrOfRXPDO"                , **d)
+        od.deviceInformation.nrOfTXPDO                = eds.get("DeviceInfo","NrOfTXPDO"                , **d)
+        od.deviceInformation.LSS_Supported            = eds.get("DeviceInfo","LSS_Supported"            , **d)
+
     if eds.has_section("DeviceComissioning"):
         od.bitrate = int(eds.get("DeviceComissioning", "Baudrate")) * 1000
         od.node_id = int(eds.get("DeviceComissioning", "NodeID"), 0)
@@ -136,7 +165,6 @@ def import_from_node(node_id, network):
         network.unsubscribe(0x580 + node_id)
     return od
 
-
 def _convert_variable(node_id, var_type, value):
     if var_type in (objectdictionary.OCTET_STRING, objectdictionary.DOMAIN):
         return bytes.fromhex(value)
@@ -152,6 +180,18 @@ def _convert_variable(node_id, var_type, value):
         else:
             return int(value, 0)
 
+def _revert_variable(var_type, value):
+    if value is None:
+        return None
+    if var_type in (objectdictionary.OCTET_STRING, objectdictionary.DOMAIN):
+        return bytes.hex(value)
+    elif var_type in (objectdictionary.VISIBLE_STRING, objectdictionary.UNICODE_STRING):
+        return value
+    elif var_type in objectdictionary.FLOAT_TYPES:
+        return value
+    else:
+        return "0x%02X" % value
+
 
 def build_variable(eds, section, node_id, index, subindex=0):
     """Creates a object dictionary entry.
@@ -161,6 +201,7 @@ def build_variable(eds, section, node_id, index, subindex=0):
     :param index: Index of the CANOpen object
     :param subindex: Subindex of the CANOpen object (if presente, else 0)
     """
+
     name = eds.get(section, "ParameterName")
     var = objectdictionary.Variable(name, index, subindex)
     try:
@@ -181,6 +222,8 @@ def build_variable(eds, section, node_id, index, subindex=0):
             # Assume DOMAIN to force application to interpret the byte data
             var.data_type = objectdictionary.DOMAIN
 
+    var.pdo_mappable = bool(int(eds.get(section, "PDOMapping", fallback = 0), 0))
+
     if eds.has_option(section, "LowLimit"):
         try:
             var.min = int(eds.get(section, "LowLimit"), 0)
@@ -193,16 +236,17 @@ def build_variable(eds, section, node_id, index, subindex=0):
             pass
     if eds.has_option(section, "DefaultValue"):
         try:
+            var.default_raw = eds.get(section, "DefaultValue")
             var.default = _convert_variable(node_id, var.data_type, eds.get(section, "DefaultValue"))
         except ValueError:
             pass
     if eds.has_option(section, "ParameterValue"):
         try:
+            var.value_raw = eds.get(section, "ParameterValue")
             var.value = _convert_variable(node_id, var.data_type, eds.get(section, "ParameterValue"))
         except ValueError:
             pass
     return var
-
 
 def copy_variable(eds, section, subindex, src_var):
     name = eds.get(section, str(subindex))
@@ -211,3 +255,153 @@ def copy_variable(eds, section, subindex, src_var):
     var.name = name
     var.subindex = subindex
     return var
+
+def export_dcf(od, dest=None, fileInfo = {}):
+    return export_eds(od, dest, fileInfo, True)
+
+def export_eds(od, dest=None, fileInfo = {}, deviceComissioning=False):
+    def export_object(obj, eds):
+        if type(obj) is objectdictionary.Variable:
+            return export_variable(obj,eds)
+        if type(obj) is objectdictionary.Record:
+            return export_record(obj,eds)
+        if type(obj) is objectdictionary.Array:
+            return export_array(obj,eds)
+
+    def export_common(var, eds, section):
+        eds.add_section(section)
+        eds.set(section, "ParameterName", var.name )
+        if var.storage_location:
+            eds.set(section, "StorageLocation", var.storage_location)
+
+    def export_variable(var, eds):
+        if type(var.parent) is objectdictionary.ObjectDictionary:
+            # top level variable
+            section = "%04X" % var.index
+        else:
+            # nested variable
+            section = "%04Xsub%X" % (var.index, var.subindex)
+
+        export_common(var,eds, section)
+        eds.set(section, "ObjectType", "0x%X"% VAR)
+        if var.data_type:
+            eds.set(section, "DataType", "0x%04X" % var.data_type)
+        if var.access_type:
+            eds.set(section, "AccessType", var.access_type);
+
+        if getattr(var, 'default_raw', None) is not None:
+            eds.set(section, "DefaultValue", var.default_raw)
+        elif getattr(var, 'default', None) is not None:
+            eds.set(section, "DefaultValue", _revert_variable(var.data_type, var.default))
+
+        if deviceComissioning:
+            if getattr(var, 'value_raw', None) is not None:
+                eds.set(section, "ParameterValue", var.value_raw)
+            elif getattr(var, 'value', None) is not None:
+                eds.set(section, "ParameterValue",_revert_variable(var.data_type, var.default))
+
+        eds.set(section, "DataType", "0x%04X" % var.data_type)
+        eds.set(section, "PDOMapping", hex(var.pdo_mappable))
+
+        if getattr(var, 'min',None) !=None:
+            eds.set(section, "LowLimit", var.min)
+        if getattr(var, 'max',None) !=None:
+            eds.set(section, "HighLimit", var.max)
+
+    def export_record(var, eds):
+        section = "%04X" % var.index
+        export_common(var,eds, section)
+        eds.set(section, "SubNumber", "0x%X"%len(var.subindices))
+        ot = RECORD if type(var) is objectdictionary.Record else ARR
+        eds.set(section, "ObjectType", "0x%X"%ot)
+        for i in var:
+            export_variable(var[i], eds)
+
+    export_array = export_record
+
+    eds = RawConfigParser()
+    # both disables lowercasing, and allows int keys
+    eds.optionxform = str
+
+    from datetime import datetime as dt
+    defmtime = dt.utcnow()
+
+    try:
+        ## only if eds was loaded by us
+        origFileInfo = od.__edsFileInfo
+    except AttributeError:
+        origFileInfo = {
+            # just set some defaults
+            "CreationDate": defmtime.strftime("%m-%d-%Y"),
+            "CreationTime": defmtime.strftime("%I:%m%p"),
+            "EdsVersion": 4.2,
+        }
+
+        fileInfo.setdefault("ModificationDate", defmtime.strftime("%m-%d-%Y"))
+        fileInfo.setdefault("ModificationTime", defmtime.strftime("%I:%m%p"))
+        for k,v in origFileInfo.items():
+            fileInfo.setdefault(k,v)
+
+    eds.add_section("FileInfo")
+    for k,v in fileInfo.items():
+        eds.set("FileInfo", k, v)
+
+
+    eds.add_section("DeviceInfo")
+    if od.deviceInformation.vendorName               :  eds.set("DeviceInfo","VendorName"               , od.deviceInformation.vendorName               )
+    if od.deviceInformation.vendorNumber             :  eds.set("DeviceInfo","VendorNumber"             , od.deviceInformation.vendorNumber             )
+    if od.deviceInformation.productName              :  eds.set("DeviceInfo","ProductName"              , od.deviceInformation.productName              )
+    if od.deviceInformation.productNumber            :  eds.set("DeviceInfo","ProductNumber"            , od.deviceInformation.productNumber            )
+    if od.deviceInformation.revisionNumber           :  eds.set("DeviceInfo","RevisionNumber"           , od.deviceInformation.revisionNumber           )
+    if od.deviceInformation.orderCode                :  eds.set("DeviceInfo","OrderCode"                , od.deviceInformation.orderCode                )
+    if od.deviceInformation.simpleBootUpMaster       :  eds.set("DeviceInfo","SimpleBootUpMaster"       , od.deviceInformation.simpleBootUpMaster       )
+    if od.deviceInformation.simpleBootUpSlave        :  eds.set("DeviceInfo","SimpleBootUpSlave"        , od.deviceInformation.simpleBootUpSlave        )
+    if od.deviceInformation.granularity              :  eds.set("DeviceInfo","Granularity"              , od.deviceInformation.granularity              )
+    if od.deviceInformation.dynamicChannelsSupported :  eds.set("DeviceInfo","DynamicChannelsSupported" , od.deviceInformation.dynamicChannelsSupported )
+    if od.deviceInformation.groupMessaging           :  eds.set("DeviceInfo","GroupMessaging"           , od.deviceInformation.groupMessaging           )
+    if od.deviceInformation.nrOfRXPDO                :  eds.set("DeviceInfo","NrOfRXPDO"                , od.deviceInformation.nrOfRXPDO                )
+    if od.deviceInformation.nrOfTXPDO                :  eds.set("DeviceInfo","NrOfTXPDO"                , od.deviceInformation.nrOfTXPDO                )
+    if od.deviceInformation.LSS_Supported            :  eds.set("DeviceInfo","LSS_Supported"            , od.deviceInformation.LSS_Supported            )
+
+    for rate in od.deviceInformation.allowedBaudrates.union({10e3,20e3,50e3,125e3,250e3,500e3,800e3,1000e3}):
+        eds.set("DeviceInfo", "Baudrate_%i"%(rate/1000), int(rate in od.deviceInformation.allowedBaudrates))
+
+    if deviceComissioning and (od.bitrate or od.node_id):
+        eds.add_section("DeviceComissioning")
+        if od.bitrate:
+            eds.set("DeviceComissioning", "Baudrate", int(od.bitrate / 1000))
+        if od.node_id:
+            eds.set("DeviceComissioning", "NodeID", int(od.node_id) )
+
+
+    eds.add_section("DummyUsage")
+    for i in range(1, 8):
+        key = "Dummy%04d" % i
+        eds.set("DummyUsage", key, 1 if (key in od) else 0)
+
+    mandatoryIndices   = lambda x: x in set([0x1000, 0x1001, 0x1018])
+    manufacturerIndices= lambda x: x in range(0x2000, 0x6000)
+    optionalIndices    = lambda x: x>0x1001 and not mandatoryIndices(x) and not manufacturerIndices(x)
+
+    supportedMantatoryIndices      = list(filter(mandatoryIndices, od ))
+    supportedOptionalIndices       = list(filter(optionalIndices , od ))
+    supportedManufacturerIndices   = list(filter(manufacturerIndices, od ))
+
+    def add_list(section, list):
+        eds.add_section(section)
+        eds.set(section, "SupportedObjects", len(list))
+        for i in range(0, len(list)):
+            eds.set(section, (i + 1), "0x%04X" %list[i])
+        for index in list:
+            export_object(od[index], eds)
+
+    add_list("MandatoryObjects", supportedMantatoryIndices)
+    add_list("OptionalObjects", supportedOptionalIndices)
+    add_list("ManufacturerObjects", supportedManufacturerIndices)
+
+    if not dest:
+        import sys
+        dest = sys.stdout
+
+    eds.write(dest, False)
+

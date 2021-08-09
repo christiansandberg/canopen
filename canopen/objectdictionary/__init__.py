@@ -13,6 +13,20 @@ from .datatypes import *
 logger = logging.getLogger(__name__)
 
 
+def export_od(od, dest=None, docType="eds"):
+    """ Export :class: ObjectDictionary to a file.
+    :param docType: type of document to export
+    :rtype: str or None
+    """
+    assert docType in ["eds", "dcf"]
+    if docType == "eds":
+        from . import eds
+        eds.export_eds(od, dest)
+    elif docType == "dcf":
+        from . import eds
+        eds.export_dcf(od, dest)
+
+
 def import_od(source, node_id=None):
     """Parse an EDS, DCF, or EPF file.
 
@@ -55,6 +69,8 @@ class ObjectDictionary(MutableMapping):
         self.bitrate = None
         #: Node ID if specified by file
         self.node_id = None
+        # Some information about the device
+        self.deviceInformation = DeviceInformation()
 
     def __getitem__(self, index):
         """Get object from object dictionary by name or index."""
@@ -272,6 +288,8 @@ class Variable(object):
         self.bit_definitions = {}
         #: Storage location of index
         self.storage_location = None
+        #: Can this variable be mapped to a PDO
+        self.pdo_mappable = False
 
     def __eq__(self, other):
         return (self.index == other.index and
@@ -409,6 +427,24 @@ class Variable(object):
         temp |= bit_value << min(bits)
         return temp
 
+
+class DeviceInformation:
+    def __init__(self):
+        self.allowedBaudrates = set()
+        self.vendorName = None
+        self.vendorNumber = None
+        self.productName = None
+        self.productNumber = None
+        self.revisionNumber = None
+        self.orderCode = None
+        self.simpleBootUpMaster = None
+        self.simpleBootUpSlave = None
+        self.granularity = None
+        self.dynamicChannelsSupported = None
+        self.groupMessaging = None
+        self.nrOfRXPDO = None
+        self.nrOfTXPDO = None
+        self.LSS_Supported = None
 
 class ObjectDictionaryError(Exception):
     """Unsupported operation with the current Object Dictionary."""

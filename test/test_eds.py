@@ -4,7 +4,6 @@ import canopen
 
 EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
 
-
 class TestEDS(unittest.TestCase):
 
     def setUp(self):
@@ -90,3 +89,45 @@ class TestEDS(unittest.TestCase):
     def test_dummy_variable_undefined(self):
         with self.assertRaises(KeyError):
             var_undef = self.od['Dummy0001']
+
+    def test_export_eds(self):
+        import tempfile
+        for docType in {"eds", "dcf"}:
+            with tempfile.NamedTemporaryFile(suffix="."+docType, mode="w+") as tempeds:
+                print("exporting %s to " % docType + tempeds.name)
+                canopen.export_od(self.od, tempeds, docType=docType)
+                tempeds.flush()
+                exported_od = canopen.import_od(tempeds.name)
+
+                for index in exported_od:
+                    self.assertIn(exported_od[index].name, self.od)
+                    self.assertIn(index                  , self.od)
+
+                for index in self.od:
+                    if index < 0x0008:
+                        # ignore dummies
+                        continue
+                    self.assertIn(self.od[index].name, exported_od)
+                    self.assertIn(index              , exported_od)
+
+                    actualObject   = exported_od[index]
+                    expectedObject =     self.od[index]
+                    self.assertEqual(type(actualObject), type(expectedObject))
+                    self.assertEqual(actualObject.name, expectedObject.name)
+
+                    if type(actualObject) is canopen.objectdictionary.Variable:
+                        expectedVars = [expectedObject]
+                        actualVars   = [actualObject  ]
+                    else :
+                        expectedVars = [expectedObject[idx] for idx in expectedObject]
+                        actualVars   = [actualObject  [idx] for idx in   actualObject]
+
+                    for evar,avar in zip(expectedVars,actualVars):
+                        self.    assertEqual(getattr(avar, "data_type"  , None)  , getattr(evar,"data_type"  ,None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
+                        self.    assertEqual(getattr(avar, "default_raw", None)  , getattr(evar,"default_raw",None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
+                        self.    assertEqual(getattr(avar, "min"        , None)  , getattr(evar,"min"        ,None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
+                        self.    assertEqual(getattr(avar, "max"        , None)  , getattr(evar,"max"        ,None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
+                        if docType == "dcf":
+                            self.assertEqual(getattr(avar, "value"      , None)  , getattr(evar,"value"      ,None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
+
+
