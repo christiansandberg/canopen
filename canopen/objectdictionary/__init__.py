@@ -30,14 +30,14 @@ def export_od(od, dest=None, doc_type=None):
     doctypes = {"eds", "dcf"}
     if type(dest) is str:
         if doc_type is None:
-            for t in doc_type:
+            for t in doctypes:
                 if dest.endswith(f".{t}"):
                     doc_type = t
                     break
 
         if doc_type is None:
             doc_type = "eds"
-        dest = open(dest,'w')
+        dest = open(dest, 'w')
     assert doc_type in doctypes
 
     if doc_type == "eds":
@@ -466,6 +466,7 @@ class DeviceInformation:
         self.nr_of_RXPDO = None
         self.nr_of_TXPDO = None
         self.LSS_supported = None
+
 
 class ObjectDictionaryError(Exception):
     """Unsupported operation with the current Object Dictionary."""
