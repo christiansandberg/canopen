@@ -92,10 +92,10 @@ class TestEDS(unittest.TestCase):
 
     def test_export_eds(self):
         import tempfile
-        for docType in {"eds", "dcf"}:
-            with tempfile.NamedTemporaryFile(suffix="."+docType, mode="w+") as tempeds:
-                print("exporting %s to " % docType + tempeds.name)
-                canopen.export_od(self.od, tempeds, docType=docType)
+        for doctype in {"eds", "dcf"}:
+            with tempfile.NamedTemporaryFile(suffix="."+doctype, mode="w+") as tempeds:
+                print("exporting %s to " % doctype + tempeds.name)
+                canopen.export_od(self.od, tempeds, doc_type=doctype)
                 tempeds.flush()
                 exported_od = canopen.import_od(tempeds.name)
 
@@ -127,7 +127,7 @@ class TestEDS(unittest.TestCase):
                         self.    assertEqual(getattr(avar, "default_raw", None)  , getattr(evar,"default_raw",None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
                         self.    assertEqual(getattr(avar, "min"        , None)  , getattr(evar,"min"        ,None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
                         self.    assertEqual(getattr(avar, "max"        , None)  , getattr(evar,"max"        ,None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
-                        if docType == "dcf":
+                        if doctype == "dcf":
                             self.assertEqual(getattr(avar, "value"      , None)  , getattr(evar,"value"      ,None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
 
 

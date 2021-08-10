@@ -91,7 +91,7 @@ class ObjectDictionary(MutableMapping):
         #: Node ID if specified by file
         self.node_id = None
         # Some information about the device
-        self.deviceInformation = DeviceInformation()
+        self.device_information = DeviceInformation()
 
     def __getitem__(self, index):
         """Get object from object dictionary by name or index."""
@@ -451,21 +451,21 @@ class Variable(object):
 
 class DeviceInformation:
     def __init__(self):
-        self.allowedBaudrates = set()
-        self.vendorName = None
-        self.vendorNumber = None
-        self.productName = None
-        self.productNumber = None
-        self.revisionNumber = None
-        self.orderCode = None
-        self.simpleBootUpMaster = None
-        self.simpleBootUpSlave = None
+        self.allowed_baudrates = set()
+        self.vendor_name = None
+        self.vendor_number = None
+        self.product_name = None
+        self.product_number = None
+        self.revision_number = None
+        self.order_code = None
+        self.simple_boot_up_master = None
+        self.simple_boot_up_slave = None
         self.granularity = None
-        self.dynamicChannelsSupported = None
-        self.groupMessaging = None
-        self.nrOfRXPDO = None
-        self.nrOfTXPDO = None
-        self.LSS_Supported = None
+        self.dynamic_channels_supported = None
+        self.group_messaging = None
+        self.nr_of_RXPDO = None
+        self.nr_of_TXPDO = None
+        self.LSS_supported = None
 
 class ObjectDictionaryError(Exception):
     """Unsupported operation with the current Object Dictionary."""

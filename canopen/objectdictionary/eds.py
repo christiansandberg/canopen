@@ -45,36 +45,36 @@ def import_eds(source, node_id):
             baudPossible = int(
                 eds.get("DeviceInfo", "Baudrate_%i" % rate, fallback='0'), 0)
             if baudPossible != 0:
-                od.deviceInformation.allowedBaudrates.add(rate*1000)
+                od.device_information.allowed_baudrates.add(rate*1000)
 
         d = {"fallback": None}
-        od.deviceInformation.vendorName = eds.get(
+        od.device_information.vendor_name = eds.get(
             "DeviceInfo", "VendorName", **d)
-        od.deviceInformation.vendorNumber = eds.get(
+        od.device_information.vendorNumber = eds.get(
             "DeviceInfo", "VendorNumber", **d)
-        od.deviceInformation.productName = eds.get(
+        od.device_information.productName = eds.get(
             "DeviceInfo", "ProductName", **d)
-        od.deviceInformation.productNumber = eds.get(
+        od.device_information.productNumber = eds.get(
             "DeviceInfo", "ProductNumber", **d)
-        od.deviceInformation.revisionNumber = eds.get(
+        od.device_information.revisionNumber = eds.get(
             "DeviceInfo", "RevisionNumber", **d)
-        od.deviceInformation.orderCode = eds.get(
+        od.device_information.orderCode = eds.get(
             "DeviceInfo", "OrderCode", **d)
-        od.deviceInformation.simpleBootUpMaster = eds.get(
+        od.device_information.simpleBootUpMaster = eds.get(
             "DeviceInfo", "SimpleBootUpMaster", **d)
-        od.deviceInformation.simpleBootUpSlave = eds.get(
+        od.device_information.simpleBootUpSlave = eds.get(
             "DeviceInfo", "SimpleBootUpSlave", **d)
-        od.deviceInformation.granularity = eds.get(
+        od.device_information.granularity = eds.get(
             "DeviceInfo", "Granularity", **d)
-        od.deviceInformation.dynamicChannelsSupported = eds.get(
+        od.device_information.dynamicChannelsSupported = eds.get(
             "DeviceInfo", "DynamicChannelsSupported", **d)
-        od.deviceInformation.groupMessaging = eds.get(
+        od.device_information.groupMessaging = eds.get(
             "DeviceInfo", "GroupMessaging", **d)
-        od.deviceInformation.nrOfRXPDO = eds.get(
+        od.device_information.nrOfRXPDO = eds.get(
             "DeviceInfo", "NrOfRXPDO", **d)
-        od.deviceInformation.nrOfTXPDO = eds.get(
+        od.device_information.nrOfTXPDO = eds.get(
             "DeviceInfo", "NrOfTXPDO", **d)
-        od.deviceInformation.LSS_Supported = eds.get(
+        od.device_information.LSS_Supported = eds.get(
             "DeviceInfo", "LSS_Supported", **d)
 
     if eds.has_section("DeviceComissioning"):
@@ -367,52 +367,52 @@ def export_eds(od, dest=None, fileInfo={}, deviceComissioning=False):
         eds.set("FileInfo", k, v)
 
     eds.add_section("DeviceInfo")
-    if od.deviceInformation.vendorName:
+    if od.device_information.vendor_name:
         eds.set(
-            "DeviceInfo", "VendorName", od.deviceInformation.vendorName)
-    if od.deviceInformation.vendorNumber:
+            "DeviceInfo", "VendorName", od.device_information.vendor_name)
+    if od.device_information.vendorNumber:
         eds.set(
-            "DeviceInfo", "VendorNumber", od.deviceInformation.vendorNumber)
-    if od.deviceInformation.productName:
+            "DeviceInfo", "VendorNumber", od.device_information.vendorNumber)
+    if od.device_information.productName:
         eds.set(
-            "DeviceInfo", "ProductName", od.deviceInformation.productName)
-    if od.deviceInformation.productNumber:
+            "DeviceInfo", "ProductName", od.device_information.productName)
+    if od.device_information.productNumber:
         eds.set(
-            "DeviceInfo", "ProductNumber", od.deviceInformation.productNumber)
-    if od.deviceInformation.revisionNumber:
+            "DeviceInfo", "ProductNumber", od.device_information.productNumber)
+    if od.device_information.revisionNumber:
         eds.set(
-            "DeviceInfo", "RevisionNumber", od.deviceInformation.revisionNumber)
-    if od.deviceInformation.orderCode:
+            "DeviceInfo", "RevisionNumber", od.device_information.revisionNumber)
+    if od.device_information.orderCode:
         eds.set(
-            "DeviceInfo", "OrderCode", od.deviceInformation.orderCode)
-    if od.deviceInformation.simpleBootUpMaster:
+            "DeviceInfo", "OrderCode", od.device_information.orderCode)
+    if od.device_information.simpleBootUpMaster:
         eds.set(
-            "DeviceInfo", "SimpleBootUpMaster", od.deviceInformation.simpleBootUpMaster)
-    if od.deviceInformation.simpleBootUpSlave:
+            "DeviceInfo", "SimpleBootUpMaster", od.device_information.simpleBootUpMaster)
+    if od.device_information.simpleBootUpSlave:
         eds.set(
-            "DeviceInfo", "SimpleBootUpSlave", od.deviceInformation.simpleBootUpSlave)
-    if od.deviceInformation.granularity:
+            "DeviceInfo", "SimpleBootUpSlave", od.device_information.simpleBootUpSlave)
+    if od.device_information.granularity:
         eds.set(
-            "DeviceInfo", "Granularity", od.deviceInformation.granularity)
-    if od.deviceInformation.dynamicChannelsSupported:
+            "DeviceInfo", "Granularity", od.device_information.granularity)
+    if od.device_information.dynamicChannelsSupported:
         eds.set(
-            "DeviceInfo", "DynamicChannelsSupported", od.deviceInformation.dynamicChannelsSupported)
-    if od.deviceInformation.groupMessaging:
+            "DeviceInfo", "DynamicChannelsSupported", od.device_information.dynamicChannelsSupported)
+    if od.device_information.groupMessaging:
         eds.set(
-            "DeviceInfo", "GroupMessaging", od.deviceInformation.groupMessaging)
-    if od.deviceInformation.nrOfRXPDO:
+            "DeviceInfo", "GroupMessaging", od.device_information.groupMessaging)
+    if od.device_information.nrOfRXPDO:
         eds.set(
-            "DeviceInfo", "NrOfRXPDO", od.deviceInformation.nrOfRXPDO)
-    if od.deviceInformation.nrOfTXPDO:
+            "DeviceInfo", "NrOfRXPDO", od.device_information.nrOfRXPDO)
+    if od.device_information.nrOfTXPDO:
         eds.set(
-            "DeviceInfo", "NrOfTXPDO", od.deviceInformation.nrOfTXPDO)
-    if od.deviceInformation.LSS_Supported:
+            "DeviceInfo", "NrOfTXPDO", od.device_information.nrOfTXPDO)
+    if od.device_information.LSS_Supported:
         eds.set(
-            "DeviceInfo", "LSS_Supported", od.deviceInformation.LSS_Supported)
+            "DeviceInfo", "LSS_Supported", od.device_information.LSS_Supported)
 
-    for rate in od.deviceInformation.allowedBaudrates.union({10e3, 20e3, 50e3, 125e3, 250e3, 500e3, 800e3, 1000e3}):
+    for rate in od.device_information.allowed_baudrates.union({10e3, 20e3, 50e3, 125e3, 250e3, 500e3, 800e3, 1000e3}):
         eds.set("DeviceInfo", "Baudrate_%i" % (rate/1000),
-                int(rate in od.deviceInformation.allowedBaudrates))
+                int(rate in od.device_information.allowed_baudrates))
 
     if deviceComissioning and (od.bitrate or od.node_id):
         eds.add_section("DeviceComissioning")
@@ -434,9 +434,9 @@ def export_eds(od, dest=None, fileInfo={}, deviceComissioning=False):
         return x in range(0x2000, 0x6000)
 
     def optionalIndices(x):
-        return x > 0x1001 and
+        return (x > 0x1001 and
         not mandatoryIndices(x) and
-        not manufacturerIndices(x)
+        not manufacturerIndices(x))
 
     supportedMantatoryIndices = list(filter(mandatoryIndices, od))
     supportedOptionalIndices = list(filter(optionalIndices, od))
