@@ -13,18 +13,39 @@ from .datatypes import *
 logger = logging.getLogger(__name__)
 
 
-def export_od(od, dest=None, docType="eds"):
+def export_od(od, dest=None, doc_type=None):
     """ Export :class: ObjectDictionary to a file.
-    :param docType: type of document to export
+
+    :param od:
+        :class: ObjectDictionary object to be exported
+    :param dest:
+        export destination. filename, or file-like object or None.
+        if None, the document is returned as string
+    :param docType: type of document to export.
+       If a filename is given for dest, this default to the file extension.
+       Otherwise, this defaults to "eds"
     :rtype: str or None
     """
-    assert docType in ["eds", "dcf"]
-    if docType == "eds":
+
+    doctypes = {"eds", "dcf"}
+    if type(dest) is str:
+        if doc_type is None:
+            for t in doc_type:
+                if dest.endswith(f".{t}"):
+                    doc_type = t
+                    break
+
+        if doc_type is None:
+            doc_type = "eds"
+        dest = open(dest,'w')
+    assert doc_type in doctypes
+
+    if doc_type == "eds":
         from . import eds
-        eds.export_eds(od, dest)
-    elif docType == "dcf":
+        return eds.export_eds(od, dest)
+    elif doc_type == "dcf":
         from . import eds
-        eds.export_dcf(od, dest)
+        return eds.export_dcf(od, dest)
 
 
 def import_od(source, node_id=None):
