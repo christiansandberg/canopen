@@ -343,7 +343,7 @@ class BaseNode402(RemoteNode):
     def op_mode(self):
         """The node's Operation Mode stored in the object 0x6061.
 
-        Uses SDO to access the current value.  The modes are passed as one of the
+        Uses SDO or PDO to access the current value.  The modes are passed as one of the
         following strings:
 
         - 'NO MODE'
@@ -378,8 +378,14 @@ class BaseNode402(RemoteNode):
                 # ensure the node does not move with an old value
                 self._clear_target_values() # Shouldn't this happen before it's switched on?
                 
-            # operation mode
-            self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
+            # Update operation mode in RPDO if possible, fall back to SDO
+            if 0x6060 in self.rpdo_pointers:
+                self.rpdo_pointers[0x6060].raw = OperationMode.NAME2CODE[mode]
+                pdo = self.rpdo_pointers[0x6060].pdo_parent
+                if not pdo.is_periodic:
+                    pdo.transmit()
+            else:
+                self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
 
             timeout = time.monotonic() + self.TIMEOUT_SWITCH_OP_MODE
             while self.op_mode != mode:
