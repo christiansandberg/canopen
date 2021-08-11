@@ -454,7 +454,9 @@ class BaseNode402(RemoteNode):
     def controlword(self, value):
         if 0x6040 in self.rpdo_pointers:
             self.rpdo_pointers[0x6040].raw = value
-            self.rpdo_pointers[0x6040].pdo_parent.transmit()
+            pdo = self.rpdo_pointers[0x6040].pdo_parent
+            if not pdo.is_periodic:
+                pdo.transmit()
         else:
             self.sdo[0x6040].raw = value
 
