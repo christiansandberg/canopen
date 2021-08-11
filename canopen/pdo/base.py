@@ -274,6 +274,23 @@ class Map(object):
         node_id = self.cob_id & 0x7F
         return "%sPDO%d_node%d" % (direction, map_id, node_id)
 
+    @property
+    def is_periodic(self):
+        """Indicate whether PDO updates will be transferred regularly.
+
+        If some external mechanism is used to transmit the PDO regularly, its cycle time
+        should be written to the :attr:`period` member for this property to work.
+        """
+        if self.period is not None:
+            # Configured from start() or externally
+            return True
+        elif self.trans_type is not None and self.trans_type <= 0xF0:
+            # TPDOs will be transmitted on SYNC, RPDOs need a SYNC to apply, so
+            # assume that the SYNC service is active.
+            return True
+        # Unknown transmission type, assume non-periodic
+        return False
+
     def on_message(self, can_id, data, timestamp):
         is_transmitting = self._task is not None
         if can_id == self.cob_id and not is_transmitting:
