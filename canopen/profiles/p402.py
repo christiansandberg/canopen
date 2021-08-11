@@ -343,8 +343,6 @@ class BaseNode402(RemoteNode):
     def op_mode(self, mode):
         """Function to define the operation mode of the node
         :param string mode: Mode to define.
-        :return: Return if the operation mode was set with success or not
-        :rtype: bool
 
         The modes can be:
         - 'NO MODE'
@@ -381,7 +379,6 @@ class BaseNode402(RemoteNode):
                     raise RuntimeError(
                         "Timeout setting node {0}'s new mode of operation to {1}.".format(
                             self.id, mode))
-            return True
         except SdoCommunicationError as e:
             logger.warning('[SDO communication error] Cause: {0}'.format(str(e)))
         except (RuntimeError, ValueError) as e:
@@ -389,7 +386,6 @@ class BaseNode402(RemoteNode):
         finally:
             self.state = start_state # why?
             logger.info('Set node {n} operation mode to {m}.'.format(n=self.id, m=mode))
-        return False
 
     def _clear_target_values(self):
         # [target velocity, target position, target torque]
