@@ -186,7 +186,8 @@ class Map(object):
         self.data = bytearray()
         #: Timestamp of last received message
         self.timestamp = None
-        #: Period of receive message transmission in seconds
+        #: Period of receive message transmission in seconds.
+        #: Set explicitly or using the :meth:`start()` method.
         self.period = None
         self.callbacks = []
         self.receive_condition = threading.Condition()
@@ -459,7 +460,10 @@ class Map(object):
     def start(self, period=None):
         """Start periodic transmission of message in a background thread.
 
-        :param float period: Transmission period in seconds
+        :param float period:
+            Transmission period in seconds.  Can be omitted if :attr:`period` has been set
+            on the object before.
+        :raises ValueError: When neither the argument nor the :attr:`period` is given.
         """
         # Stop an already running transmission if we have one, otherwise we
         # overwrite the reference and can lose our handle to shut it down
