@@ -406,8 +406,14 @@ class BaseNode402(RemoteNode):
             if not self.is_op_mode_supported(mode):
                 raise TypeError(
                     'Operation mode {m} not suppported on node {n}.'.format(n=self.id, m=mode))
-            # operation mode
-            self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
+            # Update operation mode in RPDO if possible, fall back to SDO
+            if 0x6060 in self.rpdo_pointers:
+                self.rpdo_pointers[0x6060].raw = OperationMode.NAME2CODE[mode]
+                pdo = self.rpdo_pointers[0x6060].pdo_parent
+                if not pdo.is_periodic:
+                    pdo.transmit()
+            else:
+                self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
             timeout = time.monotonic() + self.TIMEOUT_SWITCH_OP_MODE
             while self.op_mode != mode:
                 if time.monotonic() > timeout:
