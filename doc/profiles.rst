@@ -85,3 +85,10 @@ Available commands
 - 'SWITCHED ON'
 - 'OPERATION ENABLED'
 - 'QUICK STOP ACTIVE'
+
+
+API
+```
+
+.. autoclass:: canopen.profiles.p402.BaseNode402
+   :members:
