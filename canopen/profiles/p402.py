@@ -46,14 +46,14 @@ class State402(object):
         'QUICK STOP ACTIVE':            (0x6F, 0x07),
     }
 
-    # Transition path to get to the 'OPERATION ENABLED' state
-    NEXTSTATE2ENABLE = {
+    # Transition path to reach and state without a direct transition
+    NEXTSTATE2ANY = {
         ('START'):                                                      'NOT READY TO SWITCH ON',
         ('FAULT', 'NOT READY TO SWITCH ON'):                            'SWITCH ON DISABLED',
         ('SWITCH ON DISABLED'):                                         'READY TO SWITCH ON',
         ('READY TO SWITCH ON'):                                         'SWITCHED ON',
         ('SWITCHED ON', 'QUICK STOP ACTIVE', 'OPERATION ENABLED'):      'OPERATION ENABLED',
-        ('FAULT REACTION ACTIVE'):                                      'FAULT'
+        ('FAULT REACTION ACTIVE'):                                      'FAULT',
     }
 
     # Tansition table from the DS402 State Machine
@@ -86,14 +86,14 @@ class State402(object):
     }
 
     @staticmethod
-    def next_state_for_enabling(_from):
-        """Return the next state needed for reach the state Operation Enabled.
+    def next_state_indirect(_from):
+        """Return the next state needed to reach any state indirectly.
 
         :param str target: Target state.
         :return: Next target to change.
         :rtype: str
         """
-        for cond, next_state in State402.NEXTSTATE2ENABLE.items():
+        for cond, next_state in State402.NEXTSTATE2ANY.items():
             if _from in cond:
                 return next_state
 
@@ -506,7 +506,7 @@ class BaseNode402(RemoteNode):
         if (from_state, target_state) in State402.TRANSITIONTABLE:
             return target_state
         else:
-            return State402.next_state_for_enabling(from_state)
+            return State402.next_state_indirect(from_state)
 
     def _change_state(self, target_state):
         try:

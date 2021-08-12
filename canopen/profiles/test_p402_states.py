@@ -13,7 +13,7 @@ if __name__ == '__main__':
             if (from_state, target_state) in State402.TRANSITIONTABLE:
                 print('direct:\t{} -> {}'.format(from_state, target_state))
             else:
-                next_state = State402.next_state_for_enabling(from_state)
+                next_state = State402.next_state_indirect(from_state)
                 if not next_state:
                     print('FAIL:\t{} -> {}'.format(from_state, next_state))
                 else:
