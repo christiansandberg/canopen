@@ -46,7 +46,10 @@ Dummy0006=0
 Dummy0007=0
 
 [Comments]
-Lines=0
+Lines=3
+Line1=|-------------|
+Line2=| Don't panic |
+Line3=|-------------|
 
 [MandatoryObjects]
 SupportedObjects=3

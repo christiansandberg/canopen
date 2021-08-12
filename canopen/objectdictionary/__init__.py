@@ -86,6 +86,7 @@ class ObjectDictionary(MutableMapping):
     def __init__(self):
         self.indices = {}
         self.names = {}
+        self.comments=""
         #: Default bitrate if specified by file
         self.bitrate = None
         #: Node ID if specified by file

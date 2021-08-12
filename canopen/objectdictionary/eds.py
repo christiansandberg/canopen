@@ -17,7 +17,6 @@ VAR = 7
 ARR = 8
 RECORD = 9
 
-
 def import_eds(source, node_id):
     eds = RawConfigParser()
     eds.optionxform = str
@@ -39,6 +38,13 @@ def import_eds(source, node_id):
             opt: eds.get("FileInfo", opt)
             for opt in eds.options("FileInfo")
         }
+
+    if eds.has_section("Comments"):
+        linecount = eds.getint("Comments", "Lines")
+        '\n'.join([
+            eds.get("Comments","Line%i"%line)
+            for line in range(1,linecount+1)
+        ])
 
     if eds.has_section("DeviceInfo"):
         for rate in [10, 20, 50, 125, 250, 500, 800, 1000]:
@@ -421,6 +427,12 @@ def export_eds(od, dest=None, fileInfo={}, deviceComissioning=False):
         if od.node_id:
             eds.set("DeviceComissioning", "NodeID", int(od.node_id))
 
+    eds.add_section("Comments")
+    i=0
+    for line in od.comments.splitlines():
+        i += 1
+        eds.set("Comments", "Line%i"%i, line)
+    eds.set("Comments", "Lines", i)
 
     eds.add_section("DummyUsage")
     for i in range(1, 8):

@@ -130,4 +130,5 @@ class TestEDS(unittest.TestCase):
                         if doctype == "dcf":
                             self.assertEqual(getattr(avar, "value"      , None)  , getattr(evar,"value"      ,None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
 
+                        self.assertEqual(self.od.comments, exported_od.comments)
 
