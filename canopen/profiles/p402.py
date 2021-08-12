@@ -220,14 +220,20 @@ class BaseNode402(RemoteNode):
         self._check_controlword_configured()
         self._check_statusword_configured()
 
-    def setup_pdos(self):
+    def setup_pdos(self, upload=True):
         """Find the relevant PDO configuration to handle the state machine.
 
+        :param bool upload:
+            Retrieve up-to-date configuration via SDO.  If False, the node's mappings must
+            already be configured in the object, matching the drive's settings.
         :raises AssertionError:
             When the node's NMT state disallows SDOs for reading the PDO configuration.
         """
-        assert self.nmt.state in 'PRE-OPERATIONAL', 'OPERATIONAL'
-        self.pdo.read()  # TPDO and RPDO configurations
+        if upload:
+            assert self.nmt.state in 'PRE-OPERATIONAL', 'OPERATIONAL'
+            self.pdo.read()  # TPDO and RPDO configurations
+        else:
+            self.pdo.subscribe()  # Get notified on reception, usually a side-effect of read()
         self._init_tpdo_values()
         self._init_rpdo_pointers()
 
