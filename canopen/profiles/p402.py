@@ -208,9 +208,9 @@ class BaseNode402(RemoteNode):
 
     def __init__(self, node_id, object_dictionary):
         super(BaseNode402, self).__init__(node_id, object_dictionary)
-        self.tpdo_values = dict()  # { index: TPDO_value }
+        self.tpdo_values = {}  # { index: value from last received TPDO }
         self.tpdo_pointers = {}  # { index: pdo.Map instance }
-        self.rpdo_pointers = dict()  # { index: RPDO_pointer }
+        self.rpdo_pointers = {}  # { index: pdo.Map instance }
 
     def setup_402_state_machine(self):
         """Configure the state machine by searching for a TPDO that has the StatusWord mapped.
