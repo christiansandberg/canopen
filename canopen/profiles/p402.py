@@ -263,6 +263,8 @@ class BaseNode402(RemoteNode):
         if self.state == 'FAULT':
             # Resets the Fault Reset bit (rising edge 0 -> 1)
             self.controlword = State402.CW_DISABLE_VOLTAGE
+            # FIXME! The rising edge happens with the transitions toward OPERATION
+            # ENABLED below, but until then the loop will always reach the timeout!
             timeout = time.monotonic() + self.TIMEOUT_RESET_FAULT
             while self.is_faulted():
                 if time.monotonic() > timeout:
