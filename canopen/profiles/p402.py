@@ -216,12 +216,9 @@ class BaseNode402(RemoteNode):
         :raises ValueError:
             If the the node can't find a Statusword configured in any of the TPDOs.
         """
-        self.nmt.state = 'PRE-OPERATIONAL' # Why is this necessary?
         self.setup_pdos()
         self._check_controlword_configured()
         self._check_statusword_configured()
-        self.nmt.state = 'OPERATIONAL'
-        self.state = 'SWITCH ON DISABLED' # Why change state?
 
     def setup_pdos(self):
         self.pdo.read()  # TPDO and RPDO configurations
