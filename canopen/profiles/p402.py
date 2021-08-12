@@ -221,6 +221,12 @@ class BaseNode402(RemoteNode):
         self._check_statusword_configured()
 
     def setup_pdos(self):
+        """Find the relevant PDO configuration to handle the state machine.
+
+        :raises AssertionError:
+            When the node's NMT state disallows SDOs for reading the PDO configuration.
+        """
+        assert self.nmt.state in 'PRE-OPERATIONAL', 'OPERATIONAL'
         self.pdo.read()  # TPDO and RPDO configurations
         self._init_tpdo_values()
         self._init_rpdo_pointers()
