@@ -295,16 +295,18 @@ class BaseNode402(RemoteNode):
             self.op_mode = previous_op_mode
         return homingstatus in ('TARGET REACHED', 'ATTAINED')
 
-    def homing(self, timeout=TIMEOUT_HOMING_DEFAULT, set_new_home=True):
+    def homing(self, timeout=None, set_new_home=True):
         """Execute the configured Homing method on the node.
 
-        :param int timeout: Timeout value (default: 30).
+        :param int timeout: Timeout value (default: 30, zero to disable).
         :param bool set_new_home:
             Defines if the node should set the home offset object (0x607C) to the current
             position after the homing procedure (default: true).
         :return: If the homing was complete with success.
         :rtype: bool
         """
+        if timeout is None:
+            timeout = self.TIMEOUT_HOMING_DEFAULT
         previus_op_mode = self.op_mode
         self.state = 'SWITCHED ON'
         self.op_mode = 'HOMING'
@@ -325,7 +327,7 @@ class BaseNode402(RemoteNode):
                                     'ERROR VELOCITY IS ZERO'):
                     raise RuntimeError('Unable to home. Reason: {0}'.format(homingstatus))
                 time.sleep(self.INTERVAL_CHECK_STATE)
-                if time.monotonic() > t:
+                if timeout and time.monotonic() > t:
                     raise RuntimeError('Unable to home, timeout reached')
             if set_new_home:
                 actual_position = self.sdo[0x6063].raw
