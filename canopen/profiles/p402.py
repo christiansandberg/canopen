@@ -203,7 +203,6 @@ class BaseNode402(RemoteNode):
     TIMEOUT_SWITCH_STATE_FINAL = 0.8    # seconds
     TIMEOUT_SWITCH_STATE_SINGLE = 0.4   # seconds
     TIMEOUT_CHECK_TPDO = 0.2            # seconds
-    INTERVAL_CHECK_STATE = 0.01         # seconds
     TIMEOUT_HOMING_DEFAULT = 30         # seconds
 
     def __init__(self, node_id, object_dictionary):
