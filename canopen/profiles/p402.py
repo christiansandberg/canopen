@@ -210,13 +210,14 @@ class BaseNode402(RemoteNode):
         self.tpdo_values = dict()  # { index: TPDO_value }
         self.rpdo_pointers = dict()  # { index: RPDO_pointer }
 
-    def setup_402_state_machine(self):
+    def setup_402_state_machine(self, read_pdos=True):
         """Configure the state machine by searching for a TPDO that has the StatusWord mapped.
 
+        :param bool read_pdos: Upload current PDO configuration from node.
         :raises ValueError:
             If the the node can't find a Statusword configured in any of the TPDOs.
         """
-        self.setup_pdos()
+        self.setup_pdos(read_pdos)
         self._check_controlword_configured()
         self._check_statusword_configured()
 
