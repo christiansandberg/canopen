@@ -89,7 +89,7 @@ class State402(object):
     def next_state_for_enabling(_from):
         """Return the next state needed for reach the state Operation Enabled.
 
-        :param string target: Target state.
+        :param str target: Target state.
         :return: Next target to change.
         :rtype: str
         """
