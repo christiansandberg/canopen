@@ -202,12 +202,14 @@ class BaseNode402(RemoteNode):
     TIMEOUT_SWITCH_OP_MODE = 0.5        # seconds
     TIMEOUT_SWITCH_STATE_FINAL = 0.8    # seconds
     TIMEOUT_SWITCH_STATE_SINGLE = 0.4   # seconds
+    TIMEOUT_CHECK_TPDO = 0.2            # seconds
     INTERVAL_CHECK_STATE = 0.01         # seconds
     TIMEOUT_HOMING_DEFAULT = 30         # seconds
 
     def __init__(self, node_id, object_dictionary):
         super(BaseNode402, self).__init__(node_id, object_dictionary)
         self.tpdo_values = dict()  # { index: TPDO_value }
+        self.tpdo_pointers = {}  # { index: pdo.Map instance }
         self.rpdo_pointers = dict()  # { index: RPDO_pointer }
 
     def setup_402_state_machine(self):
@@ -236,6 +238,7 @@ class BaseNode402(RemoteNode):
                     logger.debug('Configured TPDO: {0}'.format(obj.index))
                     if obj.index not in self.tpdo_values:
                         self.tpdo_values[obj.index] = 0
+                        self.tpdo_pointers[obj.index] = obj
 
     def _init_rpdo_pointers(self):
         # If RPDOs have overlapping indecies, rpdo_pointers will point to
@@ -362,7 +365,18 @@ class BaseNode402(RemoteNode):
         :raises TypeError: When setting a mode not advertised as supported by the node.
         :raises RuntimeError: If the switch is not confirmed within the configured timeout.
         """
-        return OperationMode.CODE2NAME[self.sdo[0x6061].raw]
+        try:
+            pdo = self.tpdo_pointers[0x6061].pdo_parent
+            if pdo.is_periodic:
+                timestamp = pdo.wait_for_reception(timeout=self.TIMEOUT_CHECK_TPDO)
+                if timestamp is None:
+                    raise RuntimeError("Timeout getting node {0}'s mode of operation.".format(
+                        self.id))
+            code = self.tpdo_values[0x6061]
+        except KeyError:
+            logger.warning('The object 0x6061 is not a configured TPDO, fallback to SDO')
+            code = self.sdo[0x6061].raw
+        return OperationMode.CODE2NAME[code]
 
     @op_mode.setter
     def op_mode(self, mode):
