@@ -432,8 +432,8 @@ class BaseNode402(RemoteNode):
     def statusword(self):
         """Return the last read value of the Statusword (0x6041) from the device.
 
-        If the the object 0x6041 is not configured in any TPDO it will fall back to the
-        SDO mechanism and try to get the value.
+        If the object 0x6041 is not configured in any TPDO it will fall back to the SDO
+        mechanism and try to get the value.
         """
         try:
             return self.tpdo_values[0x6041]
