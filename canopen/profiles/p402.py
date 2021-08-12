@@ -497,6 +497,11 @@ class BaseNode402(RemoteNode):
             time.sleep(self.INTERVAL_CHECK_STATE)
 
     def _next_state(self, target_state):
+        if target_state in ('NOT READY TO SWITCH ON',
+                            'FAULT REACTION ACTIVE',
+                            'FAULT'):
+            raise ValueError(
+                'Target state {} cannot be entered programmatically'.format(target_state))
         if target_state == 'OPERATION ENABLED':
             return State402.next_state_for_enabling(self.state)
         else:
