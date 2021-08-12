@@ -49,10 +49,10 @@ class State402(object):
     # Transition path to reach and state without a direct transition
     NEXTSTATE2ANY = {
         ('START'):                                                      'NOT READY TO SWITCH ON',
-        ('FAULT', 'NOT READY TO SWITCH ON'):                            'SWITCH ON DISABLED',
+        ('FAULT', 'NOT READY TO SWITCH ON', 'QUICK STOP ACTIVE'):       'SWITCH ON DISABLED',
         ('SWITCH ON DISABLED'):                                         'READY TO SWITCH ON',
         ('READY TO SWITCH ON'):                                         'SWITCHED ON',
-        ('SWITCHED ON', 'QUICK STOP ACTIVE', 'OPERATION ENABLED'):      'OPERATION ENABLED',
+        ('SWITCHED ON'):                                                'OPERATION ENABLED',
         ('FAULT REACTION ACTIVE'):                                      'FAULT',
     }
 
@@ -88,6 +88,11 @@ class State402(object):
     @staticmethod
     def next_state_indirect(_from):
         """Return the next state needed to reach any state indirectly.
+
+        The chosen path always points toward the OPERATION ENABLED state, except when
+        coming from QUICK STOP ACTIVE.  In that case, it will cycle through SWITCH ON
+        DISABLED first, as there would have been a direct transition if the opposite was
+        desired.
 
         :param str target: Target state.
         :return: Next target to change.
