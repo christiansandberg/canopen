@@ -201,6 +201,7 @@ class BaseNode402(RemoteNode):
     TIMEOUT_SWITCH_STATE_FINAL = 0.8    # seconds
     TIMEOUT_SWITCH_STATE_SINGLE = 0.4   # seconds
     INTERVAL_CHECK_STATE = 0.01         # seconds
+    TIMEOUT_CHECK_TPDO = 0.2            # seconds
     TIMEOUT_HOMING_DEFAULT = 30         # seconds
     INTERVAL_CHECK_HOMING = 0.1         # seconds
 
@@ -433,6 +434,26 @@ class BaseNode402(RemoteNode):
         except KeyError:
             logger.warning('The object 0x6041 is not a configured TPDO, fallback to SDO')
             return self.sdo[0x6041].raw
+
+    def check_statusword(self, timeout=None):
+        """Report an up-to-date reading of the statusword (0x6041) from the device.
+
+        If the TPDO with the statusword is configured as periodic, this method blocks
+        until one was received.  Otherwise, it uses the SDO fallback of the ``statusword``
+        property.
+
+        :param timeout: Maximum time in seconds to wait for TPDO reception.
+        :raises RuntimeError: Occurs when the given timeout expires without a TPDO.
+        :return: Updated value of the ``statusword`` property.
+        :rtype: int
+        """
+        if 0x6041 in self.tpdo_pointers:
+            pdo = self.tpdo_pointers[0x6041].pdo_parent
+            if pdo.is_periodic:
+                timestamp = pdo.wait_for_reception(timeout or self.TIMEOUT_CHECK_TPDO)
+                if timestamp is None:
+                    raise RuntimeError('Timeout waiting for updated statusword')
+        return self.statusword
 
     @property
     def controlword(self):
