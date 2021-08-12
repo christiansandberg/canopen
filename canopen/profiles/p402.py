@@ -221,6 +221,7 @@ class BaseNode402(RemoteNode):
         self.setup_pdos(read_pdos)
         self._check_controlword_configured()
         self._check_statusword_configured()
+        self._check_op_mode_configured()
 
     def setup_pdos(self, upload=True):
         """Find the relevant PDO configuration to handle the state machine.
