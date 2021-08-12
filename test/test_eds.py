@@ -122,6 +122,26 @@ class TestEDS(unittest.TestCase):
                         expectedVars = [expectedObject[idx] for idx in expectedObject]
                         actualVars   = [actualObject  [idx] for idx in   actualObject]
 
+                    for prop in [
+                    "allowed_baudrates",
+                    "vendor_name",
+                    "vendor_number",
+                    "product_name",
+                    "product_number",
+                    "revision_number",
+                    "order_code",
+                    "simple_boot_up_master",
+                    "simple_boot_up_slave",
+                    "granularity",
+                    "dynamic_channels_supported",
+                    "group_messaging",
+                    "nr_of_RXPDO",
+                    "nr_of_TXPDO",
+                    "LSS_supported",
+                    ]:
+                        self.assertEqual(getattr(self.od.device_information, prop), getattr(exported_od.device_information, prop), f"prop {prop!r} mismatch on DeviceInfo")
+
+
                     for evar,avar in zip(expectedVars,actualVars):
                         self.    assertEqual(getattr(avar, "data_type"  , None)  , getattr(evar,"data_type"  ,None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
                         self.    assertEqual(getattr(avar, "default_raw", None)  , getattr(evar,"default_raw",None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
