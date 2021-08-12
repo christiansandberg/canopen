@@ -222,6 +222,7 @@ class BaseNode402(RemoteNode):
         self.setup_pdos()
         self._check_controlword_configured()
         self._check_statusword_configured()
+        self._check_op_mode_configured()
         self.nmt.state = 'OPERATIONAL'
         self.state = 'SWITCH ON DISABLED' # Why change state?
 
@@ -260,6 +261,16 @@ class BaseNode402(RemoteNode):
         if 0x6041 not in self.tpdo_values:  # Statusword
             raise ValueError(
                 "Statusword not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
+                    self.id))
+
+    def _check_op_mode_configured(self):
+        if 0x6060 not in self.rpdo_pointers:  # Operation Mode
+            logger.warning(
+                "Operation Mode not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
+                    self.id))
+        if 0x6061 not in self.tpdo_values:  # Operation Mode Display
+            logger.warning(
+                "Operation Mode Display not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
                     self.id))
 
     def reset_from_fault(self):
