@@ -200,10 +200,8 @@ class BaseNode402(RemoteNode):
     TIMEOUT_SWITCH_OP_MODE = 0.5        # seconds
     TIMEOUT_SWITCH_STATE_FINAL = 0.8    # seconds
     TIMEOUT_SWITCH_STATE_SINGLE = 0.4   # seconds
-    INTERVAL_CHECK_STATE = 0.01         # seconds
     TIMEOUT_CHECK_TPDO = 0.2            # seconds
     TIMEOUT_HOMING_DEFAULT = 30         # seconds
-    INTERVAL_CHECK_HOMING = 0.1         # seconds
 
     def __init__(self, node_id, object_dictionary):
         super(BaseNode402, self).__init__(node_id, object_dictionary)
@@ -269,7 +267,7 @@ class BaseNode402(RemoteNode):
             while self.is_faulted():
                 if time.monotonic() > timeout:
                     break
-                time.sleep(self.INTERVAL_CHECK_STATE)
+                self.check_statusword()
             self.state = 'OPERATION ENABLED'
 
     def is_faulted(self):
@@ -278,9 +276,8 @@ class BaseNode402(RemoteNode):
 
     def _homing_status(self):
         """Interpret the current Statusword bits as homing state string."""
-        # Wait to make sure an RPDO was received.  Should better check for reception
-        # instead of this hard-coded delay, but at least it can be configured per node.
-        time.sleep(self.INTERVAL_CHECK_HOMING)
+        # Wait to make sure a TPDO was received
+        self.check_statusword()
         status = None
         for key, value in Homing.STATES.items():
             bitmask, bits = value
@@ -293,7 +290,7 @@ class BaseNode402(RemoteNode):
         previous_op_mode = self.op_mode
         if previous_op_mode != 'HOMING':
             logger.info('Switch to HOMING from %s', previous_op_mode)
-            self.op_mode = 'HOMING'
+            self.op_mode = 'HOMING'  # blocks until confirmed
         homingstatus = self._homing_status()
         if restore_op_mode:
             self.op_mode = previous_op_mode
@@ -510,7 +507,7 @@ class BaseNode402(RemoteNode):
                 continue
             if time.monotonic() > timeout:
                 raise RuntimeError('Timeout when trying to change state')
-            time.sleep(self.INTERVAL_CHECK_STATE)
+            self.check_statusword()
 
     def _next_state(self, target_state):
         if target_state == 'OPERATION ENABLED':
@@ -528,5 +525,5 @@ class BaseNode402(RemoteNode):
         while self.state != target_state:
             if time.monotonic() > timeout:
                 return False
-            time.sleep(self.INTERVAL_CHECK_STATE)
+            self.check_statusword()
         return True
