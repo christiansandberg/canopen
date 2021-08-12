@@ -502,10 +502,11 @@ class BaseNode402(RemoteNode):
                             'FAULT'):
             raise ValueError(
                 'Target state {} cannot be entered programmatically'.format(target_state))
-        if target_state == 'OPERATION ENABLED':
-            return State402.next_state_for_enabling(self.state)
-        else:
+        from_state = self.state
+        if (from_state, target_state) in State402.TRANSITIONTABLE:
             return target_state
+        else:
+            return State402.next_state_for_enabling(from_state)
 
     def _change_state(self, target_state):
         try:
