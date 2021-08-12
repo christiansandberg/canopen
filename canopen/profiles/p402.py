@@ -214,7 +214,7 @@ class BaseNode402(RemoteNode):
         """Configure the state machine by searching for a TPDO that has the StatusWord mapped.
 
         :raises ValueError:
-            If the the node can't find a Statusword configured in the any of the TPDOs.
+            If the the node can't find a Statusword configured in any of the TPDOs.
         """
         self.nmt.state = 'PRE-OPERATIONAL' # Why is this necessary?
         self.setup_pdos()
