@@ -309,8 +309,10 @@ class BaseNode402(RemoteNode):
         self.op_mode = 'HOMING'
         # The homing process will initialize at operation enabled
         self.state = 'OPERATION ENABLED'
-        homingstatus = 'IN PROGRESS'
-        self.controlword = State402.CW_OPERATION_ENABLED | Homing.CW_START
+        homingstatus = 'UNKNOWN'
+        self.controlword = State402.CW_OPERATION_ENABLED | Homing.CW_START  # does not block
+        # Wait for one extra cycle, to make sure the controlword was received
+        self.check_statusword()
         t = time.monotonic() + timeout
         try:
             while homingstatus not in ('TARGET REACHED', 'ATTAINED'):
