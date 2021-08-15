@@ -246,7 +246,7 @@ def build_variable(eds, section, node_id, index, subindex=0):
             # Assume DOMAIN to force application to interpret the byte data
             var.data_type = objectdictionary.DOMAIN
 
-    var.pdo_mappable = bool(int(eds.get(section, "PDOMapping", fallback=0), 0))
+    var.pdo_mappable = bool(int(eds.get(section, "PDOMapping", fallback="0"), 0))
 
     if eds.has_option(section, "LowLimit"):
         try:
