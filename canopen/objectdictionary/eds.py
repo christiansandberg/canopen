@@ -283,7 +283,7 @@ def copy_variable(eds, section, subindex, src_var):
 def export_dcf(od, dest=None, fileInfo={}):
     return export_eds(od, dest, fileInfo, True)
 
-def export_eds(od, dest=None, fileInfo={}, deviceComissioning=False):
+def export_eds(od, dest=None, file_info={}, device_commisioning=False):
     def export_object(obj, eds):
         if type(obj) is objectdictionary.Variable:
             return export_variable(obj, eds)
@@ -319,7 +319,7 @@ def export_eds(od, dest=None, fileInfo={}, deviceComissioning=False):
             eds.set(section, "DefaultValue", _revert_variable(
                 var.data_type, var.default))
 
-        if deviceComissioning:
+        if device_commisioning:
             if getattr(var, 'value_raw', None) is not None:
                 eds.set(section, "ParameterValue", var.value_raw)
             elif getattr(var, 'value', None) is not None:
@@ -363,13 +363,13 @@ def export_eds(od, dest=None, fileInfo={}, deviceComissioning=False):
             "EdsVersion": 4.2,
         }
 
-        fileInfo.setdefault("ModificationDate", defmtime.strftime("%m-%d-%Y"))
-        fileInfo.setdefault("ModificationTime", defmtime.strftime("%I:%m%p"))
+        file_info.setdefault("ModificationDate", defmtime.strftime("%m-%d-%Y"))
+        file_info.setdefault("ModificationTime", defmtime.strftime("%I:%m%p"))
         for k, v in origFileInfo.items():
-            fileInfo.setdefault(k, v)
+            file_info.setdefault(k, v)
 
     eds.add_section("FileInfo")
-    for k, v in fileInfo.items():
+    for k, v in file_info.items():
         eds.set("FileInfo", k, v)
 
     eds.add_section("DeviceInfo")
@@ -398,7 +398,7 @@ def export_eds(od, dest=None, fileInfo={}, deviceComissioning=False):
         eds.set("DeviceInfo", "Baudrate_%i" % (rate/1000),
                 int(rate in od.device_information.allowed_baudrates))
 
-    if deviceComissioning and (od.bitrate or od.node_id):
+    if device_commisioning and (od.bitrate or od.node_id):
         eds.add_section("DeviceComissioning")
         if od.bitrate:
             eds.set("DeviceComissioning", "Baudrate", int(od.bitrate / 1000))
@@ -417,20 +417,20 @@ def export_eds(od, dest=None, fileInfo={}, deviceComissioning=False):
         key = "Dummy%04d" % i
         eds.set("DummyUsage", key, 1 if (key in od) else 0)
 
-    def mandatoryIndices(x):
+    def mandatory_indices(x):
         return x in {0x1000, 0x1001, 0x1018}
 
-    def manufacturerIndices(x):
+    def manufacturer_idices(x):
         return x in range(0x2000, 0x6000)
 
-    def optionalIndices(x):
+    def optional_indices(x):
         return (x > 0x1001 and
-        not mandatoryIndices(x) and
-        not manufacturerIndices(x))
+        not mandatory_indices(x) and
+        not manufacturer_idices(x))
 
-    supportedMantatoryIndices = list(filter(mandatoryIndices, od))
-    supportedOptionalIndices = list(filter(optionalIndices, od))
-    supportedManufacturerIndices = list(filter(manufacturerIndices, od))
+    supported_mantatory_indices = list(filter(mandatory_indices, od))
+    supported_optional_indices = list(filter(optional_indices, od))
+    supported_manufacturer_indices = list(filter(manufacturer_idices, od))
 
     def add_list(section, list):
         eds.add_section(section)
@@ -440,9 +440,9 @@ def export_eds(od, dest=None, fileInfo={}, deviceComissioning=False):
         for index in list:
             export_object(od[index], eds)
 
-    add_list("MandatoryObjects", supportedMantatoryIndices)
-    add_list("OptionalObjects", supportedOptionalIndices)
-    add_list("ManufacturerObjects", supportedManufacturerIndices)
+    add_list("MandatoryObjects", supported_mantatory_indices)
+    add_list("OptionalObjects", supported_optional_indices)
+    add_list("ManufacturerObjects", supported_manufacturer_indices)
 
     if not dest:
         import sys

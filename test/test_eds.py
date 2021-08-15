@@ -110,17 +110,17 @@ class TestEDS(unittest.TestCase):
                     self.assertIn(self.od[index].name, exported_od)
                     self.assertIn(index              , exported_od)
 
-                    actualObject   = exported_od[index]
-                    expectedObject =     self.od[index]
-                    self.assertEqual(type(actualObject), type(expectedObject))
-                    self.assertEqual(actualObject.name, expectedObject.name)
+                    actual_object   = exported_od[index]
+                    expected_object =     self.od[index]
+                    self.assertEqual(type(actual_object), type(expected_object))
+                    self.assertEqual(actual_object.name, expected_object.name)
 
-                    if type(actualObject) is canopen.objectdictionary.Variable:
-                        expectedVars = [expectedObject]
-                        actualVars   = [actualObject  ]
+                    if type(actual_object) is canopen.objectdictionary.Variable:
+                        expected_vars = [expected_object]
+                        actual_vars   = [actual_object  ]
                     else :
-                        expectedVars = [expectedObject[idx] for idx in expectedObject]
-                        actualVars   = [actualObject  [idx] for idx in   actualObject]
+                        expected_vars = [expected_object[idx] for idx in expected_object]
+                        actual_vars   = [actual_object  [idx] for idx in   actual_object]
 
                     for prop in [
                     "allowed_baudrates",
@@ -144,7 +144,7 @@ class TestEDS(unittest.TestCase):
                     self.assertEqual(getattr(self.od, "comments", "No comments"), getattr(exported_od, "comments", "No comments" ))
 
 
-                    for evar,avar in zip(expectedVars,actualVars):
+                    for evar,avar in zip(expected_vars,actual_vars):
                         self.    assertEqual(getattr(avar, "data_type"  , None)  , getattr(evar,"data_type"  ,None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
                         self.    assertEqual(getattr(avar, "default_raw", None)  , getattr(evar,"default_raw",None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
                         self.    assertEqual(getattr(avar, "min"        , None)  , getattr(evar,"min"        ,None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
