@@ -141,6 +141,8 @@ class TestEDS(unittest.TestCase):
                     ]:
                         self.assertEqual(getattr(self.od.device_information, prop), getattr(exported_od.device_information, prop), f"prop {prop!r} mismatch on DeviceInfo")
 
+                    self.assertEqual(getattr(self.od, "comments", "No comments"), getattr(exported_od, "comments", "No comments" ))
+
 
                     for evar,avar in zip(expectedVars,actualVars):
                         self.    assertEqual(getattr(avar, "data_type"  , None)  , getattr(evar,"data_type"  ,None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
