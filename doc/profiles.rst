@@ -34,10 +34,13 @@ The current status can be read from the device by reading the register
 0x6041, which is called the "Statusword".
 Changes in state can only be done in the 'OPERATIONAL' state of the NmtMaster
 
-TPDO1 needs to be set up correctly. For this, run the the
-`BaseNode402.setup_402_state_machine()` method. Note that this setup
-routine will change only TPDO1 and automatically go to the 'OPERATIONAL' state
-of the NmtMaster::
+PDOs with the Controlword and Statusword mapped need to be set up correctly,
+which is the default configuration of most DS402-compatible drives.  To make
+them accessible to the state machine implementation, run the the
+`BaseNode402.setup_402_state_machine()` method.  Note that this setup routine
+will read the current PDO configuration by default, causing some SDO traffic.
+That works only in the 'OPERATIONAL' or 'PRE-OPERATIONAL' states of the
+:class:`NmtMaster`::
 
     # run the setup routine for TPDO1 and it's callback
     some_node.setup_402_state_machine()
@@ -50,21 +53,20 @@ Write Controlword and read Statusword::
     # Read the state of the Statusword
     some_node.sdo[0x6041].raw
 
-During operation the state can change to states which cannot be commanded
-by the Controlword, for example a 'FAULT' state.
-Therefore the :class:`PowerStateMachine` class (in similarity to the :class:`NmtMaster`
-class) automatically monitors state changes of the Statusword which is sent
-by TPDO1. The available callback on thet TPDO1 will then extract the
-information and mirror the state change in the :attr:`BaseNode402.powerstate_402`
-attribute.
+During operation the state can change to states which cannot be commanded by the
+Controlword, for example a 'FAULT' state.  Therefore the :class:`BaseNode402`
+class (in similarity to :class:`NmtMaster`) automatically monitors state changes
+of the Statusword which is sent by TPDO.  The available callback on that TPDO
+will then extract the information and mirror the state change in the
+:attr:`BaseNode402.state` attribute.
 
 Similar to the :class:`NmtMaster` class, the states of the :class:`BaseNode402`
-class :attr:`._state` attribute can be read and set (command) by a string::
+class :attr:`.state` attribute can be read and set (command) by a string::
 
     # command a state (an SDO message will be called)
-    some_node.powerstate_402.state = 'SWITCHED ON'
+    some_node.state = 'SWITCHED ON'
     # read the current state
-    some_node.powerstate_402.state = 'SWITCHED ON'
+    some_node.state = 'SWITCHED ON'
 
 Available states:
 

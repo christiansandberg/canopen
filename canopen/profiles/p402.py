@@ -212,22 +212,31 @@ class BaseNode402(RemoteNode):
         self.tpdo_pointers = {}  # { index: pdo.Map instance }
         self.rpdo_pointers = {}  # { index: pdo.Map instance }
 
-    def setup_402_state_machine(self):
+    def setup_402_state_machine(self, read_pdos=True):
         """Configure the state machine by searching for a TPDO that has the StatusWord mapped.
 
+        :param bool read_pdos: Upload current PDO configuration from node.
         :raises ValueError:
             If the the node can't find a Statusword configured in any of the TPDOs.
         """
-        self.nmt.state = 'PRE-OPERATIONAL' # Why is this necessary?
-        self.setup_pdos()
+        self.setup_pdos(read_pdos)
         self._check_controlword_configured()
         self._check_statusword_configured()
-        self._check_op_mode_configured()
-        self.nmt.state = 'OPERATIONAL'
-        self.state = 'SWITCH ON DISABLED' # Why change state?
 
-    def setup_pdos(self):
-        self.pdo.read()  # TPDO and RPDO configurations
+    def setup_pdos(self, upload=True):
+        """Find the relevant PDO configuration to handle the state machine.
+
+        :param bool upload:
+            Retrieve up-to-date configuration via SDO.  If False, the node's mappings must
+            already be configured in the object, matching the drive's settings.
+        :raises AssertionError:
+            When the node's NMT state disallows SDOs for reading the PDO configuration.
+        """
+        if upload:
+            assert self.nmt.state in 'PRE-OPERATIONAL', 'OPERATIONAL'
+            self.pdo.read()  # TPDO and RPDO configurations
+        else:
+            self.pdo.subscribe()  # Get notified on reception, usually a side-effect of read()
         self._init_tpdo_values()
         self._init_rpdo_pointers()
 
