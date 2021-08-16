@@ -204,7 +204,6 @@ class BaseNode402(RemoteNode):
     TIMEOUT_SWITCH_STATE_SINGLE = 0.4   # seconds
     INTERVAL_CHECK_STATE = 0.01         # seconds
     TIMEOUT_HOMING_DEFAULT = 30         # seconds
-    INTERVAL_CHECK_HOMING = 0.1         # seconds
 
     def __init__(self, node_id, object_dictionary):
         super(BaseNode402, self).__init__(node_id, object_dictionary)
@@ -276,18 +275,6 @@ class BaseNode402(RemoteNode):
         bitmask, bits = State402.SW_MASK['FAULT']
         return self.statusword & bitmask == bits
 
-    def _homing_status(self):
-        """Interpret the current Statusword bits as homing state string."""
-        # Wait to make sure an RPDO was received.  Should better check for reception
-        # instead of this hard-coded delay, but at least it can be configured per node.
-        time.sleep(self.INTERVAL_CHECK_HOMING)
-        status = None
-        for key, value in Homing.STATES.items():
-            bitmask, bits = value
-            if self.statusword & bitmask == bits:
-                status = key
-        return status
-
     def is_homed(self, restore_op_mode=False):
         """Switch to homing mode and determine its status.
 
@@ -299,7 +286,11 @@ class BaseNode402(RemoteNode):
         if previous_op_mode != 'HOMING':
             logger.info('Switch to HOMING from %s', previous_op_mode)
             self.op_mode = 'HOMING'
-        homingstatus = self._homing_status()
+        homingstatus = None
+        for key, value in Homing.STATES.items():
+            bitmask, bits = value
+            if self.statusword & bitmask == bits:
+                homingstatus = key
         if restore_op_mode:
             self.op_mode = previous_op_mode
         return homingstatus in ('TARGET REACHED', 'ATTAINED')
@@ -320,10 +311,16 @@ class BaseNode402(RemoteNode):
         t = time.monotonic() + timeout
         try:
             while homingstatus not in ('TARGET REACHED', 'ATTAINED'):
-                homingstatus = self._homing_status()
+                for key, value in Homing.STATES.items():
+                    # check if the Statusword after applying the bitmask
+                    # corresponds with the needed bits to determine the current status
+                    bitmask, bits = value
+                    if self.statusword & bitmask == bits:
+                        homingstatus = key
                 if homingstatus in ('INTERRUPTED', 'ERROR VELOCITY IS NOT ZERO',
                                     'ERROR VELOCITY IS ZERO'):
                     raise RuntimeError('Unable to home. Reason: {0}'.format(homingstatus))
+                time.sleep(self.INTERVAL_CHECK_STATE)
                 if time.monotonic() > t:
                     raise RuntimeError('Unable to home, timeout reached')
             logger.info('Homing mode carried out successfully.')
