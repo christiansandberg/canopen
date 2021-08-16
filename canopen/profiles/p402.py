@@ -316,6 +316,8 @@ class BaseNode402(RemoteNode):
         :return: If the homing was complete with success.
         :rtype: bool
         """
+        if timeout is None:
+            timeout = self.TIMEOUT_HOMING_DEFAULT
         previus_op_mode = self.op_mode
         self.op_mode = 'HOMING'
         # The homing process will initialize at operation enabled
@@ -335,7 +337,7 @@ class BaseNode402(RemoteNode):
                                     'ERROR VELOCITY IS ZERO'):
                     raise RuntimeError('Unable to home. Reason: {0}'.format(homingstatus))
                 time.sleep(self.INTERVAL_CHECK_STATE)
-                if time.monotonic() > t:
+                if timeout and time.monotonic() > t:
                     raise RuntimeError('Unable to home, timeout reached')
             logger.info('Homing mode carried out successfully.')
             return True
