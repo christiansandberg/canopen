@@ -309,18 +309,14 @@ class BaseNode402(RemoteNode):
             self.op_mode = previous_op_mode
         return homingstatus in ('TARGET REACHED', 'ATTAINED')
 
-    def homing(self, timeout=TIMEOUT_HOMING_DEFAULT, set_new_home=True):
+    def homing(self, timeout=TIMEOUT_HOMING_DEFAULT):
         """Execute the configured Homing method on the node.
 
         :param int timeout: Timeout value (default: 30).
-        :param bool set_new_home:
-            Defines if the node should set the home offset object (0x607C) to the current
-            position after the homing procedure (default: true).
         :return: If the homing was complete with success.
         :rtype: bool
         """
         previus_op_mode = self.op_mode
-        self.state = 'SWITCHED ON'
         self.op_mode = 'HOMING'
         # The homing process will initialize at operation enabled
         self.state = 'OPERATION ENABLED'
@@ -341,10 +337,6 @@ class BaseNode402(RemoteNode):
                 time.sleep(self.INTERVAL_CHECK_STATE)
                 if time.monotonic() > t:
                     raise RuntimeError('Unable to home, timeout reached')
-            if set_new_home:
-                actual_position = self.sdo[0x6063].raw
-                self.sdo[0x607C].raw = actual_position  # Home Offset
-                logger.info('Homing offset set to {0}'.format(actual_position))
             logger.info('Homing mode carried out successfully.')
             return True
         except RuntimeError as e:
@@ -394,37 +386,20 @@ class BaseNode402(RemoteNode):
         try:
             if not self.is_op_mode_supported(mode):
                 raise TypeError(
-                    'Operation mode {0} not suppported on node {1}.'.format(mode, self.id))
-
-            start_state = self.state
-
-            if self.state == 'OPERATION ENABLED':
-                self.state = 'SWITCHED ON'
-                # ensure the node does not move with an old value
-                self._clear_target_values() # Shouldn't this happen before it's switched on?
-                
-            # Update operation mode in RPDO if possible, fall back to SDO
-            if 0x6060 in self.rpdo_pointers:
-                self.rpdo_pointers[0x6060].raw = OperationMode.NAME2CODE[mode]
-                pdo = self.rpdo_pointers[0x6060].pdo_parent
-                if not pdo.is_periodic:
-                    pdo.transmit()
-            else:
-                self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
-
+                    'Operation mode {m} not suppported on node {n}.'.format(n=self.id, m=mode))
+            # operation mode
+            self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
             timeout = time.monotonic() + self.TIMEOUT_SWITCH_OP_MODE
             while self.op_mode != mode:
                 if time.monotonic() > timeout:
                     raise RuntimeError(
                         "Timeout setting node {0}'s new mode of operation to {1}.".format(
                             self.id, mode))
+            logger.info('Set node {n} operation mode to {m}.'.format(n=self.id, m=mode))
         except SdoCommunicationError as e:
             logger.warning('[SDO communication error] Cause: {0}'.format(str(e)))
         except (RuntimeError, ValueError) as e:
             logger.warning('{0}'.format(str(e)))
-        finally:
-            self.state = start_state # why?
-            logger.info('Set node {n} operation mode to {m}.'.format(n=self.id, m=mode))
 
     def _clear_target_values(self):
         # [target velocity, target position, target torque]
