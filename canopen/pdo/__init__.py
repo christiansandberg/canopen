@@ -8,7 +8,8 @@ logger = logging.getLogger(__name__)
 
 
 class PDO(PdoBase):
-    """PDO Class for backwards compatibility
+    """PDO Class for backwards compatibility.
+
     :param rpdo: RPDO object holding the Receive PDO mappings
     :param tpdo: TPDO object holding the Transmit PDO mappings
     """
@@ -27,9 +28,11 @@ class PDO(PdoBase):
 
 
 class RPDO(PdoBase):
-    """PDO specialization for the Receive PDO enabling the transfer of data from the master to the node.
+    """Receive PDO to transfer data from somewhere to the represented node.
+
     Properties 0x1400 to 0x1403 | Mapping 0x1600 to 0x1603.
-    :param object node: Parent node for this object."""
+    :param object node: Parent node for this object.
+    """
 
     def __init__(self, node):
         super(RPDO, self).__init__(node)
@@ -38,8 +41,10 @@ class RPDO(PdoBase):
 
     def stop(self):
         """Stop transmission of all RPDOs.
+
         :raise TypeError: Exception is thrown if the node associated with the PDO does not
-        support this function"""
+        support this function.
+        """
         if isinstance(self.node, canopen.RemoteNode):
             for pdo in self.map.values():
                 pdo.stop()
@@ -48,8 +53,11 @@ class RPDO(PdoBase):
 
 
 class TPDO(PdoBase):
-    """PDO specialization for the Transmit PDO enabling the transfer of data from the node to the master.
-    Properties 0x1800 to 0x1803 | Mapping 0x1A00 to 0x1A03."""
+    """Transmit PDO to broadcast data from the represented node to the network.
+
+    Properties 0x1800 to 0x1803 | Mapping 0x1A00 to 0x1A03.
+    :param object node: Parent node for this object.
+    """
 
     def __init__(self, node):
         super(TPDO, self).__init__(node)
@@ -58,8 +66,10 @@ class TPDO(PdoBase):
 
     def stop(self):
         """Stop transmission of all TPDOs.
+
         :raise TypeError: Exception is thrown if the node associated with the PDO does not
-        support this function"""
+        support this function.
+        """
         if isinstance(canopen.LocalNode, self.node):
             for pdo in self.map.values():
                 pdo.stop()

@@ -59,6 +59,17 @@ class PdoBase(Mapping):
         for pdo_map in self.map.values():
             pdo_map.save()
 
+    def subscribe(self):
+        """Register the node's PDOs for reception on the network.
+
+        This normally happens when the PDO configuration is read from
+        or saved to the node.  Use this method to avoid the SDO flood
+        associated with read() or save(), if the local PDO setup is
+        known to match what's stored on the node.
+        """
+        for pdo_map in self.map.values():
+            pdo_map.subscribe()
+
     def export(self, filename):
         """Export current configuration to a database file.
 
@@ -175,7 +186,8 @@ class Map(object):
         self.data = bytearray()
         #: Timestamp of last received message
         self.timestamp = None
-        #: Period of receive message transmission in seconds
+        #: Period of receive message transmission in seconds.
+        #: Set explicitly or using the :meth:`start()` method.
         self.period = None
         self.callbacks = []
         self.receive_condition = threading.Condition()
@@ -262,6 +274,23 @@ class Map(object):
         node_id = self.cob_id & 0x7F
         return "%sPDO%d_node%d" % (direction, map_id, node_id)
 
+    @property
+    def is_periodic(self):
+        """Indicate whether PDO updates will be transferred regularly.
+
+        If some external mechanism is used to transmit the PDO regularly, its cycle time
+        should be written to the :attr:`period` member for this property to work.
+        """
+        if self.period is not None:
+            # Configured from start() or externally
+            return True
+        elif self.trans_type is not None and self.trans_type <= 0xF0:
+            # TPDOs will be transmitted on SYNC, RPDOs need a SYNC to apply, so
+            # assume that the SYNC service is active.
+            return True
+        # Unknown transmission type, assume non-periodic
+        return False
+
     def on_message(self, can_id, data, timestamp):
         is_transmitting = self._task is not None
         if can_id == self.cob_id and not is_transmitting:
@@ -331,8 +360,7 @@ class Map(object):
             if index and size:
                 self.add_variable(index, subindex, size)
 
-        if self.enabled:
-            self.pdo_node.network.subscribe(self.cob_id, self.on_message)
+        self.subscribe()
 
     def save(self):
         """Save PDO configuration for this map using SDO."""
@@ -387,9 +415,19 @@ class Map(object):
             self._update_data_size()
 
         if self.enabled:
-            logger.info("Enabling PDO")
             self.com_record[1].raw = self.cob_id | (RTR_NOT_ALLOWED if not self.rtr_allowed else 0x0)
+            self.subscribe()
 
+    def subscribe(self):
+        """Register the PDO for reception on the network.
+
+        This normally happens when the PDO configuration is read from
+        or saved to the node.  Use this method to avoid the SDO flood
+        associated with read() or save(), if the local PDO setup is
+        known to match what's stored on the node.
+        """
+        if self.enabled:
+            logger.info("Subscribing to enabled PDO 0x%X on the network", self.cob_id)
             self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
     def clear(self):
@@ -439,7 +477,10 @@ class Map(object):
     def start(self, period=None):
         """Start periodic transmission of message in a background thread.
 
-        :param float period: Transmission period in seconds
+        :param float period:
+            Transmission period in seconds.  Can be omitted if :attr:`period` has been set
+            on the object before.
+        :raises ValueError: When neither the argument nor the :attr:`period` is given.
         """
         # Stop an already running transmission if we have one, otherwise we
         # overwrite the reference and can lose our handle to shut it down
