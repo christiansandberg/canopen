@@ -293,12 +293,23 @@ class BaseNode402(RemoteNode):
             while self.is_faulted():
                 if time.monotonic() > timeout:
                     break
-                time.sleep(self.INTERVAL_CHECK_STATE)
+                self.check_statusword()
             self.state = 'OPERATION ENABLED'
 
     def is_faulted(self):
         bitmask, bits = State402.SW_MASK['FAULT']
         return self.statusword & bitmask == bits
+
+    def _homing_status(self):
+        """Interpret the current Statusword bits as homing state string."""
+        # Wait to make sure a TPDO was received
+        self.check_statusword()
+        status = None
+        for key, value in Homing.STATES.items():
+            bitmask, bits = value
+            if self.statusword & bitmask == bits:
+                status = key
+        return status
 
     def is_homed(self, restore_op_mode=False):
         """Switch to homing mode and determine its status.
@@ -310,12 +321,8 @@ class BaseNode402(RemoteNode):
         previous_op_mode = self.op_mode
         if previous_op_mode != 'HOMING':
             logger.info('Switch to HOMING from %s', previous_op_mode)
-            self.op_mode = 'HOMING'
-        homingstatus = None
-        for key, value in Homing.STATES.items():
-            bitmask, bits = value
-            if self.statusword & bitmask == bits:
-                homingstatus = key
+            self.op_mode = 'HOMING'  # blocks until confirmed
+        homingstatus = self._homing_status()
         if restore_op_mode:
             self.op_mode = previous_op_mode
         return homingstatus in ('TARGET REACHED', 'ATTAINED')
@@ -335,17 +342,14 @@ class BaseNode402(RemoteNode):
         self.op_mode = 'HOMING'
         # The homing process will initialize at operation enabled
         self.state = 'OPERATION ENABLED'
-        homingstatus = 'IN PROGRESS'
-        self.controlword = State402.CW_OPERATION_ENABLED | Homing.CW_START
+        homingstatus = 'UNKNOWN'
+        self.controlword = State402.CW_OPERATION_ENABLED | Homing.CW_START  # does not block
+        # Wait for one extra cycle, to make sure the controlword was received
+        self.check_statusword()
         t = time.monotonic() + timeout
         try:
             while homingstatus not in ('TARGET REACHED', 'ATTAINED'):
-                for key, value in Homing.STATES.items():
-                    # check if the Statusword after applying the bitmask
-                    # corresponds with the needed bits to determine the current status
-                    bitmask, bits = value
-                    if self.statusword & bitmask == bits:
-                        homingstatus = key
+                homingstatus = self._homing_status()
                 if homingstatus in ('INTERRUPTED', 'ERROR VELOCITY IS NOT ZERO',
                                     'ERROR VELOCITY IS ZERO'):
                     raise RuntimeError('Unable to home. Reason: {0}'.format(homingstatus))
@@ -463,6 +467,26 @@ class BaseNode402(RemoteNode):
             logger.warning('The object 0x6041 is not a configured TPDO, fallback to SDO')
             return self.sdo[0x6041].raw
 
+    def check_statusword(self, timeout=None):
+        """Report an up-to-date reading of the statusword (0x6041) from the device.
+
+        If the TPDO with the statusword is configured as periodic, this method blocks
+        until one was received.  Otherwise, it uses the SDO fallback of the ``statusword``
+        property.
+
+        :param timeout: Maximum time in seconds to wait for TPDO reception.
+        :raises RuntimeError: Occurs when the given timeout expires without a TPDO.
+        :return: Updated value of the ``statusword`` property.
+        :rtype: int
+        """
+        if 0x6041 in self.tpdo_pointers:
+            pdo = self.tpdo_pointers[0x6041].pdo_parent
+            if pdo.is_periodic:
+                timestamp = pdo.wait_for_reception(timeout or self.TIMEOUT_CHECK_TPDO)
+                if timestamp is None:
+                    raise RuntimeError('Timeout waiting for updated statusword')
+        return self.statusword
+
     @property
     def controlword(self):
         """Send a state change command using PDO or SDO.
@@ -518,7 +542,7 @@ class BaseNode402(RemoteNode):
                 continue
             if time.monotonic() > timeout:
                 raise RuntimeError('Timeout when trying to change state')
-            time.sleep(self.INTERVAL_CHECK_STATE)
+            self.check_statusword()
 
     def _next_state(self, target_state):
         if target_state == 'OPERATION ENABLED':
@@ -536,5 +560,5 @@ class BaseNode402(RemoteNode):
         while self.state != target_state:
             if time.monotonic() > timeout:
                 return False
-            time.sleep(self.INTERVAL_CHECK_STATE)
+            self.check_statusword()
         return True
