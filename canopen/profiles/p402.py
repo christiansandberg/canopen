@@ -202,29 +202,41 @@ class BaseNode402(RemoteNode):
     TIMEOUT_SWITCH_OP_MODE = 0.5        # seconds
     TIMEOUT_SWITCH_STATE_FINAL = 0.8    # seconds
     TIMEOUT_SWITCH_STATE_SINGLE = 0.4   # seconds
+    TIMEOUT_CHECK_TPDO = 0.2            # seconds
     INTERVAL_CHECK_STATE = 0.01         # seconds
     TIMEOUT_HOMING_DEFAULT = 30         # seconds
 
     def __init__(self, node_id, object_dictionary):
         super(BaseNode402, self).__init__(node_id, object_dictionary)
-        self.tpdo_values = dict()  # { index: TPDO_value }
-        self.rpdo_pointers = dict()  # { index: RPDO_pointer }
+        self.tpdo_values = {}  # { index: value from last received TPDO }
+        self.tpdo_pointers = {}  # { index: pdo.Map instance }
+        self.rpdo_pointers = {}  # { index: pdo.Map instance }
 
-    def setup_402_state_machine(self):
+    def setup_402_state_machine(self, read_pdos=True):
         """Configure the state machine by searching for a TPDO that has the StatusWord mapped.
 
+        :param bool read_pdos: Upload current PDO configuration from node.
         :raises ValueError:
             If the the node can't find a Statusword configured in any of the TPDOs.
         """
-        self.nmt.state = 'PRE-OPERATIONAL' # Why is this necessary?
-        self.setup_pdos()
+        self.setup_pdos(read_pdos)
         self._check_controlword_configured()
         self._check_statusword_configured()
-        self.nmt.state = 'OPERATIONAL'
-        self.state = 'SWITCH ON DISABLED' # Why change state?
 
-    def setup_pdos(self):
-        self.pdo.read()  # TPDO and RPDO configurations
+    def setup_pdos(self, upload=True):
+        """Find the relevant PDO configuration to handle the state machine.
+
+        :param bool upload:
+            Retrieve up-to-date configuration via SDO.  If False, the node's mappings must
+            already be configured in the object, matching the drive's settings.
+        :raises AssertionError:
+            When the node's NMT state disallows SDOs for reading the PDO configuration.
+        """
+        if upload:
+            assert self.nmt.state in 'PRE-OPERATIONAL', 'OPERATIONAL'
+            self.pdo.read()  # TPDO and RPDO configurations
+        else:
+            self.pdo.subscribe()  # Get notified on reception, usually a side-effect of read()
         self._init_tpdo_values()
         self._init_rpdo_pointers()
 
@@ -236,6 +248,7 @@ class BaseNode402(RemoteNode):
                     logger.debug('Configured TPDO: {0}'.format(obj.index))
                     if obj.index not in self.tpdo_values:
                         self.tpdo_values[obj.index] = 0
+                        self.tpdo_pointers[obj.index] = obj
 
     def _init_rpdo_pointers(self):
         # If RPDOs have overlapping indecies, rpdo_pointers will point to
@@ -259,11 +272,23 @@ class BaseNode402(RemoteNode):
                 "Statusword not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
                     self.id))
 
+    def _check_op_mode_configured(self):
+        if 0x6060 not in self.rpdo_pointers:  # Operation Mode
+            logger.warning(
+                "Operation Mode not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
+                    self.id))
+        if 0x6061 not in self.tpdo_values:  # Operation Mode Display
+            logger.warning(
+                "Operation Mode Display not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
+                    self.id))
+
     def reset_from_fault(self):
         """Reset node from fault and set it to Operation Enable state."""
         if self.state == 'FAULT':
             # Resets the Fault Reset bit (rising edge 0 -> 1)
             self.controlword = State402.CW_DISABLE_VOLTAGE
+            # FIXME! The rising edge happens with the transitions toward OPERATION
+            # ENABLED below, but until then the loop will always reach the timeout!
             timeout = time.monotonic() + self.TIMEOUT_RESET_FAULT
             while self.is_faulted():
                 if time.monotonic() > timeout:
@@ -325,7 +350,7 @@ class BaseNode402(RemoteNode):
                                     'ERROR VELOCITY IS ZERO'):
                     raise RuntimeError('Unable to home. Reason: {0}'.format(homingstatus))
                 time.sleep(self.INTERVAL_CHECK_STATE)
-                if time.monotonic() > t:
+                if timeout and time.monotonic() > t:
                     raise RuntimeError('Unable to home, timeout reached')
             logger.info('Homing mode carried out successfully.')
             return True
@@ -340,7 +365,7 @@ class BaseNode402(RemoteNode):
     def op_mode(self):
         """The node's Operation Mode stored in the object 0x6061.
 
-        Uses SDO to access the current value.  The modes are passed as one of the
+        Uses SDO or PDO to access the current value.  The modes are passed as one of the
         following strings:
 
         - 'NO MODE'
@@ -359,38 +384,38 @@ class BaseNode402(RemoteNode):
         :raises TypeError: When setting a mode not advertised as supported by the node.
         :raises RuntimeError: If the switch is not confirmed within the configured timeout.
         """
-        return OperationMode.CODE2NAME[self.sdo[0x6061].raw]
+        try:
+            pdo = self.tpdo_pointers[0x6061].pdo_parent
+            if pdo.is_periodic:
+                timestamp = pdo.wait_for_reception(timeout=self.TIMEOUT_CHECK_TPDO)
+                if timestamp is None:
+                    raise RuntimeError("Timeout getting node {0}'s mode of operation.".format(
+                        self.id))
+            code = self.tpdo_values[0x6061]
+        except KeyError:
+            logger.warning('The object 0x6061 is not a configured TPDO, fallback to SDO')
+            code = self.sdo[0x6061].raw
+        return OperationMode.CODE2NAME[code]
 
     @op_mode.setter
     def op_mode(self, mode):
         try:
             if not self.is_op_mode_supported(mode):
                 raise TypeError(
-                    'Operation mode {0} not suppported on node {1}.'.format(mode, self.id))
-
-            start_state = self.state
-
-            if self.state == 'OPERATION ENABLED':
-                self.state = 'SWITCHED ON'
-                # ensure the node does not move with an old value
-                self._clear_target_values() # Shouldn't this happen before it's switched on?
-                
+                    'Operation mode {m} not suppported on node {n}.'.format(n=self.id, m=mode))
             # operation mode
             self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
-
             timeout = time.monotonic() + self.TIMEOUT_SWITCH_OP_MODE
             while self.op_mode != mode:
                 if time.monotonic() > timeout:
                     raise RuntimeError(
                         "Timeout setting node {0}'s new mode of operation to {1}.".format(
                             self.id, mode))
+            logger.info('Set node {n} operation mode to {m}.'.format(n=self.id, m=mode))
         except SdoCommunicationError as e:
             logger.warning('[SDO communication error] Cause: {0}'.format(str(e)))
         except (RuntimeError, ValueError) as e:
             logger.warning('{0}'.format(str(e)))
-        finally:
-            self.state = start_state # why?
-            logger.info('Set node {n} operation mode to {m}.'.format(n=self.id, m=mode))
 
     def _clear_target_values(self):
         # [target velocity, target position, target torque]
@@ -451,7 +476,9 @@ class BaseNode402(RemoteNode):
     def controlword(self, value):
         if 0x6040 in self.rpdo_pointers:
             self.rpdo_pointers[0x6040].raw = value
-            self.rpdo_pointers[0x6040].pdo_parent.transmit()
+            pdo = self.rpdo_pointers[0x6040].pdo_parent
+            if not pdo.is_periodic:
+                pdo.transmit()
         else:
             self.sdo[0x6040].raw = value
 

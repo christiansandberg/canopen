@@ -68,8 +68,8 @@ class NmtBase(object):
         """
         if code in COMMAND_TO_STATE:
             new_state = COMMAND_TO_STATE[code]
-            logger.info("Changing NMT state from %s to %s",
-                        NMT_STATES[self._state], NMT_STATES[new_state])
+            logger.info("Changing NMT state on node %d from %s to %s",
+                        self.id, NMT_STATES[self._state], NMT_STATES[new_state])
             self._state = new_state
 
     @property
