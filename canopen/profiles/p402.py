@@ -306,7 +306,6 @@ class BaseNode402(RemoteNode):
         :rtype: bool
         """
         previus_op_mode = self.op_mode
-        self.state = 'SWITCHED ON'
         self.op_mode = 'HOMING'
         # The homing process will initialize at operation enabled
         self.state = 'OPERATION ENABLED'
