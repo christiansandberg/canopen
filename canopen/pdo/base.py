@@ -186,7 +186,8 @@ class Map(object):
         self.data = bytearray()
         #: Timestamp of last received message
         self.timestamp = None
-        #: Period of receive message transmission in seconds
+        #: Period of receive message transmission in seconds.
+        #: Set explicitly or using the :meth:`start()` method.
         self.period = None
         self.callbacks = []
         self.receive_condition = threading.Condition()
@@ -272,6 +273,23 @@ class Map(object):
             map_id -= 1
         node_id = self.cob_id & 0x7F
         return "%sPDO%d_node%d" % (direction, map_id, node_id)
+
+    @property
+    def is_periodic(self):
+        """Indicate whether PDO updates will be transferred regularly.
+
+        If some external mechanism is used to transmit the PDO regularly, its cycle time
+        should be written to the :attr:`period` member for this property to work.
+        """
+        if self.period is not None:
+            # Configured from start() or externally
+            return True
+        elif self.trans_type is not None and self.trans_type <= 0xF0:
+            # TPDOs will be transmitted on SYNC, RPDOs need a SYNC to apply, so
+            # assume that the SYNC service is active.
+            return True
+        # Unknown transmission type, assume non-periodic
+        return False
 
     def on_message(self, can_id, data, timestamp):
         is_transmitting = self._task is not None
@@ -459,7 +477,10 @@ class Map(object):
     def start(self, period=None):
         """Start periodic transmission of message in a background thread.
 
-        :param float period: Transmission period in seconds
+        :param float period:
+            Transmission period in seconds.  Can be omitted if :attr:`period` has been set
+            on the object before.
+        :raises ValueError: When neither the argument nor the :attr:`period` is given.
         """
         # Stop an already running transmission if we have one, otherwise we
         # overwrite the reference and can lose our handle to shut it down
