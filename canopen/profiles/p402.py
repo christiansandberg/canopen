@@ -203,7 +203,6 @@ class BaseNode402(RemoteNode):
     TIMEOUT_SWITCH_STATE_FINAL = 0.8    # seconds
     TIMEOUT_SWITCH_STATE_SINGLE = 0.4   # seconds
     TIMEOUT_CHECK_TPDO = 0.2            # seconds
-    INTERVAL_CHECK_STATE = 0.01         # seconds
     TIMEOUT_HOMING_DEFAULT = 30         # seconds
 
     def __init__(self, node_id, object_dictionary):
@@ -222,6 +221,7 @@ class BaseNode402(RemoteNode):
         self.setup_pdos(read_pdos)
         self._check_controlword_configured()
         self._check_statusword_configured()
+        self._check_op_mode_configured()
 
     def setup_pdos(self, upload=True):
         """Find the relevant PDO configuration to handle the state machine.
@@ -327,18 +327,19 @@ class BaseNode402(RemoteNode):
             self.op_mode = previous_op_mode
         return homingstatus in ('TARGET REACHED', 'ATTAINED')
 
-    def homing(self, timeout=TIMEOUT_HOMING_DEFAULT, restore_op_mode=False):
+    def homing(self, timeout=None, restore_op_mode=False):
         """Execute the configured Homing method on the node.
 
-        :param int timeout: Timeout value (default: 30).
+        :param int timeout: Timeout value (default: 30, zero to disable).
         :param bool restore_op_mode:
             Switch back to the previous operation mode after homing (default: no).
         :return: If the homing was complete with success.
         :rtype: bool
         """
+        if timeout is None:
+            timeout = self.TIMEOUT_HOMING_DEFAULT
         if restore_op_mode:
             previous_op_mode = self.op_mode
-        self.state = 'SWITCHED ON'
         self.op_mode = 'HOMING'
         # The homing process will initialize at operation enabled
         self.state = 'OPERATION ENABLED'
@@ -353,7 +354,6 @@ class BaseNode402(RemoteNode):
                 if homingstatus in ('INTERRUPTED', 'ERROR VELOCITY IS NOT ZERO',
                                     'ERROR VELOCITY IS ZERO'):
                     raise RuntimeError('Unable to home. Reason: {0}'.format(homingstatus))
-                time.sleep(self.INTERVAL_CHECK_STATE)
                 if timeout and time.monotonic() > t:
                     raise RuntimeError('Unable to home, timeout reached')
             logger.info('Homing mode carried out successfully.')
@@ -407,8 +407,14 @@ class BaseNode402(RemoteNode):
             if not self.is_op_mode_supported(mode):
                 raise TypeError(
                     'Operation mode {m} not suppported on node {n}.'.format(n=self.id, m=mode))
-            # operation mode
-            self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
+            # Update operation mode in RPDO if possible, fall back to SDO
+            if 0x6060 in self.rpdo_pointers:
+                self.rpdo_pointers[0x6060].raw = OperationMode.NAME2CODE[mode]
+                pdo = self.rpdo_pointers[0x6060].pdo_parent
+                if not pdo.is_periodic:
+                    pdo.transmit()
+            else:
+                self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
             timeout = time.monotonic() + self.TIMEOUT_SWITCH_OP_MODE
             while self.op_mode != mode:
                 if time.monotonic() > timeout:
