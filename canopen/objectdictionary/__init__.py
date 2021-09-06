@@ -219,6 +219,17 @@ class Array(Mapping):
         self.subindices[variable.subindex] = variable
         self.names[variable.name] = variable
 
+class Unsigned24(struct.Struct):
+    def __init__(self, *args, **kwargs):
+        super(Unsigned24, self).__init__("<I", *args, **kwargs)
+
+    def unpack(self, data, *args, **kwargs):
+        if isinstance(data, bytearray):
+            while len(data) < 4:
+                data += b'\x00'
+        else:
+            logger.error(f"Unsigned24.unpack received wrong type - {type(data)}")
+        return super(Unsigned24, self).unpack(data, *args, **kwargs)
 
 class Variable(object):
     """Simple variable."""
@@ -232,6 +243,7 @@ class Variable(object):
         UNSIGNED8: struct.Struct("B"),
         UNSIGNED16: struct.Struct("<H"),
         UNSIGNED32: struct.Struct("<L"),
+        UNSIGNED24: Unsigned24(),
         UNSIGNED64: struct.Struct("<Q"),
         REAL32: struct.Struct("<f"),
         REAL64: struct.Struct("<d")
