@@ -29,6 +29,9 @@ class SdoClient(SdoBase):
     #: Seconds to wait before sending a request, for rate limiting
     PAUSE_BEFORE_SEND = 0.0
 
+    # Seconds to wait before next read attempt for response in queue. For delayed responses.
+    PAUSE_BEFORE_READ = 0.2
+
     def __init__(self, rx_cobid, tx_cobid, od):
         """
         :param int rx_cobid:
@@ -42,6 +45,7 @@ class SdoClient(SdoBase):
         self.responses = queue.Queue()
 
     def on_response(self, can_id, data, timestamp):
+        logger.debug(f"received response in {can_id} data {data}.")
         self.responses.put(bytes(data))
 
     def send_request(self, request):
@@ -50,6 +54,7 @@ class SdoClient(SdoBase):
             try:
                 if self.PAUSE_BEFORE_SEND:
                     time.sleep(self.PAUSE_BEFORE_SEND)
+                logger.debug(f"sending to {self.rx_cobid} data {request} ")
                 self.network.send_message(self.rx_cobid, request)
             except CanError as e:
                 # Could be a buffer overflow. Wait some time before trying again
@@ -88,6 +93,7 @@ class SdoClient(SdoBase):
                 if not retries_left:
                     self.abort(0x5040000) 
                     raise
+                time.sleep(self.PAUSE_BEFORE_READ)
                 logger.warning(str(e))
 
     def abort(self, abort_code=0x08000000):
