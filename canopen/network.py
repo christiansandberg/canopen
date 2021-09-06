@@ -79,7 +79,8 @@ class Network(MutableMapping):
         if callback is None:
             del self.subscribers[can_id]
         else:
-            self.subscribers[can_id].remove(callback)
+            if callback in self.subscribers[can_id]:
+                self.subscribers[can_id].remove(callback)
 
     def connect(self, *args, **kwargs):
         """Connect to CAN bus using python-can.
