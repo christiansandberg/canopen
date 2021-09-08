@@ -45,7 +45,6 @@ class SdoClient(SdoBase):
         self.responses = queue.Queue()
 
     def on_response(self, can_id, data, timestamp):
-        logger.debug("received response in %s data %s.", can_id, data)
         self.responses.put(bytes(data))
 
     def send_request(self, request):
@@ -54,7 +53,6 @@ class SdoClient(SdoBase):
             try:
                 if self.PAUSE_BEFORE_SEND:
                     time.sleep(self.PAUSE_BEFORE_SEND)
-                logger.debug(f"sending to {self.rx_cobid} data {request} ")
                 self.network.send_message(self.rx_cobid, request)
             except CanError as e:
                 # Could be a buffer overflow. Wait some time before trying again
