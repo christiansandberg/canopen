@@ -45,7 +45,7 @@ class SdoClient(SdoBase):
         self.responses = queue.Queue()
 
     def on_response(self, can_id, data, timestamp):
-        logger.debug(f"received response in {can_id} data {data}.")
+        logger.debug("received response in %s data %s.", can_id, data)
         self.responses.put(bytes(data))
 
     def send_request(self, request):
