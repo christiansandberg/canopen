@@ -30,7 +30,7 @@ class SdoClient(SdoBase):
     PAUSE_BEFORE_SEND = 0.0
 
     # Seconds to wait before next read attempt for response in queue. For delayed responses.
-    RETRY_DELAY = 0.2
+    RETRY_DELAY = 0.0
 
     def __init__(self, rx_cobid, tx_cobid, od):
         """
