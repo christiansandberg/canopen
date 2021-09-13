@@ -1,3 +1,11 @@
+"""Verification script to diagnose automatic state transitions.
+
+This is meant to be run for verifying changes to the DS402 power state
+machine code.  For each target state, it just lists the next
+intermediate state which would be set automatically, depending on the
+assumed current state.
+"""
+
 from canopen.objectdictionary import ObjectDictionary
 from canopen.profiles.p402 import State402, BaseNode402
 
