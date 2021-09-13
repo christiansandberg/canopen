@@ -46,14 +46,14 @@ class State402(object):
         'QUICK STOP ACTIVE':            (0x6F, 0x07),
     }
 
-    # Transition path to get to the 'OPERATION ENABLED' state
-    NEXTSTATE2ENABLE = {
+    # Transition path to reach and state without a direct transition
+    NEXTSTATE2ANY = {
         ('START'):                                                      'NOT READY TO SWITCH ON',
-        ('FAULT', 'NOT READY TO SWITCH ON'):                            'SWITCH ON DISABLED',
+        ('FAULT', 'NOT READY TO SWITCH ON', 'QUICK STOP ACTIVE'):       'SWITCH ON DISABLED',
         ('SWITCH ON DISABLED'):                                         'READY TO SWITCH ON',
         ('READY TO SWITCH ON'):                                         'SWITCHED ON',
-        ('SWITCHED ON', 'QUICK STOP ACTIVE', 'OPERATION ENABLED'):      'OPERATION ENABLED',
-        ('FAULT REACTION ACTIVE'):                                      'FAULT'
+        ('SWITCHED ON'):                                                'OPERATION ENABLED',
+        ('FAULT REACTION ACTIVE'):                                      'FAULT',
     }
 
     # Tansition table from the DS402 State Machine
@@ -78,22 +78,25 @@ class State402(object):
         ('SWITCHED ON', 'OPERATION ENABLED'):             CW_OPERATION_ENABLED,  # transition 4
         ('QUICK STOP ACTIVE', 'OPERATION ENABLED'):       CW_OPERATION_ENABLED,  # transition 16
         # quickstop ---------------------------------------------------------------------------
-        ('READY TO SWITCH ON', 'QUICK STOP ACTIVE'):      CW_QUICK_STOP,  # transition 7
-        ('SWITCHED ON', 'QUICK STOP ACTIVE'):             CW_QUICK_STOP,  # transition 10
         ('OPERATION ENABLED', 'QUICK STOP ACTIVE'):       CW_QUICK_STOP,  # transition 11
         # fault -------------------------------------------------------------------------------
         ('FAULT', 'SWITCH ON DISABLED'):                  CW_SWITCH_ON_DISABLED,  # transition 15
     }
 
     @staticmethod
-    def next_state_for_enabling(_from):
-        """Return the next state needed for reach the state Operation Enabled.
+    def next_state_indirect(_from):
+        """Return the next state needed to reach any state indirectly.
+
+        The chosen path always points toward the OPERATION ENABLED state, except when
+        coming from QUICK STOP ACTIVE.  In that case, it will cycle through SWITCH ON
+        DISABLED first, as there would have been a direct transition if the opposite was
+        desired.
 
         :param str target: Target state.
         :return: Next target to change.
         :rtype: str
         """
-        for cond, next_state in State402.NEXTSTATE2ENABLE.items():
+        for cond, next_state in State402.NEXTSTATE2ANY.items():
             if _from in cond:
                 return next_state
 
@@ -551,10 +554,16 @@ class BaseNode402(RemoteNode):
             self.check_statusword()
 
     def _next_state(self, target_state):
-        if target_state == 'OPERATION ENABLED':
-            return State402.next_state_for_enabling(self.state)
-        else:
+        if target_state in ('NOT READY TO SWITCH ON',
+                            'FAULT REACTION ACTIVE',
+                            'FAULT'):
+            raise ValueError(
+                'Target state {} cannot be entered programmatically'.format(target_state))
+        from_state = self.state
+        if (from_state, target_state) in State402.TRANSITIONTABLE:
             return target_state
+        else:
+            return State402.next_state_indirect(from_state)
 
     def _change_state(self, target_state):
         try:
