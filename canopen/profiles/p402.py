@@ -271,7 +271,7 @@ class BaseNode402(RemoteNode):
 
     def _check_statusword_configured(self):
         if 0x6041 not in self.tpdo_values:  # Statusword
-            raise ValueError(
+            logger.warning(
                 "Statusword not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
                     self.id))
 
