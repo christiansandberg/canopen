@@ -90,6 +90,16 @@ class TestEDS(unittest.TestCase):
         with self.assertRaises(KeyError):
             var_undef = self.od['Dummy0001']
 
+    def test_comments(self):
+        self.assertEqual(self.od.comments,
+"""
+|-------------|
+| Don't panic |
+|-------------|
+""".strip()
+        )
+
+
     def test_export_eds(self):
         import tempfile
         for doctype in {"eds", "dcf"}:
@@ -140,8 +150,6 @@ class TestEDS(unittest.TestCase):
                     "LSS_supported",
                     ]:
                         self.assertEqual(getattr(self.od.device_information, prop), getattr(exported_od.device_information, prop), f"prop {prop!r} mismatch on DeviceInfo")
-
-                    self.assertEqual(getattr(self.od, "comments", "No comments"), getattr(exported_od, "comments", "No comments" ))
 
 
                     for evar,avar in zip(expected_vars,actual_vars):

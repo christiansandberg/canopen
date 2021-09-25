@@ -42,7 +42,7 @@ def import_eds(source, node_id):
 
     if eds.has_section("Comments"):
         linecount = eds.getint("Comments", "Lines")
-        '\n'.join([
+        od.comments = '\n'.join([
             eds.get("Comments", "Line%i" % line)
             for line in range(1, linecount+1)
         ])
