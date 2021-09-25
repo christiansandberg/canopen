@@ -17,6 +17,7 @@ VAR = 7
 ARR = 8
 RECORD = 9
 
+
 def import_eds(source, node_id):
     eds = RawConfigParser()
     eds.optionxform = str
@@ -42,8 +43,8 @@ def import_eds(source, node_id):
     if eds.has_section("Comments"):
         linecount = eds.getint("Comments", "Lines")
         '\n'.join([
-            eds.get("Comments","Line%i"%line)
-            for line in range(1,linecount+1)
+            eds.get("Comments", "Line%i" % line)
+            for line in range(1, linecount+1)
         ])
 
     if eds.has_section("DeviceInfo"):
@@ -198,7 +199,7 @@ def _convert_variable(node_id, var_type, value):
         return float(value)
     else:
         # COB-ID can contain '$NODEID+' so replace this with node_id before converting
-        value = value.replace(" ","").upper()
+        value = value.replace(" ", "").upper()
         if '$NODEID' in value and node_id is not None:
             return int(re.sub(r'\+?\$NODEID\+?', '', value), 0) + node_id
         else:
@@ -272,6 +273,7 @@ def build_variable(eds, section, node_id, index, subindex=0):
             pass
     return var
 
+
 def copy_variable(eds, section, subindex, src_var):
     name = eds.get(section, str(subindex))
     var = copy.copy(src_var)
@@ -280,8 +282,10 @@ def copy_variable(eds, section, subindex, src_var):
     var.subindex = subindex
     return var
 
+
 def export_dcf(od, dest=None, fileInfo={}):
     return export_eds(od, dest, fileInfo, True)
+
 
 def export_eds(od, dest=None, file_info={}, device_commisioning=False):
     def export_object(obj, eds):
@@ -373,30 +377,32 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
         eds.set("FileInfo", k, v)
 
     eds.add_section("DeviceInfo")
-    for  eprop, odprop in [
-        ( "VendorName", "vendor_name"),
-        ( "VendorNumber", "vendor_number"),
-        ( "ProductName", "product_name"),
-        ( "ProductNumber", "product_number"),
-        ( "RevisionNumber", "revision_number"),
-        ( "OrderCode", "order_code"),
-        ( "SimpleBootUpMaster", "simple_boot_up_master"),
-        ( "SimpleBootUpSlave", "simple_boot_up_slave"),
-        ( "Granularity", "granularity"),
-        ( "DynamicChannelsSupported", "dynamic_channels_supported"),
-        ( "GroupMessaging", "group_messaging"),
-        ( "NrOfRXPDO", "nr_of_RXPDO"),
-        ( "NrOfTXPDO", "nr_of_TXPDO"),
-        ( "LSS_Supported", "LSS_supported"),
+    for eprop, odprop in [
+        ("VendorName", "vendor_name"),
+        ("VendorNumber", "vendor_number"),
+        ("ProductName", "product_name"),
+        ("ProductNumber", "product_number"),
+        ("RevisionNumber", "revision_number"),
+        ("OrderCode", "order_code"),
+        ("SimpleBootUpMaster", "simple_boot_up_master"),
+        ("SimpleBootUpSlave", "simple_boot_up_slave"),
+        ("Granularity", "granularity"),
+        ("DynamicChannelsSupported", "dynamic_channels_supported"),
+        ("GroupMessaging", "group_messaging"),
+        ("NrOfRXPDO", "nr_of_RXPDO"),
+        ("NrOfTXPDO", "nr_of_TXPDO"),
+        ("LSS_Supported", "LSS_supported"),
     ]:
         val = getattr(od.device_information, odprop, "None")
         if val is not None:
             eds.set("DeviceInfo", eprop, val)
 
     # we are also adding out of spec baudrates here.
-    for rate in od.device_information.allowed_baudrates.union({10e3, 20e3, 50e3, 125e3, 250e3, 500e3, 800e3, 1000e3}):
-        eds.set("DeviceInfo", "Baudrate_%i" % (rate/1000),
-                int(rate in od.device_information.allowed_baudrates))
+    for rate in od.device_information.allowed_baudrates.union(
+            {10e3, 20e3, 50e3, 125e3, 250e3, 500e3, 800e3, 1000e3}):
+        eds.set(
+            "DeviceInfo", "Baudrate_%i" % (rate/1000),
+            int(rate in od.device_information.allowed_baudrates))
 
     if device_commisioning and (od.bitrate or od.node_id):
         eds.add_section("DeviceComissioning")
@@ -406,10 +412,10 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
             eds.set("DeviceComissioning", "NodeID", int(od.node_id))
 
     eds.add_section("Comments")
-    i=0
+    i = 0
     for line in od.comments.splitlines():
         i += 1
-        eds.set("Comments", "Line%i"%i, line)
+        eds.set("Comments", "Line%i" % i, line)
     eds.set("Comments", "Lines", i)
 
     eds.add_section("DummyUsage")
@@ -424,9 +430,11 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
         return x in range(0x2000, 0x6000)
 
     def optional_indices(x):
-        return (x > 0x1001 and
-        not mandatory_indices(x) and
-        not manufacturer_idices(x))
+        return all((
+            x > 0x1001,
+            not mandatory_indices(x),
+            not manufacturer_idices(x),
+        ))
 
     supported_mantatory_indices = list(filter(mandatory_indices, od))
     supported_optional_indices = list(filter(optional_indices, od))
