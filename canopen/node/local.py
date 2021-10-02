@@ -1,5 +1,5 @@
 import logging
-import struct
+from typing import Dict, Union
 
 from .base import BaseNode
 from ..sdo import SdoServer, SdoAbortedError
@@ -13,10 +13,14 @@ logger = logging.getLogger(__name__)
 
 class LocalNode(BaseNode):
 
-    def __init__(self, node_id, object_dictionary):
+    def __init__(
+        self,
+        node_id: int,
+        object_dictionary: Union[objectdictionary.ObjectDictionary, str],
+    ):
         super(LocalNode, self).__init__(node_id, object_dictionary)
 
-        self.data_store = {}
+        self.data_store: Dict[int, Dict[int, bytes]] = {}
         self._read_callbacks = []
         self._write_callbacks = []
 
@@ -55,7 +59,9 @@ class LocalNode(BaseNode):
     def add_write_callback(self, callback):
         self._write_callbacks.append(callback)
 
-    def get_data(self, index, subindex, check_readable=False):
+    def get_data(
+        self, index: int, subindex: int, check_readable: bool = False
+    ) -> bytes:
         obj = self._find_object(index, subindex)
 
         if check_readable and not obj.readable:
@@ -82,7 +88,13 @@ class LocalNode(BaseNode):
         logger.info("Resource unavailable for 0x%X:%d", index, subindex)
         raise SdoAbortedError(0x060A0023)
 
-    def set_data(self, index, subindex, data, check_writable=False):
+    def set_data(
+        self,
+        index: int,
+        subindex: int,
+        data: bytes,
+        check_writable: bool = False,
+    ) -> None:
         obj = self._find_object(index, subindex)
 
         if check_writable and not obj.writable:

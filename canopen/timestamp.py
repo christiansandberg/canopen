@@ -1,5 +1,6 @@
 import time
 import struct
+from typing import Optional
 
 # 1 Jan 1984
 OFFSET = 441763200
@@ -18,7 +19,7 @@ class TimeProducer(object):
     def __init__(self, network):
         self.network = network
 
-    def transmit(self, timestamp=None):
+    def transmit(self, timestamp: Optional[float] = None):
         """Send out the TIME message once.
 
         :param float timestamp:

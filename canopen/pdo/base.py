@@ -1,5 +1,6 @@
 import threading
 import math
+from typing import Callable, Dict, Iterable, List, Optional, Union
 try:
     from collections.abc import Mapping
 except ImportError:
@@ -127,14 +128,14 @@ class PdoBase(Mapping):
 class Maps(Mapping):
     """A collection of transmit or receive maps."""
 
-    def __init__(self, com_offset, map_offset, pdo_node, cob_base=None):
+    def __init__(self, com_offset, map_offset, pdo_node: PdoBase, cob_base=None):
         """
         :param com_offset:
         :param map_offset:
         :param pdo_node:
         :param cob_base:
         """
-        self.maps = {}
+        self.maps: Dict[int, "Map"] = {}
         for map_no in range(512):
             if com_offset + map_no in pdo_node.node.object_dictionary:
                 new_map = Map(
@@ -146,13 +147,13 @@ class Maps(Mapping):
                     new_map.predefined_cob_id = cob_base + map_no * 0x100 + pdo_node.node.id
                 self.maps[map_no + 1] = new_map
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: int) -> "Map":
         return self.maps[key]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[int]:
         return iter(self.maps)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.maps)
 
 
@@ -164,34 +165,34 @@ class Map(object):
         self.com_record = com_record
         self.map_array = map_array
         #: If this map is valid
-        self.enabled = False
+        self.enabled: bool = False
         #: COB-ID for this PDO
-        self.cob_id = None
+        self.cob_id: Optional[int] = None
         #: Default COB-ID if this PDO is part of the pre-defined connection set
-        self.predefined_cob_id = None
+        self.predefined_cob_id: Optional[int] = None
         #: Is the remote transmit request (RTR) allowed for this PDO
-        self.rtr_allowed = True
+        self.rtr_allowed: bool = True
         #: Transmission type (0-255)
-        self.trans_type = None
+        self.trans_type: Optional[int] = None
         #: Inhibit Time (optional) (in 100us)
-        self.inhibit_time = None
+        self.inhibit_time: Optional[int] = None
         #: Event timer (optional) (in ms)
-        self.event_timer = None
+        self.event_timer: Optional[int] = None
         #: Ignores SYNC objects up to this SYNC counter value (optional)
-        self.sync_start_value = None
+        self.sync_start_value: Optional[int] = None
         #: List of variables mapped to this PDO
-        self.map = []
-        self.length = 0
+        self.map: List["Variable"] = []
+        self.length: int = 0
         #: Current message data
         self.data = bytearray()
         #: Timestamp of last received message
-        self.timestamp = None
+        self.timestamp: Optional[float] = None
         #: Period of receive message transmission in seconds.
         #: Set explicitly or using the :meth:`start()` method.
-        self.period = None
+        self.period: Optional[float] = None
         self.callbacks = []
         self.receive_condition = threading.Condition()
-        self.is_received = False
+        self.is_received: bool = False
         self._task = None
 
     def __getitem_by_index(self, value):
@@ -214,7 +215,7 @@ class Map(object):
         raise KeyError('{0} not found in map. Valid entries are {1}'.format(
             value, ', '.join(valid_values)))
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: Union[int, str]) -> "Variable":
         var = None
         if isinstance(key, int):
             # there is a maximum available of 8 slots per PDO map
@@ -229,10 +230,10 @@ class Map(object):
                 var = self.__getitem_by_name(key)
         return var
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable["Variable"]:
         return iter(self.map)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.map)
 
     def _get_variable(self, index, subindex):
@@ -257,7 +258,7 @@ class Map(object):
         self.data = bytearray(int(math.ceil(self.length / 8.0)))
 
     @property
-    def name(self):
+    def name(self) -> str:
         """A descriptive name of the PDO.
 
         Examples:
@@ -275,7 +276,7 @@ class Map(object):
         return "%sPDO%d_node%d" % (direction, map_id, node_id)
 
     @property
-    def is_periodic(self):
+    def is_periodic(self) -> bool:
         """Indicate whether PDO updates will be transferred regularly.
 
         If some external mechanism is used to transmit the PDO regularly, its cycle time
@@ -304,7 +305,7 @@ class Map(object):
                 for callback in self.callbacks:
                     callback(self)
 
-    def add_callback(self, callback):
+    def add_callback(self, callback: Callable[["Map"], None]) -> None:
         """Add a callback which will be called on receive.
 
         :param callback:
@@ -313,7 +314,7 @@ class Map(object):
         """
         self.callbacks.append(callback)
 
-    def read(self):
+    def read(self) -> None:
         """Read PDO configuration for this map using SDO."""
         cob_id = self.com_record[1].raw
         self.cob_id = cob_id & 0x1FFFFFFF
@@ -362,7 +363,7 @@ class Map(object):
 
         self.subscribe()
 
-    def save(self):
+    def save(self) -> None:
         """Save PDO configuration for this map using SDO."""
         logger.info("Setting COB-ID 0x%X and temporarily disabling PDO",
                     self.cob_id)
@@ -418,7 +419,7 @@ class Map(object):
             self.com_record[1].raw = self.cob_id | (RTR_NOT_ALLOWED if not self.rtr_allowed else 0x0)
             self.subscribe()
 
-    def subscribe(self):
+    def subscribe(self) -> None:
         """Register the PDO for reception on the network.
 
         This normally happens when the PDO configuration is read from
@@ -430,21 +431,23 @@ class Map(object):
             logger.info("Subscribing to enabled PDO 0x%X on the network", self.cob_id)
             self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear all variables from this map."""
         self.map = []
         self.length = 0
 
-    def add_variable(self, index, subindex=0, length=None):
+    def add_variable(
+        self,
+        index: Union[str, int],
+        subindex: Union[str, int] = 0,
+        length: Optional[int] = None,
+    ) -> "Variable":
         """Add a variable from object dictionary as the next entry.
 
         :param index: Index of variable as name or number
         :param subindex: Sub-index of variable as name or number
-        :param int length: Size of data in number of bits
-        :type index: :class:`str` or :class:`int`
-        :type subindex: :class:`str` or :class:`int`
+        :param length: Size of data in number of bits
         :return: Variable that was added
-        :rtype: canopen.pdo.Variable
         """
         try:
             var = self._get_variable(index, subindex)
@@ -470,14 +473,14 @@ class Map(object):
             logger.warning("Max size of PDO exceeded (%d > 64)", self.length)
         return var
 
-    def transmit(self):
+    def transmit(self) -> None:
         """Transmit the message once."""
         self.pdo_node.network.send_message(self.cob_id, self.data)
 
-    def start(self, period=None):
+    def start(self, period: Optional[float] = None) -> None:
         """Start periodic transmission of message in a background thread.
 
-        :param float period:
+        :param period:
             Transmission period in seconds.  Can be omitted if :attr:`period` has been set
             on the object before.
         :raises ValueError: When neither the argument nor the :attr:`period` is given.
@@ -496,30 +499,29 @@ class Map(object):
         self._task = self.pdo_node.network.send_periodic(
             self.cob_id, self.data, self.period)
 
-    def stop(self):
+    def stop(self) -> None:
         """Stop transmission."""
         if self._task is not None:
             self._task.stop()
             self._task = None
 
-    def update(self):
+    def update(self) -> None:
         """Update periodic message with new data."""
         if self._task is not None:
             self._task.update(self.data)
 
-    def remote_request(self):
+    def remote_request(self) -> None:
         """Send a remote request for the transmit PDO.
         Silently ignore if not allowed.
         """
         if self.enabled and self.rtr_allowed:
             self.pdo_node.network.send_message(self.cob_id, None, remote=True)
 
-    def wait_for_reception(self, timeout=10):
+    def wait_for_reception(self, timeout: float = 10) -> float:
         """Wait for the next transmit PDO.
 
         :param float timeout: Max time to wait in seconds.
         :return: Timestamp of message received or None if timeout.
-        :rtype: float
         """
         with self.receive_condition:
             self.is_received = False
@@ -530,7 +532,7 @@ class Map(object):
 class Variable(variable.Variable):
     """One object dictionary variable mapped to a PDO."""
 
-    def __init__(self, od):
+    def __init__(self, od: objectdictionary.Variable):
         #: PDO object that is associated with this Variable Object
         self.pdo_parent = None
         #: Location of variable in the message in bits
@@ -538,11 +540,10 @@ class Variable(variable.Variable):
         self.length = len(od)
         variable.Variable.__init__(self, od)
 
-    def get_data(self):
+    def get_data(self) -> bytes:
         """Reads the PDO variable from the last received message.
 
         :return: Variable value as :class:`bytes`.
-        :rtype: bytes
         """
         byte_offset, bit_offset = divmod(self.offset, 8)
 
@@ -566,10 +567,10 @@ class Variable(variable.Variable):
 
         return data
 
-    def set_data(self, data):
+    def set_data(self, data: bytes):
         """Set for the given variable the PDO data.
 
-        :param bytes data: Value for the PDO variable in the PDO message as :class:`bytes`.
+        :param data: Value for the PDO variable in the PDO message.
         """
         byte_offset, bit_offset = divmod(self.offset, 8)
         logger.debug("Updating %s to %s in %s",

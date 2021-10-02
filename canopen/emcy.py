@@ -2,6 +2,7 @@ import struct
 import logging
 import threading
 import time
+from typing import Callable, List, Optional
 
 # Error code, error register, vendor specific data
 EMCY_STRUCT = struct.Struct("<HB5s")
@@ -13,9 +14,9 @@ class EmcyConsumer(object):
 
     def __init__(self):
         #: Log of all received EMCYs for this node
-        self.log = []
+        self.log: List["EmcyError"] = []
         #: Only active EMCYs. Will be cleared on Error Reset
-        self.active = []
+        self.active: List["EmcyError"] = []
         self.callbacks = []
         self.emcy_received = threading.Condition()
 
@@ -35,7 +36,7 @@ class EmcyConsumer(object):
         for callback in self.callbacks:
             callback(entry)
 
-    def add_callback(self, callback):
+    def add_callback(self, callback: Callable[["EmcyError"], None]):
         """Get notified on EMCY messages from this node.
 
         :param callback:
@@ -49,14 +50,15 @@ class EmcyConsumer(object):
         self.log = []
         self.active = []
 
-    def wait(self, emcy_code=None, timeout=10):
+    def wait(
+        self, emcy_code: Optional[int] = None, timeout: float = 10
+    ) -> "EmcyError":
         """Wait for a new EMCY to arrive.
 
-        :param int emcy_code: EMCY code to wait for
-        :param float timeout: Max time in seconds to wait
+        :param emcy_code: EMCY code to wait for
+        :param timeout: Max time in seconds to wait
 
         :return: The EMCY exception object or None if timeout
-        :rtype: canopen.emcy.EmcyError
         """
         end_time = time.time() + timeout
         while True:
@@ -79,15 +81,15 @@ class EmcyConsumer(object):
 
 class EmcyProducer(object):
 
-    def __init__(self, cob_id):
+    def __init__(self, cob_id: int):
         self.network = None
         self.cob_id = cob_id
 
-    def send(self, code, register=0, data=b""):
+    def send(self, code: int, register: int = 0, data: bytes = b""):
         payload = EMCY_STRUCT.pack(code, register, data)
         self.network.send_message(self.cob_id, payload)
 
-    def reset(self, register=0, data=b""):
+    def reset(self, register: int = 0, data: bytes = b""):
         payload = EMCY_STRUCT.pack(0, register, data)
         self.network.send_message(self.cob_id, payload)
 
@@ -111,7 +113,7 @@ class EmcyError(Exception):
         (0xFF00, 0xFF00, "Device Specific")
     ]
 
-    def __init__(self, code, register, data, timestamp):
+    def __init__(self, code: int, register: int, data: bytes, timestamp: float):
         #: EMCY code
         self.code = code
         #: Error register
@@ -121,7 +123,7 @@ class EmcyError(Exception):
         #: Timestamp of message
         self.timestamp = timestamp
 
-    def get_desc(self):
+    def get_desc(self) -> str:
         for code, mask, description in self.DESCRIPTIONS:
             if self.code & mask == code:
                 return description

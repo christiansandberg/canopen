@@ -1,4 +1,5 @@
 import logging
+from typing import Union
 try:
     from collections.abc import Mapping
 except ImportError:
@@ -11,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class Variable(object):
 
-    def __init__(self, od):
+    def __init__(self, od: objectdictionary.Variable):
         self.od = od
         #: Description of this variable from Object Dictionary, overridable
         self.name = od.name
@@ -24,23 +25,23 @@ class Variable(object):
         #: Holds a local, overridable copy of the Object Subindex
         self.subindex = od.subindex
 
-    def get_data(self):
+    def get_data(self) -> bytes:
         raise NotImplementedError("Variable is not readable")
 
-    def set_data(self, data):
+    def set_data(self, data: bytes):
         raise NotImplementedError("Variable is not writable")
 
     @property
-    def data(self):
+    def data(self) -> bytes:
         """Byte representation of the object as :class:`bytes`."""
         return self.get_data()
 
     @data.setter
-    def data(self, data):
+    def data(self, data: bytes):
         self.set_data(data)
 
     @property
-    def raw(self):
+    def raw(self) -> Union[int, bool, float, str, bytes]:
         """Raw representation of the object.
 
         This table lists the translations between object dictionary data types
@@ -81,14 +82,14 @@ class Variable(object):
         return value
 
     @raw.setter
-    def raw(self, value):
+    def raw(self, value: Union[int, bool, float, str, bytes]):
         logger.debug("Writing %s (0x%X:%d) = %r",
                      self.name, self.index,
                      self.subindex, value)
         self.data = self.od.encode_raw(value)
 
     @property
-    def phys(self):
+    def phys(self) -> Union[int, bool, float, str, bytes]:
         """Physical value scaled with some factor (defaults to 1).
 
         On object dictionaries that support specifying a factor, this can be
@@ -101,26 +102,26 @@ class Variable(object):
         return value
 
     @phys.setter
-    def phys(self, value):
+    def phys(self, value: Union[int, bool, float, str, bytes]):
         self.raw = self.od.encode_phys(value)
 
     @property
-    def desc(self):
+    def desc(self) -> str:
         """Converts to and from a description of the value as a string."""
         value = self.od.decode_desc(self.raw)
         logger.debug("Description is '%s'", value)
         return value
 
     @desc.setter
-    def desc(self, desc):
+    def desc(self, desc: str):
         self.raw = self.od.encode_desc(desc)
 
     @property
-    def bits(self):
+    def bits(self) -> "Bits":
         """Access bits using integers, slices, or bit descriptions."""
         return Bits(self)
 
-    def read(self, fmt="raw"):
+    def read(self, fmt: str = "raw") -> Union[int, bool, float, str, bytes]:
         """Alternative way of reading using a function instead of attributes.
 
         May be useful for asynchronous reading.
@@ -141,7 +142,9 @@ class Variable(object):
         elif fmt == "desc":
             return self.desc
 
-    def write(self, value, fmt="raw"):
+    def write(
+        self, value: Union[int, bool, float, str, bytes], fmt: str = "raw"
+    ) -> None:
         """Alternative way of writing using a function instead of attributes.
 
         May be useful for asynchronous writing.
@@ -162,7 +165,7 @@ class Variable(object):
 
 class Bits(Mapping):
 
-    def __init__(self, variable):
+    def __init__(self, variable: Variable):
         self.variable = variable
         self.read()
 
@@ -176,10 +179,10 @@ class Bits(Mapping):
             bits = key
         return bits
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> int:
         return self.variable.od.decode_bits(self.raw, self._get_bits(key))
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key, value: int):
         self.raw = self.variable.od.encode_bits(
             self.raw, self._get_bits(key), value)
         self.write()

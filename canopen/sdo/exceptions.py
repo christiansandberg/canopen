@@ -44,7 +44,7 @@ class SdoAbortedError(SdoError):
         0x08000024: "No data available",
     }
 
-    def __init__(self, code):
+    def __init__(self, code: int):
         #: Abort code
         self.code = code
 

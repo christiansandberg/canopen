@@ -181,30 +181,35 @@ class SdoServer(SdoBase):
         self.send_response(data)
         # logger.error("Transfer aborted with code 0x{:08X}".format(abort_code))
 
-    def upload(self, index, subindex):
+    def upload(self, index: int, subindex: int) -> bytes:
         """May be called to make a read operation without an Object Dictionary.
 
-        :param int index:
+        :param index:
             Index of object to read.
-        :param int subindex:
+        :param subindex:
             Sub-index of object to read.
 
         :return: A data object.
-        :rtype: bytes
 
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
         return self._node.get_data(index, subindex)
 
-    def download(self, index, subindex, data, force_segment=False):
-        """May be called to make a write operation without an Object Dictionary.
+    def download(
+        self,
+        index: int,
+        subindex: int,
+        data: bytes,
+        force_segment: bool = False,
+    ):
+        """May be called to make a write operation without an Object Dictionary. 
 
-        :param int index:
+        :param index:
             Index of object to write.
-        :param int subindex:
+        :param subindex:
             Sub-index of object to write.
-        :param bytes data:
+        :param data:
             Data to be written.
 
         :raises canopen.SdoAbortedError:

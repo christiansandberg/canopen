@@ -1,5 +1,8 @@
 
 
+from typing import Optional
+
+
 class SyncProducer(object):
     """Transmits a SYNC message periodically."""
 
@@ -8,22 +11,22 @@ class SyncProducer(object):
 
     def __init__(self, network):
         self.network = network
-        self.period = None
+        self.period: Optional[float] = None
         self._task = None
 
-    def transmit(self, count=None):
+    def transmit(self, count: Optional[int] = None):
         """Send out a SYNC message once.
 
-        :param int count:
+        :param count:
             Counter to add in message.
         """
         data = [count] if count is not None else []
         self.network.send_message(self.cob_id, data)
 
-    def start(self, period=None):
+    def start(self, period: Optional[float] = None):
         """Start periodic transmission of SYNC message in a background thread.
 
-        :param float period:
+        :param period:
             Period of SYNC message in seconds.
         """
         if period is not None:

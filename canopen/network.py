@@ -4,7 +4,7 @@ except ImportError:
     from collections import MutableMapping
 import logging
 import threading
-import struct
+from typing import Callable, Dict, Iterable, List, Optional, Union
 
 try:
     import can
@@ -22,8 +22,11 @@ from .timestamp import TimeProducer
 from .nmt import NmtMaster
 from .lss import LssMaster
 from .objectdictionary.eds import import_from_node
+from .objectdictionary import ObjectDictionary
 
 logger = logging.getLogger(__name__)
+
+Callback = Callable[[int, bytearray, float], None]
 
 
 class Network(MutableMapping):
@@ -43,8 +46,8 @@ class Network(MutableMapping):
         #: Includes at least MessageListener.
         self.listeners = [MessageListener(self)]
         self.notifier = None
-        self.nodes = {}
-        self.subscribers = {}
+        self.nodes: Dict[int, Union[RemoteNode, LocalNode]] = {}
+        self.subscribers: Dict[int, List[Callback]] = {}
         self.send_lock = threading.Lock()
         self.sync = SyncProducer(self)
         self.time = TimeProducer(self)
@@ -55,10 +58,10 @@ class Network(MutableMapping):
         self.lss.network = self
         self.subscribe(self.lss.LSS_RX_COBID, self.lss.on_message_received)
 
-    def subscribe(self, can_id, callback):
+    def subscribe(self, can_id: int, callback: Callback) -> None:
         """Listen for messages with a specific CAN ID.
 
-        :param int can_id:
+        :param can_id:
             The CAN ID to listen for.
         :param callback:
             Function to call when message is received.
@@ -67,7 +70,7 @@ class Network(MutableMapping):
         if callback not in self.subscribers[can_id]:
             self.subscribers[can_id].append(callback)
 
-    def unsubscribe(self, can_id, callback=None):
+    def unsubscribe(self, can_id, callback=None) -> None:
         """Stop listening for message.
 
         :param int can_id:
@@ -81,7 +84,7 @@ class Network(MutableMapping):
         else:
             self.subscribers[can_id].remove(callback)
 
-    def connect(self, *args, **kwargs):
+    def connect(self, *args, **kwargs) -> "Network":
         """Connect to CAN bus using python-can.
 
         Arguments are passed directly to :class:`can.BusABC`. Typically these
@@ -111,7 +114,7 @@ class Network(MutableMapping):
         self.notifier = can.Notifier(self.bus, self.listeners, 1)
         return self
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         """Disconnect from the CAN bus.
 
         Must be overridden in a subclass if a custom interface is used.
@@ -132,7 +135,12 @@ class Network(MutableMapping):
     def __exit__(self, type, value, traceback):
         self.disconnect()
 
-    def add_node(self, node, object_dictionary=None, upload_eds=False):
+    def add_node(
+        self,
+        node: Union[int, RemoteNode, LocalNode],
+        object_dictionary: Union[str, ObjectDictionary, None] = None,
+        upload_eds: bool = False,
+    ) -> RemoteNode:
         """Add a remote node to the network.
 
         :param node:
@@ -142,12 +150,11 @@ class Network(MutableMapping):
             Can be either a string for specifying the path to an
             Object Dictionary file or a
             :class:`canopen.ObjectDictionary` object.
-        :param bool upload_eds:
+        :param upload_eds:
             Set ``True`` if EDS file should be uploaded from 0x1021.
 
         :return:
             The Node object that was added.
-        :rtype: canopen.RemoteNode
         """
         if isinstance(node, int):
             if upload_eds:
@@ -157,7 +164,11 @@ class Network(MutableMapping):
         self[node.id] = node
         return node
 
-    def create_node(self, node, object_dictionary=None):
+    def create_node(
+        self,
+        node: int,
+        object_dictionary: Union[str, ObjectDictionary, None] = None,
+    ) -> LocalNode:
         """Create a local node in the network.
 
         :param node:
@@ -169,14 +180,13 @@ class Network(MutableMapping):
 
         :return:
             The Node object that was added.
-        :rtype: canopen.LocalNode
         """
         if isinstance(node, int):
             node = LocalNode(node, object_dictionary)
         self[node.id] = node
         return node
 
-    def send_message(self, can_id, data, remote=False):
+    def send_message(self, can_id: int, data: bytes, remote: bool = False) -> None:
         """Send a raw CAN message to the network.
 
         This method may be overridden in a subclass if you need to integrate
@@ -203,35 +213,36 @@ class Network(MutableMapping):
             self.bus.send(msg)
         self.check()
 
-    def send_periodic(self, can_id, data, period, remote=False):
+    def send_periodic(
+        self, can_id: int, data: bytes, period: float, remote: bool = False
+    ) -> "PeriodicMessageTask":
         """Start sending a message periodically.
 
-        :param int can_id:
+        :param can_id:
             CAN-ID of the message
         :param data:
             Data to be transmitted (anything that can be converted to bytes)
-        :param float period:
+        :param period:
             Seconds between each message
-        :param bool remote:
+        :param remote:
             indicates if the message frame is a remote request to the slave node
 
         :return:
             An task object with a ``.stop()`` method to stop the transmission
-        :rtype: canopen.network.PeriodicMessageTask
         """
         return PeriodicMessageTask(can_id, data, period, self.bus, remote)
 
-    def notify(self, can_id, data, timestamp):
+    def notify(self, can_id: int, data: bytearray, timestamp: float) -> None:
         """Feed incoming message to this library.
 
         If a custom interface is used, this function must be called for each
         message read from the CAN bus.
 
-        :param int can_id:
+        :param can_id:
             CAN-ID of the message
-        :param bytearray data:
+        :param data:
             Data part of the message (0 - 8 bytes)
-        :param float timestamp:
+        :param timestamp:
             Timestamp of the message, preferably as a Unix timestamp
         """
         if can_id in self.subscribers:
@@ -240,7 +251,7 @@ class Network(MutableMapping):
                 callback(can_id, data, timestamp)
         self.scanner.on_message_received(can_id)
 
-    def check(self):
+    def check(self) -> None:
         """Check that no fatal error has occurred in the receiving thread.
 
         If an exception caused the thread to terminate, that exception will be
@@ -252,22 +263,22 @@ class Network(MutableMapping):
                 logger.error("An error has caused receiving of messages to stop")
                 raise exc
 
-    def __getitem__(self, node_id):
+    def __getitem__(self, node_id: int) -> Union[RemoteNode, LocalNode]:
         return self.nodes[node_id]
 
-    def __setitem__(self, node_id, node):
+    def __setitem__(self, node_id: int, node: Union[RemoteNode, LocalNode]):
         assert node_id == node.id
         self.nodes[node_id] = node
         node.associate_network(self)
 
-    def __delitem__(self, node_id):
+    def __delitem__(self, node_id: int):
         self.nodes[node_id].remove_network()
         del self.nodes[node_id]
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[int]:
         return iter(self.nodes)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.nodes)
 
 
@@ -277,13 +288,20 @@ class PeriodicMessageTask(object):
     CyclicSendTask
     """
 
-    def __init__(self, can_id, data, period, bus, remote=False):
-        """
-        :param int can_id:
+    def __init__(
+        self,
+        can_id: int,
+        data: bytes,
+        period: float,
+        bus,
+        remote: bool = False,
+    ):
+        """ 
+        :param can_id:
             CAN-ID of the message
         :param data:
             Data to be transmitted (anything that can be converted to bytes)
-        :param float period:
+        :param period:
             Seconds between each message
         :param can.BusABC bus:
             python-can bus to use for transmission
@@ -303,7 +321,7 @@ class PeriodicMessageTask(object):
         """Stop transmission"""
         self._task.stop()
 
-    def update(self, data):
+    def update(self, data: bytes) -> None:
         """Update data of message
 
         :param data:
@@ -323,11 +341,11 @@ class PeriodicMessageTask(object):
 class MessageListener(Listener):
     """Listens for messages on CAN bus and feeds them to a Network instance.
 
-    :param canopen.Network network:
+    :param network:
         The network to notify on new messages.
     """
 
-    def __init__(self, network):
+    def __init__(self, network: Network):
         self.network = network
 
     def on_message_received(self, msg):
@@ -359,12 +377,12 @@ class NodeScanner(object):
 
     SERVICES = (0x700, 0x580, 0x180, 0x280, 0x380, 0x480, 0x80)
 
-    def __init__(self, network=None):
+    def __init__(self, network: Optional[Network] = None):
         self.network = network
         #: A :class:`list` of nodes discovered
-        self.nodes = []
+        self.nodes: List[int] = []
 
-    def on_message_received(self, can_id):
+    def on_message_received(self, can_id: int):
         service = can_id & 0x780
         node_id = can_id & 0x7F
         if node_id not in self.nodes and node_id != 0 and service in self.SERVICES:
@@ -374,11 +392,10 @@ class NodeScanner(object):
         """Clear list of found nodes."""
         self.nodes = []
 
-    def search(self, limit=127):
+    def search(self, limit: int = 127) -> None:
         """Search for nodes by sending SDO requests to all node IDs."""
         if self.network is None:
             raise RuntimeError("A Network is required to do active scanning")
         sdo_req = b"\x40\x00\x10\x00\x00\x00\x00\x00"
         for node_id in range(1, limit + 1):
             self.network.send_message(0x600 + node_id, sdo_req)
-
