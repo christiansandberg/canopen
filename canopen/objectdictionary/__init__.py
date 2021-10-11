@@ -21,7 +21,7 @@ def export_od(od, dest=None, doc_type=None):
     :param dest:
         export destination. filename, or file-like object or None.
         if None, the document is returned as string
-    :param docType: type of document to export.
+    :param doc_type: type of document to export.
        If a filename is given for dest, this default to the file extension.
        Otherwise, this defaults to "eds"
     :rtype: str or None
@@ -86,12 +86,12 @@ class ObjectDictionary(MutableMapping):
     def __init__(self):
         self.indices = {}
         self.names = {}
-        self.comments=""
+        self.comments = ""
         #: Default bitrate if specified by file
         self.bitrate = None
         #: Node ID if specified by file
         self.node_id = None
-        # Some information about the device
+        #: Some information about the device
         self.device_information = DeviceInformation()
 
     def __getitem__(self, index):
