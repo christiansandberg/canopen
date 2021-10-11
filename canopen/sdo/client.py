@@ -99,16 +99,15 @@ class SdoClient(SdoBase):
         self.send_request(request)
         logger.error("Transfer aborted by client with code 0x{:08X}".format(abort_code))
 
-    def upload(self, index, subindex):
+    def upload(self, index: int, subindex: int) -> bytes:
         """May be called to make a read operation without an Object Dictionary.
 
-        :param int index:
+        :param index:
             Index of object to read.
-        :param int subindex:
+        :param subindex:
             Sub-index of object to read.
 
         :return: A data object.
-        :rtype: bytes
 
         :raises canopen.SdoCommunicationError:
             On unexpected response or timeout.
@@ -133,16 +132,22 @@ class SdoClient(SdoBase):
                     data = data[0:size]
         return data
 
-    def download(self, index, subindex, data, force_segment=False):
+    def download(
+        self,
+        index: int,
+        subindex: int,
+        data: bytes,
+        force_segment: bool = False,
+    ) -> None:
         """May be called to make a write operation without an Object Dictionary.
 
-        :param int index:
+        :param index:
             Index of object to write.
-        :param int subindex:
+        :param subindex:
             Sub-index of object to write.
-        :param bytes data:
+        :param data:
             Data to be written.
-        :param bool force_segment:
+        :param force_segment:
             Force use of segmented transfer regardless of data size.
 
         :raises canopen.SdoCommunicationError:

@@ -1,18 +1,22 @@
+from typing import TextIO, Union
 from .. import objectdictionary
 
 
 class BaseNode(object):
     """A CANopen node.
 
-    :param int node_id:
+    :param node_id:
         Node ID (set to None or 0 if specified by object dictionary)
     :param object_dictionary:
         Object dictionary as either a path to a file, an ``ObjectDictionary``
         or a file like object.
-    :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary`
     """
 
-    def __init__(self, node_id, object_dictionary):
+    def __init__(
+        self,
+        node_id: int,
+        object_dictionary: Union[objectdictionary.ObjectDictionary, str, TextIO],
+    ):
         self.network = None
 
         if not isinstance(object_dictionary,

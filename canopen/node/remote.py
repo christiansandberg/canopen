@@ -1,4 +1,5 @@
 import logging
+from typing import Union, TextIO
 
 from ..sdo import SdoClient
 from ..nmt import NmtMaster
@@ -9,24 +10,30 @@ from .base import BaseNode
 
 import canopen
 
+from canopen import objectdictionary
+
 logger = logging.getLogger(__name__)
 
 
 class RemoteNode(BaseNode):
     """A CANopen remote node.
 
-    :param int node_id:
+    :param node_id:
         Node ID (set to None or 0 if specified by object dictionary)
     :param object_dictionary:
         Object dictionary as either a path to a file, an ``ObjectDictionary``
         or a file like object.
-    :param bool load_od:
+    :param load_od:
         Enable the Object Dictionary to be sent trough SDO's to the remote
         node at startup.
-    :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary`
     """
 
-    def __init__(self, node_id, object_dictionary, load_od=False):
+    def __init__(
+        self,
+        node_id: int,
+        object_dictionary: Union[objectdictionary.ObjectDictionary, str, TextIO],
+        load_od: bool = False,
+    ):
         super(RemoteNode, self).__init__(node_id, object_dictionary)
 
         #: Enable WORKAROUND for reversed PDO mapping entries

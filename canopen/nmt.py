@@ -2,6 +2,7 @@ import threading
 import logging
 import struct
 import time
+from typing import Callable, Optional
 
 from .network import CanError
 
@@ -44,7 +45,7 @@ class NmtBase(object):
     the current state using the heartbeat protocol.
     """
 
-    def __init__(self, node_id):
+    def __init__(self, node_id: int):
         self.id = node_id
         self.network = None
         self._state = 0
@@ -60,10 +61,10 @@ class NmtBase(object):
                                 NMT_STATES[new_state], NMT_STATES[self._state])
                 self._state = new_state
 
-    def send_command(self, code):
+    def send_command(self, code: int):
         """Send an NMT command code to the node.
 
-        :param int code:
+        :param code:
             NMT command code.
         """
         if code in COMMAND_TO_STATE:
@@ -73,7 +74,7 @@ class NmtBase(object):
             self._state = new_state
 
     @property
-    def state(self):
+    def state(self) -> str:
         """Attribute to get or set node's state as a string.
 
         Can be one of:
@@ -93,7 +94,7 @@ class NmtBase(object):
             return self._state
 
     @state.setter
-    def state(self, new_state):
+    def state(self, new_state: str):
         if new_state in NMT_COMMANDS:
             code = NMT_COMMANDS[new_state]
         else:
@@ -105,12 +106,12 @@ class NmtBase(object):
 
 class NmtMaster(NmtBase):
 
-    def __init__(self, node_id):
+    def __init__(self, node_id: int):
         super(NmtMaster, self).__init__(node_id)
         self._state_received = None
         self._node_guarding_producer = None
         #: Timestamp of last heartbeat message
-        self.timestamp = None
+        self.timestamp: Optional[float] = None
         self.state_update = threading.Condition()
         self._callbacks = []
 
@@ -131,10 +132,10 @@ class NmtMaster(NmtBase):
             self._state_received = new_state
             self.state_update.notify_all()
 
-    def send_command(self, code):
+    def send_command(self, code: int):
         """Send an NMT command code to the node.
 
-        :param int code:
+        :param code:
             NMT command code.
         """
         super(NmtMaster, self).send_command(code)
@@ -142,7 +143,7 @@ class NmtMaster(NmtBase):
             "Sending NMT command 0x%X to node %d", code, self.id)
         self.network.send_message(0, [code, self.id])
 
-    def wait_for_heartbeat(self, timeout=10):
+    def wait_for_heartbeat(self, timeout: float = 10):
         """Wait until a heartbeat message is received."""
         with self.state_update:
             self._state_received = None
@@ -151,7 +152,7 @@ class NmtMaster(NmtBase):
             raise NmtError("No boot-up or heartbeat received")
         return self.state
 
-    def wait_for_bootup(self, timeout=10):
+    def wait_for_bootup(self, timeout: float = 10) -> None:
         """Wait until a boot-up message is received."""
         end_time = time.time() + timeout
         while True:
@@ -164,7 +165,7 @@ class NmtMaster(NmtBase):
             if self._state_received == 0:
                 break
 
-    def add_hearbeat_callback(self, callback):
+    def add_hearbeat_callback(self, callback: Callable[[int], None]):
         """Add function to be called on heartbeat reception.
 
         :param callback:
@@ -172,10 +173,10 @@ class NmtMaster(NmtBase):
         """
         self._callbacks.append(callback)
 
-    def start_node_guarding(self, period):
+    def start_node_guarding(self, period: float):
         """Starts the node guarding mechanism.
 
-        :param float period:
+        :param period:
             Period (in seconds) at which the node guarding should be advertised to the slave node.
         """
         if self._node_guarding_producer : self.stop_node_guarding()
@@ -193,7 +194,7 @@ class NmtSlave(NmtBase):
     Handles the NMT state and handles heartbeat NMT service.
     """
 
-    def __init__(self, node_id, local_node):
+    def __init__(self, node_id: int, local_node):
         super(NmtSlave, self).__init__(node_id)
         self._send_task = None
         self._heartbeat_time_ms = 0
@@ -203,10 +204,10 @@ class NmtSlave(NmtBase):
         super(NmtSlave, self).on_command(can_id, data, timestamp)
         self.update_heartbeat()
 
-    def send_command(self, code):
+    def send_command(self, code: int) -> None:
         """Send an NMT command code to the node.
 
-        :param int code:
+        :param code:
             NMT command code.
         """
         old_state = self._state
@@ -232,10 +233,10 @@ class NmtSlave(NmtBase):
             else:
                 self.start_heartbeat(hearbeat_time)
 
-    def start_heartbeat(self, heartbeat_time_ms):
+    def start_heartbeat(self, heartbeat_time_ms: int):
         """Start the hearbeat service.
 
-        :param int hearbeat_time
+        :param hearbeat_time
             The heartbeat time in ms. If the heartbeat time is 0
             the heartbeating will not start.
         """
