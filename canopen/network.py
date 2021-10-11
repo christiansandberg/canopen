@@ -1,10 +1,14 @@
+from __future__ import annotations
 try:
     from collections.abc import MutableMapping
 except ImportError:
     from collections import MutableMapping
 import logging
 import threading
-from typing import Callable, Dict, Iterable, List, Optional, Union
+from typing import Callable, Dict, Iterable, List, Optional, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from can import BusABC, Notifier
 
 try:
     import can
@@ -39,13 +43,13 @@ class Network(MutableMapping):
         """
         #: A python-can :class:`can.BusABC` instance which is set after
         #: :meth:`canopen.Network.connect` is called
-        self.bus = bus
+        self.bus: Optional[BusABC] = bus
         #: A :class:`~canopen.network.NodeScanner` for detecting nodes
         self.scanner = NodeScanner(self)
         #: List of :class:`can.Listener` objects.
         #: Includes at least MessageListener.
         self.listeners = [MessageListener(self)]
-        self.notifier = None
+        self.notifier: Optional[Notifier] = None
         self.nodes: Dict[int, Union[RemoteNode, LocalNode]] = {}
         self.subscribers: Dict[int, List[Callback]] = {}
         self.send_lock = threading.Lock()

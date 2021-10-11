@@ -1,5 +1,6 @@
+from __future__ import annotations
 import binascii
-from typing import Iterable, Union
+from typing import Iterable, Union, Optional, TYPE_CHECKING
 try:
     from collections.abc import Mapping
 except ImportError:
@@ -7,6 +8,9 @@ except ImportError:
 
 from .. import objectdictionary
 from .. import variable
+
+if TYPE_CHECKING:
+    from ..network import Network
 
 
 class CrcXmodem(object):
@@ -43,7 +47,7 @@ class SdoBase(Mapping):
         """
         self.rx_cobid = rx_cobid
         self.tx_cobid = tx_cobid
-        self.network = None
+        self.network: Optional[Network] = None
         self.od = od
 
     def __getitem__(

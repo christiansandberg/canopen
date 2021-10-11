@@ -1,5 +1,6 @@
+from __future__ import annotations
 import logging
-from typing import Union, TextIO
+from typing import Union, TextIO, TYPE_CHECKING
 
 from ..sdo import SdoClient
 from ..nmt import NmtMaster
@@ -11,6 +12,9 @@ from .base import BaseNode
 import canopen
 
 from canopen import objectdictionary
+
+if TYPE_CHECKING:
+    from ..network import Network
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +54,7 @@ class RemoteNode(BaseNode):
         if load_od:
             self.load_configuration()
 
-    def associate_network(self, network):
+    def associate_network(self, network: Network):
         self.network = network
         self.sdo.network = network
         self.pdo.network = network

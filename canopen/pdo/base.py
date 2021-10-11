@@ -1,12 +1,16 @@
+from __future__ import annotations
 import threading
 import math
-from typing import Callable, Dict, Iterable, List, Optional, Union
+from typing import Callable, Dict, Iterable, List, Optional, Union, TYPE_CHECKING
 try:
     from collections.abc import Mapping
 except ImportError:
     from collections import Mapping
 import logging
 import binascii
+
+if TYPE_CHECKING:
+    from ..network import Network
 
 from ..sdo import SdoAbortedError
 from .. import objectdictionary
@@ -26,14 +30,14 @@ class PdoBase(Mapping):
     """
 
     def __init__(self, node):
-        self.network = None
+        self.network: Optional[Network] = None
         self.map = None  # instance of Maps
         self.node = node
 
     def __iter__(self):
         return iter(self.map)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> PdoBase:
         if isinstance(key, int) and (0x1A00 <= key <= 0x1BFF or   # By TPDO ID (512)
                                      0x1600 <= key <= 0x17FF or   # By RPDO ID (512)
                                      0 < key <= 512):             # By PDO Index
@@ -160,7 +164,7 @@ class Maps(Mapping):
 class Map(object):
     """One message which can have up to 8 bytes of variables mapped."""
 
-    def __init__(self, pdo_node, com_record, map_array):
+    def __init__(self, pdo_node: PdoBase, com_record, map_array):
         self.pdo_node = pdo_node
         self.com_record = com_record
         self.map_array = map_array

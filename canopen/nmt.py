@@ -1,10 +1,15 @@
+from __future__ import annotations
 import threading
 import logging
 import struct
 import time
-from typing import Callable, Optional
+from typing import Callable, Optional, TYPE_CHECKING
 
 from .network import CanError
+
+if TYPE_CHECKING:
+    from .network import Network
+
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +52,7 @@ class NmtBase(object):
 
     def __init__(self, node_id: int):
         self.id = node_id
-        self.network = None
+        self.network: Optional[Network] = None
         self._state = 0
 
     def on_command(self, can_id, data, timestamp):

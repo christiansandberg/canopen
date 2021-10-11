@@ -1,5 +1,6 @@
+from __future__ import annotations
 import logging
-from typing import Dict, Union
+from typing import Dict, Union, TYPE_CHECKING
 
 from .base import BaseNode
 from ..sdo import SdoServer, SdoAbortedError
@@ -7,6 +8,9 @@ from ..pdo import PDO, TPDO, RPDO
 from ..nmt import NmtSlave
 from ..emcy import EmcyProducer
 from .. import objectdictionary
+
+if TYPE_CHECKING:
+    from ..network import Network
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +37,7 @@ class LocalNode(BaseNode):
         self.add_write_callback(self.nmt.on_write)
         self.emcy = EmcyProducer(0x80 + self.id)
 
-    def associate_network(self, network):
+    def associate_network(self, network: Network):
         self.network = network
         self.sdo.network = network
         self.tpdo.network = network

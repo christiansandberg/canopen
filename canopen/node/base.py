@@ -1,5 +1,9 @@
-from typing import TextIO, Union
+from __future__ import annotations
+from typing import TextIO, Union, Optional, TYPE_CHECKING
 from .. import objectdictionary
+
+if TYPE_CHECKING:
+    from ..network import Network
 
 
 class BaseNode(object):
@@ -17,7 +21,7 @@ class BaseNode(object):
         node_id: int,
         object_dictionary: Union[objectdictionary.ObjectDictionary, str, TextIO],
     ):
-        self.network = None
+        self.network: Optional[Network] = None
 
         if not isinstance(object_dictionary,
                           objectdictionary.ObjectDictionary):

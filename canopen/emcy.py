@@ -1,8 +1,12 @@
+from __future__ import annotations
 import struct
 import logging
 import threading
 import time
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .network import Network
 
 # Error code, error register, vendor specific data
 EMCY_STRUCT = struct.Struct("<HB5s")
@@ -82,7 +86,7 @@ class EmcyConsumer(object):
 class EmcyProducer(object):
 
     def __init__(self, cob_id: int):
-        self.network = None
+        self.network: Optional[Network] = None
         self.cob_id = cob_id
 
     def send(self, code: int, register: int = 0, data: bytes = b""):

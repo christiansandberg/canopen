@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Optional, TYPE_CHECKING
 import logging
 import time
 import struct
@@ -5,6 +7,9 @@ try:
     import queue
 except ImportError:
     import Queue as queue
+
+if TYPE_CHECKING:
+    from .network import Network
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +87,7 @@ class LssMaster(object):
     RESPONSE_TIMEOUT = 0.5
 
     def __init__(self):
-        self.network = None
+        self.network: Optional[Network] = None
         self._node_id = 0
         self._data = None
         self.responses = queue.Queue()
