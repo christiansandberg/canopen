@@ -47,42 +47,42 @@ def import_eds(source, node_id):
             for line in range(1, linecount+1)
         ])
 
-    if eds.has_section("DeviceInfo"):
+    if not eds.has_section("DeviceInfo"):
+        logger.warn("eds file does not have a DeviceInfo section. This section is mandatory")
+    else:
         for rate in [10, 20, 50, 125, 250, 500, 800, 1000]:
             baudPossible = int(
                 eds.get("DeviceInfo", "Baudrate_%i" % rate, fallback='0'), 0)
             if baudPossible != 0:
                 od.device_information.allowed_baudrates.add(rate*1000)
 
-        d = {"fallback": None}
-        od.device_information.vendor_name = eds.get(
-            "DeviceInfo", "VendorName", **d)
-        od.device_information.vendor_number = eds.get(
-            "DeviceInfo", "VendorNumber", **d)
-        od.device_information.product_name = eds.get(
-            "DeviceInfo", "ProductName", **d)
-        od.device_information.product_number = eds.get(
-            "DeviceInfo", "ProductNumber", **d)
-        od.device_information.revision_number = eds.get(
-            "DeviceInfo", "RevisionNumber", **d)
-        od.device_information.order_code = eds.get(
-            "DeviceInfo", "OrderCode", **d)
-        od.device_information.simple_boot_up_master = eds.get(
-            "DeviceInfo", "SimpleBootUpMaster", **d)
-        od.device_information.simple_boot_up_slave = eds.get(
-            "DeviceInfo", "SimpleBootUpSlave", **d)
-        od.device_information.granularity = eds.get(
-            "DeviceInfo", "Granularity", **d)
-        od.device_information.dynamic_channels_supported = eds.get(
-            "DeviceInfo", "DynamicChannelsSupported", **d)
-        od.device_information.group_messaging = eds.get(
-            "DeviceInfo", "GroupMessaging", **d)
-        od.device_information.nr_of_RXPDO = eds.get(
-            "DeviceInfo", "NrOfRXPDO", **d)
-        od.device_information.nr_of_TXPDO = eds.get(
-            "DeviceInfo", "NrOfTXPDO", **d)
-        od.device_information.LSS_supported = eds.get(
-            "DeviceInfo", "LSS_Supported", **d)
+        for t, eprop, odprop in [
+            (str, "VendorName", "vendor_name"),
+            (int, "VendorNumber", "vendor_number"),
+            (str, "ProductName", "product_name"),
+            (int, "ProductNumber", "product_number"),
+            (int, "RevisionNumber", "revision_number"),
+            (str, "OrderCode", "order_code"),
+            (bool, "SimpleBootUpMaster", "simple_boot_up_master"),
+            (bool, "SimpleBootUpSlave", "simple_boot_up_slave"),
+            (bool, "Granularity", "granularity"),
+            (bool, "DynamicChannelsSupported", "dynamic_channels_supported"),
+            (bool, "GroupMessaging", "group_messaging"),
+            (int, "NrOfRXPDO", "nr_of_RXPDO"),
+            (int, "NrOfTXPDO", "nr_of_TXPDO"),
+            (bool, "LSS_Supported", "LSS_supported"),
+        ]:
+            try:
+                if t in (int, bool):
+                    setattr(od.device_information, odprop,
+                            t(int(eds.get("DeviceInfo", eprop), 0))
+                            )
+                elif t is str:
+                    setattr(od.device_information, odprop,
+                            eds.get("DeviceInfo", eprop)
+                            )
+            except NoOptionError:
+                pass
 
     if eds.has_section("DeviceComissioning"):
         od.bitrate = int(eds.get("DeviceComissioning", "Baudrate")) * 1000
@@ -393,9 +393,13 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
         ("NrOfTXPDO", "nr_of_TXPDO"),
         ("LSS_Supported", "LSS_supported"),
     ]:
-        val = getattr(od.device_information, odprop, "None")
-        if val is not None:
+        val = getattr(od.device_information, odprop, None)
+        if type(val) is None:
+            continue
+        elif type(val) is str:
             eds.set("DeviceInfo", eprop, val)
+        elif type(val) in (int, bool):
+            eds.set("DeviceInfo", eprop, int(val))
 
     # we are also adding out of spec baudrates here.
     for rate in od.device_information.allowed_baudrates.union(
