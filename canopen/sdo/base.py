@@ -73,7 +73,19 @@ class SdoBase(Mapping):
     def upload(self, index: int, subindex: int) -> bytes:
         raise NotImplementedError()
 
+    async def aupload(self, index: int, subindex: int) -> bytes:
+        raise NotImplementedError()
+
     def download(
+        self,
+        index: int,
+        subindex: int,
+        data: bytes,
+        force_segment: bool = False,
+    ) -> None:
+        raise NotImplementedError()
+
+    async def adownload(
         self,
         index: int,
         subindex: int,
@@ -131,9 +143,16 @@ class Variable(variable.Variable):
     def get_data(self) -> bytes:
         return self.sdo_node.upload(self.od.index, self.od.subindex)
 
+    async def aget_data(self) -> bytes:
+        return await self.sdo_node.aupload(self.od.index, self.od.subindex)
+
     def set_data(self, data: bytes):
         force_segment = self.od.data_type == objectdictionary.DOMAIN
         self.sdo_node.download(self.od.index, self.od.subindex, data, force_segment)
+
+    async def aset_data(self, data: bytes):
+        force_segment = self.od.data_type == objectdictionary.DOMAIN
+        await self.sdo_node.adownload(self.od.index, self.od.subindex, data, force_segment)
 
     def open(self, mode="rb", encoding="ascii", buffering=1024, size=None,
              block_transfer=False, request_crc_support=True):

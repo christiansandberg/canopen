@@ -93,6 +93,7 @@ class NmtBase(object):
         - 'RESET'
         - 'RESET COMMUNICATION'
         """
+        logger.warning("Accessing NmtBase.state attribute is deprecated")
         if self._state in NMT_STATES:
             return NMT_STATES[self._state]
         else:
@@ -100,6 +101,10 @@ class NmtBase(object):
 
     @state.setter
     def state(self, new_state: str):
+        logger.warning("Accessing NmtBase.state setter is deprecated")
+        self.set_state(new_state)
+
+    def set_state(self, new_state: str):
         if new_state in NMT_COMMANDS:
             code = NMT_COMMANDS[new_state]
         else:

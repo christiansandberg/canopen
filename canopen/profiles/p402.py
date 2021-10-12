@@ -391,6 +391,7 @@ class BaseNode402(RemoteNode):
         :raises TypeError: When setting a mode not advertised as supported by the node.
         :raises RuntimeError: If the switch is not confirmed within the configured timeout.
         """
+        logger.warning("Accessing BaseNode402.op_mode property is deprecated")
         try:
             pdo = self.tpdo_pointers[0x6061].pdo_parent
             if pdo.is_periodic:
@@ -406,6 +407,7 @@ class BaseNode402(RemoteNode):
 
     @op_mode.setter
     def op_mode(self, mode):
+        logger.warning("Accessing BaseNode402.op_mode setter is deprecated")
         try:
             if not self.is_op_mode_supported(mode):
                 raise TypeError(
@@ -470,6 +472,7 @@ class BaseNode402(RemoteNode):
         If the object 0x6041 is not configured in any TPDO it will fall back to the SDO
         mechanism and try to get the value.
         """
+        logger.warning("Accessing BaseNode402.statusword property is deprecated")
         try:
             return self.tpdo_values[0x6041]
         except KeyError:
@@ -507,6 +510,7 @@ class BaseNode402(RemoteNode):
 
     @controlword.setter
     def controlword(self, value):
+        logger.warning("Accessing BaseNode402.controlword setter is deprecated")
         if 0x6040 in self.rpdo_pointers:
             self.rpdo_pointers[0x6040].raw = value
             pdo = self.rpdo_pointers[0x6040].pdo_parent
@@ -536,6 +540,7 @@ class BaseNode402(RemoteNode):
         :raises RuntimeError: If the switch is not confirmed within the configured timeout.
         :raises ValueError: Trying to execute a illegal transition in the state machine.
         """
+        logger.warning("Accessing BaseNode402.state property is deprecated")
         for state, mask_val_pair in State402.SW_MASK.items():
             bitmask, bits = mask_val_pair
             if self.statusword & bitmask == bits:
@@ -544,6 +549,7 @@ class BaseNode402(RemoteNode):
 
     @state.setter
     def state(self, target_state):
+        logger.warning("Accessing BaseNode402.state setter is deprecated")
         timeout = time.monotonic() + self.TIMEOUT_SWITCH_STATE_FINAL
         while self.state != target_state:
             next_state = self._next_state(target_state)

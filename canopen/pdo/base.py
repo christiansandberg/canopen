@@ -8,6 +8,7 @@ except ImportError:
     from collections import Mapping
 import logging
 import binascii
+import asyncio
 
 if TYPE_CHECKING:
     from ..network import Network
@@ -58,6 +59,11 @@ class PdoBase(Mapping):
         """Read PDO configuration from node using SDO."""
         for pdo_map in self.map.values():
             pdo_map.read()
+
+    async def aread(self):
+        """Read PDO configuration from node using SDO."""
+        for pdo_map in self.map.values():
+            await pdo_map.aread()
 
     def save(self):
         """Save PDO configuration to node using SDO."""
@@ -195,7 +201,8 @@ class Map(object):
         #: Set explicitly or using the :meth:`start()` method.
         self.period: Optional[float] = None
         self.callbacks = []
-        self.receive_condition = threading.Condition()
+        #self.receive_condition = threading.Condition()  # FIXME
+        self.receive_condition = asyncio.Condition()
         self.is_received: bool = False
         self._task = None
 
@@ -296,6 +303,22 @@ class Map(object):
         # Unknown transmission type, assume non-periodic
         return False
 
+    async def aon_message(self, can_id, data, timestamp):
+        is_transmitting = self._task is not None
+        if can_id == self.cob_id and not is_transmitting:
+            async with self.receive_condition:
+                self.is_received = True
+                self.data = data
+                if self.timestamp is not None:
+                    self.period = timestamp - self.timestamp
+                self.timestamp = timestamp
+                self.receive_condition.notify_all()
+                for callback in self.callbacks:
+                    callback(self)
+
+    def on_message_async(self, can_id, data, timestamp):
+        asyncio.create_task(self.aon_message(can_id, data, timestamp))
+
     def on_message(self, can_id, data, timestamp):
         is_transmitting = self._task is not None
         if can_id == self.cob_id and not is_transmitting:
@@ -355,6 +378,55 @@ class Map(object):
         nof_entries = self.map_array[0].raw
         for subindex in range(1, nof_entries + 1):
             value = self.map_array[subindex].raw
+            index = value >> 16
+            subindex = (value >> 8) & 0xFF
+            size = value & 0xFF
+            if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
+                index = value & 0xFFFF
+                subindex = (value >> 16) & 0xFF
+                size = (value >> 24) & 0xFF
+            if index and size:
+                self.add_variable(index, subindex, size)
+
+        self.subscribe()
+
+    async def aread(self) -> None:
+        """Read PDO configuration for this map using SDO."""
+        cob_id = await self.com_record[1].aget_raw()
+        self.cob_id = cob_id & 0x1FFFFFFF
+        logger.info("COB-ID is 0x%X", self.cob_id)
+        self.enabled = cob_id & PDO_NOT_VALID == 0
+        logger.info("PDO is %s", "enabled" if self.enabled else "disabled")
+        self.rtr_allowed = cob_id & RTR_NOT_ALLOWED == 0
+        logger.info("RTR is %s", "allowed" if self.rtr_allowed else "not allowed")
+        self.trans_type = await self.com_record[2].aget_raw()
+        logger.info("Transmission type is %d", self.trans_type)
+        if self.trans_type >= 254:
+            try:
+                self.inhibit_time = await self.com_record[3].aget_raw()
+            except (KeyError, SdoAbortedError) as e:
+                logger.info("Could not read inhibit time (%s)", e)
+            else:
+                logger.info("Inhibit time is set to %d ms", self.inhibit_time)
+
+            try:
+                self.event_timer = await self.com_record[5].aget_raw()
+            except (KeyError, SdoAbortedError) as e:
+                logger.info("Could not read event timer (%s)", e)
+            else:
+                logger.info("Event timer is set to %d ms", self.event_timer)
+
+            try:
+                self.sync_start_value = await self.com_record[6].aget_raw()
+            except (KeyError, SdoAbortedError) as e:
+                logger.info("Could not read SYNC start value (%s)", e)
+            else:
+                logger.info("SYNC start value is set to %d ms", self.sync_start_value)
+
+        self.clear()
+        nof_entries = await self.map_array[0].aget_raw()
+        for subindex in range(1, nof_entries + 1):
+            value = await self.map_array[subindex].aget_raw()
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
@@ -433,7 +505,8 @@ class Map(object):
         """
         if self.enabled:
             logger.info("Subscribing to enabled PDO 0x%X on the network", self.cob_id)
-            self.pdo_node.network.subscribe(self.cob_id, self.on_message)
+            #self.pdo_node.network.subscribe(self.cob_id, self.on_message)  # FIXME
+            self.pdo_node.network.subscribe(self.cob_id, self.on_message_async)
 
     def clear(self) -> None:
         """Clear all variables from this map."""
@@ -532,6 +605,17 @@ class Map(object):
             self.receive_condition.wait(timeout)
         return self.timestamp if self.is_received else None
 
+    async def await_for_reception(self, timeout: float = 10) -> float:
+        """Wait for the next transmit PDO.
+
+        :param float timeout: Max time to wait in seconds.
+        :return: Timestamp of message received or None if timeout.
+        """
+        async with self.receive_condition:
+            self.is_received = False
+            await self.receive_condition.wait()
+        return self.timestamp if self.is_received else None
+
 
 class Variable(variable.Variable):
     """One object dictionary variable mapped to a PDO."""
@@ -571,6 +655,11 @@ class Variable(variable.Variable):
 
         return data
 
+    async def aget_data(self) -> bytes:
+        # As long as get_data() is not making any IO, it can be called
+        # directly with no special async variant
+        return self.get_data()
+
     def set_data(self, data: bytes):
         """Set for the given variable the PDO data.
 
@@ -603,3 +692,8 @@ class Variable(variable.Variable):
             self.pdo_parent.data[byte_offset:byte_offset + len(data)] = data
 
         self.pdo_parent.update()
+
+    async def aset_data(self, data: bytes):
+        # As long as get_data() is not making any IO, it can be called
+        # directly with no special async variant
+        return self.set_data(data)

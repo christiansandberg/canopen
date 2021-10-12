@@ -28,20 +28,32 @@ class Variable(object):
     def get_data(self) -> bytes:
         raise NotImplementedError("Variable is not readable")
 
+    async def aget_data(self) -> bytes:
+        raise NotImplementedError("Variable is not readable")
+
     def set_data(self, data: bytes):
+        raise NotImplementedError("Variable is not writable")
+
+    async def aset_data(self, data: bytes):
         raise NotImplementedError("Variable is not writable")
 
     @property
     def data(self) -> bytes:
         """Byte representation of the object as :class:`bytes`."""
+        logger.warning("Accessing Variable.data property is deprecated")
         return self.get_data()
 
     @data.setter
     def data(self, data: bytes):
+        logger.warning("Accessing Variable.data setter is deprecated")
         self.set_data(data)
 
     @property
     def raw(self) -> Union[int, bool, float, str, bytes]:
+        logger.warning("Accessing Variable.raw property is deprecated")
+        return self.get_raw()
+
+    def get_raw(self) -> Union[int, bool, float, str, bytes]:
         """Raw representation of the object.
 
         This table lists the translations between object dictionary data types
@@ -72,7 +84,13 @@ class Variable(object):
         Data types that this library does not handle yet must be read and
         written as :class:`bytes`.
         """
-        value = self.od.decode_raw(self.data)
+        return self._get_raw(self.get_data())
+
+    async def aget_raw(self) -> Union[int, bool, float, str, bytes]:
+        return self._get_raw(await self.aget_data())
+
+    def _get_raw(self, data: bytes) -> Union[int, bool, float, str, bytes]:
+        value = self.od.decode_raw(data)
         text = "Value of %s (0x%X:%d) is %r" % (
             self.name, self.index,
             self.subindex, value)
@@ -83,42 +101,83 @@ class Variable(object):
 
     @raw.setter
     def raw(self, value: Union[int, bool, float, str, bytes]):
+        logger.warning("Accessing Variable.data setter is deprecated")
+        self.set_raw(value)
+
+    def set_raw(self, value: Union[int, bool, float, str, bytes]):
+        self.set_data(self._set_raw(value))
+
+    async def aset_raw(self, value: Union[int, bool, float, str, bytes]):
+        await self.aset_data(self._set_raw(value))
+
+    def _set_raw(self, value: Union[int, bool, float, str, bytes]):
         logger.debug("Writing %s (0x%X:%d) = %r",
                      self.name, self.index,
                      self.subindex, value)
-        self.data = self.od.encode_raw(value)
+        return self.od.encode_raw(value)
 
     @property
     def phys(self) -> Union[int, bool, float, str, bytes]:
+        logger.warning("Accessing Variable.phys attribute is deprecated")
+        return self.get_phys()
+
+    def get_phys(self) -> Union[int, bool, float, str, bytes]:
         """Physical value scaled with some factor (defaults to 1).
 
         On object dictionaries that support specifying a factor, this can be
         either a :class:`float` or an :class:`int`.
         Non integers will be passed as is.
         """
-        value = self.od.decode_phys(self.raw)
+        return self._get_phys(self.get_raw())
+
+    async def aget_phys(self) -> Union[int, bool, float, str, bytes]:
+        return self._get_phys(await self.aget_raw())
+
+    def _get_phys(raw: Union[int, bool, float, str, bytes]):
+        value = self.od.decode_phys(raw)
         if self.od.unit:
             logger.debug("Physical value is %s %s", value, self.od.unit)
         return value
 
     @phys.setter
     def phys(self, value: Union[int, bool, float, str, bytes]):
-        self.raw = self.od.encode_phys(value)
+        logger.warning("Accessing Variable.phys setter is deprecated")
+        self.set_phys(value)
+
+    def set_phys(self, value: Union[int, bool, float, str, bytes]):
+        self.set_raw(self.od.encode_phys(value))
+
+    async def aset_phys(self, value: Union[int, bool, float, str, bytes]):
+        await self.aset_raw(self.od.encode_phys(value))
 
     @property
     def desc(self) -> str:
         """Converts to and from a description of the value as a string."""
-        value = self.od.decode_desc(self.raw)
+        logger.warning("Accessing Variable.desc attribute is deprecated")
+        return self.get_desc()
+
+    def get_desc(self) -> str:
+        value = self.od.decode_desc(self.get_raw())
+        logger.debug("Description is '%s'", value)
+        return value
+
+    async def aget_desc(self) -> str:
+        value = self.od.decode_desc(await self.aget_raw())
         logger.debug("Description is '%s'", value)
         return value
 
     @desc.setter
     def desc(self, desc: str):
-        self.raw = self.od.encode_desc(desc)
+        logger.warning("Accessing Variable.desc setter is deprecated")
+        self.set_desc(desc)
+
+    def set_desc(self, desc: str):
+        self.set_raw(self.od.encode_desc(desc))
 
     @property
     def bits(self) -> "Bits":
         """Access bits using integers, slices, or bit descriptions."""
+        logger.warning("Accessing Variable.bits attribute is deprecated")
         return Bits(self)
 
     def read(self, fmt: str = "raw") -> Union[int, bool, float, str, bytes]:
@@ -136,11 +195,19 @@ class Variable(object):
             The value of the variable.
         """
         if fmt == "raw":
-            return self.raw
+            return self.get_raw()
         elif fmt == "phys":
-            return self.phys
+            return self.get_phys()
         elif fmt == "desc":
-            return self.desc
+            return self.get_desc()
+
+    async def aread(self, fmt: str = "raw") -> Union[int, bool, float, str, bytes]:
+        if fmt == "raw":
+            return await self.aget_raw()
+        elif fmt == "phys":
+            return await self.aget_phys()
+        elif fmt == "desc":
+            return await self.aget_desc()
 
     def write(
         self, value: Union[int, bool, float, str, bytes], fmt: str = "raw"
@@ -161,6 +228,26 @@ class Variable(object):
             self.phys = value
         elif fmt == "desc":
             self.desc = value
+
+    async def awrite(
+        self, value: Union[int, bool, float, str, bytes], fmt: str = "raw"
+    ) -> None:
+        """Alternative way of writing using a function instead of attributes.
+
+        May be useful for asynchronous writing.
+
+        :param str fmt:
+            How to write the value
+             - 'raw'
+             - 'phys'
+             - 'desc'
+        """
+        if fmt == "raw":
+            await self.aset_raw(value)
+        elif fmt == "phys":
+            await self.aset_phys(value)
+        elif fmt == "desc":
+            await self.aset_desc(value)
 
 
 class Bits(Mapping):
