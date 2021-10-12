@@ -70,3 +70,6 @@ target/
 \.project
 
 \.pydevproject
+
+*.kdev4
+*.kate-swp

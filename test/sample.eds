@@ -20,7 +20,7 @@ BaudRate_500=1
 BaudRate_800=0
 BaudRate_1000=1
 SimpleBootUpMaster=0
-SimpleBootUpSlave=0
+SimpleBootUpSlave=1
 Granularity=8
 DynamicChannelsSupported=0
 CompactPDO=0
@@ -46,7 +46,10 @@ Dummy0006=0
 Dummy0007=0
 
 [Comments]
-Lines=0
+Lines=3
+Line1=|-------------|
+Line2=| Don't panic |
+Line3=|-------------|
 
 [MandatoryObjects]
 SupportedObjects=3
