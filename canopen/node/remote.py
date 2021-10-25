@@ -135,9 +135,9 @@ class RemoteNode(BaseNode):
                     subindex=subindex,
                     name=name,
                     value=value)))
-                self.sdo[index][subindex].raw = value
+                self.sdo[index][subindex].set_raw(value)
             else:
-                self.sdo[index].raw = value
+                self.sdo[index].set_raw(value)
                 logger.info(str('SDO [{index:#06x}]: {name}: {value:#06x}'.format(
                     index=index,
                     name=name,

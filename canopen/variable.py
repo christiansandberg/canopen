@@ -87,6 +87,7 @@ class Variable(object):
         return self._get_raw(self.get_data())
 
     async def aget_raw(self) -> Union[int, bool, float, str, bytes]:
+        """Raw representation of the object, async variant"""
         return self._get_raw(await self.aget_data())
 
     def _get_raw(self, data: bytes) -> Union[int, bool, float, str, bytes]:
@@ -101,7 +102,7 @@ class Variable(object):
 
     @raw.setter
     def raw(self, value: Union[int, bool, float, str, bytes]):
-        logger.warning("Accessing Variable.data setter is deprecated")
+        logger.warning("Accessing Variable.raw setter is deprecated")
         self.set_raw(value)
 
     def set_raw(self, value: Union[int, bool, float, str, bytes]):
@@ -174,6 +175,9 @@ class Variable(object):
     def set_desc(self, desc: str):
         self.set_raw(self.od.encode_desc(desc))
 
+    async def aset_desc(self, desc: str):
+        await self.aset_raw(self.od.encode_desc(desc))
+
     @property
     def bits(self) -> "Bits":
         """Access bits using integers, slices, or bit descriptions."""
@@ -223,11 +227,11 @@ class Variable(object):
              - 'desc'
         """
         if fmt == "raw":
-            self.raw = value
+            self.set_raw(value)
         elif fmt == "phys":
-            self.phys = value
+            self.set_phys(value)
         elif fmt == "desc":
-            self.desc = value
+            self.set_desc(value)
 
     async def awrite(
         self, value: Union[int, bool, float, str, bytes], fmt: str = "raw"
@@ -281,7 +285,7 @@ class Bits(Mapping):
         return len(self.variable.od.bit_definitions)
 
     def read(self):
-        self.raw = self.variable.raw
+        self.raw = self.variable.get_raw()
 
     def write(self):
-        self.variable.raw = self.raw
+        self.variable.set_raw(self.raw)

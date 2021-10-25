@@ -343,41 +343,41 @@ class Map(object):
 
     def read(self) -> None:
         """Read PDO configuration for this map using SDO."""
-        cob_id = self.com_record[1].raw
+        cob_id = self.com_record[1].get_raw()
         self.cob_id = cob_id & 0x1FFFFFFF
         logger.info("COB-ID is 0x%X", self.cob_id)
         self.enabled = cob_id & PDO_NOT_VALID == 0
         logger.info("PDO is %s", "enabled" if self.enabled else "disabled")
         self.rtr_allowed = cob_id & RTR_NOT_ALLOWED == 0
         logger.info("RTR is %s", "allowed" if self.rtr_allowed else "not allowed")
-        self.trans_type = self.com_record[2].raw
+        self.trans_type = self.com_record[2].get_raw()
         logger.info("Transmission type is %d", self.trans_type)
         if self.trans_type >= 254:
             try:
-                self.inhibit_time = self.com_record[3].raw
+                self.inhibit_time = self.com_record[3].get_raw()
             except (KeyError, SdoAbortedError) as e:
                 logger.info("Could not read inhibit time (%s)", e)
             else:
                 logger.info("Inhibit time is set to %d ms", self.inhibit_time)
 
             try:
-                self.event_timer = self.com_record[5].raw
+                self.event_timer = self.com_record[5].get_raw()
             except (KeyError, SdoAbortedError) as e:
                 logger.info("Could not read event timer (%s)", e)
             else:
                 logger.info("Event timer is set to %d ms", self.event_timer)
 
             try:
-                self.sync_start_value = self.com_record[6].raw
+                self.sync_start_value = self.com_record[6].get_raw()
             except (KeyError, SdoAbortedError) as e:
                 logger.info("Could not read SYNC start value (%s)", e)
             else:
                 logger.info("SYNC start value is set to %d ms", self.sync_start_value)
 
         self.clear()
-        nof_entries = self.map_array[0].raw
+        nof_entries = self.map_array[0].get_raw()
         for subindex in range(1, nof_entries + 1):
-            value = self.map_array[subindex].raw
+            value = self.map_array[subindex].get_raw()
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
@@ -443,44 +443,44 @@ class Map(object):
         """Save PDO configuration for this map using SDO."""
         logger.info("Setting COB-ID 0x%X and temporarily disabling PDO",
                     self.cob_id)
-        self.com_record[1].raw = self.cob_id | PDO_NOT_VALID | (RTR_NOT_ALLOWED if not self.rtr_allowed else 0x0)
+        self.com_record[1].set_raw(self.cob_id | PDO_NOT_VALID | (RTR_NOT_ALLOWED if not self.rtr_allowed else 0x0))
         if self.trans_type is not None:
             logger.info("Setting transmission type to %d", self.trans_type)
-            self.com_record[2].raw = self.trans_type
+            self.com_record[2].set_raw(self.trans_type)
         if self.inhibit_time is not None:
             logger.info("Setting inhibit time to %d us", (self.inhibit_time * 100))
-            self.com_record[3].raw = self.inhibit_time
+            self.com_record[3].set_raw(self.inhibit_time)
         if self.event_timer is not None:
             logger.info("Setting event timer to %d ms", self.event_timer)
-            self.com_record[5].raw = self.event_timer
+            self.com_record[5].set_raw(self.event_timer)
         if self.sync_start_value is not None:
             logger.info("Setting SYNC start value to %d", self.sync_start_value)
-            self.com_record[6].raw = self.sync_start_value
+            self.com_record[6].set_raw(self.sync_start_value)
 
         if self.map is not None:
             try:
-                self.map_array[0].raw = 0
+                self.map_array[0].set_raw(0)
             except SdoAbortedError:
                 # WORKAROUND for broken implementations: If the array has a
                 # fixed number of entries (count not writable), generate dummy
                 # mappings for an invalid object 0x0000:00 to overwrite any
                 # excess entries with all-zeros.
-                self._fill_map(self.map_array[0].raw)
+                self._fill_map(self.map_array[0].get_raw())
             subindex = 1
             for var in self.map:
                 logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
                             var.name, var.index, var.subindex, var.length)
                 if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
-                    self.map_array[subindex].raw = (var.index |
-                                                    var.subindex << 16 |
-                                                    var.length << 24)
+                    self.map_array[subindex].set_raw(var.index |
+                                                     var.subindex << 16 |
+                                                     var.length << 24)
                 else:
-                    self.map_array[subindex].raw = (var.index << 16 |
-                                                    var.subindex << 8 |
-                                                    var.length)
+                    self.map_array[subindex].set_raw(var.index << 16 |
+                                                     var.subindex << 8 |
+                                                     var.length)
                 subindex += 1
             try:
-                self.map_array[0].raw = len(self.map)
+                self.map_array[0].set_raw(len(self.map))
             except SdoAbortedError as e:
                 # WORKAROUND for broken implementations: If the array
                 # number-of-entries parameter is not writable, we have already
@@ -492,7 +492,7 @@ class Map(object):
             self._update_data_size()
 
         if self.enabled:
-            self.com_record[1].raw = self.cob_id | (RTR_NOT_ALLOWED if not self.rtr_allowed else 0x0)
+            self.com_record[1].set_raw(self.cob_id | (RTR_NOT_ALLOWED if not self.rtr_allowed else 0x0))
             self.subscribe()
 
     def subscribe(self) -> None:

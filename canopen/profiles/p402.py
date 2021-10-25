@@ -402,7 +402,7 @@ class BaseNode402(RemoteNode):
             code = self.tpdo_values[0x6061]
         except KeyError:
             logger.warning('The object 0x6061 is not a configured TPDO, fallback to SDO')
-            code = self.sdo[0x6061].raw
+            code = self.sdo[0x6061].get_raw()
         return OperationMode.CODE2NAME[code]
 
     @op_mode.setter
@@ -414,12 +414,12 @@ class BaseNode402(RemoteNode):
                     'Operation mode {m} not suppported on node {n}.'.format(n=self.id, m=mode))
             # Update operation mode in RPDO if possible, fall back to SDO
             if 0x6060 in self.rpdo_pointers:
-                self.rpdo_pointers[0x6060].raw = OperationMode.NAME2CODE[mode]
+                self.rpdo_pointers[0x6060].set_raw(OperationMode.NAME2CODE[mode])
                 pdo = self.rpdo_pointers[0x6060].pdo_parent
                 if not pdo.is_periodic:
                     pdo.transmit()
             else:
-                self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
+                self.sdo[0x6060].set_raw(OperationMode.NAME2CODE[mode])
             timeout = time.monotonic() + self.TIMEOUT_SWITCH_OP_MODE
             while self.op_mode != mode:
                 if time.monotonic() > timeout:
@@ -436,7 +436,7 @@ class BaseNode402(RemoteNode):
         # [target velocity, target position, target torque]
         for target_index in [0x60FF, 0x607A, 0x6071]:
             if target_index in self.sdo.keys():
-                self.sdo[target_index].raw = 0
+                self.sdo[target_index].set_raw(0)
 
     def is_op_mode_supported(self, mode):
         """Check if the operation mode is supported by the node.
@@ -450,7 +450,7 @@ class BaseNode402(RemoteNode):
         """
         if not hasattr(self, '_op_mode_support'):
             # Cache value only on first lookup, this object should never change.
-            self._op_mode_support = self.sdo[0x6502].raw
+            self._op_mode_support = self.sdo[0x6502].get_raw()
             logger.info('Caching node {n} supported operation modes 0x{m:04X}'.format(
                 n=self.id, m=self._op_mode_support))
         bits = OperationMode.SUPPORTED[mode]
@@ -463,7 +463,7 @@ class BaseNode402(RemoteNode):
         :type mapobject: canopen.pdo.Map
         """
         for obj in mapobject:
-            self.tpdo_values[obj.index] = obj.raw
+            self.tpdo_values[obj.index] = obj.get_raw()
 
     @property
     def statusword(self):
@@ -477,7 +477,7 @@ class BaseNode402(RemoteNode):
             return self.tpdo_values[0x6041]
         except KeyError:
             logger.warning('The object 0x6041 is not a configured TPDO, fallback to SDO')
-            return self.sdo[0x6041].raw
+            return self.sdo[0x6041].get_raw()
 
     def check_statusword(self, timeout=None):
         """Report an up-to-date reading of the statusword (0x6041) from the device.
@@ -512,12 +512,12 @@ class BaseNode402(RemoteNode):
     def controlword(self, value):
         logger.warning("Accessing BaseNode402.controlword setter is deprecated")
         if 0x6040 in self.rpdo_pointers:
-            self.rpdo_pointers[0x6040].raw = value
+            self.rpdo_pointers[0x6040].set_raw(value)
             pdo = self.rpdo_pointers[0x6040].pdo_parent
             if not pdo.is_periodic:
                 pdo.transmit()
         else:
-            self.sdo[0x6040].raw = value
+            self.sdo[0x6040].set_raw(value)
 
     @property
     def state(self):

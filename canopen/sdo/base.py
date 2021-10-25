@@ -127,7 +127,7 @@ class Array(Mapping):
         return iter(range(1, len(self) + 1))
 
     def __len__(self) -> int:
-        return self[0].raw
+        return self[0].get_raw()
 
     def __contains__(self, subindex: int) -> bool:
         return 0 <= subindex <= len(self)
