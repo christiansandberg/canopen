@@ -477,9 +477,9 @@ class BaseNode402(RemoteNode):
             return self.sdo[0x6041].raw
 
     def check_statusword(self, timeout=None):
-        """Report an up-to-date reading of the statusword (0x6041) from the device.
+        """Report an up-to-date reading of the Statusword (0x6041) from the device.
 
-        If the TPDO with the statusword is configured as periodic, this method blocks
+        If the TPDO with the Statusword is configured as periodic, this method blocks
         until one was received.  Otherwise, it uses the SDO fallback of the ``statusword``
         property.
 
@@ -494,6 +494,8 @@ class BaseNode402(RemoteNode):
                 timestamp = pdo.wait_for_reception(timeout or self.TIMEOUT_CHECK_TPDO)
                 if timestamp is None:
                     raise RuntimeError('Timeout waiting for updated statusword')
+            else:
+                return self.sdo[0x6041].raw
         return self.statusword
 
     @property
