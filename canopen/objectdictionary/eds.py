@@ -262,6 +262,8 @@ def build_variable(eds, section, node_id, index, subindex=0):
     if eds.has_option(section, "DefaultValue"):
         try:
             var.default_raw = eds.get(section, "DefaultValue")
+            if '$NODEID' in var.default_raw:
+                var.relative = True
             var.default = _convert_variable(node_id, var.data_type, eds.get(section, "DefaultValue"))
         except ValueError:
             pass
