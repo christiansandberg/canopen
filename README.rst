@@ -177,19 +177,19 @@ This library can be used with asyncio.
 
         while True:
 
-            # Wait for RPDO 1
-            t = await tpdo.await_for_reception(1)
+            # Wait for TPDO 1
+            t = await node.tpdo[1].await_for_reception(1)
             if not t:
                 continue
 
-            # Get the PDO value
+            # Get the TPDO 1 value
             rpm = node.tpdo[1]['MotorSpeed Actual'].get_raw()
             print(f'SPEED on motor {nodeid}:', rpm)
 
             # Sleep a little
             await asyncio.sleep(0.2)
 
-            # Send PDO with
+            # Send RPDO 1 with some data
             node.rpdo[1]['Some variable'].set_phys(42)
             node.rpdo[1].transmit()
 
