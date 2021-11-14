@@ -102,6 +102,8 @@ class Network(MutableMapping):
             for full list of supported interfaces.
         :param int bitrate:
             Bitrate in bit/s.
+        :param loop:
+            Optional, pass the loop parameter if running under asyncio
 
         :raises can.CanError:
             When connection fails.
@@ -113,9 +115,14 @@ class Network(MutableMapping):
                 if node.object_dictionary.bitrate:
                     kwargs["bitrate"] = node.object_dictionary.bitrate
                     break
+        # The optional loop parameter goes to can.Notifier()
+        kwargs_notifier = {}
+        if "loop" in kwargs:
+            kwargs_notifier["loop"] = kwargs["loop"]
+            del kwargs["loop"]
         self.bus = can.interface.Bus(*args, **kwargs)
         logger.info("Connected to '%s'", self.bus.channel_info)
-        self.notifier = can.Notifier(self.bus, self.listeners, 1)
+        self.notifier = can.Notifier(self.bus, self.listeners, 1, **kwargs_notifier)
         return self
 
     def disconnect(self) -> None:

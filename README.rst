@@ -113,11 +113,11 @@ The :code:`n` is the PDO index (normally 1 to 4). The second form of access is f
     # network.connect(bustype='nican', channel='CAN0', bitrate=250000)
 
     # Read a variable using SDO
-    device_name = node.sdo['Manufacturer device name'].raw
-    vendor_id = node.sdo[0x1018][1].raw
+    device_name = node.sdo['Manufacturer device name'].get_raw()
+    vendor_id = node.sdo[0x1018][1].get_raw()
 
     # Write a variable using SDO
-    node.sdo['Producer heartbeat time'].raw = 1000
+    node.sdo['Producer heartbeat time'].set_raw(1000)
 
     # Read PDO configuration from node
     node.tpdo.read()
@@ -141,8 +141,8 @@ The :code:`n` is the PDO index (normally 1 to 4). The second form of access is f
 
     # Read a value from TPDO[1]
     node.tpdo[1].wait_for_reception()
-    speed = node.tpdo[1]['Velocity actual value'].phys
-    val = node.tpdo['Some group.Some subindex'].raw
+    speed = node.tpdo[1]['Velocity actual value'].get_phys()
+    val = node.tpdo['Some group.Some subindex'].get_raw()
 
     # Disconnect from CAN bus
     network.sync.stop()
@@ -195,17 +195,15 @@ This library can be used with asyncio.
 
     async def main():
 
-        # Open CAN bus
+        # Start with creating a network representing one CAN bus
+        network = canopen.Network()
+
+        # Connect to the CAN bus
         # Arguments are passed to python-can's can.Bus() constructor
         # (see https://python-can.readthedocs.io/en/latest/bus.html).
-        bus = can.BUS(interface='pcan', bitrate=1000000)
-
-        # Create a network representing one CAN bus
-        network = canopen.Network(bus)
-
-        # Start the notifier to enable canopen to respond to incoming CAN message
+        # Note the loop parameter to enable asyncio operation
         loop = asyncio.get_event_loop()
-        network.notifier = can.Notifier(bus, network.listeners, 1, loop=loop)
+        network.connect(interface='pcan', bitrate=1000000, loop=loop)
 
         # Create two independent tasks for two nodes 51 and 52 which will run concurrently
         task1 = asyncio.create_task(my_node(network, 51, '/path/to/object_dictionary.eds'))
