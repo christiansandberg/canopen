@@ -14,6 +14,41 @@ from .datatypes import *
 logger = logging.getLogger(__name__)
 
 
+def export_od(od, dest:Union[str,TextIO,None]=None, doc_type:Optional[str]=None):
+    """ Export :class: ObjectDictionary to a file.
+
+    :param od:
+        :class: ObjectDictionary object to be exported
+    :param dest:
+        export destination. filename, or file-like object or None.
+        if None, the document is returned as string
+    :param doc_type: type of document to export.
+       If a filename is given for dest, this default to the file extension.
+       Otherwise, this defaults to "eds"
+    :rtype: str or None
+    """
+
+    doctypes = {"eds", "dcf"}
+    if type(dest) is str:
+        if doc_type is None:
+            for t in doctypes:
+                if dest.endswith(f".{t}"):
+                    doc_type = t
+                    break
+
+        if doc_type is None:
+            doc_type = "eds"
+        dest = open(dest, 'w')
+    assert doc_type in doctypes
+
+    if doc_type == "eds":
+        from . import eds
+        return eds.export_eds(od, dest)
+    elif doc_type == "dcf":
+        from . import eds
+        return eds.export_dcf(od, dest)
+
+
 def import_od(
     source: Union[str, TextIO, None],
     node_id: Optional[int] = None,
@@ -54,10 +89,13 @@ class ObjectDictionary(MutableMapping):
     def __init__(self):
         self.indices = {}
         self.names = {}
+        self.comments = ""
         #: Default bitrate if specified by file
         self.bitrate: Optional[int] = None
         #: Node ID if specified by file
         self.node_id: Optional[int] = None
+        #: Some information about the device
+        self.device_information = DeviceInformation()
 
     def __getitem__(
         self, index: Union[int, str]
@@ -280,6 +318,9 @@ class Variable(object):
         self.bit_definitions: Dict[str, List[int]] = {}
         #: Storage location of index
         self.storage_location = None
+        #: Can this variable be mapped to a PDO
+        self.pdo_mappable = False
+
 
     def __eq__(self, other: "Variable") -> bool:
         return (self.index == other.index and
@@ -416,6 +457,25 @@ class Variable(object):
         temp &= ~mask
         temp |= bit_value << min(bits)
         return temp
+
+
+class DeviceInformation:
+    def __init__(self):
+        self.allowed_baudrates = set()
+        self.vendor_name:Optional[str] = None
+        self.vendor_number:Optional[int] = None
+        self.product_name:Optional[str] = None
+        self.product_number:Optional[int] = None
+        self.revision_number:Optional[int] = None
+        self.order_code:Optional[str] = None
+        self.simple_boot_up_master:Optional[bool] = None
+        self.simple_boot_up_slave:Optional[bool] = None
+        self.granularity:Optional[int] = None
+        self.dynamic_channels_supported:Optional[bool] = None
+        self.group_messaging:Optional[bool] = None
+        self.nr_of_RXPDO:Optional[bool] = None
+        self.nr_of_TXPDO:Optional[bool] = None
+        self.LSS_supported:Optional[bool] = None
 
 
 class ObjectDictionaryError(Exception):

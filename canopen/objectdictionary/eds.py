@@ -11,6 +11,7 @@ from canopen.sdo import SdoClient
 
 logger = logging.getLogger(__name__)
 
+# Object type. Don't confuse with Data type
 DOMAIN = 2
 VAR = 7
 ARR = 8
@@ -19,6 +20,7 @@ RECORD = 9
 
 def import_eds(source, node_id):
     eds = RawConfigParser()
+    eds.optionxform = str
     if hasattr(source, "read"):
         fp = source
     else:
@@ -31,6 +33,57 @@ def import_eds(source, node_id):
         eds.readfp(fp)
     fp.close()
     od = objectdictionary.ObjectDictionary()
+
+    if eds.has_section("FileInfo"):
+        od.__edsFileInfo = {
+            opt: eds.get("FileInfo", opt)
+            for opt in eds.options("FileInfo")
+        }
+
+    if eds.has_section("Comments"):
+        linecount = int(eds.get("Comments", "Lines"), 0)
+        od.comments = '\n'.join([
+            eds.get("Comments", "Line%i" % line)
+            for line in range(1, linecount+1)
+        ])
+
+    if not eds.has_section("DeviceInfo"):
+        logger.warn("eds file does not have a DeviceInfo section. This section is mandatory")
+    else:
+        for rate in [10, 20, 50, 125, 250, 500, 800, 1000]:
+            baudPossible = int(
+                eds.get("DeviceInfo", "Baudrate_%i" % rate, fallback='0'), 0)
+            if baudPossible != 0:
+                od.device_information.allowed_baudrates.add(rate*1000)
+
+        for t, eprop, odprop in [
+            (str, "VendorName", "vendor_name"),
+            (int, "VendorNumber", "vendor_number"),
+            (str, "ProductName", "product_name"),
+            (int, "ProductNumber", "product_number"),
+            (int, "RevisionNumber", "revision_number"),
+            (str, "OrderCode", "order_code"),
+            (bool, "SimpleBootUpMaster", "simple_boot_up_master"),
+            (bool, "SimpleBootUpSlave", "simple_boot_up_slave"),
+            (bool, "Granularity", "granularity"),
+            (bool, "DynamicChannelsSupported", "dynamic_channels_supported"),
+            (bool, "GroupMessaging", "group_messaging"),
+            (int, "NrOfRXPDO", "nr_of_RXPDO"),
+            (int, "NrOfTXPDO", "nr_of_TXPDO"),
+            (bool, "LSS_Supported", "LSS_supported"),
+        ]:
+            try:
+                if t in (int, bool):
+                    setattr(od.device_information, odprop,
+                            t(int(eds.get("DeviceInfo", eprop), 0))
+                            )
+                elif t is str:
+                    setattr(od.device_information, odprop,
+                            eds.get("DeviceInfo", eprop)
+                            )
+            except NoOptionError:
+                pass
+
     if eds.has_section("DeviceComissioning"):
         od.bitrate = int(eds.get("DeviceComissioning", "Baudrate")) * 1000
         od.node_id = int(eds.get("DeviceComissioning", "NodeID"), 0)
@@ -146,11 +199,24 @@ def _convert_variable(node_id, var_type, value):
         return float(value)
     else:
         # COB-ID can contain '$NODEID+' so replace this with node_id before converting
-        value = value.replace(" ","").upper()
+        value = value.replace(" ", "").upper()
         if '$NODEID' in value and node_id is not None:
             return int(re.sub(r'\+?\$NODEID\+?', '', value), 0) + node_id
         else:
             return int(value, 0)
+
+
+def _revert_variable(var_type, value):
+    if value is None:
+        return None
+    if var_type in (objectdictionary.OCTET_STRING, objectdictionary.DOMAIN):
+        return bytes.hex(value)
+    elif var_type in (objectdictionary.VISIBLE_STRING, objectdictionary.UNICODE_STRING):
+        return value
+    elif var_type in objectdictionary.FLOAT_TYPES:
+        return value
+    else:
+        return "0x%02X" % value
 
 
 def build_variable(eds, section, node_id, index, subindex=0):
@@ -181,6 +247,8 @@ def build_variable(eds, section, node_id, index, subindex=0):
             # Assume DOMAIN to force application to interpret the byte data
             var.data_type = objectdictionary.DOMAIN
 
+    var.pdo_mappable = bool(int(eds.get(section, "PDOMapping", fallback="0"), 0))
+
     if eds.has_option(section, "LowLimit"):
         try:
             var.min = int(eds.get(section, "LowLimit"), 0)
@@ -193,11 +261,13 @@ def build_variable(eds, section, node_id, index, subindex=0):
             pass
     if eds.has_option(section, "DefaultValue"):
         try:
+            var.default_raw = eds.get(section, "DefaultValue")
             var.default = _convert_variable(node_id, var.data_type, eds.get(section, "DefaultValue"))
         except ValueError:
             pass
     if eds.has_option(section, "ParameterValue"):
         try:
+            var.value_raw = eds.get(section, "ParameterValue")
             var.value = _convert_variable(node_id, var.data_type, eds.get(section, "ParameterValue"))
         except ValueError:
             pass
@@ -211,3 +281,183 @@ def copy_variable(eds, section, subindex, src_var):
     var.name = name
     var.subindex = subindex
     return var
+
+
+def export_dcf(od, dest=None, fileInfo={}):
+    return export_eds(od, dest, fileInfo, True)
+
+
+def export_eds(od, dest=None, file_info={}, device_commisioning=False):
+    def export_object(obj, eds):
+        if type(obj) is objectdictionary.Variable:
+            return export_variable(obj, eds)
+        if type(obj) is objectdictionary.Record:
+            return export_record(obj, eds)
+        if type(obj) is objectdictionary.Array:
+            return export_array(obj, eds)
+
+    def export_common(var, eds, section):
+        eds.add_section(section)
+        eds.set(section, "ParameterName", var.name)
+        if var.storage_location:
+            eds.set(section, "StorageLocation", var.storage_location)
+
+    def export_variable(var, eds):
+        if type(var.parent) is objectdictionary.ObjectDictionary:
+            # top level variable
+            section = "%04X" % var.index
+        else:
+            # nested variable
+            section = "%04Xsub%X" % (var.index, var.subindex)
+
+        export_common(var, eds, section)
+        eds.set(section, "ObjectType", "0x%X" % VAR)
+        if var.data_type:
+            eds.set(section, "DataType", "0x%04X" % var.data_type)
+        if var.access_type:
+            eds.set(section, "AccessType", var.access_type)
+
+        if getattr(var, 'default_raw', None) is not None:
+            eds.set(section, "DefaultValue", var.default_raw)
+        elif getattr(var, 'default', None) is not None:
+            eds.set(section, "DefaultValue", _revert_variable(
+                var.data_type, var.default))
+
+        if device_commisioning:
+            if getattr(var, 'value_raw', None) is not None:
+                eds.set(section, "ParameterValue", var.value_raw)
+            elif getattr(var, 'value', None) is not None:
+                eds.set(section, "ParameterValue",
+                        _revert_variable(var.data_type, var.default))
+
+        eds.set(section, "DataType", "0x%04X" % var.data_type)
+        eds.set(section, "PDOMapping", hex(var.pdo_mappable))
+
+        if getattr(var, 'min', None) is not None:
+            eds.set(section, "LowLimit", var.min)
+        if getattr(var, 'max', None) is not None:
+            eds.set(section, "HighLimit", var.max)
+
+    def export_record(var, eds):
+        section = "%04X" % var.index
+        export_common(var, eds, section)
+        eds.set(section, "SubNumber", "0x%X" % len(var.subindices))
+        ot = RECORD if type(var) is objectdictionary.Record else ARR
+        eds.set(section, "ObjectType", "0x%X" % ot)
+        for i in var:
+            export_variable(var[i], eds)
+
+    export_array = export_record
+
+    eds = RawConfigParser()
+    # both disables lowercasing, and allows int keys
+    eds.optionxform = str
+
+    from datetime import datetime as dt
+    defmtime = dt.utcnow()
+
+    try:
+        # only if eds was loaded by us
+        origFileInfo = od.__edsFileInfo
+    except AttributeError:
+        origFileInfo = {
+            # just set some defaults
+            "CreationDate": defmtime.strftime("%m-%d-%Y"),
+            "CreationTime": defmtime.strftime("%I:%m%p"),
+            "EdsVersion": 4.2,
+        }
+
+        file_info.setdefault("ModificationDate", defmtime.strftime("%m-%d-%Y"))
+        file_info.setdefault("ModificationTime", defmtime.strftime("%I:%m%p"))
+        for k, v in origFileInfo.items():
+            file_info.setdefault(k, v)
+
+    eds.add_section("FileInfo")
+    for k, v in file_info.items():
+        eds.set("FileInfo", k, v)
+
+    eds.add_section("DeviceInfo")
+    for eprop, odprop in [
+        ("VendorName", "vendor_name"),
+        ("VendorNumber", "vendor_number"),
+        ("ProductName", "product_name"),
+        ("ProductNumber", "product_number"),
+        ("RevisionNumber", "revision_number"),
+        ("OrderCode", "order_code"),
+        ("SimpleBootUpMaster", "simple_boot_up_master"),
+        ("SimpleBootUpSlave", "simple_boot_up_slave"),
+        ("Granularity", "granularity"),
+        ("DynamicChannelsSupported", "dynamic_channels_supported"),
+        ("GroupMessaging", "group_messaging"),
+        ("NrOfRXPDO", "nr_of_RXPDO"),
+        ("NrOfTXPDO", "nr_of_TXPDO"),
+        ("LSS_Supported", "LSS_supported"),
+    ]:
+        val = getattr(od.device_information, odprop, None)
+        if type(val) is None:
+            continue
+        elif type(val) is str:
+            eds.set("DeviceInfo", eprop, val)
+        elif type(val) in (int, bool):
+            eds.set("DeviceInfo", eprop, int(val))
+
+    # we are also adding out of spec baudrates here.
+    for rate in od.device_information.allowed_baudrates.union(
+            {10e3, 20e3, 50e3, 125e3, 250e3, 500e3, 800e3, 1000e3}):
+        eds.set(
+            "DeviceInfo", "Baudrate_%i" % (rate/1000),
+            int(rate in od.device_information.allowed_baudrates))
+
+    if device_commisioning and (od.bitrate or od.node_id):
+        eds.add_section("DeviceComissioning")
+        if od.bitrate:
+            eds.set("DeviceComissioning", "Baudrate", int(od.bitrate / 1000))
+        if od.node_id:
+            eds.set("DeviceComissioning", "NodeID", int(od.node_id))
+
+    eds.add_section("Comments")
+    i = 0
+    for line in od.comments.splitlines():
+        i += 1
+        eds.set("Comments", "Line%i" % i, line)
+    eds.set("Comments", "Lines", i)
+
+    eds.add_section("DummyUsage")
+    for i in range(1, 8):
+        key = "Dummy%04d" % i
+        eds.set("DummyUsage", key, 1 if (key in od) else 0)
+
+    def mandatory_indices(x):
+        return x in {0x1000, 0x1001, 0x1018}
+
+    def manufacturer_idices(x):
+        return x in range(0x2000, 0x6000)
+
+    def optional_indices(x):
+        return all((
+            x > 0x1001,
+            not mandatory_indices(x),
+            not manufacturer_idices(x),
+        ))
+
+    supported_mantatory_indices = list(filter(mandatory_indices, od))
+    supported_optional_indices = list(filter(optional_indices, od))
+    supported_manufacturer_indices = list(filter(manufacturer_idices, od))
+
+    def add_list(section, list):
+        eds.add_section(section)
+        eds.set(section, "SupportedObjects", len(list))
+        for i in range(0, len(list)):
+            eds.set(section, (i + 1), "0x%04X" % list[i])
+        for index in list:
+            export_object(od[index], eds)
+
+    add_list("MandatoryObjects", supported_mantatory_indices)
+    add_list("OptionalObjects", supported_optional_indices)
+    add_list("ManufacturerObjects", supported_manufacturer_indices)
+
+    if not dest:
+        import sys
+        dest = sys.stdout
+
+    eds.write(dest, False)

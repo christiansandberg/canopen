@@ -1,10 +1,9 @@
 #!/bin/sh
 
 py=python3
-name=canopen
-pkgname=$py-canopen
+name='canopen'
+pkgname=$py-$name
 description="CANopen stack implementation"
-
 
 version=`git tag |grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' |sort | tail -1  `
 maintainer=`git log -1 --pretty=format:'%an <%ae>'`
@@ -19,14 +18,13 @@ fakeroot=$package_dir
 
 mkdir -p $fakeroot
 
-$py setup.py bdist >setup_py.log
-
-tar -f dist/*.tar.*  -C $fakeroot -x
+$py setup.py bdist_wheel >setup_py.log
 
 mkdir -p $fakeroot/usr/lib/$py/dist-packages/
-mv -f $(find $fakeroot -name $name -type d) $fakeroot/usr/lib/python3/dist-packages/
+unzip dist/*.whl -d $fakeroot/usr/lib/python3/dist-packages/
 
-cp -r $name.egg-info $fakeroot/usr/lib/python3/dist-packages/$name-$version.egg-info
+# deploy extra files
+#cp -r install/* $fakeroot/
 
 mkdir $package_dir/DEBIAN
 
