@@ -1,5 +1,5 @@
-CANopen for Python
-==================
+CANopen for Python, asyncio port
+================================
 
 A Python implementation of the CANopen_ standard.
 The aim of the project is to support the most common parts of the CiA 301
@@ -7,6 +7,8 @@ standard in a simple Pythonic interface. It is mainly targeted for testing and
 automation tasks rather than a standard compliant master implementation.
 
 The library supports Python 3.6+.
+
+This library is the asyncio port of CANopen. See below for code example.
 
 
 Features
@@ -145,6 +147,74 @@ The :code:`n` is the PDO index (normally 1 to 4). The second form of access is f
     # Disconnect from CAN bus
     network.sync.stop()
     network.disconnect()
+
+
+Asyncio
+-------
+
+This library can be used with asyncio.
+
+.. code-block:: python
+
+    import asyncio
+    import canopen
+    import can
+
+    async def my_node(network, nodeid, od):
+
+        # Create the node object and load the OD
+        node = network.add_node(nodeid, od)
+
+        # Read the PDOs from the remote
+        await node.tpdo.aread()
+        await node.rpdo.aread()
+
+        # Set the module state
+        node.nmt.set_state('OPERATIONAL')
+
+        # Set motor speed via SDO
+        await node.sdo['MotorSpeed'].aset_raw(2)
+
+        while True:
+
+            # Wait for RPDO 1
+            t = await tpdo.await_for_reception(1)
+            if not t:
+                continue
+
+            # Get the PDO value
+            rpm = node.tpdo[1]['MotorSpeed Actual'].get_raw()
+            print(f'SPEED on motor {nodeid}:', rpm)
+
+            # Sleep a little
+            await asyncio.sleep(0.2)
+
+            # Send PDO with
+            node.rpdo[1]['Some variable'].set_phys(42)
+            node.rpdo[1].transmit()
+
+    async def main():
+
+        # Open CAN bus
+        # Arguments are passed to python-can's can.Bus() constructor
+        # (see https://python-can.readthedocs.io/en/latest/bus.html).
+        bus = can.BUS(interface='pcan', bitrate=1000000)
+
+        # Create a network representing one CAN bus
+        network = canopen.Network(bus)
+
+        # Start the notifier to enable canopen to respond to incoming CAN message
+        loop = asyncio.get_event_loop()
+        network.notifier = can.Notifier(bus, network.listeners, 1, loop=loop)
+
+        # Create two independent tasks for two nodes 51 and 52 which will run concurrently
+        task1 = asyncio.create_task(my_node(network, 51, '/path/to/object_dictionary.eds'))
+        task2 = asyncio.create_task(my_node(network, 52, '/path/to/object_dictionary.eds'))
+
+        # Wait for both to complete (which will never happen)
+        await asyncio.gather((task1, task2))
+
+    asyncio.run(main())
 
 
 Debugging
