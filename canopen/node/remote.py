@@ -6,7 +6,7 @@ from ..sdo import SdoClient
 from ..nmt import NmtMaster
 from ..emcy import EmcyConsumer
 from ..pdo import TPDO, RPDO, PDO
-from ..objectdictionary import Record, Array, Variable
+from ..objectdictionary import Record, Array, Variable, List
 from .base import BaseNode
 
 import canopen
@@ -43,7 +43,7 @@ class RemoteNode(BaseNode):
         #: Enable WORKAROUND for reversed PDO mapping entries
         self.curtis_hack = False
 
-        self.sdo_channels = []
+        self.sdo_channels: List[SdoClient] = []
         self.sdo = self.add_sdo(0x600 + self.id, 0x580 + self.id)
         self.tpdo = TPDO(self)
         self.rpdo = RPDO(self)
@@ -61,13 +61,20 @@ class RemoteNode(BaseNode):
         self.tpdo.network = network
         self.rpdo.network = network
         self.nmt.network = network
-        for sdo in self.sdo_channels:
-            network.subscribe(sdo.tx_cobid, sdo.on_response)
-        network.subscribe(0x700 + self.id, self.nmt.on_heartbeat)
-        network.subscribe(0x80 + self.id, self.emcy.on_emcy)
+        if network.loop:
+            for sdo in self.sdo_channels:
+                network.subscribe(sdo.tx_cobid, sdo.aon_response)
+            network.subscribe(0x700 + self.id, self.nmt.aon_heartbeat)
+            network.subscribe(0x80 + self.id, self.emcy.aon_emcy)
+        else:
+            for sdo in self.sdo_channels:
+                network.subscribe(sdo.tx_cobid, sdo.on_response)
+            network.subscribe(0x700 + self.id, self.nmt.on_heartbeat)
+            network.subscribe(0x80 + self.id, self.emcy.on_emcy)
         network.subscribe(0, self.nmt.on_command)
 
     def remove_network(self):
+        # FIXME: Usubscribe async CB
         for sdo in self.sdo_channels:
             self.network.unsubscribe(sdo.tx_cobid, sdo.on_response)
         self.network.unsubscribe(0x700 + self.id, self.nmt.on_heartbeat)
@@ -96,7 +103,10 @@ class RemoteNode(BaseNode):
         client = SdoClient(rx_cobid, tx_cobid, self.object_dictionary)
         self.sdo_channels.append(client)
         if self.network is not None:
-            self.network.subscribe(client.tx_cobid, client.on_response)
+            if self.network.loop:
+                self.network.subscribe(client.tx_cobid, client.aon_response)
+            else:
+                self.network.subscribe(client.tx_cobid, client.on_response)
         return client
 
     def store(self, subindex=1):

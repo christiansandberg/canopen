@@ -14,6 +14,7 @@ from .. import objectdictionary
 from .base import SdoBase
 from .constants import *
 from .exceptions import *
+from . import io_async
 
 logger = logging.getLogger(__name__)
 
@@ -43,11 +44,16 @@ class SdoClient(SdoBase):
             Object Dictionary to use for communication
         """
         SdoBase.__init__(self, rx_cobid, tx_cobid, od)
-        #self.responses = queue.Queue()  # FIXME
-        self.responses = asyncio.Queue()
+        self.responses = queue.Queue()  # FIXME Async
+        self.aresponses = asyncio.Queue()
+        self.lock = asyncio.Lock()
 
     def on_response(self, can_id, data, timestamp):
-        self.responses.put_nowait(bytes(data))  # FIXME
+        # NOTE: Callback. Will be called from another thread
+        self.responses.put_nowait(bytes(data))
+
+    async def aon_response(self, can_id, data, timestamp):
+        await self.aresponses.put(bytes(data))
 
     def send_request(self, request):
         retries_left = self.MAX_RETRIES
@@ -69,7 +75,7 @@ class SdoClient(SdoBase):
 
     def read_response(self):
         try:
-            response = self.responses.get(
+            response = self.responses.get(  # FIXME: Blocking
                 block=True, timeout=self.RESPONSE_TIMEOUT)
         except queue.Empty:
             raise SdoCommunicationError("No SDO response received")
@@ -81,7 +87,7 @@ class SdoClient(SdoBase):
 
     async def aread_response(self):
         try:
-            response = await self.responses.get()
+            response = await self.aresponses.get()
         except queue.Empty:
             raise SdoCommunicationError("No SDO response received")
         res_command, = struct.unpack_from("B", response)
@@ -94,7 +100,7 @@ class SdoClient(SdoBase):
         retries_left = self.MAX_RETRIES
         if not self.responses.empty():
             # logger.warning("There were unexpected messages in the queue")
-            self.responses = queue.Queue()
+            self.responses = queue.Queue()  # FIXME Async
         while True:
             self.send_request(sdo_request)
             # Wait for node to respond
@@ -178,9 +184,11 @@ class SdoClient(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        fp = await self.aopen(index, subindex, buffering=0)
-        size = fp.size
-        data = await fp.aread()
+        async with self.lock:  # Ensure only one active SDO request per channel
+            fp = await self.aopen(index, subindex, buffering=0)
+            size = fp.size
+            data = await fp.read()
+            await fp.close()
         if size is None:
             # Node did not specify how many bytes to use
             # Try to find out using Object Dictionary
@@ -247,10 +255,11 @@ class SdoClient(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        fp = await self.aopen(index, subindex, "wb", buffering=7, size=len(data),
-                              force_segment=force_segment)
-        await fp.awrite(data)
-        await fp.close()
+        async with self.lock:  # Ensure only one active SDO request per channel
+            fp = await self.aopen(index, subindex, "wb", buffering=7,
+                                  size=len(data), force_segment=force_segment)
+            await fp.write(data)
+            await fp.close()
 
     def open(self, index, subindex=0, mode="rb", encoding="ascii",
              buffering=1024, size=None, block_transfer=False, force_segment=False, request_crc_support=True):
@@ -358,10 +367,9 @@ class SdoClient(SdoBase):
                 raise NotImplementedError("Missing BlockUploadStream for async")
                 raw_stream = BlockUploadStream(self, index, subindex, request_crc_support=request_crc_support)
             else:
-                raw_stream = await AReadableStream.factory(self, index, subindex)
+                raw_stream = await AReadableStream.open(self, index, subindex)
             if buffering:
-                raise NotImplementedError("Missing BufferedReader for async")
-                buffered_stream = io.BufferedReader(raw_stream, buffer_size=buffer_size)
+                buffered_stream = io_async.BufferedReader(raw_stream, buffer_size=buffer_size)
             else:
                 return raw_stream
         if "w" in mode:
@@ -369,12 +377,9 @@ class SdoClient(SdoBase):
                 raise NotImplementedError("Missing BlockDownloadStream for async")
                 raw_stream = BlockDownloadStream(self, index, subindex, size, request_crc_support=request_crc_support)
             else:
-                raw_stream = await AWritableStream.factory(self, index, subindex, size, force_segment)
+                raw_stream = await AWritableStream.open(self, index, subindex, size, force_segment)
             if buffering:
-                #raise NotImplementedError("Missing BufferedWriter for async")
-                logger.warning("Missing BufferedWriter for async in SdoClient.aopen, using raw")
-                return raw_stream
-                #buffered_stream = io.BufferedWriter(raw_stream, buffer_size=buffer_size)
+                buffered_stream = io_async.BufferedWriter(raw_stream, buffer_size=buffer_size)
             else:
                 return raw_stream
         if "b" not in mode:
@@ -489,14 +494,14 @@ class ReadableStream(io.RawIOBase):
         return self.pos
 
 
-class AReadableStream(io.RawIOBase):
+class AReadableStream(io_async.RawIOBase):
     """File like object for reading from a variable."""
 
     #: Total size of data or ``None`` if not specified
     size = None
 
     @classmethod
-    async def factory(cls, sdo_client, index, subindex=0):
+    async def open(cls, sdo_client, index, subindex=0):
         """
         :param canopen.sdo.SdoClient sdo_client:
             The SDO client to use for reading.
@@ -557,7 +562,7 @@ class AReadableStream(io.RawIOBase):
         else:
             logger.debug("Using segmented transfer")
 
-    async def aread(self, size=-1):
+    async def read(self, size=-1):
         """Read one segment which may be up to 7 bytes.
 
         :param int size:
@@ -603,7 +608,7 @@ class AReadableStream(io.RawIOBase):
     def readable(self):
         return True
 
-    def tell(self):
+    async def tell(self):
         return self.pos
 
 
@@ -724,11 +729,11 @@ class WritableStream(io.RawIOBase):
         return self.pos
 
 
-class AWritableStream(io.RawIOBase):
+class AWritableStream(io_async.RawIOBase):
     """File like object for writing to a variable."""
 
     @classmethod
-    async def factory(cls, sdo_client: SdoClient, index, subindex=0, size=None, force_segment=False):
+    async def open(cls, sdo_client: SdoClient, index, subindex=0, size=None, force_segment=False):
         """
         :param canopen.sdo.SdoClient sdo_client:
             The SDO client to use for communication.
@@ -795,7 +800,7 @@ class AWritableStream(io.RawIOBase):
             command |= (4 - size) << 2
             self._exp_header = SDO_STRUCT.pack(command, index, subindex)
 
-    async def awrite(self, b):
+    async def write(self, b):
         """
         Write the given bytes-like object, b, to the SDO server, and return the
         number of bytes written. This will be at most 7 bytes.
@@ -850,7 +855,7 @@ class AWritableStream(io.RawIOBase):
 
         An empty segmented SDO message may be sent saying there is no more data.
         """
-        super(AWritableStream, self).close()
+        await super(AWritableStream, self).close()
         if not self._done and not self._exp_header:
             # Segmented download not finished
             command = REQUEST_SEGMENT_DOWNLOAD | NO_MORE_DATA
@@ -865,7 +870,7 @@ class AWritableStream(io.RawIOBase):
     def writable(self):
         return True
 
-    def tell(self):
+    async def tell(self):
         return self.pos
 
 

@@ -185,5 +185,6 @@ class Variable(variable.Variable):
         :returns:
             A file like object.
         """
+        # FIXME: Implement asyncio variant?
         return self.sdo_node.open(self.od.index, self.od.subindex, mode,
                                   encoding, buffering, size, block_transfer, request_crc_support=request_crc_support)

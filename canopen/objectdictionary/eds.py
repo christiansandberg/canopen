@@ -176,7 +176,7 @@ def import_from_node(node_id, network):
     sdo_client = SdoClient(0x600 + node_id, 0x580 + node_id, objectdictionary.ObjectDictionary())
     sdo_client.network = network
     # Subscribe to SDO responses
-    network.subscribe(0x580 + node_id, sdo_client.on_response)
+    network.subscribe(0x580 + node_id, sdo_client.on_response)  # FIXME: Async CB
     # Create file like object for Store EDS variable
     try:
         eds_fp = sdo_client.open(0x1021, 0, "rt")

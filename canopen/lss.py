@@ -3,6 +3,7 @@ from typing import Optional, TYPE_CHECKING
 import logging
 import time
 import struct
+import asyncio
 try:
     import queue
 except ImportError:
@@ -90,7 +91,8 @@ class LssMaster(object):
         self.network: Optional[Network] = None
         self._node_id = 0
         self._data = None
-        self.responses = queue.Queue()
+        self.responses = queue.Queue()  # FIXME Async
+        self.aresponses = asyncio.Queue()
 
     def send_switch_state_global(self, mode):
         """switch mode to CONFIGURATION_STATE or WAITING_STATE
@@ -247,12 +249,12 @@ class LssMaster(object):
         self.__send_command(message)
 
     def fast_scan(self):
-        """This command sends a series of fastscan message 
+        """This command sends a series of fastscan message
         to find unconfigured slave with lowest number of LSS idenities
 
         :return:
             True if a slave is found.
-            False if there is no candidate. 
+            False if there is no candidate.
             list is the LSS identities [vendor_id, product_code, revision_number, seerial_number]
         :rtype: bool, list
         """
@@ -270,21 +272,21 @@ class LssMaster(object):
 
                     if not self.__send_fast_scan_message(lss_id[lss_sub], lss_bit_check, lss_sub, lss_next):
                         lss_id[lss_sub] |= 1<<lss_bit_check
-                    
+
                     time.sleep(0.01)
-                    
+
                 lss_next = (lss_sub + 1) & 3
                 if not self.__send_fast_scan_message(lss_id[lss_sub], lss_bit_check, lss_sub, lss_next):
                     return False, None
 
                 time.sleep(0.01)
-                
+
                 # Now the next 32 bits will be scanned
                 lss_sub += 1
 
             # Now lss_id contains the entire 128 bits scanned
             return True, lss_id
-        
+
         return False, None
 
     def __send_fast_scan_message(self, id_number, bit_checker, lss_sub, lss_next):
@@ -298,7 +300,7 @@ class LssMaster(object):
         cs = struct.unpack_from("<B", recv_msg)[0]
         if cs == CS_IDENTIFY_SLAVE:
                 return True
-        
+
         return False
 
     def __send_lss_address(self, req_cs, number):
@@ -383,7 +385,7 @@ class LssMaster(object):
         response = None
         if not self.responses.empty():
             logger.info("There were unexpected messages in the queue")
-            self.responses = queue.Queue()
+            self.responses = queue.Queue()  # FIXME Async
 
         self.network.send_message(self.LSS_TX_COBID, message)
 
@@ -393,7 +395,7 @@ class LssMaster(object):
         # Wait for the slave to respond
         # TODO check if the response is LSS response message
         try:
-            response = self.responses.get(
+            response = self.responses.get(  # FIXME: Blocking
                 block=True, timeout=self.RESPONSE_TIMEOUT)
         except queue.Empty:
             raise LssError("No LSS response received")
@@ -401,7 +403,11 @@ class LssMaster(object):
         return response
 
     def on_message_received(self, can_id, data, timestamp):
-        self.responses.put(bytes(data))
+        # NOTE: Callback. Will be called from another thread
+        self.responses.put(bytes(data))  # FIXME: Blocking
+
+    async def aon_message_received(self, can_id, data, timestamp):
+        await self.aresponses.put(bytes(data))
 
 
 class LssError(Exception):

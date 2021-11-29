@@ -2,6 +2,7 @@ from __future__ import annotations
 import struct
 import logging
 import threading
+import asyncio
 import time
 from typing import Callable, List, Optional, TYPE_CHECKING
 
@@ -22,13 +23,15 @@ class EmcyConsumer(object):
         #: Only active EMCYs. Will be cleared on Error Reset
         self.active: List["EmcyError"] = []
         self.callbacks = []
-        self.emcy_received = threading.Condition()
+        self.emcy_received = threading.Condition()  # FIXME Async
+        self.aemcy_received = asyncio.Condition()
 
     def on_emcy(self, can_id, data, timestamp):
+        # NOTE: Callback. Will be called from another thread
         code, register, data = EMCY_STRUCT.unpack(data)
         entry = EmcyError(code, register, data, timestamp)
 
-        with self.emcy_received:
+        with self.emcy_received:  # FIXME: Blocking
             if code & 0xFF00 == 0:
                 # Error reset
                 self.active = []
@@ -37,11 +40,31 @@ class EmcyConsumer(object):
             self.log.append(entry)
             self.emcy_received.notify_all()
 
+        # NOTE: Will be called from another thread
         for callback in self.callbacks:
-            callback(entry)
+            callback(entry)  # FIXME: Assert if coroutine?
+
+    async def aon_emcy(self, can_id, data, timestamp):
+        code, register, data = EMCY_STRUCT.unpack(data)
+        entry = EmcyError(code, register, data, timestamp)
+
+        async with self.aemcy_received:
+            if code & 0xFF00 == 0:
+                # Error reset
+                self.active = []
+            else:
+                self.active.append(entry)
+            self.log.append(entry)
+            self.aemcy_received.notify_all()
+
+        for callback in self.callbacks:
+            res = callback(entry)
+            if res is not None and asyncio.iscoroutine(res):
+                await res
 
     def add_callback(self, callback: Callable[["EmcyError"], None]):
-        """Get notified on EMCY messages from this node.
+        """Get notified on EMCY messages from this node. The callback must
+           be multi-threaded.
 
         :param callback:
             Callable which must take one argument of an
@@ -66,9 +89,9 @@ class EmcyConsumer(object):
         """
         end_time = time.time() + timeout
         while True:
-            with self.emcy_received:
+            with self.emcy_received:  # FIXME: Blocking
                 prev_log_size = len(self.log)
-                self.emcy_received.wait(timeout)
+                self.emcy_received.wait(timeout)  # FIXME: Blocking
                 if len(self.log) == prev_log_size:
                     # Resumed due to timeout
                     return None

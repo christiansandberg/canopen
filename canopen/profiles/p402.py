@@ -462,7 +462,9 @@ class BaseNode402(RemoteNode):
         :param mapobject: The received PDO message.
         :type mapobject: canopen.pdo.Map
         """
+        # NOTE: Callback. Will be called from another thread
         for obj in mapobject:
+            # NOTE: Assume thread-safe set without locking
             self.tpdo_values[obj.index] = obj.get_raw()
 
     @property

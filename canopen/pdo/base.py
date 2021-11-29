@@ -206,8 +206,8 @@ class Map(object):
         #: Set explicitly or using the :meth:`start()` method.
         self.period: Optional[float] = None
         self.callbacks = []
-        #self.receive_condition = threading.Condition()  # FIXME
-        self.receive_condition = asyncio.Condition()
+        self.receive_condition = threading.Condition()  # FIXME Async
+        self.areceive_condition = asyncio.Condition()
         self.is_received: bool = False
         self._task = None
 
@@ -308,34 +308,34 @@ class Map(object):
         # Unknown transmission type, assume non-periodic
         return False
 
+    def on_message(self, can_id, data, timestamp):
+        # NOTE: Callback. Will be called from another thread
+        is_transmitting = self._task is not None
+        if can_id == self.cob_id and not is_transmitting:
+            with self.receive_condition:  # FIXME: Blocking
+                self.is_received = True
+                self.data = data
+                if self.timestamp is not None:
+                    self.period = timestamp - self.timestamp
+                self.timestamp = timestamp
+                self.receive_condition.notify_all()
+                for callback in self.callbacks:
+                    callback(self)  # FIXME: Assert on couroutines?
+
     async def aon_message(self, can_id, data, timestamp):
         is_transmitting = self._task is not None
         if can_id == self.cob_id and not is_transmitting:
-            async with self.receive_condition:
+            async with self.areceive_condition:
                 self.is_received = True
                 self.data = data
                 if self.timestamp is not None:
                     self.period = timestamp - self.timestamp
                 self.timestamp = timestamp
-                self.receive_condition.notify_all()
+                self.areceive_condition.notify_all()
                 for callback in self.callbacks:
-                    callback(self)
-
-    def on_message_async(self, can_id, data, timestamp):
-        asyncio.create_task(self.aon_message(can_id, data, timestamp))
-
-    def on_message(self, can_id, data, timestamp):
-        is_transmitting = self._task is not None
-        if can_id == self.cob_id and not is_transmitting:
-            with self.receive_condition:
-                self.is_received = True
-                self.data = data
-                if self.timestamp is not None:
-                    self.period = timestamp - self.timestamp
-                self.timestamp = timestamp
-                self.receive_condition.notify_all()
-                for callback in self.callbacks:
-                    callback(self)
+                    res = callback(self)
+                    if res is not None and asyncio.iscouroutine(res):
+                        await res
 
     def add_callback(self, callback: Callable[["Map"], None]) -> None:
         """Add a callback which will be called on receive.
@@ -423,7 +423,6 @@ class Map(object):
             else:
                 # Get value from SDO
                 value = await var.aget_raw()
-                pass
             try:
                 var = gen.send(value)
             except StopIteration:
@@ -507,8 +506,10 @@ class Map(object):
         """
         if self.enabled:
             logger.info("Subscribing to enabled PDO 0x%X on the network", self.cob_id)
-            #self.pdo_node.network.subscribe(self.cob_id, self.on_message)  # FIXME
-            self.pdo_node.network.subscribe(self.cob_id, self.on_message_async)
+            if self.pdo_node.network.loop:
+                self.pdo_node.network.subscribe(self.cob_id, self.aon_message)
+            else:
+                self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
     def clear(self) -> None:
         """Clear all variables from this map."""
@@ -602,9 +603,9 @@ class Map(object):
         :param float timeout: Max time to wait in seconds.
         :return: Timestamp of message received or None if timeout.
         """
-        with self.receive_condition:
+        with self.receive_condition:  # FIXME: Blocking
             self.is_received = False
-            self.receive_condition.wait(timeout)
+            self.receive_condition.wait(timeout)  # FIXME: Blocking
         return self.timestamp if self.is_received else None
 
     async def await_for_reception(self, timeout: float = 10) -> float:
@@ -613,11 +614,14 @@ class Map(object):
         :param float timeout: Max time to wait in seconds.
         :return: Timestamp of message received or None if timeout.
         """
-        async with self.receive_condition:
+        async with self.areceive_condition:
             self.is_received = False
-            await self.receive_condition.wait()
-        return self.timestamp if self.is_received else None
-
+            try:
+                await asyncio.wait_for(self.areceive_condition.wait(), timeout=timeout)
+                # FIXME: Can we assume that self.is_received it set here?
+                return self.timestamp
+            except asyncio.TimeoutError:
+                return None
 
 class Variable(variable.Variable):
     """One object dictionary variable mapped to a PDO."""

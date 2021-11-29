@@ -3,6 +3,7 @@ import threading
 import logging
 import struct
 import time
+import asyncio
 from typing import Callable, Optional, TYPE_CHECKING
 
 from .network import CanError
@@ -56,6 +57,7 @@ class NmtBase(object):
         self._state = 0
 
     def on_command(self, can_id, data, timestamp):
+        # NOTE: Callback. Will be called from another thread
         cmd, node_id = struct.unpack_from("BB", data)
         if node_id in (self.id, 0):
             logger.info("Node %d received command %d", self.id, cmd)
@@ -64,6 +66,7 @@ class NmtBase(object):
                 if new_state != self._state:
                     logger.info("New NMT state %s, old state %s",
                                 NMT_STATES[new_state], NMT_STATES[self._state])
+                # NOTE: Assume thread-safe
                 self._state = new_state
 
     def send_command(self, code: int):
@@ -122,18 +125,20 @@ class NmtMaster(NmtBase):
         self._node_guarding_producer = None
         #: Timestamp of last heartbeat message
         self.timestamp: Optional[float] = None
-        self.state_update = threading.Condition()
+        self.state_update = threading.Condition()  # FIXME
+        self.astate_update = asyncio.Condition()
         self._callbacks = []
 
     def on_heartbeat(self, can_id, data, timestamp):
-        with self.state_update:
+        # NOTE: Callback. Will be called from another thread
+        with self.state_update:  # FIXME: Blocking
             self.timestamp = timestamp
             new_state, = struct.unpack_from("B", data)
             # Mask out toggle bit
             new_state &= 0x7F
             logger.debug("Received heartbeat can-id %d, state is %d", can_id, new_state)
             for callback in self._callbacks:
-                callback(new_state)
+                callback(new_state)  # FIXME: Assert on coroutines?
             if new_state == 0:
                 # Boot-up, will go to PRE-OPERATIONAL automatically
                 self._state = 127
@@ -141,6 +146,25 @@ class NmtMaster(NmtBase):
                 self._state = new_state
             self._state_received = new_state
             self.state_update.notify_all()
+
+    async def aon_heartbeat(self, can_id, data, timestamp):
+        async with self.astate_update:
+            self.timestamp = timestamp
+            new_state, = struct.unpack_from("B", data)
+            # Mask out toggle bit
+            new_state &= 0x7F
+            logger.debug("Received heartbeat can-id %d, state is %d", can_id, new_state)
+            for callback in self._callbacks:
+                res = callback(new_state)
+                if res is not None and asyncio.iscoroutine(res):
+                    await res
+            if new_state == 0:
+                # Boot-up, will go to PRE-OPERATIONAL automatically
+                self._state = 127
+            else:
+                self._state = new_state
+            self._state_received = new_state
+            self.astate_update.notify_all()
 
     def send_command(self, code: int):
         """Send an NMT command code to the node.
@@ -155,9 +179,9 @@ class NmtMaster(NmtBase):
 
     def wait_for_heartbeat(self, timeout: float = 10):
         """Wait until a heartbeat message is received."""
-        with self.state_update:
+        with self.state_update:  # FIXME: Blocking
             self._state_received = None
-            self.state_update.wait(timeout)
+            self.state_update.wait(timeout)  # FIXME: Blocking
         if self._state_received is None:
             raise NmtError("No boot-up or heartbeat received")
         return self.state
@@ -167,9 +191,9 @@ class NmtMaster(NmtBase):
         end_time = time.time() + timeout
         while True:
             now = time.time()
-            with self.state_update:
+            with self.state_update:  # FIXME: Blocking
                 self._state_received = None
-                self.state_update.wait(end_time - now + 0.1)
+                self.state_update.wait(end_time - now + 0.1)  # FIXME: Blocking
             if now > end_time:
                 raise NmtError("Timeout waiting for boot-up message")
             if self._state_received == 0:
@@ -211,6 +235,7 @@ class NmtSlave(NmtBase):
         self._local_node = local_node
 
     def on_command(self, can_id, data, timestamp):
+        # NOTE: Callback. Will be called from another thread
         super(NmtSlave, self).on_command(can_id, data, timestamp)
         self.update_heartbeat()
 
@@ -266,7 +291,9 @@ class NmtSlave(NmtBase):
             self._send_task = None
 
     def update_heartbeat(self):
+        # NOTE: Called from callback. Might be called from another thread
         if self._send_task is not None:
+            # FIXME: Check if network.PeriodicMessageTask() is thread-safe
             self._send_task.update([self._state])
 
 
