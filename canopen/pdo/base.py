@@ -114,7 +114,7 @@ class PdoBase(Mapping):
                     signal.addValues(value, desc)
                 frame.add_signal(signal)
             frame.calc_dlc()
-            db.frames.append(frame)
+            db.add_frame(frame)
         formats.dumpp({"": db}, filename)
         return db
 
