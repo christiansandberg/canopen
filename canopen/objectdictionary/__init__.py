@@ -304,6 +304,8 @@ class Variable(object):
         self.max: Optional[int] = None
         #: Default value at start-up
         self.default: Optional[int] = None
+        #: Is the default value relative to the node-ID (only applies to COB-IDs)
+        self.relative = False
         #: The value of this variable stored in the object dictionary
         self.value: Optional[int] = None
         #: Data type according to the standard as an :class:`int`
