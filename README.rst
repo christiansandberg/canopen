@@ -53,6 +53,10 @@ it in `develop mode`_::
     $ cd canopen
     $ pip install -e .
 
+Unit tests can be run using the pytest_ framework::
+
+    $ pip install pytest
+    $ pytest -v
 
 Documentation
 -------------
@@ -233,3 +237,4 @@ logging_ level:
 .. _Sphinx: http://www.sphinx-doc.org/
 .. _develop mode: https://packaging.python.org/distributing/#working-in-development-mode
 .. _logging: https://docs.python.org/3/library/logging.html
+.. _pytest: https://docs.pytest.org/

@@ -103,8 +103,7 @@ class PdoBase(Mapping):
             if pdo_map.cob_id is None:
                 continue
             frame = canmatrix.Frame(pdo_map.name,
-                                    Id=pdo_map.cob_id,
-                                    extended=0)
+                                    arbitration_id=pdo_map.cob_id)
             for var in pdo_map.map:
                 is_signed = var.od.data_type in objectdictionary.SIGNED_TYPES
                 is_float = var.od.data_type in objectdictionary.FLOAT_TYPES
@@ -118,8 +117,8 @@ class PdoBase(Mapping):
                 name = name.replace(" ", "_")
                 name = name.replace(".", "_")
                 signal = canmatrix.Signal(name,
-                                          startBit=var.offset,
-                                          signalSize=var.length,
+                                          start_bit=var.offset,
+                                          size=var.length,
                                           is_signed=is_signed,
                                           is_float=is_float,
                                           factor=var.od.factor,
@@ -128,9 +127,9 @@ class PdoBase(Mapping):
                                           unit=var.od.unit)
                 for value, desc in var.od.value_descriptions.items():
                     signal.addValues(value, desc)
-                frame.addSignal(signal)
-            frame.calcDLC()
-            db.frames.addFrame(frame)
+                frame.add_signal(signal)
+            frame.calc_dlc()
+            db.add_frame(frame)
         formats.dumpp({"": db}, filename)
         return db
 

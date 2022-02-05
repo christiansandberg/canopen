@@ -26,6 +26,12 @@ class TestEDS(unittest.TestCase):
         self.assertEqual(var.data_type, canopen.objectdictionary.UNSIGNED16)
         self.assertEqual(var.access_type, 'rw')
         self.assertEqual(var.default, 0)
+        self.assertFalse(var.relative)
+
+    def test_relative_variable(self):
+        var = self.od['Receive PDO 0 Communication Parameter']['COB-ID use by RPDO 1']
+        self.assertTrue(var.relative)
+        self.assertEqual(var.default, 512 + self.od.node_id)
 
     def test_record(self):
         record = self.od['Identity object']
