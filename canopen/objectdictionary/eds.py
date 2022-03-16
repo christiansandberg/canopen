@@ -52,7 +52,7 @@ def import_eds(source, node_id):
     else:
         for rate in [10, 20, 50, 125, 250, 500, 800, 1000]:
             baudPossible = int(
-                eds.get("DeviceInfo", "Baudrate_%i" % rate, fallback='0'), 0)
+                eds.get("DeviceInfo", "BaudRate_%i" % rate, fallback='0'), 0)
             if baudPossible != 0:
                 od.device_information.allowed_baudrates.add(rate*1000)
 
@@ -407,7 +407,7 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
     for rate in od.device_information.allowed_baudrates.union(
             {10e3, 20e3, 50e3, 125e3, 250e3, 500e3, 800e3, 1000e3}):
         eds.set(
-            "DeviceInfo", "Baudrate_%i" % (rate/1000),
+            "DeviceInfo", "BaudRate_%i" % (rate/1000),
             int(rate in od.device_information.allowed_baudrates))
 
     if device_commisioning and (od.bitrate or od.node_id):
