@@ -369,10 +369,10 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
             "EdsVersion": 4.2,
         }
 
-        file_info.setdefault("ModificationDate", defmtime.strftime("%m-%d-%Y"))
-        file_info.setdefault("ModificationTime", defmtime.strftime("%I:%m%p"))
-        for k, v in origFileInfo.items():
-            file_info.setdefault(k, v)
+    file_info.setdefault("ModificationDate", defmtime.strftime("%m-%d-%Y"))
+    file_info.setdefault("ModificationTime", defmtime.strftime("%I:%m%p"))
+    for k, v in origFileInfo.items():
+        file_info.setdefault(k, v)
 
     eds.add_section("FileInfo")
     for k, v in file_info.items():
