@@ -32,7 +32,7 @@ LSS_Supported=0
 [DeviceComissioning]
 NodeID=2
 NodeName=Some name
-Baudrate=500
+BaudRate=500
 NetNumber=0
 LSS_SerialNumber=0
 

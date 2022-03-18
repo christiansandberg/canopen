@@ -18,14 +18,14 @@ ProductName=example
 ProductNumber=25
 RevisionNumber=295
 OrderCode=25
-Baudrate_10=1
-Baudrate_20=1
-Baudrate_50=1
-Baudrate_125=1
-Baudrate_250=1
-Baudrate_500=1
-Baudrate_800=0
-Baudrate_1000=1
+BaudRate_10=1
+BaudRate_20=1
+BaudRate_50=1
+BaudRate_125=1
+BaudRate_250=1
+BaudRate_500=1
+BaudRate_800=0
+BaudRate_1000=1
 SimpleBootUpMaster=0
 SimpleBootUpSlave=1
 Granularity=8
@@ -243,7 +243,7 @@ HighLimit=0x7F
 ParameterValue=0x20
 
 [2000sub2]
-ParameterName=Baudrate
+ParameterName=BaudRate
 ObjectType=0x7
 DataType=0x0005
 AccessType=rw
@@ -324,7 +324,7 @@ LowLimit=0x1
 HighLimit=0x7F
 
 [2001sub2]
-ParameterName=Baudrate
+ParameterName=BaudRate
 ObjectType=0x7
 DataType=0x0005
 AccessType=rw
