@@ -8,7 +8,7 @@ except ImportError:
 import logging
 import binascii
 
-from ..sdo import SdoAbortedError
+from ..sdo import SdoAbortedError, SdoCommunicationError
 from .. import objectdictionary
 from .. import variable
 
@@ -327,21 +327,21 @@ class Map(object):
         if self.trans_type >= 254:
             try:
                 self.inhibit_time = self.com_record[3].raw
-            except (KeyError, SdoAbortedError) as e:
+            except (KeyError, SdoAbortedError, SdoCommunicationError) as e:
                 logger.info("Could not read inhibit time (%s)", e)
             else:
                 logger.info("Inhibit time is set to %d ms", self.inhibit_time)
 
             try:
                 self.event_timer = self.com_record[5].raw
-            except (KeyError, SdoAbortedError) as e:
+            except (KeyError, SdoAbortedError, SdoCommunicationError) as e:
                 logger.info("Could not read event timer (%s)", e)
             else:
                 logger.info("Event timer is set to %d ms", self.event_timer)
 
             try:
                 self.sync_start_value = self.com_record[6].raw
-            except (KeyError, SdoAbortedError) as e:
+            except (KeyError, SdoAbortedError, SdoCommunicationError) as e:
                 logger.info("Could not read SYNC start value (%s)", e)
             else:
                 logger.info("SYNC start value is set to %d ms", self.sync_start_value)
