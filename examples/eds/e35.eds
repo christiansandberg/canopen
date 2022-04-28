@@ -13,7 +13,7 @@ ModifiedBy=Manufacturer
 
 [DeviceInfo]
 VendorName=Manufacturer
-VendorNumber=001
+VendorNumber=101
 ProductName=example
 ProductNumber=25
 RevisionNumber=295
