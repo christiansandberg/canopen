@@ -94,7 +94,7 @@ class Network(MutableMapping):
             Backend specific channel for the CAN interface.
         :param str bustype:
             Name of the interface. See
-            `python-can manual <https://python-can.readthedocs.io/en/latest/configuration.html#interface-names>`__
+            `python-can manual <https://python-can.readthedocs.io/en/stable/configuration.html#interface-names>`__
             for full list of supported interfaces.
         :param int bitrate:
             Bitrate in bit/s.
