@@ -629,7 +629,7 @@ class BlockDownloadStream(io.RawIOBase):
         self._crc = sdo_client.crc_cls()
         self._last_bytes_sent = 0
         self._current_block = []
-        self._retransmit_counter = 0
+        self._retransmitting = False
         command = REQUEST_BLOCK_DOWNLOAD | INITIATE_BLOCK_TRANSFER
         if request_crc_support:
             command |= CRC_SUPPORTED
@@ -713,7 +713,7 @@ class BlockDownloadStream(io.RawIOBase):
         # Add the sent data to the current block buffer
         self._current_block.append(b)
         # Don't calculate crc if retransmitting
-        if self.crc_supported and self._retransmit_counter == 0:
+        if self.crc_supported and not self._retransmitting:
             # Calculate CRC
             self._crc.process(b)
         if self._seqno >= self._blksize:
@@ -755,19 +755,19 @@ class BlockDownloadStream(io.RawIOBase):
         # Sub blocks betwen ackseq and end of corrupted block need to be resent
         # Copy block to resend, and clear it so that multiple retransmits can be done
         block = self._current_block[ackseq:].copy()
-        # Get number of blocks to resend
-        self._retransmit_counter = len(block)
         # Go back to correct position in stream
-        self.pos = self.pos - (self._retransmit_counter * 7)
+        self.pos = self.pos - (len(block) * 7)
         # Reset the _current_block before starting the retransmission
         self._current_block = []
         # Reset _seqno and update blksize
         self._seqno = 0
         self._blksize = blksize
+        # We are retransmitting
+        self._retransmitting = True
         # Resend the block
         for b in block:
             self.write(b)
-            self._retransmit_counter -= 1
+        self._retransmitting = False
 
     def close(self):
         """Closes the stream."""
