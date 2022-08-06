@@ -628,6 +628,8 @@ class BlockDownloadStream(io.RawIOBase):
         self._seqno = 0
         self._crc = sdo_client.crc_cls()
         self._last_bytes_sent = 0
+        self._current_block = []
+        self._retransmit_counter = 0
         command = REQUEST_BLOCK_DOWNLOAD | INITIATE_BLOCK_TRANSFER
         if request_crc_support:
             command |= CRC_SUPPORTED
@@ -708,7 +710,10 @@ class BlockDownloadStream(io.RawIOBase):
         request[1:len(b) + 1] = b
         self.sdo_client.send_request(request)
         self.pos += len(b)
-        if self.crc_supported:
+        # Add the sent data to the current block buffer
+        self._current_block.append(b)
+        # Don't calculate crc if retransmitting
+        if self.crc_supported and self._retransmit_counter == 0:
             # Calculate CRC
             self._crc.process(b)
         if self._seqno >= self._blksize:
@@ -731,14 +736,38 @@ class BlockDownloadStream(io.RawIOBase):
             raise SdoCommunicationError("Server did not respond with a "
                                         "block download response")
         if ackseq != self._blksize:
+            # Sequence error, try to retransmit
             self.sdo_client.abort(0x05040003)
-            raise SdoCommunicationError(
-                ("%d of %d sequences were received. "
-                 "Retransmission is not supported yet.") % (ackseq, self._blksize))
+            self._retransmit(ackseq, blksize)
+            # We should be back in sync
+            return
+        # Clear the current block buffer
+        self._current_block = []
         logger.debug("All %d sequences were received successfully", ackseq)
         logger.debug("Server requested a block size of %d", blksize)
         self._blksize = blksize
         self._seqno = 0
+        
+    def _retransmit(self, ackseq, blksize):
+        """Retransmit the failed block"""
+        logger.info(("%d of %d sequences were received. "
+                 "Will start retransmission") % (ackseq, self._blksize))
+        # Sub blocks betwen ackseq and end of corrupted block need to be resent
+        # Copy block to resend, and clear it so that multiple retransmits can be done
+        block = self._current_block[ackseq:].copy()
+        # Get number of blocks to resend
+        self._retransmit_counter = len(block)
+        # Go back to correct position in stream
+        self.pos = self.pos - (self._retransmit_counter * 7)
+        # Reset the _current_block before starting the retransmission
+        self._current_block = []
+        # Reset _seqno and update blksize
+        self._seqno = 0
+        self._blksize = blksize
+        # Resend the block
+        for b in block:
+            self.write(b)
+            self._retransmit_counter -= 1
 
     def close(self):
         """Closes the stream."""
