@@ -737,7 +737,6 @@ class BlockDownloadStream(io.RawIOBase):
                                         "block download response")
         if ackseq != self._blksize:
             # Sequence error, try to retransmit
-            self.sdo_client.abort(0x05040003)
             self._retransmit(ackseq, blksize)
             # We should be back in sync
             return
@@ -753,8 +752,8 @@ class BlockDownloadStream(io.RawIOBase):
         logger.info(("%d of %d sequences were received. "
                  "Will start retransmission") % (ackseq, self._blksize))
         # Sub blocks betwen ackseq and end of corrupted block need to be resent
-        # Copy block to resend, and clear it so that multiple retransmits can be done
-        block = self._current_block[ackseq:].copy()
+        # Get the part of the block to resend
+        block = self._current_block[ackseq:]
         # Go back to correct position in stream
         self.pos = self.pos - (len(block) * 7)
         # Reset the _current_block before starting the retransmission
