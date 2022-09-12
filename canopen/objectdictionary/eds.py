@@ -52,7 +52,7 @@ def import_eds(source, node_id):
     else:
         for rate in [10, 20, 50, 125, 250, 500, 800, 1000]:
             baudPossible = int(
-                eds.get("DeviceInfo", "Baudrate_%i" % rate, fallback='0'), 0)
+                eds.get("DeviceInfo", "BaudRate_%i" % rate, fallback='0'), 0)
             if baudPossible != 0:
                 od.device_information.allowed_baudrates.add(rate*1000)
 
@@ -85,7 +85,7 @@ def import_eds(source, node_id):
                 pass
 
     if eds.has_section("DeviceComissioning"):
-        od.bitrate = int(eds.get("DeviceComissioning", "Baudrate")) * 1000
+        od.bitrate = int(eds.get("DeviceComissioning", "BaudRate")) * 1000
         od.node_id = int(eds.get("DeviceComissioning", "NodeID"), 0)
 
     for section in eds.sections():
@@ -370,10 +370,10 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
             "EdsVersion": 4.2,
         }
 
-        file_info.setdefault("ModificationDate", defmtime.strftime("%m-%d-%Y"))
-        file_info.setdefault("ModificationTime", defmtime.strftime("%I:%m%p"))
-        for k, v in origFileInfo.items():
-            file_info.setdefault(k, v)
+    file_info.setdefault("ModificationDate", defmtime.strftime("%m-%d-%Y"))
+    file_info.setdefault("ModificationTime", defmtime.strftime("%I:%m%p"))
+    for k, v in origFileInfo.items():
+        file_info.setdefault(k, v)
 
     eds.add_section("FileInfo")
     for k, v in file_info.items():
@@ -408,13 +408,13 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
     for rate in od.device_information.allowed_baudrates.union(
             {10e3, 20e3, 50e3, 125e3, 250e3, 500e3, 800e3, 1000e3}):
         eds.set(
-            "DeviceInfo", "Baudrate_%i" % (rate/1000),
+            "DeviceInfo", "BaudRate_%i" % (rate/1000),
             int(rate in od.device_information.allowed_baudrates))
 
     if device_commisioning and (od.bitrate or od.node_id):
         eds.add_section("DeviceComissioning")
         if od.bitrate:
-            eds.set("DeviceComissioning", "Baudrate", int(od.bitrate / 1000))
+            eds.set("DeviceComissioning", "BaudRate", int(od.bitrate / 1000))
         if od.node_id:
             eds.set("DeviceComissioning", "NodeID", int(od.node_id))
 
