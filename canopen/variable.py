@@ -134,7 +134,7 @@ class Variable(object):
     async def aget_phys(self) -> Union[int, bool, float, str, bytes]:
         return self._get_phys(await self.aget_raw())
 
-    def _get_phys(raw: Union[int, bool, float, str, bytes]):
+    def _get_phys(self, raw: Union[int, bool, float, str, bytes]):
         value = self.od.decode_phys(raw)
         if self.od.unit:
             logger.debug("Physical value is %s %s", value, self.od.unit)

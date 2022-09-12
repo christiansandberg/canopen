@@ -107,6 +107,13 @@ class Record(Mapping):
     def __iter__(self) -> Iterable[int]:
         return iter(self.od)
 
+    async def aiter(self):
+        for i in range(1, len(self.od)):
+            yield i
+
+    def __aiter__(self):
+        return self.aiter()
+
     def __len__(self) -> int:
         return len(self.od)
 
@@ -125,6 +132,13 @@ class Array(Mapping):
 
     def __iter__(self) -> Iterable[int]:
         return iter(range(1, len(self) + 1))
+
+    async def aiter(self):
+        for i in range(1, await self[0].aget_raw() + 1):
+            yield i
+
+    def __aiter__(self):
+        return self.aiter()
 
     def __len__(self) -> int:
         return self[0].get_raw()
@@ -185,6 +199,12 @@ class Variable(variable.Variable):
         :returns:
             A file like object.
         """
-        # FIXME: Implement asyncio variant?
         return self.sdo_node.open(self.od.index, self.od.subindex, mode,
                                   encoding, buffering, size, block_transfer, request_crc_support=request_crc_support)
+
+    async def aopen(self, mode="rb", encoding="ascii", buffering=1024, size=None,
+                    block_transfer=False, request_crc_support=True):
+        """Open the data stream as a file like object. See open()"""
+        return await self.sdo_node.aopen(self.od.index, self.od.subindex, mode,
+                                         encoding, buffering, size, block_transfer,
+                                         request_crc_support=request_crc_support)

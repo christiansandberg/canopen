@@ -44,7 +44,7 @@ class SdoClient(SdoBase):
             Object Dictionary to use for communication
         """
         SdoBase.__init__(self, rx_cobid, tx_cobid, od)
-        self.responses = queue.Queue()  # FIXME Async
+        self.responses = queue.Queue()
         self.aresponses = asyncio.Queue()
         self.lock = asyncio.Lock()
 
@@ -60,7 +60,7 @@ class SdoClient(SdoBase):
         while True:
             try:
                 if self.PAUSE_BEFORE_SEND:
-                    time.sleep(self.PAUSE_BEFORE_SEND)
+                    time.sleep(self.PAUSE_BEFORE_SEND)  # FIXME: Blocking
                 self.network.send_message(self.rx_cobid, request)
             except CanError as e:
                 # Could be a buffer overflow. Wait some time before trying again
@@ -69,7 +69,7 @@ class SdoClient(SdoBase):
                     raise
                 logger.info(str(e))
                 if self.PAUSE_AFTER_SEND:
-                    time.sleep(0.1)
+                    time.sleep(0.1)  # FIXME: Blocking
             else:
                 break
 
@@ -151,9 +151,10 @@ class SdoClient(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        fp = self.open(index, subindex, buffering=0)
-        size = fp.size
-        data = fp.read()
+        with self.open(index, subindex, buffering=0) as fp:
+            size = fp.size
+            data = fp.read()  # FIXME: Blocking?
+
         if size is None:
             # Node did not specify how many bytes to use
             # Try to find out using Object Dictionary
@@ -185,10 +186,10 @@ class SdoClient(SdoBase):
             When node responds with an error.
         """
         async with self.lock:  # Ensure only one active SDO request per channel
-            fp = await self.aopen(index, subindex, buffering=0)
-            size = fp.size
-            data = await fp.read()
-            await fp.close()
+            async with await self.aopen(index, subindex, buffering=0) as fp:
+                size = fp.size
+                data = await fp.read()
+
         if size is None:
             # Node did not specify how many bytes to use
             # Try to find out using Object Dictionary
@@ -227,10 +228,9 @@ class SdoClient(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        fp = self.open(index, subindex, "wb", buffering=7, size=len(data),
-                       force_segment=force_segment)
-        fp.write(data)
-        fp.close()
+        with self.open(index, subindex, "wb", buffering=7, size=len(data),
+                       force_segment=force_segment) as fp:
+            fp.write(data)
 
     async def adownload(
         self,
@@ -256,10 +256,9 @@ class SdoClient(SdoBase):
             When node responds with an error.
         """
         async with self.lock:  # Ensure only one active SDO request per channel
-            fp = await self.aopen(index, subindex, "wb", buffering=7,
-                                  size=len(data), force_segment=force_segment)
-            await fp.write(data)
-            await fp.close()
+            async with await self.aopen(index, subindex, "wb", buffering=7,
+                                        size=len(data), force_segment=force_segment) as fp:
+                await fp.write(data)
 
     def open(self, index, subindex=0, mode="rb", encoding="ascii",
              buffering=1024, size=None, block_transfer=False, force_segment=False, request_crc_support=True):
@@ -325,7 +324,8 @@ class SdoClient(SdoBase):
         return buffered_stream
 
     async def aopen(self, index, subindex=0, mode="rb", encoding="ascii",
-             buffering=1024, size=None, block_transfer=False, force_segment=False, request_crc_support=True):
+                    buffering=1024, size=None, block_transfer=False, force_segment=False,
+                    request_crc_support=True):
         """Open the data stream as a file like object.
 
         :param int index:
@@ -364,7 +364,7 @@ class SdoClient(SdoBase):
         buffer_size = buffering if buffering > 1 else io.DEFAULT_BUFFER_SIZE
         if "r" in mode:
             if block_transfer:
-                raise NotImplementedError("Missing BlockUploadStream for async")
+                raise NotImplementedError("BlockUploadStream for async not implemented")
                 raw_stream = BlockUploadStream(self, index, subindex, request_crc_support=request_crc_support)
             else:
                 raw_stream = await AReadableStream.open(self, index, subindex)
@@ -374,7 +374,7 @@ class SdoClient(SdoBase):
                 return raw_stream
         if "w" in mode:
             if block_transfer:
-                raise NotImplementedError("Missing BlockDownloadStream for async")
+                raise NotImplementedError("BlockDownloadStream for async not implemented")
                 raw_stream = BlockDownloadStream(self, index, subindex, size, request_crc_support=request_crc_support)
             else:
                 raw_stream = await AWritableStream.open(self, index, subindex, size, force_segment)
@@ -385,7 +385,7 @@ class SdoClient(SdoBase):
         if "b" not in mode:
             # Text mode
             line_buffering = buffering == 1
-            raise NotImplementedError("Missing TextIOWrapper for async")
+            raise NotImplementedError("TextIOWrapper for async not implemented")
             return io.TextIOWrapper(buffered_stream, encoding,
                                     line_buffering=line_buffering)
         return buffered_stream
@@ -577,7 +577,7 @@ class AReadableStream(io_async.RawIOBase):
             self._done = True
             return self.exp_data
         if size is None or size < 0:
-            return self.readall()
+            return await self.readall()
 
         command = REQUEST_SEGMENT_UPLOAD
         command |= self._toggle

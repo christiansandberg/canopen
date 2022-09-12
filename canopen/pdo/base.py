@@ -308,7 +308,7 @@ class Map(object):
         return False
 
     def on_message(self, can_id, data, timestamp):
-        # NOTE: Callback. Will be called from another thread
+        # NOTE: Callback. Called from another thread unless async
         is_transmitting = self._task is not None
         if can_id == self.cob_id and not is_transmitting:
             with self.receive_condition:  # FIXME: Blocking

@@ -44,12 +44,21 @@ class LocalNode(BaseNode):
         self.rpdo.network = network
         self.nmt.network = network
         self.emcy.network = network
-        network.subscribe(self.sdo.rx_cobid, self.sdo.on_request)  # FIXME: Async CB
-        network.subscribe(0, self.nmt.on_command)  # FIXME: Async CB
+        if network.is_async():
+            network.subscribe(self.sdo.rx_cobid, self.sdo.aon_request)
+            network.subscribe(0, self.nmt.aon_command)
+        else:
+            network.subscribe(self.sdo.rx_cobid, self.sdo.on_request)
+            network.subscribe(0, self.nmt.on_command)
 
     def remove_network(self):
-        self.network.unsubscribe(self.sdo.rx_cobid, self.sdo.on_request)  # FIXME: Async CB
-        self.network.unsubscribe(0, self.nmt.on_command)  # FIXME: Async CB
+        network = self.network
+        if network.is_async():
+            network.unsubscribe(self.sdo.rx_cobid, self.sdo.aon_request)
+            network.unsubscribe(0, self.nmt.aon_command)
+        else:
+            network.unsubscribe(self.sdo.rx_cobid, self.sdo.on_request)
+            network.unsubscribe(0, self.nmt.on_command)
         self.network = None
         self.sdo.network = None
         self.tpdo.network = None

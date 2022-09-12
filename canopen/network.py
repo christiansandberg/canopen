@@ -59,7 +59,7 @@ class Network(MutableMapping):
         self.notifier: Optional[Notifier] = None
         self.nodes: Dict[int, Union[RemoteNode, LocalNode]] = {}
         self.subscribers: Dict[int, List[Callback]] = {}
-        self.send_lock = threading.Lock()  # FIXME Async
+        self.send_lock = threading.Lock()
         self.sync = SyncProducer(self)
         self.time = TimeProducer(self)
         self.nmt = NmtMaster(0)
@@ -232,9 +232,9 @@ class Network(MutableMapping):
                           arbitration_id=can_id,
                           data=data,
                           is_remote_frame=remote)
-        # NOTE: This lock is ok for async, because ther is only one thread
-        #       calling this function when using async, so it'll never lock.
-        with self.send_lock:  # FIXME: Blocking
+        # NOTE: Blocking lock. This is probably ok for async, because async
+        #       only use one thread.
+        with self.send_lock:
             self.bus.send(msg)
         self.check()
 
@@ -270,7 +270,7 @@ class Network(MutableMapping):
         :param timestamp:
             Timestamp of the message, preferably as a Unix timestamp
         """
-        # NOTE: Callback. Will be called from another thread
+        # NOTE: Callback. Called from another thread unless async
         callbacks = self.subscribers.get(can_id)
         if callbacks is not None:
             for callback in callbacks:
@@ -290,6 +290,10 @@ class Network(MutableMapping):
             if exc is not None:
                 logger.error("An error has caused receiving of messages to stop")
                 raise exc
+
+    def is_async(self) -> bool:
+        """Check if canopen has been connected with async"""
+        return self.loop is not None
 
     def __getitem__(self, node_id: int) -> Union[RemoteNode, LocalNode]:
         return self.nodes[node_id]
@@ -355,6 +359,8 @@ class PeriodicMessageTask(object):
         :param data:
             New data to transmit
         """
+        # NOTE: Called from callback, which is another thread on non-async use.
+        #       Make sure this is thread-safe.
         new_data = bytearray(data)
         old_data = self.msg.data
         self.msg.data = new_data
@@ -377,7 +383,7 @@ class MessageListener(Listener):
         self.network = network
 
     def on_message_received(self, msg):
-        # NOTE: Callback. Will be called from another thread
+        # NOTE: Callback. Called from another thread unless async
         if msg.is_error_frame or msg.is_remote_frame:
             return
 
@@ -412,11 +418,14 @@ class NodeScanner(object):
         self.nodes: List[int] = []
 
     def on_message_received(self, can_id: int):
-        # NOTE: Callback. Will be called from another thread
+        # NOTE: Callback. Called from another thread unless async
         service = can_id & 0x780
         node_id = can_id & 0x7F
         if node_id not in self.nodes and node_id != 0 and service in self.SERVICES:
-            # NOTE: Assume this is thread-safe
+            # NOTE: In the current CPython implementation append on lists are
+            #       atomic which makes this thread-safe. However, other py
+            #       interpreters might not. It should be considered if a better
+            #       mechanism is needed to protect against race.
             self.nodes.append(node_id)
 
     def reset(self):

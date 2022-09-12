@@ -61,7 +61,7 @@ class RemoteNode(BaseNode):
         self.tpdo.network = network
         self.rpdo.network = network
         self.nmt.network = network
-        if network.loop:
+        if network.is_async():
             for sdo in self.sdo_channels:
                 network.subscribe(sdo.tx_cobid, sdo.aon_response)
             network.subscribe(0x700 + self.id, self.nmt.aon_heartbeat)
@@ -74,12 +74,18 @@ class RemoteNode(BaseNode):
         network.subscribe(0, self.nmt.on_command)
 
     def remove_network(self):
-        # FIXME: Usubscribe async CB
-        for sdo in self.sdo_channels:
-            self.network.unsubscribe(sdo.tx_cobid, sdo.on_response)
-        self.network.unsubscribe(0x700 + self.id, self.nmt.on_heartbeat)
-        self.network.unsubscribe(0x80 + self.id, self.emcy.on_emcy)
-        self.network.unsubscribe(0, self.nmt.on_command)
+        network = self.network
+        if network.is_async():
+            for sdo in self.sdo_channels:
+                network.unsubscribe(sdo.tx_cobid, sdo.aon_response)
+            network.unsubscribe(0x700 + self.id, self.nmt.aon_heartbeat)
+            network.unsubscribe(0x80 + self.id, self.emcy.aon_emcy)
+        else:
+            for sdo in self.sdo_channels:
+                network.unsubscribe(sdo.tx_cobid, sdo.on_response)
+            network.unsubscribe(0x700 + self.id, self.nmt.on_heartbeat)
+            network.unsubscribe(0x80 + self.id, self.emcy.on_emcy)
+        network.unsubscribe(0, self.nmt.on_command)
         self.network = None
         self.sdo.network = None
         self.pdo.network = None

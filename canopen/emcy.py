@@ -23,15 +23,15 @@ class EmcyConsumer(object):
         #: Only active EMCYs. Will be cleared on Error Reset
         self.active: List["EmcyError"] = []
         self.callbacks = []
-        self.emcy_received = threading.Condition()  # FIXME Async
+        self.emcy_received = threading.Condition()
         self.aemcy_received = asyncio.Condition()
 
     def on_emcy(self, can_id, data, timestamp):
-        # NOTE: Callback. Will be called from another thread
+        # NOTE: Callback. Called from another thread unless async
         code, register, data = EMCY_STRUCT.unpack(data)
         entry = EmcyError(code, register, data, timestamp)
 
-        with self.emcy_received:  # FIXME: Blocking
+        with self.emcy_received:  # NOTE: Blocking call
             if code & 0xFF00 == 0:
                 # Error reset
                 self.active = []
@@ -40,9 +40,8 @@ class EmcyConsumer(object):
             self.log.append(entry)
             self.emcy_received.notify_all()
 
-        # NOTE: Will be called from another thread
         for callback in self.callbacks:
-            callback(entry)  # FIXME: Assert if coroutine?
+            callback(entry)  # FIXME: Assert if callback is coroutine?
 
     async def aon_emcy(self, can_id, data, timestamp):
         code, register, data = EMCY_STRUCT.unpack(data)
@@ -89,9 +88,9 @@ class EmcyConsumer(object):
         """
         end_time = time.time() + timeout
         while True:
-            with self.emcy_received:  # FIXME: Blocking
+            with self.emcy_received:  # NOTE: Blocking call
                 prev_log_size = len(self.log)
-                self.emcy_received.wait(timeout)  # FIXME: Blocking
+                self.emcy_received.wait(timeout)  # NOTE: Blocking call
                 if len(self.log) == prev_log_size:
                     # Resumed due to timeout
                     return None

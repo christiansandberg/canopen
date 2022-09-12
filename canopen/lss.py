@@ -91,7 +91,7 @@ class LssMaster(object):
         self.network: Optional[Network] = None
         self._node_id = 0
         self._data = None
-        self.responses = queue.Queue()  # FIXME Async
+        self.responses = queue.Queue()
         self.aresponses = asyncio.Queue()
 
     def send_switch_state_global(self, mode):
@@ -264,7 +264,7 @@ class LssMaster(object):
         lss_next = 0
 
         if self.__send_fast_scan_message(lss_id[0], lss_bit_check, lss_sub, lss_next):
-            time.sleep(0.01)
+            time.sleep(0.01)  # NOTE: Blocking call
             while lss_sub < 4:
                 lss_bit_check = 32
                 while lss_bit_check > 0:
@@ -273,13 +273,13 @@ class LssMaster(object):
                     if not self.__send_fast_scan_message(lss_id[lss_sub], lss_bit_check, lss_sub, lss_next):
                         lss_id[lss_sub] |= 1<<lss_bit_check
 
-                    time.sleep(0.01)
+                    time.sleep(0.01)  # NOTE: Blocking call
 
                 lss_next = (lss_sub + 1) & 3
                 if not self.__send_fast_scan_message(lss_id[lss_sub], lss_bit_check, lss_sub, lss_next):
                     return False, None
 
-                time.sleep(0.01)
+                time.sleep(0.01)  # NOTE: Blocking
 
                 # Now the next 32 bits will be scanned
                 lss_sub += 1
@@ -311,7 +311,7 @@ class LssMaster(object):
         response = self.__send_command(message)
         # some device needs these delays between messages
         # because it can't handle messages arriving with no delay
-        time.sleep(0.2)
+        time.sleep(0.2)  # NOTE: Blocking call
 
         return response
 
@@ -385,7 +385,7 @@ class LssMaster(object):
         response = None
         if not self.responses.empty():
             logger.info("There were unexpected messages in the queue")
-            self.responses = queue.Queue()  # FIXME Async
+            self.responses = queue.Queue()  # FIXME: Recreating the queue. Async too?
 
         self.network.send_message(self.LSS_TX_COBID, message)
 
@@ -395,7 +395,7 @@ class LssMaster(object):
         # Wait for the slave to respond
         # TODO check if the response is LSS response message
         try:
-            response = self.responses.get(  # FIXME: Blocking
+            response = self.responses.get(  # NOTE: Blocking call
                 block=True, timeout=self.RESPONSE_TIMEOUT)
         except queue.Empty:
             raise LssError("No LSS response received")
@@ -403,8 +403,8 @@ class LssMaster(object):
         return response
 
     def on_message_received(self, can_id, data, timestamp):
-        # NOTE: Callback. Will be called from another thread
-        self.responses.put(bytes(data))  # FIXME: Blocking
+        # NOTE: Callback. Called from another thread
+        self.responses.put(bytes(data))  # NOTE: Blocking call
 
     async def aon_message_received(self, can_id, data, timestamp):
         await self.aresponses.put(bytes(data))

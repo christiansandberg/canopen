@@ -99,21 +99,21 @@ try:
     while node.state != 'READY TO SWITCH ON':
         if time.time() > timeout:
             raise Exception('Timeout when trying to change state')
-        time.sleep(0.001)
+        time.sleep(0.001)  # FIXME: Blocking
 
     timeout = time.time() + 15
     node.state = 'SWITCHED ON'
     while node.state != 'SWITCHED ON':
         if time.time() > timeout:
             raise Exception('Timeout when trying to change state')
-        time.sleep(0.001)
+        time.sleep(0.001)  # FIXME: Blocking
 
     timeout = time.time() + 15
     node.state = 'OPERATION ENABLED'
     while node.state != 'OPERATION ENABLED':
         if time.time() > timeout:
             raise Exception('Timeout when trying to change state')
-        time.sleep(0.001)
+        time.sleep(0.001)  # FIXME: Blocking
 
     print('Node Status {0}'.format(node.powerstate_402.state))
 
@@ -135,7 +135,7 @@ try:
         print('statusword: {0}'.format(statusword))
         print('VEL: {0}'.format(speed))
 
-        time.sleep(0.01)
+        time.sleep(0.01)  # FIXME: Blocking
 
 except KeyboardInterrupt:
     pass

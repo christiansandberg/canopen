@@ -28,7 +28,7 @@ class SdoServer(SdoBase):
         self.last_received_error = 0x00000000
 
     def on_request(self, can_id, data, timestamp):
-        # NOTE: Callback. Will be called from another thread
+        # NOTE: Callback. Called from another thread unless async
         command, = struct.unpack_from("B", data, 0)
         ccs = command & 0xE0
 
