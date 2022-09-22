@@ -21,7 +21,7 @@ class SdoClient(SdoBase):
     """Handles communication with an SDO server."""
 
     #: Max time in seconds to wait for response from server
-    RESPONSE_TIMEOUT = 0.3
+    RESPONSE_TIMEOUT = 0.5
 
     #: Max number of request retries before raising error
     MAX_RETRIES = 1
