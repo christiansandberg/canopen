@@ -24,7 +24,7 @@ class SdoClient(SdoBase):
     RESPONSE_TIMEOUT = 0.5
 
     #: Max number of request retries before raising error
-    MAX_RETRIES = 1
+    MAX_RETRIES = 5
 
     #: Seconds to wait before sending a request, for rate limiting
     PAUSE_BEFORE_SEND = 0.0
