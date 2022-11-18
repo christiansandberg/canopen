@@ -248,7 +248,7 @@ class LssMaster(object):
         :return:
             True if a slave is found.
             False if there is no candidate. 
-            list is the LSS identities [vendor_id, product_code, revision_number, seerial_number]
+            list is the LSS identities [vendor_id, product_code, revision_number, serial_number]
         :rtype: bool, list
         """
         lss_id = [0] * 4
@@ -265,21 +265,21 @@ class LssMaster(object):
 
                     if not self.__send_fast_scan_message(lss_id[lss_sub], lss_bit_check, lss_sub, lss_next):
                         lss_id[lss_sub] |= 1<<lss_bit_check
-                    
+
                     time.sleep(0.01)
-                    
+
                 lss_next = (lss_sub + 1) & 3
                 if not self.__send_fast_scan_message(lss_id[lss_sub], lss_bit_check, lss_sub, lss_next):
                     return False, None
 
                 time.sleep(0.01)
-                
+
                 # Now the next 32 bits will be scanned
                 lss_sub += 1
 
             # Now lss_id contains the entire 128 bits scanned
             return True, lss_id
-        
+
         return False, None
 
     def __send_fast_scan_message(self, id_number, bit_checker, lss_sub, lss_next):
@@ -293,7 +293,7 @@ class LssMaster(object):
         cs = struct.unpack_from("<B", recv_msg)[0]
         if cs == CS_IDENTIFY_SLAVE:
                 return True
-        
+
         return False
 
     def __send_lss_address(self, req_cs, number):
