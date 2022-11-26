@@ -28,7 +28,7 @@ class RemoteNode(BaseNode):
         Object dictionary as either a path to a file, an ``ObjectDictionary``
         or a file like object.
     :param load_od:
-        Enable the Object Dictionary to be sent trough SDO's to the remote
+        Enable the Object Dictionary to be sent through SDO's to the remote
         node at startup.
     """
 

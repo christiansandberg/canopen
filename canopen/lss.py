@@ -258,7 +258,7 @@ class LssMaster(object):
         :return:
             True if a slave is found.
             False if there is no candidate.
-            list is the LSS identities [vendor_id, product_code, revision_number, seerial_number]
+            list is the LSS identities [vendor_id, product_code, revision_number, serial_number]
         :rtype: bool, list
         """
         lss_id = [0] * 4
