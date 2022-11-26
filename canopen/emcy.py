@@ -5,6 +5,7 @@ import threading
 import asyncio
 import time
 from typing import Callable, List, Optional, TYPE_CHECKING
+from .async_guard import ensure_not_async
 
 if TYPE_CHECKING:
     from .network import Network
@@ -26,6 +27,7 @@ class EmcyConsumer(object):
         self.emcy_received = threading.Condition()
         self.aemcy_received = asyncio.Condition()
 
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def on_emcy(self, can_id, data, timestamp):
         # NOTE: Callback. Called from another thread unless async
         code, register, data = EMCY_STRUCT.unpack(data)
@@ -76,6 +78,8 @@ class EmcyConsumer(object):
         self.log = []
         self.active = []
 
+    # FIXME: Make async implementation
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def wait(
         self, emcy_code: Optional[int] = None, timeout: float = 10
     ) -> "EmcyError":

@@ -7,6 +7,7 @@ import asyncio
 from typing import Callable, Optional, TYPE_CHECKING
 
 from .network import CanError
+from .async_guard import ensure_not_async
 
 if TYPE_CHECKING:
     from .network import Network
@@ -96,7 +97,6 @@ class NmtBase(object):
         - 'RESET'
         - 'RESET COMMUNICATION'
         """
-        logger.warning("Accessing NmtBase.state attribute is deprecated")
         if self._state in NMT_STATES:
             return NMT_STATES[self._state]
         else:
@@ -104,7 +104,7 @@ class NmtBase(object):
 
     @state.setter
     def state(self, new_state: str):
-        logger.warning("Accessing NmtBase.state setter is deprecated")
+        logger.warning("Accessing NmtBase.state setter is deprecated, use set_state()")
         self.set_state(new_state)
 
     def set_state(self, new_state: str):
@@ -129,6 +129,7 @@ class NmtMaster(NmtBase):
         self.astate_update = asyncio.Condition()
         self._callbacks = []
 
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def on_heartbeat(self, can_id, data, timestamp):
         # NOTE: Callback. Called from another thread unless async
         with self.state_update:  # NOTE: Blocking call
@@ -177,6 +178,7 @@ class NmtMaster(NmtBase):
             "Sending NMT command 0x%X to node %d", code, self.id)
         self.network.send_message(0, [code, self.id])
 
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def wait_for_heartbeat(self, timeout: float = 10):
         """Wait until a heartbeat message is received."""
         with self.state_update:  # NOTE: Blocking call
@@ -186,6 +188,17 @@ class NmtMaster(NmtBase):
             raise NmtError("No boot-up or heartbeat received")
         return self.state
 
+    async def await_for_heartbeat(self, timeout: float = 10):
+        """Wait until a heartbeat message is received."""
+        async with self.astate_update:
+            self._state_received = None
+            try:
+                await asyncio.wait_for(self.astate_update.wait(), timeout=timeout)
+            except asyncio.TimeoutError:
+                raise NmtError("No boot-up or heartbeat received")
+        return self.state
+
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def wait_for_bootup(self, timeout: float = 10) -> None:
         """Wait until a boot-up message is received."""
         end_time = time.time() + timeout
@@ -198,6 +211,20 @@ class NmtMaster(NmtBase):
                 raise NmtError("Timeout waiting for boot-up message")
             if self._state_received == 0:
                 break
+
+    async def await_for_bootup(self, timeout: float = 10) -> None:
+        """Wait until a boot-up message is received."""
+        async def wait_for_bootup():
+            while True:
+                async with self.astate_update:
+                    self._state_received = None
+                    await self.astate_update.wait()
+                    if self._state_received == 0:
+                        return
+        try:
+            await asyncio.wait_for(wait_for_bootup(), timeout=timeout)
+        except asyncio.TimeoutError:
+            raise NmtError("Timeout waiting for boot-up message")
 
     def add_hearbeat_callback(self, callback: Callable[[int], None]):
         """Add function to be called on heartbeat reception.
@@ -255,7 +282,7 @@ class NmtSlave(NmtBase):
         # The heartbeat service should start on the transition
         # between INITIALIZING and PRE-OPERATIONAL state
         if old_state == 0 and self._state == 127:
-            heartbeat_time_ms = self._local_node.sdo[0x1017].get_raw()
+            heartbeat_time_ms = self._local_node.sdo[0x1017].get_raw()  # FIXME: Blocking?
             self.start_heartbeat(heartbeat_time_ms)
         else:
             self.update_heartbeat()

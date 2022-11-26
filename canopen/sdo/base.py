@@ -108,7 +108,7 @@ class Record(Mapping):
         return iter(self.od)
 
     async def aiter(self):
-        for i in range(1, len(self.od)):
+        for i in iter(self.od):
             yield i
 
     def __aiter__(self):
@@ -200,7 +200,8 @@ class Variable(variable.Variable):
             A file like object.
         """
         return self.sdo_node.open(self.od.index, self.od.subindex, mode,
-                                  encoding, buffering, size, block_transfer, request_crc_support=request_crc_support)
+                                  encoding, buffering, size, block_transfer,
+                                  request_crc_support=request_crc_support)
 
     async def aopen(self, mode="rb", encoding="ascii", buffering=1024, size=None,
                     block_transfer=False, request_crc_support=True):

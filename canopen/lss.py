@@ -8,6 +8,7 @@ try:
     import queue
 except ImportError:
     import Queue as queue
+from .async_guard import ensure_not_async
 
 if TYPE_CHECKING:
     from .network import Network
@@ -248,6 +249,8 @@ class LssMaster(object):
         message[0] = CS_IDENTIFY_NON_CONFIGURED_REMOTE_SLAVE
         self.__send_command(message)
 
+    # FIXME: Make async implementation
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def fast_scan(self):
         """This command sends a series of fastscan message
         to find unconfigured slave with lowest number of LSS idenities
@@ -279,7 +282,7 @@ class LssMaster(object):
                 if not self.__send_fast_scan_message(lss_id[lss_sub], lss_bit_check, lss_sub, lss_next):
                     return False, None
 
-                time.sleep(0.01)  # NOTE: Blocking
+                time.sleep(0.01)  # NOTE: Blocking call
 
                 # Now the next 32 bits will be scanned
                 lss_sub += 1
@@ -303,6 +306,8 @@ class LssMaster(object):
 
         return False
 
+    # FIXME: Make async implementation
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def __send_lss_address(self, req_cs, number):
         message = bytearray(8)
 
@@ -366,6 +371,8 @@ class LssMaster(object):
             error_msg = "LSS Error: %d" % error_code
             raise LssError(error_msg)
 
+    # FIXME: Make async implementation
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def __send_command(self, message):
         """Send a LSS operation code to the network
 
@@ -385,7 +392,7 @@ class LssMaster(object):
         response = None
         if not self.responses.empty():
             logger.info("There were unexpected messages in the queue")
-            self.responses = queue.Queue()  # FIXME: Recreating the queue. Async too?
+            self.responses = queue.Queue()  # FIXME: Recreating the queue
 
         self.network.send_message(self.LSS_TX_COBID, message)
 
@@ -402,6 +409,7 @@ class LssMaster(object):
 
         return response
 
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def on_message_received(self, can_id, data, timestamp):
         # NOTE: Callback. Called from another thread
         self.responses.put(bytes(data))  # NOTE: Blocking call

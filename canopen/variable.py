@@ -45,7 +45,7 @@ class Variable(object):
 
     @data.setter
     def data(self, data: bytes):
-        logger.warning("Accessing Variable.data setter is deprecated")
+        logger.warning("Accessing Variable.data setter is deprecated, use set_data()")
         self.set_data(data)
 
     @property
@@ -102,7 +102,7 @@ class Variable(object):
 
     @raw.setter
     def raw(self, value: Union[int, bool, float, str, bytes]):
-        logger.warning("Accessing Variable.raw setter is deprecated")
+        logger.warning("Accessing Variable.raw setter is deprecated, use set_raw()")
         self.set_raw(value)
 
     def set_raw(self, value: Union[int, bool, float, str, bytes]):
@@ -142,7 +142,7 @@ class Variable(object):
 
     @phys.setter
     def phys(self, value: Union[int, bool, float, str, bytes]):
-        logger.warning("Accessing Variable.phys setter is deprecated")
+        logger.warning("Accessing Variable.phys setter is deprecated, use set_phys()")
         self.set_phys(value)
 
     def set_phys(self, value: Union[int, bool, float, str, bytes]):
@@ -169,7 +169,7 @@ class Variable(object):
 
     @desc.setter
     def desc(self, desc: str):
-        logger.warning("Accessing Variable.desc setter is deprecated")
+        logger.warning("Accessing Variable.desc setter is deprecated, use set_desc()")
         self.set_desc(desc)
 
     def set_desc(self, desc: str):

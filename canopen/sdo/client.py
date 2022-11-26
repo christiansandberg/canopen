@@ -15,6 +15,7 @@ from .base import SdoBase
 from .constants import *
 from .exceptions import *
 from . import io_async
+from ..async_guard import ensure_not_async
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,7 @@ class SdoClient(SdoBase):
         self.aresponses = asyncio.Queue()
         self.lock = asyncio.Lock()
 
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def on_response(self, can_id, data, timestamp):
         # NOTE: Callback. Will be called from another thread
         self.responses.put_nowait(bytes(data))
@@ -55,12 +57,13 @@ class SdoClient(SdoBase):
     async def aon_response(self, can_id, data, timestamp):
         await self.aresponses.put(bytes(data))
 
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def send_request(self, request):
         retries_left = self.MAX_RETRIES
         while True:
             try:
                 if self.PAUSE_BEFORE_SEND:
-                    time.sleep(self.PAUSE_BEFORE_SEND)  # FIXME: Blocking
+                    time.sleep(self.PAUSE_BEFORE_SEND)  # NOTE: Blocking call
                 self.network.send_message(self.rx_cobid, request)
             except CanError as e:
                 # Could be a buffer overflow. Wait some time before trying again
@@ -69,13 +72,32 @@ class SdoClient(SdoBase):
                     raise
                 logger.info(str(e))
                 if self.PAUSE_AFTER_SEND:
-                    time.sleep(0.1)  # FIXME: Blocking
+                    time.sleep(0.1)  # NOTE: Blocking call
             else:
                 break
 
+    async def asend_request(self, request):
+        retries_left = self.MAX_RETRIES
+        while True:
+            try:
+                if self.PAUSE_BEFORE_SEND:
+                    await asyncio.sleep(self.PAUSE_BEFORE_SEND)
+                self.network.send_message(self.rx_cobid, request)
+            except CanError as e:
+                # Could be a buffer overflow. Wait some time before trying again
+                retries_left -= 1
+                if not retries_left:
+                    raise
+                logger.info(str(e))
+                if self.PAUSE_AFTER_SEND:
+                    await asyncio.sleep(0.1)
+            else:
+                break
+
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def read_response(self):
         try:
-            response = self.responses.get(  # FIXME: Blocking
+            response = self.responses.get(  # NOTE: Blocking call
                 block=True, timeout=self.RESPONSE_TIMEOUT)
         except queue.Empty:
             raise SdoCommunicationError("No SDO response received")
@@ -96,11 +118,13 @@ class SdoClient(SdoBase):
             raise SdoAbortedError(abort_code)
         return response
 
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def request_response(self, sdo_request):
         retries_left = self.MAX_RETRIES
         if not self.responses.empty():
+            raise RuntimeError("Unexpected message in the queue")  # FIXME
             # logger.warning("There were unexpected messages in the queue")
-            self.responses = queue.Queue()  # FIXME Async
+            self.responses = queue.Queue()
         while True:
             self.send_request(sdo_request)
             # Wait for node to respond
@@ -116,7 +140,7 @@ class SdoClient(SdoBase):
     async def arequest_response(self, sdo_request):
         retries_left = self.MAX_RETRIES
         while True:
-            self.send_request(sdo_request)
+            await self.asend_request(sdo_request)
             # Wait for node to respond
             try:
                 return await self.aread_response()
@@ -136,6 +160,7 @@ class SdoClient(SdoBase):
         self.send_request(request)
         logger.error("Transfer aborted by client with code 0x{:08X}".format(abort_code))
 
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def upload(self, index: int, subindex: int) -> bytes:
         """May be called to make a read operation without an Object Dictionary.
 
@@ -153,7 +178,7 @@ class SdoClient(SdoBase):
         """
         with self.open(index, subindex, buffering=0) as fp:
             size = fp.size
-            data = fp.read()  # FIXME: Blocking?
+            data = fp.read()
 
         if size is None:
             # Node did not specify how many bytes to use
@@ -205,6 +230,7 @@ class SdoClient(SdoBase):
                     data = data[0:size]
         return data
 
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def download(
         self,
         index: int,
@@ -260,6 +286,7 @@ class SdoClient(SdoBase):
                                         size=len(data), force_segment=force_segment) as fp:
                 await fp.write(data)
 
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def open(self, index, subindex=0, mode="rb", encoding="ascii",
              buffering=1024, size=None, block_transfer=False, force_segment=False, request_crc_support=True):
         """Open the data stream as a file like object.

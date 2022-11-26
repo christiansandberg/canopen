@@ -1,8 +1,12 @@
+from typing import TYPE_CHECKING
 import logging
 
 from .base import SdoBase
 from .constants import *
 from .exceptions import *
+
+if TYPE_CHECKING:
+    from ..node.local import LocalNode
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +14,7 @@ logger = logging.getLogger(__name__)
 class SdoServer(SdoBase):
     """Creates an SDO server."""
 
-    def __init__(self, rx_cobid, tx_cobid, node):
+    def __init__(self, rx_cobid, tx_cobid, node: 'LocalNode'):
         """
         :param int rx_cobid:
             COB-ID that the server receives on (usually 0x600 + node ID)
@@ -29,6 +33,7 @@ class SdoServer(SdoBase):
 
     def on_request(self, can_id, data, timestamp):
         # NOTE: Callback. Called from another thread unless async
+        # FIXME: There is a lot of calls here, this must be checked for thread safe
         command, = struct.unpack_from("B", data, 0)
         ccs = command & 0xE0
 

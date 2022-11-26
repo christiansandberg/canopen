@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 from ..sdo import SdoAbortedError
 from .. import objectdictionary
 from .. import variable
+from ..async_guard import ensure_not_async
 
 PDO_NOT_VALID = 1 << 31
 RTR_NOT_ALLOWED = 1 << 30
@@ -205,7 +206,7 @@ class Map(object):
         #: Set explicitly or using the :meth:`start()` method.
         self.period: Optional[float] = None
         self.callbacks = []
-        self.receive_condition = threading.Condition()  # FIXME Async
+        self.receive_condition = threading.Condition()
         self.areceive_condition = asyncio.Condition()
         self.is_received: bool = False
         self._task = None
@@ -307,11 +308,12 @@ class Map(object):
         # Unknown transmission type, assume non-periodic
         return False
 
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def on_message(self, can_id, data, timestamp):
         # NOTE: Callback. Called from another thread unless async
         is_transmitting = self._task is not None
         if can_id == self.cob_id and not is_transmitting:
-            with self.receive_condition:  # FIXME: Blocking
+            with self.receive_condition:  # NOTE: Blocking call
                 self.is_received = True
                 self.data = data
                 if self.timestamp is not None:
@@ -394,6 +396,7 @@ class Map(object):
 
         self.subscribe()
 
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def read(self, from_od=False) -> None:
         """Read PDO configuration for this map using SDO or from OD."""
         gen = self.read_generator()
@@ -404,7 +407,7 @@ class Map(object):
                 value = var.od.default
             else:
                 # Get value from SDO
-                value = var.get_raw()
+                value = var.get_raw()  # FIXME: Blocking?
             try:
                 # Deliver value into read_generator and wait for next object
                 var = gen.send(value)
@@ -454,8 +457,7 @@ class Map(object):
                 # mappings for an invalid object 0x0000:00 to overwrite any
                 # excess entries with all-zeros.
 
-                # FIXME: This is a blocking call which might be called from async
-                self._fill_map(self.map_array[0].get_raw())
+                self._fill_map(self.map_array[0].get_raw())  # FIXME: Blocking?
             subindex = 1
             for var in self.map:
                 logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
@@ -485,10 +487,11 @@ class Map(object):
             yield self.com_record[1], self.cob_id | (RTR_NOT_ALLOWED if not self.rtr_allowed else 0x0)
             self.subscribe()
 
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def save(self) -> None:
         """Read PDO configuration for this map using SDO."""
         for sdo, value in self.save_generator():
-            sdo.set_raw(value)
+            sdo.set_raw(value)  # FIXME: Blocking?
 
     async def asave(self) -> None:
         """Read PDO configuration for this map using SDO, async variant."""
@@ -596,15 +599,16 @@ class Map(object):
         if self.enabled and self.rtr_allowed:
             self.pdo_node.network.send_message(self.cob_id, None, remote=True)
 
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def wait_for_reception(self, timeout: float = 10) -> float:
         """Wait for the next transmit PDO.
 
         :param float timeout: Max time to wait in seconds.
         :return: Timestamp of message received or None if timeout.
         """
-        with self.receive_condition:  # FIXME: Blocking
+        with self.receive_condition:  # NOTE: Blocking call
             self.is_received = False
-            self.receive_condition.wait(timeout)  # FIXME: Blocking
+            self.receive_condition.wait(timeout)  # NOTE: Blocking call
         return self.timestamp if self.is_received else None
 
     async def await_for_reception(self, timeout: float = 10) -> float:

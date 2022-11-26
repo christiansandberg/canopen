@@ -29,6 +29,7 @@ from .nmt import NmtMaster
 from .lss import LssMaster
 from .objectdictionary.eds import import_from_node
 from .objectdictionary import ObjectDictionary
+from .async_guard import set_async_sentinel
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +133,10 @@ class Network(MutableMapping):
             kwargs_notifier["loop"] = kwargs["loop"]
             self.loop = kwargs["loop"]
             del kwargs["loop"]
+            # Register this function as the means to check if canopen is run in
+            # async mode. This enables the @ensure_not_async() decorator to
+            # work. See async_guard.py
+            set_async_sentinel(self.is_async)
         self.bus = can.Bus(*args, **kwargs)
         logger.info("Connected to '%s'", self.bus.channel_info)
         self.notifier = can.Notifier(self.bus, self.listeners, 1, **kwargs_notifier)
@@ -359,8 +364,7 @@ class PeriodicMessageTask(object):
         :param data:
             New data to transmit
         """
-        # NOTE: Called from callback, which is another thread on non-async use.
-        #       Make sure this is thread-safe.
+        # NOTE: Callback. Called from another thread unless async
         new_data = bytearray(data)
         old_data = self.msg.data
         self.msg.data = new_data
@@ -436,6 +440,7 @@ class NodeScanner(object):
         """Search for nodes by sending SDO requests to all node IDs."""
         if self.network is None:
             raise RuntimeError("A Network is required to do active scanning")
+        # SDO upload request, parameter 0x1000:0x00
         sdo_req = b"\x40\x00\x10\x00\x00\x00\x00\x00"
         for node_id in range(1, limit + 1):
             self.network.send_message(0x600 + node_id, sdo_req)

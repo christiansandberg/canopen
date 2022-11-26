@@ -151,9 +151,9 @@ class RemoteNode(BaseNode):
                     subindex=subindex,
                     name=name,
                     value=value)))
-                self.sdo[index][subindex].set_raw(value)
+                self.sdo[index][subindex].set_raw(value)  # FIXME: Blocking?
             else:
-                self.sdo[index].set_raw(value)
+                self.sdo[index].set_raw(value)  # FIXME: Blocking?
                 logger.info(str('SDO [{index:#06x}]: {name}: {value:#06x}'.format(
                     index=index,
                     name=name,
