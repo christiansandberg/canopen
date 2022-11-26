@@ -370,7 +370,7 @@ class BaseNode402(RemoteNode):
 
     @property
     def op_mode(self):
-        logger.warning("Accessing BaseNode402.op_mode property is deprecated")
+        logger.warning("Accessing BaseNode402.op_mode property is deprecated, use get_op_mode()")
         return self.get_op_mode()
 
     def get_op_mode(self):
@@ -456,7 +456,7 @@ class BaseNode402(RemoteNode):
         """
         if not hasattr(self, '_op_mode_support'):
             # Cache value only on first lookup, this object should never change.
-            self._op_mode_support = self.sdo[0x6502].get_raw()
+            self._op_mode_support = self.sdo[0x6502].get_raw()  # FIXME: Blocking
             logger.info('Caching node {n} supported operation modes 0x{m:04X}'.format(
                 n=self.id, m=self._op_mode_support))
         bits = OperationMode.SUPPORTED[mode]
@@ -475,7 +475,7 @@ class BaseNode402(RemoteNode):
 
     @property
     def statusword(self):
-        logger.warning("Accessing BaseNode402.statusword property is deprecated")
+        logger.warning("Accessing BaseNode402.statusword property is deprecated, use get_statusword()")
         return self.get_statusword()
 
     def get_statusword(self):
@@ -537,7 +537,7 @@ class BaseNode402(RemoteNode):
 
     @property
     def state(self):
-        logger.warning("Accessing BaseNode402.state property is deprecated")
+        logger.warning("Accessing BaseNode402.state property is deprecated, use get_state()")
         return self.get_state(self)
 
     def get_state(self):

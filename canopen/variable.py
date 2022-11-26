@@ -26,6 +26,7 @@ class Variable(object):
         self.subindex = od.subindex
 
     def get_data(self) -> bytes:
+        """Byte representation of the object as :class:`bytes`."""
         raise NotImplementedError("Variable is not readable")
 
     async def aget_data(self) -> bytes:
@@ -39,8 +40,7 @@ class Variable(object):
 
     @property
     def data(self) -> bytes:
-        """Byte representation of the object as :class:`bytes`."""
-        logger.warning("Accessing Variable.data property is deprecated")
+        logger.warning("Accessing Variable.data property is deprecated, use get_data()")
         return self.get_data()
 
     @data.setter
@@ -50,7 +50,7 @@ class Variable(object):
 
     @property
     def raw(self) -> Union[int, bool, float, str, bytes]:
-        logger.warning("Accessing Variable.raw property is deprecated")
+        logger.warning("Accessing Variable.raw property is deprecated, use get_raw()")
         return self.get_raw()
 
     def get_raw(self) -> Union[int, bool, float, str, bytes]:
@@ -119,7 +119,7 @@ class Variable(object):
 
     @property
     def phys(self) -> Union[int, bool, float, str, bytes]:
-        logger.warning("Accessing Variable.phys attribute is deprecated")
+        logger.warning("Accessing Variable.phys attribute is deprecated, use get_phys()")
         return self.get_phys()
 
     def get_phys(self) -> Union[int, bool, float, str, bytes]:
@@ -153,11 +153,11 @@ class Variable(object):
 
     @property
     def desc(self) -> str:
-        """Converts to and from a description of the value as a string."""
-        logger.warning("Accessing Variable.desc attribute is deprecated")
+        logger.warning("Accessing Variable.desc attribute is deprecated, use get_desc()")
         return self.get_desc()
 
     def get_desc(self) -> str:
+        """Converts to and from a description of the value as a string."""
         value = self.od.decode_desc(self.get_raw())
         logger.debug("Description is '%s'", value)
         return value
@@ -180,8 +180,11 @@ class Variable(object):
 
     @property
     def bits(self) -> "Bits":
-        """Access bits using integers, slices, or bit descriptions."""
         logger.warning("Accessing Variable.bits attribute is deprecated")
+        return self.get_bits()
+
+    def get_bits(self) -> "Bits":
+        """Access bits using integers, slices, or bit descriptions."""
         return Bits(self)
 
     def read(self, fmt: str = "raw") -> Union[int, bool, float, str, bytes]:

@@ -456,7 +456,6 @@ class Map(object):
                 # fixed number of entries (count not writable), generate dummy
                 # mappings for an invalid object 0x0000:00 to overwrite any
                 # excess entries with all-zeros.
-
                 self._fill_map(self.map_array[0].get_raw())  # FIXME: Blocking?
             subindex = 1
             for var in self.map:
