@@ -100,6 +100,12 @@ class LocalNode(BaseNode):
         if check_writable and not obj.writable:
             raise SdoAbortedError(0x06010002)
 
+        # Check length matches type (length of od variable is in bits)
+        if obj.data_type in objectdictionary.NUMBER_TYPES and (
+            not 8 * len(data) == len(obj)
+        ):
+            raise SdoAbortedError(0x06070010)
+
         # Try callbacks
         for callback in self._write_callbacks:
             callback(index=index, subindex=subindex, od=obj, data=data)
