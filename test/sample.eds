@@ -298,7 +298,7 @@ ObjectType=7
 DataType=7
 AccessType=RW
 PDOMapping=0
-DefaultValue=1614807056
+DefaultValue=0x20010032
 
 [1600sub2]
 ParameterName=RPDO 1 mapping information 2

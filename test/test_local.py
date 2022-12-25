@@ -4,7 +4,9 @@ import canopen
 import logging
 import time
 
-# logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
+
+logger = logging.getLogger(__name__)
 
 EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
 
@@ -251,6 +253,29 @@ class TestPDO(unittest.TestCase):
     def tearDownClass(cls):
         cls.network1.disconnect()
         cls.network2.disconnect()
+        
+    def test_od_propagation_to_tpdo(self):
+        """Test that writing via SDO to local node propagates the data to PDO"""
+        # data of pdo points to the updated data
+        self.local_node.pdo.read()
+        self.local_node.pdo.save()
+        # Updata the stored data via SDO
+        self.local_node.sdo["INTEGER16 value"].raw = 11
+        # Check propagated correctly in PDO
+        self.assertEqual(self.local_node.pdo["INTEGER16 value"].raw,11)
+    
+    def test_rpdo_propagation_to_od(self):
+        """Test that received PDO gets propagated to internal OD"""
+        self.remote_node.pdo.read()
+        self.remote_node.pdo.save()
+        # Update remote value in PDO to 25, transmit the RPDO
+        self.remote_node.pdo["INTEGER16 value"].raw = 25
+        # Before sending value should be different from 25
+        self.assertNotEqual(self.local_node.pdo["INTEGER16 value"].raw,25)
+        self.remote_node.rpdo[1].transmit()
+        # Local node should receive RPDO
+        self.local_node.rpdo[1].wait_for_reception()
+        self.assertEqual(self.local_node.pdo["INTEGER16 value"].raw,25)
 
     def test_read(self):
         # TODO: Do some more checks here. Currently it only tests that they
