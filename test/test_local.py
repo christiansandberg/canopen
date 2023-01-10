@@ -71,6 +71,16 @@ class TestSDO(unittest.TestCase):
         value = self.local_node.sdo[0x2004].raw
         self.assertEqual(value, 0xfeff)
 
+    def test_expedited_download_wrong_datatype(self):
+        # Try to write 32 bit in integer16 type
+        with self.assertRaises(canopen.SdoAbortedError) as error:
+            self.remote_node.sdo.download(0x2001, 0x0, bytes([10, 10, 10, 10]))
+        self.assertEqual(error.exception.code, 0x06070010)
+        # Try to write normal 16 bit word, should be ok
+        self.remote_node.sdo.download(0x2001, 0x0, bytes([10, 10]))
+        value = self.remote_node.sdo.upload(0x2001, 0x0)
+        self.assertEqual(value, bytes([10, 10]))
+
     def test_segmented_download(self):
         self.remote_node.sdo[0x2000].raw = "Another cool device"
         value = self.local_node.sdo[0x2000].data
