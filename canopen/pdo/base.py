@@ -7,7 +7,7 @@ except ImportError:
     from collections import Mapping
 import logging
 import binascii
-from .. import node
+
 from ..sdo import SdoAbortedError
 from .. import objectdictionary
 from .. import variable
@@ -193,8 +193,6 @@ class Map(object):
         self.receive_condition = threading.Condition()
         self.is_received: bool = False
         self._task = None
-        #: Internal sync count for synchronous PDOs (used as a prescaler)
-        self._internal_sync_count = 0
 
     def __getitem_by_index(self, value):
         valid_values = []
@@ -299,10 +297,6 @@ class Map(object):
             with self.receive_condition:
                 self.is_received = True
                 self.data = data
-                # Also update object dictionary in case of local node
-                if(isinstance(self.pdo_node.node,node.LocalNode)):
-                    for var in self:
-                        self.pdo_node.node.set_data(var.index,var.subindex,data=var.data)
                 if self.timestamp is not None:
                     self.period = timestamp - self.timestamp
                 self.timestamp = timestamp
