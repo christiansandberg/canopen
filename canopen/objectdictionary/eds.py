@@ -172,7 +172,7 @@ def import_from_node(node_id, network,block_transfer =False,eds_format_handler =
     :param int node_id: Identifier of the node
     :param network: network object
     :param block_transfer: use block transfer
-    :param eds_format_handler: Callable with custom logic that should retunr the EDS
+    :param eds_format_handler: Callable with custom logic that should return the EDS
     """
     # Create temporary SDO client
     sdo_client = SdoClient(0x600 + node_id, 0x580 + node_id, objectdictionary.ObjectDictionary())
