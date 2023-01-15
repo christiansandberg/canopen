@@ -184,9 +184,8 @@ def import_from_node(node_id, network,block_transfer =False,eds_format_handler =
         if eds_format_handler is not None:
             eds_raw_fp = sdo_client.open(0x1021, 0, "rb",block_transfer=block_transfer)
             # Do custom handling (extracting,etc) and return an fp to EDS
-            eds_fp = eds_format_handler(eds_raw_fp)
             # Custom format handler must return a fp or string to extracted eds file
-            
+            eds_fp = eds_format_handler(eds_raw_fp)
         else:
             eds_fp = sdo_client.open(0x1021, 0, "rt", block_transfer=block_transfer)
         od = import_eds(eds_fp,node_id)
