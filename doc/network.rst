@@ -38,6 +38,22 @@ Add nodes to the network using the :meth:`~canopen.Network.add_node` method::
     local_node = canopen.LocalNode(1, '/path/to/master_dictionary.eds')
     network.add_node(local_node)
 
+Some nodes store their EDS, using object 0x1021.The node can be added using
+it's internal EDS in the following way :
+
+    node = network.add_node(6,upload_eds=True)
+    # Optional block_transfer enabled
+    node = network.add_node(6,upload_eds = True, block_transfer = True)
+    # optionally add a handler if the file uses a compressed format.
+    import zipfile
+    from io import BytesIO, TextIOWrapper
+    def def unzip_eds_handler(fp):
+      zip = zipfile.ZipFile(BytesIO(fp.read()))
+      io = TextIOWrapper(zip.open(name="device.eds"),encoding="ascii")
+      return io
+    node = network.add_node(6,upload_eds = True, block_transfer = True, eds_format_handler=unzip_eds_handler)
+
+
 Nodes can also be accessed using the ``Network`` object as a Python dictionary::
 
     for node_id in network:
