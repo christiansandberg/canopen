@@ -52,7 +52,7 @@ it's internal EDS in the following way::
     import zipfile
     from io import BytesIO, TextIOWrapper
 
-    def def unzip_eds_handler(fp):
+    def unzip_eds_handler(fp,storage_format):
       zip = zipfile.ZipFile(BytesIO(fp.read()))
       io = TextIOWrapper(zip.open(name="device.eds"),encoding="ascii")
       return io
