@@ -1,7 +1,9 @@
-import re
-import io
-import logging
 import copy
+import logging
+import re
+
+from canopen.objectdictionary import datatypes
+
 try:
     from configparser import RawConfigParser, NoOptionError, NoSectionError
 except ImportError:
@@ -190,6 +192,28 @@ def import_from_node(node_id, network):
     return od
 
 
+def _calc_bit_length(data_type: int) -> int:
+    if data_type == datatypes.INTEGER8:
+        return 8
+    elif data_type == datatypes.INTEGER16:
+        return 16
+    elif data_type == datatypes.INTEGER32:
+        return 32
+    elif data_type == datatypes.INTEGER64:
+        return 64
+    else:
+        raise ValueError(f"Invalid data_type '{data_type}', expecting an signed integer data_type.")
+
+
+def _signed_int_from_hex(hex_str: str, bit_length: int):
+    number = int(hex_str, 0)
+    limit = ((1 << bit_length - 1) - 1)
+    if number > limit:
+        return limit - number
+    else:
+        return number
+
+
 def _convert_variable(node_id, var_type, value):
     if var_type in (objectdictionary.OCTET_STRING, objectdictionary.DOMAIN):
         return bytes.fromhex(value)
@@ -251,12 +275,12 @@ def build_variable(eds, section, node_id, index, subindex=0):
 
     if eds.has_option(section, "LowLimit"):
         try:
-            var.min = int(eds.get(section, "LowLimit"), 0)
+            var.min = _signed_int_from_hex(eds.get(section, "LowLimit"), _calc_bit_length(var.data_type))
         except ValueError:
             pass
     if eds.has_option(section, "HighLimit"):
         try:
-            var.max = int(eds.get(section, "HighLimit"), 0)
+            var.max = _signed_int_from_hex(eds.get(section, "HighLimit"), _calc_bit_length(var.data_type))
         except ValueError:
             pass
     if eds.has_option(section, "DefaultValue"):
