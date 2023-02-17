@@ -275,12 +275,20 @@ def build_variable(eds, section, node_id, index, subindex=0):
 
     if eds.has_option(section, "LowLimit"):
         try:
-            var.min = _signed_int_from_hex(eds.get(section, "LowLimit"), _calc_bit_length(var.data_type))
+            min_string = eds.get(section, "LowLimit")
+            if var.data_type in objectdictionary.SIGNED_TYPES:
+                var.min = _signed_int_from_hex(min_string, _calc_bit_length(var.data_type))
+            else:
+                var.min = int(min_string, 0)
         except ValueError:
             pass
     if eds.has_option(section, "HighLimit"):
         try:
-            var.max = _signed_int_from_hex(eds.get(section, "HighLimit"), _calc_bit_length(var.data_type))
+            max_string = eds.get(section, "HighLimit")
+            if var.data_type in objectdictionary.SIGNED_TYPES:
+                var.max = _signed_int_from_hex(max_string, _calc_bit_length(var.data_type))
+            else:
+                var.max = int(max_string, 0)
         except ValueError:
             pass
     if eds.has_option(section, "DefaultValue"):
