@@ -902,3 +902,39 @@ DataType=0x0008
 AccessType=ro
 DefaultValue=0
 PDOMapping=1
+
+[3020]
+ParameterName=INTEGER8 only positive values
+ObjectType=0x7
+DataType=0x02
+AccessType=rw
+HighLimit=0x7F
+LowLimit=0x00
+PDOMapping=0
+
+[3021]
+ParameterName=UNSIGNED8 value range +2 to +10
+ObjectType=0x7
+DataType=0x05
+AccessType=rw
+HighLimit=0x0A
+LowLimit=0x02
+PDOMapping=0
+
+[3030]
+ParameterName=INTEGER32 only negative values
+ObjectType=0x7
+DataType=0x04
+AccessType=rw
+HighLimit=0x00000000
+LowLimit=0xFFFFFFFF
+PDOMapping=0
+
+[3040]
+ParameterName=INTEGER64 value range -10 to +10
+ObjectType=0x7
+DataType=0x15
+AccessType=rw
+HighLimit=0x000000000000000A
+LowLimit=0x8000000000000009
+PDOMapping=0
