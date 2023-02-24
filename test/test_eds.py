@@ -4,6 +4,7 @@ import canopen
 
 EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
 
+
 class TestEDS(unittest.TestCase):
 
     def setUp(self):
@@ -46,6 +47,20 @@ class TestEDS(unittest.TestCase):
         self.assertEqual(var.subindex, 1)
         self.assertEqual(var.data_type, canopen.objectdictionary.UNSIGNED32)
         self.assertEqual(var.access_type, 'ro')
+
+    def test_record_with_limits(self):
+        int8 = self.od[0x3020]
+        self.assertEqual(int8.min, 0)
+        self.assertEqual(int8.max, 127)
+        uint8 = self.od[0x3021]
+        self.assertEqual(uint8.min, 2)
+        self.assertEqual(uint8.max, 10)
+        int32 = self.od[0x3030]
+        self.assertEqual(int32.min, -2147483648)
+        self.assertEqual(int32.max, 0)
+        int64 = self.od[0x3040]
+        self.assertEqual(int64.min, -10)
+        self.assertEqual(int64.max, +10)
 
     def test_array_compact_subobj(self):
         array = self.od[0x1003]
@@ -98,18 +113,16 @@ class TestEDS(unittest.TestCase):
 
     def test_comments(self):
         self.assertEqual(self.od.comments,
-"""
+                         """
 |-------------|
 | Don't panic |
 |-------------|
-""".strip()
-        )
-
+""".strip())
 
     def test_export_eds(self):
         import tempfile
         for doctype in {"eds", "dcf"}:
-            with tempfile.NamedTemporaryFile(suffix="."+doctype, mode="w+") as tempeds:
+            with tempfile.NamedTemporaryFile(suffix="." + doctype, mode="w+") as tempeds:
                 print("exporting %s to " % doctype + tempeds.name)
                 canopen.export_od(self.od, tempeds, doc_type=doctype)
                 tempeds.flush()
@@ -117,54 +130,59 @@ class TestEDS(unittest.TestCase):
 
                 for index in exported_od:
                     self.assertIn(exported_od[index].name, self.od)
-                    self.assertIn(index                  , self.od)
+                    self.assertIn(index, self.od)
 
                 for index in self.od:
                     if index < 0x0008:
                         # ignore dummies
                         continue
                     self.assertIn(self.od[index].name, exported_od)
-                    self.assertIn(index              , exported_od)
+                    self.assertIn(index, exported_od)
 
-                    actual_object   = exported_od[index]
-                    expected_object =     self.od[index]
+                    actual_object = exported_od[index]
+                    expected_object = self.od[index]
                     self.assertEqual(type(actual_object), type(expected_object))
                     self.assertEqual(actual_object.name, expected_object.name)
 
                     if type(actual_object) is canopen.objectdictionary.Variable:
                         expected_vars = [expected_object]
-                        actual_vars   = [actual_object  ]
-                    else :
+                        actual_vars = [actual_object]
+                    else:
                         expected_vars = [expected_object[idx] for idx in expected_object]
-                        actual_vars   = [actual_object  [idx] for idx in   actual_object]
+                        actual_vars = [actual_object[idx] for idx in actual_object]
 
                     for prop in [
-                    "allowed_baudrates",
-                    "vendor_name",
-                    "vendor_number",
-                    "product_name",
-                    "product_number",
-                    "revision_number",
-                    "order_code",
-                    "simple_boot_up_master",
-                    "simple_boot_up_slave",
-                    "granularity",
-                    "dynamic_channels_supported",
-                    "group_messaging",
-                    "nr_of_RXPDO",
-                    "nr_of_TXPDO",
-                    "LSS_supported",
+                        "allowed_baudrates",
+                        "vendor_name",
+                        "vendor_number",
+                        "product_name",
+                        "product_number",
+                        "revision_number",
+                        "order_code",
+                        "simple_boot_up_master",
+                        "simple_boot_up_slave",
+                        "granularity",
+                        "dynamic_channels_supported",
+                        "group_messaging",
+                        "nr_of_RXPDO",
+                        "nr_of_TXPDO",
+                        "LSS_supported",
                     ]:
-                        self.assertEqual(getattr(self.od.device_information, prop), getattr(exported_od.device_information, prop), f"prop {prop!r} mismatch on DeviceInfo")
+                        self.assertEqual(getattr(self.od.device_information, prop),
+                                         getattr(exported_od.device_information, prop),
+                                         f"prop {prop!r} mismatch on DeviceInfo")
 
-
-                    for evar,avar in zip(expected_vars,actual_vars):
-                        self.    assertEqual(getattr(avar, "data_type"  , None)  , getattr(evar,"data_type"  ,None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
-                        self.    assertEqual(getattr(avar, "default_raw", None)  , getattr(evar,"default_raw",None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
-                        self.    assertEqual(getattr(avar, "min"        , None)  , getattr(evar,"min"        ,None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
-                        self.    assertEqual(getattr(avar, "max"        , None)  , getattr(evar,"max"        ,None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
+                    for evar, avar in zip(expected_vars, actual_vars):
+                        self.assertEqual(getattr(avar, "data_type", None), getattr(evar, "data_type", None),
+                                         " mismatch on %04X:%X" % (evar.index, evar.subindex))
+                        self.assertEqual(getattr(avar, "default_raw", None), getattr(evar, "default_raw", None),
+                                         " mismatch on %04X:%X" % (evar.index, evar.subindex))
+                        self.assertEqual(getattr(avar, "min", None), getattr(evar, "min", None),
+                                         " mismatch on %04X:%X" % (evar.index, evar.subindex))
+                        self.assertEqual(getattr(avar, "max", None), getattr(evar, "max", None),
+                                         " mismatch on %04X:%X" % (evar.index, evar.subindex))
                         if doctype == "dcf":
-                            self.assertEqual(getattr(avar, "value"      , None)  , getattr(evar,"value"      ,None)  , " mismatch on %04X:%X"%(evar.index, evar.subindex))
+                            self.assertEqual(getattr(avar, "value", None), getattr(evar, "value", None),
+                                             " mismatch on %04X:%X" % (evar.index, evar.subindex))
 
                         self.assertEqual(self.od.comments, exported_od.comments)
-
