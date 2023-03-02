@@ -66,7 +66,7 @@ class :attr:`.state` attribute can be read and set (command) by a string::
     # command a state (an SDO message will be called)
     some_node.state = 'SWITCHED ON'
     # read the current state
-    some_node.state = 'SWITCHED ON'
+    some_node.state
 
 Available states:
 
