@@ -109,8 +109,9 @@ class SdoClient(SdoBase):
 
     async def aread_response(self):
         try:
-            response = await self.aresponses.get()
-        except queue.Empty:
+            response = await asyncio.wait_for(
+                self.aresponses.get(), timeout=self.RESPONSE_TIMEOUT)
+        except asyncio.TimeoutError:
             raise SdoCommunicationError("No SDO response received")
         res_command, = struct.unpack_from("B", response)
         if res_command == RESPONSE_ABORTED:
