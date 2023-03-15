@@ -301,8 +301,10 @@ class ReadableStream(io.RawIOBase):
         response = self.sdo_client.request_response(request)
         res_command, = struct.unpack_from("B", response)
         if res_command & 0xE0 != RESPONSE_SEGMENT_UPLOAD:
+            self.sdo_client.abort(0x05040001)
             raise SdoCommunicationError("Unexpected response 0x%02X" % res_command)
         if res_command & TOGGLE_BIT != self._toggle:
+            self.sdo_client.abort(0x05030000)
             raise SdoCommunicationError("Toggle bit mismatch")
         length = 7 - ((res_command >> 1) & 0x7)
         if res_command & NO_MORE_DATA:
