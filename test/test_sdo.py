@@ -42,7 +42,7 @@ class TestSDO(unittest.TestCase):
             (TX, b'\x40\x18\x10\x01\x00\x00\x00\x00'),
             (RX, b'\x43\x18\x10\x01\x04\x00\x00\x00')
         ]
-        vendor_id = self.network[2].sdo[0x1018][1].raw
+        vendor_id = self.network[2].sdo[0x1018][1].get_raw()
         self.assertEqual(vendor_id, 4)
 
         # UNSIGNED8 without padded data part (see issue #5)
@@ -50,7 +50,7 @@ class TestSDO(unittest.TestCase):
             (TX, b'\x40\x00\x14\x02\x00\x00\x00\x00'),
             (RX, b'\x4f\x00\x14\x02\xfe')
         ]
-        trans_type = self.network[2].sdo[0x1400]['Transmission type RPDO 1'].raw
+        trans_type = self.network[2].sdo[0x1400]['Transmission type RPDO 1'].get_raw()
         self.assertEqual(trans_type, 254)
 
     def test_size_not_specified(self):
@@ -67,7 +67,7 @@ class TestSDO(unittest.TestCase):
             (TX, b'\x2b\x17\x10\x00\xa0\x0f\x00\x00'),
             (RX, b'\x60\x17\x10\x00\x00\x00\x00\x00')
         ]
-        self.network[2].sdo[0x1017].raw = 4000
+        self.network[2].sdo[0x1017].set_raw(4000)
 
     def test_segmented_upload(self):
         self.data = [
@@ -82,7 +82,7 @@ class TestSDO(unittest.TestCase):
             (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
             (RX, b'\x15\x69\x6E\x73\x20\x21\x00\x00')
         ]
-        device_name = self.network[2].sdo[0x1008].raw
+        device_name = self.network[2].sdo[0x1008].get_raw()
         self.assertEqual(device_name, "Tiny Node - Mega Domains !")
 
     def test_segmented_download(self):
@@ -94,7 +94,7 @@ class TestSDO(unittest.TestCase):
             (TX, b'\x13\x73\x74\x72\x69\x6e\x67\x00'),
             (RX, b'\x30\x00\x20\x00\x00\x00\x00\x00')
         ]
-        self.network[2].sdo['Writable string'].raw = 'A long string'
+        self.network[2].sdo['Writable string'].set_raw('A long string')
 
     def test_block_download(self):
         self.data = [
@@ -159,7 +159,7 @@ class TestSDO(unittest.TestCase):
             (RX, b'\x80\x18\x10\x01\x11\x00\x09\x06')
         ]
         with self.assertRaises(canopen.SdoAbortedError) as cm:
-            _ = self.network[2].sdo[0x1018][1].raw
+            _ = self.network[2].sdo[0x1018][1].get_raw()
         self.assertEqual(cm.exception.code, 0x06090011)
 
     def test_add_sdo_channel(self):

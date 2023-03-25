@@ -22,48 +22,48 @@ try:
     # node = network[34]
 
     # Reset network
-    node.nmt.state = 'RESET COMMUNICATION'
-    #node.nmt.state = 'RESET'
+    node.nmt.set_state('RESET COMMUNICATION')
+    #node.nmt.set_state('RESET')
     node.nmt.wait_for_bootup(15)
 
-    print('node state 1) = {0}'.format(node.nmt.state))
+    print('node state 1) = {0}'.format(node.nmt.get_state()))
 
     # Iterate over arrays or records
     error_log = node.sdo[0x1003]
     for error in error_log.values():
-        print("Error {0} was found in the log".format(error.raw))
+        print("Error {0} was found in the log".format(error.get_raw()))
 
     for node_id in network:
         print(network[node_id])
 
-    print('node state 2) = {0}'.format(node.nmt.state))
+    print('node state 2) = {0}'.format(node.nmt.get_state()))
 
     # Read a variable using SDO
 
-    node.sdo[0x1006].raw = 1
-    node.sdo[0x100c].raw = 100
-    node.sdo[0x100d].raw = 3
-    node.sdo[0x1014].raw = 163
-    node.sdo[0x1003][0].raw = 0
+    node.sdo[0x1006].set_raw(1)
+    node.sdo[0x100c].set_raw(100)
+    node.sdo[0x100d].set_raw(3)
+    node.sdo[0x1014].set_raw(163)
+    node.sdo[0x1003][0].set_raw(0)
 
     # Transmit SYNC every 100 ms
     network.sync.start(0.1)
 
     node.load_configuration()
 
-    print('node state 3) = {0}'.format(node.nmt.state))
+    print('node state 3) = {0}'.format(node.nmt.get_state()))
 
     node.setup_402_state_machine()
 
-    device_name = node.sdo[0x1008].raw
-    vendor_id = node.sdo[0x1018][1].raw
+    device_name = node.sdo[0x1008].get_raw()
+    vendor_id = node.sdo[0x1018][1].get_raw()
 
     print(device_name)
     print(vendor_id)
 
-    node.state = 'SWITCH ON DISABLED'
+    node.set_state('SWITCH ON DISABLED')
 
-    print('node state 4) = {0}'.format(node.nmt.state))
+    print('node state 4) = {0}'.format(node.nmt.get_state()))
 
     # Read PDO configuration from node
     node.tpdo.read()
@@ -80,13 +80,13 @@ try:
     # publish the a value to the control word (in this case reset the fault at the motors)
 
     node.rpdo.read()
-    node.rpdo[1]['Controlword'].raw = 0x80
+    node.rpdo[1]['Controlword'].set_raw(0x80)
     node.rpdo[1].transmit()
-    node.rpdo[1]['Controlword'].raw = 0x81
+    node.rpdo[1]['Controlword'].set_raw(0x81)
     node.rpdo[1].transmit()
 
-    node.state = 'READY TO SWITCH ON'
-    node.state = 'SWITCHED ON'
+    node.set_state('READY TO SWITCH ON')
+    node.set_state('SWITCHED ON')
 
     node.rpdo.export('database.dbc')
 
@@ -95,27 +95,27 @@ try:
     print('Node booted up')
 
     timeout = time.time() + 15
-    node.state = 'READY TO SWITCH ON'
-    while node.state != 'READY TO SWITCH ON':
+    node.set_state('READY TO SWITCH ON')
+    while node.get_state() != 'READY TO SWITCH ON':
         if time.time() > timeout:
             raise Exception('Timeout when trying to change state')
         time.sleep(0.001)
 
     timeout = time.time() + 15
-    node.state = 'SWITCHED ON'
-    while node.state != 'SWITCHED ON':
+    node.set_state('SWITCHED ON')
+    while node.get_state() != 'SWITCHED ON':
         if time.time() > timeout:
             raise Exception('Timeout when trying to change state')
         time.sleep(0.001)
 
     timeout = time.time() + 15
-    node.state = 'OPERATION ENABLED'
-    while node.state != 'OPERATION ENABLED':
+    node.set_state('OPERATION ENABLED')
+    while node.get_state() != 'OPERATION ENABLED':
         if time.time() > timeout:
             raise Exception('Timeout when trying to change state')
         time.sleep(0.001)
 
-    print('Node Status {0}'.format(node.powerstate_402.state))
+    print('Node Status {0}'.format(node.powerstate_402.get_state()))
 
     # -----------------------------------------------------------------------------------------
     node.nmt.start_node_guarding(0.01)
@@ -127,10 +127,10 @@ try:
 
         # Read a value from TxPDO1
         node.tpdo[1].wait_for_reception()
-        speed = node.tpdo[1]['Velocity actual value'].phys
+        speed = node.tpdo[1]['Velocity actual value'].get_phys()
 
         # Read the state of the Statusword
-        statusword = node.sdo[0x6041].raw
+        statusword = node.sdo[0x6041].get_raw()
 
         print('statusword: {0}'.format(statusword))
         print('VEL: {0}'.format(speed))
@@ -151,7 +151,7 @@ finally:
 
         for node_id in network:
             node = network[node_id]
-            node.nmt.state = 'PRE-OPERATIONAL'
+            node.nmt.set_state('PRE-OPERATIONAL')
             node.nmt.stop_node_guarding()
         network.sync.stop()
         network.disconnect()

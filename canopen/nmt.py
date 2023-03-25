@@ -75,6 +75,9 @@ class NmtBase(object):
 
     @property
     def state(self) -> str:
+        return self.get_state()
+
+    def get_state(self) -> str:
         """Attribute to get or set node's state as a string.
 
         Can be one of:
@@ -95,6 +98,10 @@ class NmtBase(object):
 
     @state.setter
     def state(self, new_state: str):
+        logger.warning("Accessing NmtBase.state setter is deprecated, use set_state()")
+        self.set_state(new_state)
+
+    def set_state(self, new_state: str):
         if new_state in NMT_COMMANDS:
             code = NMT_COMMANDS[new_state]
         else:
@@ -150,7 +157,7 @@ class NmtMaster(NmtBase):
             self.state_update.wait(timeout)
         if self._state_received is None:
             raise NmtError("No boot-up or heartbeat received")
-        return self.state
+        return self.get_state()
 
     def wait_for_bootup(self, timeout: float = 10) -> None:
         """Wait until a boot-up message is received."""
@@ -220,7 +227,7 @@ class NmtSlave(NmtBase):
         # The heartbeat service should start on the transition
         # between INITIALIZING and PRE-OPERATIONAL state
         if old_state == 0 and self._state == 127:
-            heartbeat_time_ms = self._local_node.sdo[0x1017].raw
+            heartbeat_time_ms = self._local_node.sdo[0x1017].get_raw()
             self.start_heartbeat(heartbeat_time_ms)
         else:
             self.update_heartbeat()

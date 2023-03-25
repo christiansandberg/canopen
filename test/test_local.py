@@ -34,8 +34,8 @@ class TestSDO(unittest.TestCase):
         cls.network2.disconnect()
 
     def test_expedited_upload(self):
-        self.local_node.sdo[0x1400][1].raw = 0x99
-        vendor_id = self.remote_node.sdo[0x1400][1].raw
+        self.local_node.sdo[0x1400][1].set_raw(0x99)
+        vendor_id = self.remote_node.sdo[0x1400][1].get_raw()
         self.assertEqual(vendor_id, 0x99)
 
     def test_block_upload_switch_to_expedite_upload(self):
@@ -54,21 +54,21 @@ class TestSDO(unittest.TestCase):
         self.assertEqual(context.exception.code, 0x05040001)
 
     def test_expedited_upload_default_value_visible_string(self):
-        device_name = self.remote_node.sdo["Manufacturer device name"].raw
+        device_name = self.remote_node.sdo["Manufacturer device name"].get_raw()
         self.assertEqual(device_name, "TEST DEVICE")
 
     def test_expedited_upload_default_value_real(self):
-        sampling_rate = self.remote_node.sdo["Sensor Sampling Rate (Hz)"].raw
+        sampling_rate = self.remote_node.sdo["Sensor Sampling Rate (Hz)"].get_raw()
         self.assertAlmostEqual(sampling_rate, 5.2, places=2)
 
     def test_segmented_upload(self):
-        self.local_node.sdo["Manufacturer device name"].raw = "Some cool device"
-        device_name = self.remote_node.sdo["Manufacturer device name"].data
+        self.local_node.sdo["Manufacturer device name"].set_raw("Some cool device")
+        device_name = self.remote_node.sdo["Manufacturer device name"].get_data()
         self.assertEqual(device_name, b"Some cool device")
 
     def test_expedited_download(self):
-        self.remote_node.sdo[0x2004].raw = 0xfeff
-        value = self.local_node.sdo[0x2004].raw
+        self.remote_node.sdo[0x2004].set_raw(0xfeff)
+        value = self.local_node.sdo[0x2004].get_raw()
         self.assertEqual(value, 0xfeff)
 
     def test_expedited_download_wrong_datatype(self):
@@ -82,14 +82,14 @@ class TestSDO(unittest.TestCase):
         self.assertEqual(value, bytes([10, 10]))
 
     def test_segmented_download(self):
-        self.remote_node.sdo[0x2000].raw = "Another cool device"
-        value = self.local_node.sdo[0x2000].data
+        self.remote_node.sdo[0x2000].set_raw("Another cool device")
+        value = self.local_node.sdo[0x2000].get_data()
         self.assertEqual(value, b"Another cool device")
 
     def test_slave_send_heartbeat(self):
         # Setting the heartbeat time should trigger hearbeating
         # to start
-        self.remote_node.sdo["Producer heartbeat time"].raw = 1000
+        self.remote_node.sdo["Producer heartbeat time"].set_raw(1000)
         state = self.remote_node.nmt.wait_for_heartbeat()
         self.local_node.nmt.stop_heartbeat()
         # The NMT master will change the state INITIALISING (0)
@@ -98,11 +98,11 @@ class TestSDO(unittest.TestCase):
 
     def test_nmt_state_initializing_to_preoper(self):
         # Initialize the heartbeat timer
-        self.local_node.sdo["Producer heartbeat time"].raw = 1000
+        self.local_node.sdo["Producer heartbeat time"].set_raw(1000)
         self.local_node.nmt.stop_heartbeat()
         # This transition shall start the heartbeating
-        self.local_node.nmt.state = 'INITIALISING'
-        self.local_node.nmt.state = 'PRE-OPERATIONAL'
+        self.local_node.nmt.set_state('INITIALISING')
+        self.local_node.nmt.set_state('PRE-OPERATIONAL')
         state = self.remote_node.nmt.wait_for_heartbeat()
         self.local_node.nmt.stop_heartbeat()
         self.assertEqual(state, 'PRE-OPERATIONAL')
@@ -115,20 +115,20 @@ class TestSDO(unittest.TestCase):
         self.assertEqual(self.local_node.sdo.last_received_error, 0x05040003)
 
     def test_start_remote_node(self):
-        self.remote_node.nmt.state = 'OPERATIONAL'
+        self.remote_node.nmt.set_state('OPERATIONAL')
         # Line below is just so that we are sure the client have received the command
         # before we do the check
         time.sleep(0.1)
-        slave_state = self.local_node.nmt.state
+        slave_state = self.local_node.nmt.get_state()
         self.assertEqual(slave_state, 'OPERATIONAL')
 
     def test_two_nodes_on_the_bus(self):
-        self.local_node.sdo["Manufacturer device name"].raw = "Some cool device"
-        device_name = self.remote_node.sdo["Manufacturer device name"].data
+        self.local_node.sdo["Manufacturer device name"].set_raw("Some cool device")
+        device_name = self.remote_node.sdo["Manufacturer device name"].get_data()
         self.assertEqual(device_name, b"Some cool device")
 
-        self.local_node2.sdo["Manufacturer device name"].raw = "Some cool device2"
-        device_name = self.remote_node2.sdo["Manufacturer device name"].data
+        self.local_node2.sdo["Manufacturer device name"].set_raw("Some cool device2")
+        device_name = self.remote_node2.sdo["Manufacturer device name"].get_data()
         self.assertEqual(device_name, b"Some cool device2")
 
     def test_abort(self):
@@ -143,7 +143,7 @@ class TestSDO(unittest.TestCase):
         self.assertEqual(cm.exception.code, 0x06090011)
 
         with self.assertRaises(canopen.SdoAbortedError) as cm:
-            _ = self.remote_node.sdo[0x1001].data
+            _ = self.remote_node.sdo[0x1001].get_data()
         # Should be Resource not available
         self.assertEqual(cm.exception.code, 0x060A0023)
 
@@ -195,18 +195,18 @@ class TestNMT(unittest.TestCase):
         cls.network2.disconnect()
 
     def test_start_two_remote_nodes(self):
-        self.remote_node.nmt.state = 'OPERATIONAL'
+        self.remote_node.nmt.set_state('OPERATIONAL')
         # Line below is just so that we are sure the client have received the command
         # before we do the check
         time.sleep(0.1)
-        slave_state = self.local_node.nmt.state
+        slave_state = self.local_node.nmt.get_state()
         self.assertEqual(slave_state, 'OPERATIONAL')
 
-        self.remote_node2.nmt.state = 'OPERATIONAL'
+        self.remote_node2.nmt.set_state('OPERATIONAL')
         # Line below is just so that we are sure the client have received the command
         # before we do the check
         time.sleep(0.1)
-        slave_state = self.local_node2.nmt.state
+        slave_state = self.local_node2.nmt.get_state()
         self.assertEqual(slave_state, 'OPERATIONAL')
 
     def test_stop_two_remote_nodes_using_broadcast(self):
@@ -217,18 +217,18 @@ class TestNMT(unittest.TestCase):
         # Line below is just so that we are sure the slaves have received the command
         # before we do the check
         time.sleep(0.1)
-        slave_state = self.local_node.nmt.state
+        slave_state = self.local_node.nmt.get_state()
         self.assertEqual(slave_state, 'STOPPED')
-        slave_state = self.local_node2.nmt.state
+        slave_state = self.local_node2.nmt.get_state()
         self.assertEqual(slave_state, 'STOPPED')
 
     def test_heartbeat(self):
-        # self.assertEqual(self.remote_node.nmt.state, 'INITIALISING')
-        # self.assertEqual(self.local_node.nmt.state, 'INITIALISING')
-        self.local_node.nmt.state = 'OPERATIONAL'
-        self.local_node.sdo[0x1017].raw = 100
+        # self.assertEqual(self.remote_node.nmt.get_state(), 'INITIALISING')
+        # self.assertEqual(self.local_node.nmt.get_state(), 'INITIALISING')
+        self.local_node.nmt.set_state('OPERATIONAL')
+        self.local_node.sdo[0x1017].set_raw(100)
         time.sleep(0.2)
-        self.assertEqual(self.remote_node.nmt.state, 'OPERATIONAL')
+        self.assertEqual(self.remote_node.nmt.get_state(), 'OPERATIONAL')
 
         self.local_node.nmt.stop_heartbeat()
 
