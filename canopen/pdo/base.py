@@ -335,7 +335,7 @@ class Map(object):
                 self.areceive_condition.notify_all()
                 for callback in self.callbacks:
                     res = callback(self)
-                    if res is not None and asyncio.iscouroutine(res):
+                    if res is not None and asyncio.iscoroutine(res):
                         await res
 
     def add_callback(self, callback: Callable[["Map"], None]) -> None:
