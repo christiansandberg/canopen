@@ -15,7 +15,8 @@ class TestEDS(unittest.TestCase):
             canopen.import_od('/path/to/wrong_file.eds')
 
     def test_load_file_object(self):
-        od = canopen.import_od(open(EDS_PATH))
+        with open(EDS_PATH) as fp:
+            od = canopen.import_od(fp)
         self.assertTrue(len(od) > 0)
 
     def test_variable(self):
