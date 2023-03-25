@@ -323,11 +323,11 @@ def export_dcf(od, dest=None, fileInfo={}):
 
 def export_eds(od, dest=None, file_info={}, device_commisioning=False):
     def export_object(obj, eds):
-        if type(obj) is objectdictionary.Variable:
+        if isinstance(obj, objectdictionary.Variable):
             return export_variable(obj, eds)
-        if type(obj) is objectdictionary.Record:
+        if isinstance(obj, objectdictionary.Record):
             return export_record(obj, eds)
-        if type(obj) is objectdictionary.Array:
+        if isinstance(obj, objectdictionary.Array):
             return export_array(obj, eds)
 
     def export_common(var, eds, section):
@@ -337,7 +337,7 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
             eds.set(section, "StorageLocation", var.storage_location)
 
     def export_variable(var, eds):
-        if type(var.parent) is objectdictionary.ObjectDictionary:
+        if isinstance(var.parent, objectdictionary.ObjectDictionary):
             # top level variable
             section = "%04X" % var.index
         else:
@@ -376,7 +376,7 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
         section = "%04X" % var.index
         export_common(var, eds, section)
         eds.set(section, "SubNumber", "0x%X" % len(var.subindices))
-        ot = RECORD if type(var) is objectdictionary.Record else ARR
+        ot = RECORD if isinstance(var, objectdictionary.Record) else ARR
         eds.set(section, "ObjectType", "0x%X" % ot)
         for i in var:
             export_variable(var[i], eds)
@@ -428,11 +428,11 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
         ("LSS_Supported", "LSS_supported"),
     ]:
         val = getattr(od.device_information, odprop, None)
-        if type(val) is None:
+        if val is None:
             continue
-        elif type(val) is str:
+        elif isinstance(val, str):
             eds.set("DeviceInfo", eprop, val)
-        elif type(val) in (int, bool):
+        elif isinstance(val, (int, bool)):
             eds.set("DeviceInfo", eprop, int(val))
 
     # we are also adding out of spec baudrates here.
