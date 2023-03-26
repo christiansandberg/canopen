@@ -1,3 +1,6 @@
+from __future__ import annotations
+from typing import Iterable, Union, Optional, TYPE_CHECKING
+
 import struct
 import logging
 import io
@@ -5,7 +8,7 @@ import time
 try:
     import queue
 except ImportError:
-    import Queue as queue
+    import Queue as queue  # type: ignore
 
 from ..network import CanError
 from .. import objectdictionary
@@ -13,6 +16,10 @@ from .. import objectdictionary
 from .base import SdoBase
 from .constants import *
 from .exceptions import *
+
+if TYPE_CHECKING:
+    # Repeat import to ensure the type checker understands the imports
+    import queue
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +48,7 @@ class SdoClient(SdoBase):
         SdoBase.__init__(self, rx_cobid, tx_cobid, od)
         self.responses = queue.Queue()
 
-    def on_response(self, can_id, data, timestamp):
+    def on_response(self, can_id: int, data: bytearray, timestamp: float):
         self.responses.put(bytes(data))
 
     def send_request(self, request):
@@ -50,6 +57,7 @@ class SdoClient(SdoBase):
             try:
                 if self.PAUSE_BEFORE_SEND:
                     time.sleep(self.PAUSE_BEFORE_SEND)
+                assert self.network  # For typing
                 self.network.send_message(self.rx_cobid, request)
             except CanError as e:
                 # Could be a buffer overflow. Wait some time before trying again
@@ -193,7 +201,7 @@ class SdoClient(SdoBase):
             Force use of segmented download regardless of data size.
         :param bool request_crc_support:
             If crc calculation should be requested when using block transfer
-        
+
         :returns:
             A file like object.
         """

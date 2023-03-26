@@ -1,16 +1,25 @@
+from __future__ import annotations
+from typing import Callable, Dict, Iterable, List, Optional, Union, TYPE_CHECKING
 import threading
 import math
-from typing import Callable, Dict, Iterable, List, Optional, Union
 try:
     from collections.abc import Mapping
 except ImportError:
-    from collections import Mapping
+    from collections import Mapping  # type: ignore
 import logging
 import binascii
 
 from ..sdo import SdoAbortedError
 from .. import objectdictionary
 from .. import variable
+
+if TYPE_CHECKING:
+    # The type checker doesn't like the conditional import above, so lets import
+    # it for the type checker
+    from collections.abc import Mapping
+    from ..network import Network
+
+TCallback = Callable[["Map"], None]
 
 PDO_NOT_VALID = 1 << 31
 RTR_NOT_ALLOWED = 1 << 30
@@ -26,14 +35,14 @@ class PdoBase(Mapping):
     """
 
     def __init__(self, node):
-        self.network = None
+        self.network: Optional[Network] = None
         self.map = None  # instance of Maps
         self.node = node
 
     def __iter__(self):
         return iter(self.map)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> PdoBase:
         if isinstance(key, int) and (0x1A00 <= key <= 0x1BFF or   # By TPDO ID (512)
                                      0x1600 <= key <= 0x17FF or   # By RPDO ID (512)
                                      0 < key <= 512):             # By PDO Index
@@ -159,7 +168,7 @@ class Maps(Mapping):
 class Map(object):
     """One message which can have up to 8 bytes of variables mapped."""
 
-    def __init__(self, pdo_node, com_record, map_array):
+    def __init__(self, pdo_node: PdoBase, com_record, map_array):
         self.pdo_node = pdo_node
         self.com_record = com_record
         self.map_array = map_array
@@ -189,13 +198,13 @@ class Map(object):
         #: Period of receive message transmission in seconds.
         #: Set explicitly or using the :meth:`start()` method.
         self.period: Optional[float] = None
-        self.callbacks = []
+        self.callbacks: List[TCallback] = []
         self.receive_condition = threading.Condition()
         self.is_received: bool = False
         self._task = None
 
     def __getitem_by_index(self, value):
-        valid_values = []
+        valid_values: List[int] = []
         for var in self.map:
             if var.length:
                 valid_values.append(var.index)
@@ -205,7 +214,7 @@ class Map(object):
             value, ', '.join(str(v) for v in valid_values)))
 
     def __getitem_by_name(self, value):
-        valid_values = []
+        valid_values: List[str] = []
         for var in self.map:
             if var.length:
                 valid_values.append(var.name)
@@ -291,7 +300,7 @@ class Map(object):
         # Unknown transmission type, assume non-periodic
         return False
 
-    def on_message(self, can_id, data, timestamp):
+    def on_message(self, can_id: int, data: bytearray, timestamp: float):
         is_transmitting = self._task is not None
         if can_id == self.cob_id and not is_transmitting:
             with self.receive_condition:
@@ -304,7 +313,7 @@ class Map(object):
                 for callback in self.callbacks:
                     callback(self)
 
-    def add_callback(self, callback: Callable[["Map"], None]) -> None:
+    def add_callback(self, callback: TCallback) -> None:
         """Add a callback which will be called on receive.
 
         :param callback:

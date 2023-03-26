@@ -1,10 +1,13 @@
+from __future__ import annotations
+from typing import Callable, List, Optional, Union, TYPE_CHECKING
 import threading
 import logging
 import struct
 import time
-from typing import Callable, Optional
 
-from .network import CanError
+if TYPE_CHECKING:
+    from .node import LocalNode
+    from .network import Network
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +41,7 @@ COMMAND_TO_STATE = {
     130: 0
 }
 
+TCallback = Callable[[int], None]
 
 class NmtBase(object):
     """
@@ -47,10 +51,10 @@ class NmtBase(object):
 
     def __init__(self, node_id: int):
         self.id = node_id
-        self.network = None
+        self.network: Optional[Network] = None
         self._state = 0
 
-    def on_command(self, can_id, data, timestamp):
+    def on_command(self, can_id: int, data: bytearray, timestamp: float):
         cmd, node_id = struct.unpack_from("BB", data)
         if node_id in (self.id, 0):
             logger.info("Node %d received command %d", self.id, cmd)
@@ -74,7 +78,7 @@ class NmtBase(object):
             self._state = new_state
 
     @property
-    def state(self) -> str:
+    def state(self) -> Union[str, int]:
         """Attribute to get or set node's state as a string.
 
         Can be one of:
@@ -113,9 +117,9 @@ class NmtMaster(NmtBase):
         #: Timestamp of last heartbeat message
         self.timestamp: Optional[float] = None
         self.state_update = threading.Condition()
-        self._callbacks = []
+        self._callbacks: List[TCallback] = []
 
-    def on_heartbeat(self, can_id, data, timestamp):
+    def on_heartbeat(self, can_id: int, data: bytearray, timestamp: float):
         with self.state_update:
             self.timestamp = timestamp
             new_state, = struct.unpack_from("B", data)
@@ -141,6 +145,7 @@ class NmtMaster(NmtBase):
         super(NmtMaster, self).send_command(code)
         logger.info(
             "Sending NMT command 0x%X to node %d", code, self.id)
+        assert self.network  # For typing
         self.network.send_message(0, [code, self.id])
 
     def wait_for_heartbeat(self, timeout: float = 10):
@@ -165,7 +170,7 @@ class NmtMaster(NmtBase):
             if self._state_received == 0:
                 break
 
-    def add_hearbeat_callback(self, callback: Callable[[int], None]):
+    def add_hearbeat_callback(self, callback: TCallback):
         """Add function to be called on heartbeat reception.
 
         :param callback:
@@ -180,7 +185,8 @@ class NmtMaster(NmtBase):
             Period (in seconds) at which the node guarding should be advertised to the slave node.
         """
         if self._node_guarding_producer : self.stop_node_guarding()
-        self._node_guarding_producer = self.network.send_periodic(0x700 + self.id, None, period, True)
+        assert self.network  # For typing
+        self._node_guarding_producer = self.network.send_periodic(0x700 + self.id, [], period, True)
 
     def stop_node_guarding(self):
         """Stops the node guarding mechanism."""
@@ -194,13 +200,13 @@ class NmtSlave(NmtBase):
     Handles the NMT state and handles heartbeat NMT service.
     """
 
-    def __init__(self, node_id: int, local_node):
+    def __init__(self, node_id: int, local_node: LocalNode):
         super(NmtSlave, self).__init__(node_id)
         self._send_task = None
         self._heartbeat_time_ms = 0
         self._local_node = local_node
 
-    def on_command(self, can_id, data, timestamp):
+    def on_command(self, can_id: int, data: bytearray, timestamp: float):
         super(NmtSlave, self).on_command(can_id, data, timestamp)
         self.update_heartbeat()
 
@@ -215,6 +221,7 @@ class NmtSlave(NmtBase):
 
         if self._state == 0:
             logger.info("Sending boot-up message")
+            assert self.network  # For typing
             self.network.send_message(0x700 + self.id, [0])
 
         # The heartbeat service should start on the transition
@@ -225,7 +232,7 @@ class NmtSlave(NmtBase):
         else:
             self.update_heartbeat()
 
-    def on_write(self, index, data, **kwargs):
+    def on_write(self, index: int, data: bytes, **kwargs):
         if index == 0x1017:
             hearbeat_time, = struct.unpack_from("<H", data)
             if hearbeat_time == 0:
@@ -245,17 +252,18 @@ class NmtSlave(NmtBase):
         self.stop_heartbeat()
         if heartbeat_time_ms > 0:
             logger.info("Start the hearbeat timer, interval is %d ms", self._heartbeat_time_ms)
+            assert self.network  # For typing
             self._send_task = self.network.send_periodic(
                 0x700 + self.id, [self._state], heartbeat_time_ms / 1000.0)
 
-    def stop_heartbeat(self):
+    def stop_heartbeat(self) -> None:
         """Stop the hearbeat service."""
         if self._send_task is not None:
             logger.info("Stop the heartbeat timer")
             self._send_task.stop()
             self._send_task = None
 
-    def update_heartbeat(self):
+    def update_heartbeat(self) -> None:
         if self._send_task is not None:
             self._send_task.update([self._state])
 

@@ -1,11 +1,16 @@
+from __future__ import annotations
+from typing import Union, TYPE_CHECKING
 import logging
-from typing import Union
 try:
     from collections.abc import Mapping
 except ImportError:
-    from collections import Mapping
+    from collections import Mapping  # type: ignore
 
 from . import objectdictionary
+
+if TYPE_CHECKING:
+    # Repeat import to ensure the type checker understands the imports
+    from collections.abc import Mapping
 
 logger = logging.getLogger(__name__)
 
@@ -141,6 +146,7 @@ class Variable(object):
             return self.phys
         elif fmt == "desc":
             return self.desc
+        raise Exception("Uknown format '{}'".format(fmt))
 
     def write(
         self, value: Union[int, bool, float, str, bytes], fmt: str = "raw"
@@ -163,7 +169,7 @@ class Variable(object):
             self.desc = value
 
 
-class Bits(Mapping):
+class Bits(Mapping[int, int]):
 
     def __init__(self, variable: Variable):
         self.variable = variable

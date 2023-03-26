@@ -1,8 +1,13 @@
+from typing import TYPE_CHECKING, Optional
 import logging
+import struct
 
 from .base import SdoBase
 from .constants import *
 from .exceptions import *
+
+if TYPE_CHECKING:
+    from ..node.local import LocalNode
 
 logger = logging.getLogger(__name__)
 
@@ -10,7 +15,7 @@ logger = logging.getLogger(__name__)
 class SdoServer(SdoBase):
     """Creates an SDO server."""
 
-    def __init__(self, rx_cobid, tx_cobid, node):
+    def __init__(self, rx_cobid, tx_cobid, node: "LocalNode"):
         """
         :param int rx_cobid:
             COB-ID that the server receives on (usually 0x600 + node ID)
@@ -21,13 +26,13 @@ class SdoServer(SdoBase):
         """
         SdoBase.__init__(self, rx_cobid, tx_cobid, node.object_dictionary)
         self._node = node
-        self._buffer = None
+        self._buffer: Optional[bytearray] = None
         self._toggle = 0
         self._index = None
         self._subindex = None
         self.last_received_error = 0x00000000
 
-    def on_request(self, can_id, data, timestamp):
+    def on_request(self, can_id: int, data: bytearray, timestamp: float):
         command, = struct.unpack_from("B", data, 0)
         ccs = command & 0xE0
 
@@ -83,6 +88,7 @@ class SdoServer(SdoBase):
         if command & TOGGLE_BIT != self._toggle:
             # Toggle bit mismatch
             raise SdoAbortedError(0x05030000)
+        assert self._buffer  # For typing
         data = self._buffer[:7]
         size = len(data)
 
@@ -153,6 +159,7 @@ class SdoServer(SdoBase):
             # Toggle bit mismatch
             raise SdoAbortedError(0x05030000)
         last_byte = 8 - ((command >> 1) & 0x7)
+        assert self._buffer  # For typing
         self._buffer.extend(request[1:last_byte])
 
         if command & NO_MORE_DATA:
@@ -172,6 +179,7 @@ class SdoServer(SdoBase):
         self.send_response(response)
 
     def send_response(self, response):
+        assert self.network  # For typing
         self.network.send_message(self.tx_cobid, response)
 
     def abort(self, abort_code=0x08000000):

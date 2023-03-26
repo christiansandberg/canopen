@@ -1,10 +1,15 @@
+from __future__ import annotations
+from typing import List, Optional, TYPE_CHECKING, Tuple
 import logging
 import time
 import struct
 try:
     import queue
 except ImportError:
-    import Queue as queue
+    import Queue as queue  # type: ignore
+
+if TYPE_CHECKING:
+    from .network import Network
 
 logger = logging.getLogger(__name__)
 
@@ -82,12 +87,12 @@ class LssMaster(object):
     RESPONSE_TIMEOUT = 0.5
 
     def __init__(self):
-        self.network = None
+        self.network: Optional[Network] = None
         self._node_id = 0
         self._data = None
-        self.responses = queue.Queue()
+        self.responses: queue.Queue[bytes] = queue.Queue()
 
-    def send_switch_state_global(self, mode):
+    def send_switch_state_global(self, mode: int):
         """switch mode to CONFIGURATION_STATE or WAITING_STATE
         in the all slaves on CAN bus.
         There is no reply for this request
@@ -103,12 +108,13 @@ class LssMaster(object):
         message[1] = mode
         self.__send_command(message)
 
-    def send_switch_mode_global(self, mode):
+    def send_switch_mode_global(self, mode: int):
         """obsolete"""
         self.send_switch_state_global(mode)
 
     def send_switch_state_selective(self,
-                                    vendorId, productCode, revisionNumber, serialNumber):
+                                    vendorId: int, productCode: int,
+                                    revisionNumber: int, serialNumber: int):
         """switch mode from WAITING_STATE to CONFIGURATION_STATE
         only if 128bits LSS address matches with the arguments.
         It sends 4 messages for each argument.
@@ -134,6 +140,7 @@ class LssMaster(object):
         self.__send_lss_address(CS_SWITCH_STATE_SELECTIVE_PRODUCT_CODE, productCode)
         self.__send_lss_address(CS_SWITCH_STATE_SELECTIVE_REVISION_NUMBER, revisionNumber)
         response = self.__send_lss_address(CS_SWITCH_STATE_SELECTIVE_SERIAL_NUMBER, serialNumber)
+        assert response  # For typing
 
         cs = struct.unpack_from("<B", response)[0]
         if cs == CS_SWITCH_STATE_SELECTIVE_RESPONSE:
@@ -141,7 +148,7 @@ class LssMaster(object):
 
         return False
 
-    def inquire_node_id(self):
+    def inquire_node_id(self) -> int:
         """Read the node id.
         CANopen node id must be within the range from 1 to 127.
 
@@ -151,7 +158,7 @@ class LssMaster(object):
         """
         return self.__send_inquire_node_id()
 
-    def inquire_lss_address(self, req_cs):
+    def inquire_lss_address(self, req_cs: int) -> int:
         """Read the part of LSS address.
             VENDOR_ID, PRODUCT_CODE, REVISION_NUMBER, or SERIAL_NUMBER
 
@@ -164,7 +171,7 @@ class LssMaster(object):
         """
         return self.__send_inquire_lss_address(req_cs)
 
-    def configure_node_id(self, new_node_id):
+    def configure_node_id(self, new_node_id: int):
         """Set the node id
 
         :param int new_node_id:
@@ -172,7 +179,7 @@ class LssMaster(object):
         """
         self.__send_configure(CS_CONFIGURE_NODE_ID, new_node_id)
 
-    def configure_bit_timing(self, new_bit_timing):
+    def configure_bit_timing(self, new_bit_timing: int):
         """Set the bit timing.
 
         :param int new_bit_timing:
@@ -185,7 +192,7 @@ class LssMaster(object):
         """
         self.__send_configure(CS_CONFIGURE_BIT_TIMING, 0, new_bit_timing)
 
-    def activate_bit_timing(self, switch_delay_ms):
+    def activate_bit_timing(self, switch_delay_ms: int):
         """Activate the bit timing.
 
         :param uint16_t switch_delay_ms:
@@ -206,9 +213,9 @@ class LssMaster(object):
         self.__send_configure(CS_STORE_CONFIGURATION)
 
     def send_identify_remote_slave(self,
-                                   vendorId, productCode,
-                                   revisionNumberLow, revisionNumberHigh,
-                                   serialNumberLow, serialNumberHigh):
+                                   vendorId: int, productCode: int,
+                                   revisionNumberLow: int, revisionNumberHigh: int,
+                                   serialNumberLow: int, serialNumberHigh: int):
 
         """This command sends the range of LSS address to find the slave nodes
         in the specified range
@@ -241,13 +248,13 @@ class LssMaster(object):
         message[0] = CS_IDENTIFY_NON_CONFIGURED_REMOTE_SLAVE
         self.__send_command(message)
 
-    def fast_scan(self):
-        """This command sends a series of fastscan message 
+    def fast_scan(self) -> Tuple[bool, Optional[List[int]]]:
+        """This command sends a series of fastscan message
         to find unconfigured slave with lowest number of LSS idenities
 
         :return:
             True if a slave is found.
-            False if there is no candidate. 
+            False if there is no candidate.
             list is the LSS identities [vendor_id, product_code, revision_number, serial_number]
         :rtype: bool, list
         """
@@ -282,13 +289,14 @@ class LssMaster(object):
 
         return False, None
 
-    def __send_fast_scan_message(self, id_number, bit_checker, lss_sub, lss_next):
+    def __send_fast_scan_message(self, id_number: int, bit_checker: int, lss_sub: int, lss_next: int):
         message = bytearray(8)
         message[0:8] = struct.pack('<BIBBB', CS_FAST_SCAN, id_number, bit_checker, lss_sub, lss_next)
         try:
             recv_msg = self.__send_command(message)
         except LssError:
             return False
+        assert recv_msg  # For typing
 
         cs = struct.unpack_from("<B", recv_msg)[0]
         if cs == CS_IDENTIFY_SLAVE:
@@ -296,7 +304,7 @@ class LssMaster(object):
 
         return False
 
-    def __send_lss_address(self, req_cs, number):
+    def __send_lss_address(self, req_cs: int, number: int):
         message = bytearray(8)
 
         message[0] = req_cs
@@ -308,7 +316,7 @@ class LssMaster(object):
 
         return response
 
-    def __send_inquire_node_id(self):
+    def __send_inquire_node_id(self) -> int:
         """
         :return:
             Current node id
@@ -317,7 +325,9 @@ class LssMaster(object):
         message = bytearray(8)
         message[0] = CS_INQUIRE_NODE_ID
         response = self.__send_command(message)
+        assert response  # For typing
 
+        current_node_id: int
         cs, current_node_id = struct.unpack_from("<BB", response)
 
         if cs != CS_INQUIRE_NODE_ID:
@@ -325,7 +335,7 @@ class LssMaster(object):
 
         return current_node_id
 
-    def __send_inquire_lss_address(self, req_cs):
+    def __send_inquire_lss_address(self, req_cs: int) -> int:
         """
         :return:
             part of address. e.g., vendor ID or product code,  ..
@@ -334,7 +344,9 @@ class LssMaster(object):
         message = bytearray(8)
         message[0] = req_cs
         response = self.__send_command(message)
+        assert response  # For typing
 
+        part_of_address: int
         res_cs, part_of_address = struct.unpack_from("<BI", response)
 
         if res_cs != req_cs:
@@ -342,13 +354,14 @@ class LssMaster(object):
 
         return part_of_address
 
-    def __send_configure(self, req_cs, value1=0, value2=0):
+    def __send_configure(self, req_cs: int, value1: int=0, value2: int=0):
         """Send a message to set a key with values"""
         message = bytearray(8)
         message[0] = req_cs
         message[1] = value1
         message[2] = value2
         response = self.__send_command(message)
+        assert response  # For typing
 
         res_cs, error_code = struct.unpack_from("<BB", response)
 
@@ -359,7 +372,7 @@ class LssMaster(object):
             error_msg = "LSS Error: %d" % error_code
             raise LssError(error_msg)
 
-    def __send_command(self, message):
+    def __send_command(self, message: bytearray) -> Optional[bytes]:
         """Send a LSS operation code to the network
 
         :param bytearray message:
@@ -380,6 +393,7 @@ class LssMaster(object):
             logger.info("There were unexpected messages in the queue")
             self.responses = queue.Queue()
 
+        assert self.network  # For typing
         self.network.send_message(self.LSS_TX_COBID, message)
 
         if not bool(message[0] in ListMessageNeedResponse):
@@ -395,7 +409,7 @@ class LssMaster(object):
 
         return response
 
-    def on_message_received(self, can_id, data, timestamp):
+    def on_message_received(self, can_id: int, data: bytearray, timestamp: float):
         self.responses.put(bytes(data))
 
 

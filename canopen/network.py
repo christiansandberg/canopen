@@ -1,20 +1,34 @@
+from __future__ import annotations
+from typing import Callable, Dict, Iterable, List, Optional, Union, TYPE_CHECKING
 try:
     from collections.abc import MutableMapping
 except ImportError:
-    from collections import MutableMapping
+    from collections import MutableMapping  # type: ignore
 import logging
 import threading
-from typing import Callable, Dict, Iterable, List, Optional, Union
 
-try:
+if TYPE_CHECKING:
+    # The conditional import and duck typing on the class types confuse the
+    # type checker, so import it explicitly for the type checker.
+    from collections.abc import MutableMapping
+    from can.bus import BusABC
+    from can.notifier import Notifier
+    from can.message import Message
+    from can.listener import Listener
     import can
-    from can import Listener
-    from can import CanError
-except ImportError:
-    # Do not fail if python-can is not installed
-    can = None
-    Listener = object
-    CanError = Exception
+
+else:
+    # Type checkers don't like this conditional logic, so it is only run when
+    # not type checking
+    try:
+        import can
+        from can.listener import Listener
+        from can.exceptions import CanError
+    except ImportError:
+        # Do not fail if python-can is not installed
+        can = None  # type: ignore
+        Listener = object  # type: ignore
+        CanError = Exception
 
 from .node import RemoteNode, LocalNode
 from .sync import SyncProducer
@@ -26,28 +40,29 @@ from .objectdictionary import ObjectDictionary
 
 logger = logging.getLogger(__name__)
 
-Callback = Callable[[int, bytearray, float], None]
+TCallback = Callable[[int, bytearray, float], None]
+TNode = Union[RemoteNode, LocalNode]
+CanData = Union[bytes, bytearray, int, Iterable[int]]
 
-
-class Network(MutableMapping):
+class Network(MutableMapping[int, TNode]):
     """Representation of one CAN bus containing one or more nodes."""
 
-    def __init__(self, bus=None):
+    def __init__(self, bus: Optional[BusABC] = None):
         """
         :param can.BusABC bus:
             A python-can bus instance to re-use.
         """
         #: A python-can :class:`can.BusABC` instance which is set after
         #: :meth:`canopen.Network.connect` is called
-        self.bus = bus
+        self.bus: Optional[BusABC] = bus
         #: A :class:`~canopen.network.NodeScanner` for detecting nodes
         self.scanner = NodeScanner(self)
         #: List of :class:`can.Listener` objects.
         #: Includes at least MessageListener.
         self.listeners = [MessageListener(self)]
-        self.notifier = None
+        self.notifier: Optional[Notifier] = None
         self.nodes: Dict[int, Union[RemoteNode, LocalNode]] = {}
-        self.subscribers: Dict[int, List[Callback]] = {}
+        self.subscribers: Dict[int, List[TCallback]] = {}
         self.send_lock = threading.Lock()
         self.sync = SyncProducer(self)
         self.time = TimeProducer(self)
@@ -58,7 +73,7 @@ class Network(MutableMapping):
         self.lss.network = self
         self.subscribe(self.lss.LSS_RX_COBID, self.lss.on_message_received)
 
-    def subscribe(self, can_id: int, callback: Callback) -> None:
+    def subscribe(self, can_id: int, callback: TCallback) -> None:
         """Listen for messages with a specific CAN ID.
 
         :param can_id:
@@ -70,7 +85,7 @@ class Network(MutableMapping):
         if callback not in self.subscribers[can_id]:
             self.subscribers[can_id].append(callback)
 
-    def unsubscribe(self, can_id, callback=None) -> None:
+    def unsubscribe(self, can_id, callback: Optional[TCallback]=None) -> None:
         """Stop listening for message.
 
         :param int can_id:
@@ -84,7 +99,7 @@ class Network(MutableMapping):
         else:
             self.subscribers[can_id].remove(callback)
 
-    def connect(self, *args, **kwargs) -> "Network":
+    def connect(self, *args, **kwargs) -> Network:
         """Connect to CAN bus using python-can.
 
         Arguments are passed directly to :class:`can.BusABC`. Typically these
@@ -140,7 +155,7 @@ class Network(MutableMapping):
         node: Union[int, RemoteNode, LocalNode],
         object_dictionary: Union[str, ObjectDictionary, None] = None,
         upload_eds: bool = False,
-    ) -> RemoteNode:
+    ) -> Union[RemoteNode, LocalNode]:
         """Add a remote node to the network.
 
         :param node:
@@ -186,7 +201,7 @@ class Network(MutableMapping):
         self[node.id] = node
         return node
 
-    def send_message(self, can_id: int, data: bytes, remote: bool = False) -> None:
+    def send_message(self, can_id: int, data: CanData, remote: bool = False) -> None:
         """Send a raw CAN message to the network.
 
         This method may be overridden in a subclass if you need to integrate
@@ -214,7 +229,7 @@ class Network(MutableMapping):
         self.check()
 
     def send_periodic(
-        self, can_id: int, data: bytes, period: float, remote: bool = False
+        self, can_id: int, data: CanData, period: float, remote: bool = False
     ) -> "PeriodicMessageTask":
         """Start sending a message periodically.
 
@@ -291,12 +306,12 @@ class PeriodicMessageTask(object):
     def __init__(
         self,
         can_id: int,
-        data: bytes,
+        data: CanData,
         period: float,
-        bus,
+        bus: Optional[BusABC],
         remote: bool = False,
     ):
-        """ 
+        """
         :param can_id:
             CAN-ID of the message
         :param data:
@@ -311,17 +326,19 @@ class PeriodicMessageTask(object):
         self.msg = can.Message(is_extended_id=can_id > 0x7FF,
                                arbitration_id=can_id,
                                data=data, is_remote_frame=remote)
-        self._task = None
+        self._task: Optional[can.broadcastmanager.CyclicSendTaskABC] = None
         self._start()
 
     def _start(self):
+        assert self.bus  # For typing
         self._task = self.bus.send_periodic(self.msg, self.period)
 
     def stop(self):
         """Stop transmission"""
+        assert self._task  # For typing
         self._task.stop()
 
-    def update(self, data: bytes) -> None:
+    def update(self, data: CanData) -> None:
         """Update data of message
 
         :param data:
@@ -330,6 +347,7 @@ class PeriodicMessageTask(object):
         new_data = bytearray(data)
         old_data = self.msg.data
         self.msg.data = new_data
+        assert self._task  # For typing
         if hasattr(self._task, "modify_data"):
             self._task.modify_data(self.msg)
         elif new_data != old_data:
@@ -348,7 +366,7 @@ class MessageListener(Listener):
     def __init__(self, network: Network):
         self.network = network
 
-    def on_message_received(self, msg):
+    def on_message_received(self, msg: Message):
         if msg.is_error_frame or msg.is_remote_frame:
             return
 

@@ -1,18 +1,24 @@
 """
 Object Dictionary module
 """
+from __future__ import annotations
+from typing import Dict, Iterable, List, Optional, TextIO, Union, TYPE_CHECKING
 import struct
-from typing import Dict, Iterable, List, Optional, TextIO, Union
 try:
     from collections.abc import MutableMapping, Mapping
 except ImportError:
-    from collections import MutableMapping, Mapping
+    from collections import MutableMapping, Mapping  # type: ignore
 import logging
 
 from .datatypes import *
 
+if TYPE_CHECKING:
+    # Repeat import to ensure the type checker understands the imports
+    from collections.abc import MutableMapping, Mapping
+
 logger = logging.getLogger(__name__)
 
+TObject = Union["Array", "Record", "Variable"]
 
 def export_od(od, dest:Union[str,TextIO,None]=None, doc_type:Optional[str]=None):
     """ Export :class: ObjectDictionary to a file.
@@ -83,12 +89,12 @@ def import_od(
         raise NotImplementedError("No support for this format")
 
 
-class ObjectDictionary(MutableMapping):
+class ObjectDictionary(MutableMapping[Union[str, int], TObject]):
     """Representation of the object dictionary as a Python dictionary."""
 
     def __init__(self):
-        self.indices = {}
-        self.names = {}
+        self.indices: Dict[int, TObject] = {}
+        self.names: Dict[str, TObject] = {}
         self.comments = ""
         #: Default bitrate if specified by file
         self.bitrate: Optional[int] = None
@@ -107,9 +113,7 @@ class ObjectDictionary(MutableMapping):
             raise KeyError("%s was not found in Object Dictionary" % name)
         return item
 
-    def __setitem__(
-        self, index: Union[int, str], obj: Union["Array", "Record", "Variable"]
-    ):
+    def __setitem__(self, index: Union[int, str], obj: TObject):
         assert index == obj.index or index == obj.name
         self.add_object(obj)
 
@@ -127,7 +131,7 @@ class ObjectDictionary(MutableMapping):
     def __contains__(self, index: Union[int, str]):
         return index in self.names or index in self.indices
 
-    def add_object(self, obj: Union["Array", "Record", "Variable"]) -> None:
+    def add_object(self, obj: TObject) -> None:
         """Add object to the object dictionary.
 
         :param obj:
@@ -154,7 +158,7 @@ class ObjectDictionary(MutableMapping):
             return obj.get(subindex)
 
 
-class Record(MutableMapping):
+class Record(MutableMapping[Union[int, str], "Variable"]):
     """Groups multiple :class:`~canopen.objectdictionary.Variable` objects using
     subindices.
     """
@@ -171,8 +175,8 @@ class Record(MutableMapping):
         self.name = name
         #: Storage location of index
         self.storage_location = None
-        self.subindices = {}
-        self.names = {}
+        self.subindices: Dict[int, "Variable"] = {}
+        self.names: Dict[str, "Variable"] = {}
 
     def __getitem__(self, subindex: Union[int, str]) -> "Variable":
         item = self.names.get(subindex) or self.subindices.get(subindex)
@@ -208,7 +212,7 @@ class Record(MutableMapping):
         self.names[variable.name] = variable
 
 
-class Array(Mapping):
+class Array(Mapping[Union[int, str], "Variable"]):
     """An array of :class:`~canopen.objectdictionary.Variable` objects using
     subindices.
 
@@ -220,15 +224,15 @@ class Array(Mapping):
 
     def __init__(self, name: str, index: int):
         #: The :class:`~canopen.ObjectDictionary` owning the record.
-        self.parent = None
+        self.parent: Optional[ObjectDictionary] = None
         #: 16-bit address of the array
         self.index = index
         #: Name of array
         self.name = name
         #: Storage location of index
         self.storage_location = None
-        self.subindices = {}
-        self.names = {}
+        self.subindices: Dict[int, "Variable"] = {}
+        self.names: Dict[str, "Variable"] = {}
 
     def __getitem__(self, subindex: Union[int, str]) -> "Variable":
         var = self.names.get(subindex) or self.subindices.get(subindex)
@@ -287,7 +291,7 @@ class Variable(object):
         #: The :class:`~canopen.ObjectDictionary`,
         #: :class:`~canopen.objectdictionary.Record` or
         #: :class:`~canopen.objectdictionary.Array` owning the variable
-        self.parent = None
+        self.parent: Optional[ObjectDictionary] = None
         #: 16-bit address of the object in the dictionary
         self.index = index
         #: 8-bit sub-index of the object in the dictionary

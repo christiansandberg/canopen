@@ -1,5 +1,6 @@
+from __future__ import annotations
+from typing import Optional, Union, TextIO, TYPE_CHECKING, List
 import logging
-from typing import Union, TextIO
 
 from ..sdo import SdoClient
 from ..nmt import NmtMaster
@@ -9,8 +10,10 @@ from ..objectdictionary import Record, Array, Variable
 from .base import BaseNode
 
 import canopen
-
 from canopen import objectdictionary
+
+if TYPE_CHECKING:
+    from ..network import Network
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +33,7 @@ class RemoteNode(BaseNode):
 
     def __init__(
         self,
-        node_id: int,
+        node_id: Optional[int],
         object_dictionary: Union[objectdictionary.ObjectDictionary, str, TextIO],
         load_od: bool = False,
     ):
@@ -39,7 +42,7 @@ class RemoteNode(BaseNode):
         #: Enable WORKAROUND for reversed PDO mapping entries
         self.curtis_hack = False
 
-        self.sdo_channels = []
+        self.sdo_channels: List[SdoClient] = []
         self.sdo = self.add_sdo(0x600 + self.id, 0x580 + self.id)
         self.tpdo = TPDO(self)
         self.rpdo = RPDO(self)
@@ -50,7 +53,7 @@ class RemoteNode(BaseNode):
         if load_od:
             self.load_configuration()
 
-    def associate_network(self, network):
+    def associate_network(self, network: Network):
         self.network = network
         self.sdo.network = network
         self.pdo.network = network
@@ -64,6 +67,7 @@ class RemoteNode(BaseNode):
         network.subscribe(0, self.nmt.on_command)
 
     def remove_network(self):
+        assert self.network  # For typing
         for sdo in self.sdo_channels:
             self.network.unsubscribe(sdo.tx_cobid, sdo.on_response)
         self.network.unsubscribe(0x700 + self.id, self.nmt.on_heartbeat)
@@ -76,7 +80,7 @@ class RemoteNode(BaseNode):
         self.rpdo.network = None
         self.nmt.network = None
 
-    def add_sdo(self, rx_cobid, tx_cobid):
+    def add_sdo(self, rx_cobid: int, tx_cobid: int):
         """Add an additional SDO channel.
 
         The SDO client will be added to :attr:`sdo_channels`.
@@ -95,7 +99,7 @@ class RemoteNode(BaseNode):
             self.network.subscribe(client.tx_cobid, client.on_response)
         return client
 
-    def store(self, subindex=1):
+    def store(self, subindex: int=1):
         """Store parameters in non-volatile memory.
 
         :param int subindex:

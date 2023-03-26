@@ -1,14 +1,19 @@
+from __future__ import annotations
+from typing import Callable, List, Optional, TYPE_CHECKING, Tuple
 import struct
 import logging
 import threading
 import time
-from typing import Callable, List, Optional
+
+if TYPE_CHECKING:
+    from .network import Network
 
 # Error code, error register, vendor specific data
 EMCY_STRUCT = struct.Struct("<HB5s")
 
 logger = logging.getLogger(__name__)
 
+TCallback = Callable[["EmcyError"], None]
 
 class EmcyConsumer(object):
 
@@ -17,10 +22,10 @@ class EmcyConsumer(object):
         self.log: List["EmcyError"] = []
         #: Only active EMCYs. Will be cleared on Error Reset
         self.active: List["EmcyError"] = []
-        self.callbacks = []
+        self.callbacks: List[TCallback] = []
         self.emcy_received = threading.Condition()
 
-    def on_emcy(self, can_id, data, timestamp):
+    def on_emcy(self, can_id: int, data: bytearray, timestamp: float):
         code, register, data = EMCY_STRUCT.unpack(data)
         entry = EmcyError(code, register, data, timestamp)
 
@@ -36,7 +41,7 @@ class EmcyConsumer(object):
         for callback in self.callbacks:
             callback(entry)
 
-    def add_callback(self, callback: Callable[["EmcyError"], None]):
+    def add_callback(self, callback: TCallback):
         """Get notified on EMCY messages from this node.
 
         :param callback:
@@ -52,7 +57,7 @@ class EmcyConsumer(object):
 
     def wait(
         self, emcy_code: Optional[int] = None, timeout: float = 10
-    ) -> "EmcyError":
+    ) -> Optional["EmcyError"]:
         """Wait for a new EMCY to arrive.
 
         :param emcy_code: EMCY code to wait for
@@ -82,14 +87,16 @@ class EmcyConsumer(object):
 class EmcyProducer(object):
 
     def __init__(self, cob_id: int):
-        self.network = None
+        self.network: Optional[Network] = None
         self.cob_id = cob_id
 
     def send(self, code: int, register: int = 0, data: bytes = b""):
+        assert self.network  # For typing
         payload = EMCY_STRUCT.pack(code, register, data)
         self.network.send_message(self.cob_id, payload)
 
     def reset(self, register: int = 0, data: bytes = b""):
+        assert self.network  # For typing
         payload = EMCY_STRUCT.pack(0, register, data)
         self.network.send_message(self.cob_id, payload)
 
@@ -97,7 +104,7 @@ class EmcyProducer(object):
 class EmcyError(Exception):
     """EMCY exception."""
 
-    DESCRIPTIONS = [
+    DESCRIPTIONS: List[Tuple[int, int, str]] = [
         # Code   Mask    Description
         (0x0000, 0xFF00, "Error Reset / No Error"),
         (0x1000, 0xFF00, "Generic Error"),

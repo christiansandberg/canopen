@@ -1,12 +1,18 @@
+from __future__ import annotations
 import binascii
-from typing import Iterable, Union
+from typing import Iterable, Union, Optional, TYPE_CHECKING
 try:
     from collections.abc import Mapping
 except ImportError:
-    from collections import Mapping
+    from collections import Mapping  # type: ignore
 
 from .. import objectdictionary
 from .. import variable
+
+if TYPE_CHECKING:
+    # Repeat import to ensure the type checker understands the imports
+    from collections.abc import Mapping
+    from ..network import Network
 
 
 class CrcXmodem(object):
@@ -22,7 +28,7 @@ class CrcXmodem(object):
         return self._value
 
 
-class SdoBase(Mapping):
+class SdoBase(Mapping[Union[str, int], Union["Variable", "Array", "Record"]]):
 
     #: The CRC algorithm used for block transfers
     crc_cls = CrcXmodem
@@ -43,7 +49,7 @@ class SdoBase(Mapping):
         """
         self.rx_cobid = rx_cobid
         self.tx_cobid = tx_cobid
-        self.network = None
+        self.network: Optional[Network] = None
         self.od = od
 
     def __getitem__(
@@ -56,6 +62,7 @@ class SdoBase(Mapping):
             return Array(self, entry)
         elif isinstance(entry, objectdictionary.Record):
             return Record(self, entry)
+        raise TypeError("Unknown object type")
 
     def __iter__(self) -> Iterable[int]:
         return iter(self.od)
@@ -78,10 +85,17 @@ class SdoBase(Mapping):
     ) -> None:
         raise NotImplementedError()
 
+    def open(
+        self, index, subindex=0, mode="rb", encoding="ascii",
+        buffering=1024, size=None, block_transfer=False, force_segment=False,
+        request_crc_support=True
+    ) -> None:
+        raise NotImplementedError()
 
-class Record(Mapping):
 
-    def __init__(self, sdo_node: SdoBase, od: objectdictionary.ObjectDictionary):
+class Record(Mapping[Union[int, str], "Variable"]):
+
+    def __init__(self, sdo_node: SdoBase, od: objectdictionary.Record):
         self.sdo_node = sdo_node
         self.od = od
 
@@ -98,9 +112,9 @@ class Record(Mapping):
         return subindex in self.od
 
 
-class Array(Mapping):
+class Array(Mapping[Union[int, str], "Variable"]):
 
-    def __init__(self, sdo_node: SdoBase, od: objectdictionary.ObjectDictionary):
+    def __init__(self, sdo_node: SdoBase, od: objectdictionary.Array):
         self.sdo_node = sdo_node
         self.od = od
 
@@ -120,7 +134,7 @@ class Array(Mapping):
 class Variable(variable.Variable):
     """Access object dictionary variable values using SDO protocol."""
 
-    def __init__(self, sdo_node: SdoBase, od: objectdictionary.ObjectDictionary):
+    def __init__(self, sdo_node: SdoBase, od: objectdictionary.Variable):
         self.sdo_node = sdo_node
         variable.Variable.__init__(self, od)
 

@@ -1,7 +1,8 @@
+from typing import IO, TYPE_CHECKING, Union
 try:
     import xml.etree.cElementTree as etree
 except ImportError:
-    import xml.etree.ElementTree as etree
+    import xml.etree.ElementTree as etree  # type: ignore
 import logging
 from canopen import objectdictionary
 
@@ -21,7 +22,7 @@ DATA_TYPES = {
 }
 
 
-def import_epf(epf):
+def import_epf(epf: Union[str, IO, etree.Element]) -> objectdictionary.ObjectDictionary:
     """Import an EPF file.
 
     :param epf:

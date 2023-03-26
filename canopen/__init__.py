@@ -12,3 +12,20 @@ except ImportError:
 Node = RemoteNode
 
 __pypi_url__ = "https://pypi.org/project/canopen/"
+
+__all__ = [
+    "__version__",
+    "__pypi_url__",
+    "Network",
+    "NodeScanner",
+    "RemoteNode",
+    "LocalNode",
+    "Node",
+    "SdoCommunicationError",
+    "SdoAbortedError",
+    "import_od",
+    "export_od",
+    "ObjectDictionary",
+    "ObjectDictionaryError",
+    "BaseNode402",
+]

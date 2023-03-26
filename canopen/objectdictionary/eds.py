@@ -1,3 +1,4 @@
+from typing import Union, IO
 import copy
 import logging
 import re
@@ -7,7 +8,7 @@ from canopen.objectdictionary import datatypes
 try:
     from configparser import RawConfigParser, NoOptionError, NoSectionError
 except ImportError:
-    from ConfigParser import RawConfigParser, NoOptionError, NoSectionError
+    from ConfigParser import RawConfigParser, NoOptionError, NoSectionError  # type: ignore
 from canopen import objectdictionary
 from canopen.sdo import SdoClient
 
@@ -20,7 +21,7 @@ ARR = 8
 RECORD = 9
 
 
-def import_eds(source, node_id):
+def import_eds(source: Union[IO, str], node_id: int) -> objectdictionary.ObjectDictionary:
     eds = RawConfigParser()
     eds.optionxform = str
     if hasattr(source, "read"):
@@ -321,7 +322,7 @@ def export_dcf(od, dest=None, fileInfo={}):
     return export_eds(od, dest, fileInfo, True)
 
 
-def export_eds(od, dest=None, file_info={}, device_commisioning=False):
+def export_eds(od: objectdictionary.ObjectDictionary, dest=None, file_info={}, device_commisioning=False):
     def export_object(obj, eds):
         if type(obj) is objectdictionary.Variable:
             return export_variable(obj, eds)
