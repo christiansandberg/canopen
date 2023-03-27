@@ -170,7 +170,7 @@ def import_eds(source, node_id):
     return od
 
 
-# FIXME: Make async variant
+# FIXME: Make async variant "aimport_from_node"
 @ensure_not_async  # NOTE: Safeguard for accidental async use
 def import_from_node(node_id, network):
     """ Download the configuration from the remote node

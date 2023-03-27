@@ -109,7 +109,7 @@ class RemoteNode(BaseNode):
         client = SdoClient(rx_cobid, tx_cobid, self.object_dictionary)
         self.sdo_channels.append(client)
         if self.network is not None:
-            if self.network.loop:
+            if self.network.is_async():
                 self.network.subscribe(client.tx_cobid, client.aon_response)
             else:
                 self.network.subscribe(client.tx_cobid, client.on_response)
@@ -151,9 +151,11 @@ class RemoteNode(BaseNode):
                     subindex=subindex,
                     name=name,
                     value=value)))
-                self.sdo[index][subindex].set_raw(value)  # FIXME: Blocking?
+                # NOTE: Blocking - OK. Protected in SdoClient
+                self.sdo[index][subindex].set_raw(value)
             else:
-                self.sdo[index].set_raw(value)  # FIXME: Blocking?
+                # FIXME: Blocking - OK. Protected in SdoClient
+                self.sdo[index].set_raw(value)
                 logger.info(str('SDO [{index:#06x}]: {name}: {value:#06x}'.format(
                     index=index,
                     name=name,

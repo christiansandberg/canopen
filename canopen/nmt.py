@@ -132,14 +132,16 @@ class NmtMaster(NmtBase):
     @ensure_not_async  # NOTE: Safeguard for accidental async use
     def on_heartbeat(self, can_id, data, timestamp):
         # NOTE: Callback. Called from another thread unless async
-        with self.state_update:  # NOTE: Blocking call
+        # NOTE: Blocking call
+        with self.state_update:
             self.timestamp = timestamp
             new_state, = struct.unpack_from("B", data)
             # Mask out toggle bit
             new_state &= 0x7F
             logger.debug("Received heartbeat can-id %d, state is %d", can_id, new_state)
             for callback in self._callbacks:
-                callback(new_state)  # FIXME: Assert if callback is coroutine?
+                # FIXME: Assert if callback is coroutine?
+                callback(new_state)
             if new_state == 0:
                 # Boot-up, will go to PRE-OPERATIONAL automatically
                 self._state = 127
@@ -181,9 +183,11 @@ class NmtMaster(NmtBase):
     @ensure_not_async  # NOTE: Safeguard for accidental async use
     def wait_for_heartbeat(self, timeout: float = 10):
         """Wait until a heartbeat message is received."""
-        with self.state_update:  # NOTE: Blocking call
+        # NOTE: Blocking call
+        with self.state_update:
             self._state_received = None
-            self.state_update.wait(timeout)  # NOTE: Blocking call
+            # NOTE: Blocking call
+            self.state_update.wait(timeout)
         if self._state_received is None:
             raise NmtError("No boot-up or heartbeat received")
         return self.state
@@ -204,9 +208,11 @@ class NmtMaster(NmtBase):
         end_time = time.time() + timeout
         while True:
             now = time.time()
-            with self.state_update:  # NOTE: Blocking call
+            # NOTE: Blocking call
+            with self.state_update:
                 self._state_received = None
-                self.state_update.wait(end_time - now + 0.1)  # NOTE: Blocking call
+                # NOTE: Blocking call
+                self.state_update.wait(end_time - now + 0.1)
             if now > end_time:
                 raise NmtError("Timeout waiting for boot-up message")
             if self._state_received == 0:
@@ -214,7 +220,7 @@ class NmtMaster(NmtBase):
 
     async def await_for_bootup(self, timeout: float = 10) -> None:
         """Wait until a boot-up message is received."""
-        async def wait_for_bootup():
+        async def _wait_for_bootup():
             while True:
                 async with self.astate_update:
                     self._state_received = None
@@ -222,7 +228,7 @@ class NmtMaster(NmtBase):
                     if self._state_received == 0:
                         return
         try:
-            await asyncio.wait_for(wait_for_bootup(), timeout=timeout)
+            await asyncio.wait_for(_wait_for_bootup(), timeout=timeout)
         except asyncio.TimeoutError:
             raise NmtError("Timeout waiting for boot-up message")
 
@@ -282,7 +288,8 @@ class NmtSlave(NmtBase):
         # The heartbeat service should start on the transition
         # between INITIALIZING and PRE-OPERATIONAL state
         if old_state == 0 and self._state == 127:
-            heartbeat_time_ms = self._local_node.sdo[0x1017].get_raw()  # FIXME: Blocking?
+            # NOTE: Blocking - OK. Protected in SdoClient
+            heartbeat_time_ms = self._local_node.sdo[0x1017].get_raw()
             self.start_heartbeat(heartbeat_time_ms)
         else:
             self.update_heartbeat()

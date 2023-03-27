@@ -33,6 +33,7 @@ async def do_loop(network: canopen.Network, nodeid):
             continue
 
         # Get TPDO value
+        # FIXME: Is this ok?
         state = node.tpdo[1]['state'].get_raw()
 
         # If state send RPDO to remote
@@ -41,6 +42,7 @@ async def do_loop(network: canopen.Network, nodeid):
             await asyncio.sleep(0.2)
 
             # Set RPDO and transmit
+            # FIXME: Using set_phys() ok?
             node.rpdo[1]['count'].set_phys(i)
             node.rpdo[1].transmit()
 

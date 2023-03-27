@@ -141,6 +141,7 @@ class Array(Mapping):
         return self.aiter()
 
     def __len__(self) -> int:
+        # NOTE: Blocking - OK. Protected in SdoClient
         return self[0].get_raw()
 
     def __contains__(self, subindex: int) -> bool:

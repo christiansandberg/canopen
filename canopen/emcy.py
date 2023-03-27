@@ -33,7 +33,8 @@ class EmcyConsumer(object):
         code, register, data = EMCY_STRUCT.unpack(data)
         entry = EmcyError(code, register, data, timestamp)
 
-        with self.emcy_received:  # NOTE: Blocking call
+        # NOTE: Blocking call
+        with self.emcy_received:
             if code & 0xFF00 == 0:
                 # Error reset
                 self.active = []
@@ -43,7 +44,8 @@ class EmcyConsumer(object):
             self.emcy_received.notify_all()
 
         for callback in self.callbacks:
-            callback(entry)  # FIXME: Assert if callback is coroutine?
+            # FIXME: Assert if callback is a coroutine?
+            callback(entry)
 
     async def aon_emcy(self, can_id, data, timestamp):
         code, register, data = EMCY_STRUCT.unpack(data)
@@ -78,7 +80,8 @@ class EmcyConsumer(object):
         self.log = []
         self.active = []
 
-    # FIXME: Make async implementation
+    # FIXME: Implement "await" function. (Other name is needed here)
+
     @ensure_not_async  # NOTE: Safeguard for accidental async use
     def wait(
         self, emcy_code: Optional[int] = None, timeout: float = 10
@@ -92,9 +95,11 @@ class EmcyConsumer(object):
         """
         end_time = time.time() + timeout
         while True:
-            with self.emcy_received:  # NOTE: Blocking call
+            # NOTE: Blocking call
+            with self.emcy_received:
                 prev_log_size = len(self.log)
-                self.emcy_received.wait(timeout)  # NOTE: Blocking call
+                # NOTE: Blocking call
+                self.emcy_received.wait(timeout)
                 if len(self.log) == prev_log_size:
                     # Resumed due to timeout
                     return None

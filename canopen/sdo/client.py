@@ -63,7 +63,8 @@ class SdoClient(SdoBase):
         while True:
             try:
                 if self.PAUSE_BEFORE_SEND:
-                    time.sleep(self.PAUSE_BEFORE_SEND)  # NOTE: Blocking call
+                    # NOTE: Blocking call
+                    time.sleep(self.PAUSE_BEFORE_SEND)
                 self.network.send_message(self.rx_cobid, request)
             except CanError as e:
                 # Could be a buffer overflow. Wait some time before trying again
@@ -72,7 +73,8 @@ class SdoClient(SdoBase):
                     raise
                 logger.info(str(e))
                 if self.PAUSE_AFTER_SEND:
-                    time.sleep(0.1)  # NOTE: Blocking call
+                    # NOTE: Blocking call
+                    time.sleep(0.1)
             else:
                 break
 
@@ -97,7 +99,8 @@ class SdoClient(SdoBase):
     @ensure_not_async  # NOTE: Safeguard for accidental async use
     def read_response(self):
         try:
-            response = self.responses.get(  # NOTE: Blocking call
+            # NOTE: Blocking call
+            response = self.responses.get(
                 block=True, timeout=self.RESPONSE_TIMEOUT)
         except queue.Empty:
             raise SdoCommunicationError("No SDO response received")
@@ -123,7 +126,8 @@ class SdoClient(SdoBase):
     def request_response(self, sdo_request):
         retries_left = self.MAX_RETRIES
         if not self.responses.empty():
-            raise RuntimeError("Unexpected message in the queue")  # FIXME
+            # FIXME: Added to check if this occurs
+            raise RuntimeError("Unexpected message in the queue")
             # logger.warning("There were unexpected messages in the queue")
             self.responses = queue.Queue()
         while True:
@@ -393,7 +397,7 @@ class SdoClient(SdoBase):
         if "r" in mode:
             if block_transfer:
                 raise NotImplementedError("BlockUploadStream for async not implemented")
-                raw_stream = BlockUploadStream(self, index, subindex, request_crc_support=request_crc_support)
+                # raw_stream = ABlockUploadStream(self, index, subindex, request_crc_support=request_crc_support)
             else:
                 raw_stream = await AReadableStream.open(self, index, subindex)
             if buffering:
@@ -403,7 +407,7 @@ class SdoClient(SdoBase):
         if "w" in mode:
             if block_transfer:
                 raise NotImplementedError("BlockDownloadStream for async not implemented")
-                raw_stream = BlockDownloadStream(self, index, subindex, size, request_crc_support=request_crc_support)
+                # raw_stream = ABlockDownloadStream(self, index, subindex, size, request_crc_support=request_crc_support)
             else:
                 raw_stream = await AWritableStream.open(self, index, subindex, size, force_segment)
             if buffering:
@@ -413,9 +417,10 @@ class SdoClient(SdoBase):
         if "b" not in mode:
             # Text mode
             line_buffering = buffering == 1
+            # FIXME: Implement io.TextIOWrapper for async?
             raise NotImplementedError("TextIOWrapper for async not implemented")
-            return io.TextIOWrapper(buffered_stream, encoding,
-                                    line_buffering=line_buffering)
+            # return io.TextIOWrapper(buffered_stream, encoding,
+            #                         line_buffering=line_buffering)
         return buffered_stream
 
 
@@ -921,7 +926,7 @@ class BlockUploadStream(io.RawIOBase):
         :param int subindex:
             Object dictionary sub-index to read from.
         :param bool request_crc_support:
-            If crc calculation should be requested when using block transfer            
+            If crc calculation should be requested when using block transfer
         """
         self._done = False
         self.sdo_client = sdo_client
@@ -1063,6 +1068,9 @@ class BlockUploadStream(io.RawIOBase):
         return True
 
 
+# FIXME: Implement ABlockUploadStream(io_async.RawIOBase)
+
+
 class BlockDownloadStream(io.RawIOBase):
     """File like object for block download."""
 
@@ -1077,7 +1085,7 @@ class BlockDownloadStream(io.RawIOBase):
         :param int size:
             Size of data in number of bytes if known in advance.
         :param bool request_crc_support:
-            If crc calculation should be requested when using block transfer            
+            If crc calculation should be requested when using block transfer
         """
         self.sdo_client = sdo_client
         self.size = size
@@ -1204,7 +1212,7 @@ class BlockDownloadStream(io.RawIOBase):
         logger.debug("Server requested a block size of %d", blksize)
         self._blksize = blksize
         self._seqno = 0
-        
+
     def _retransmit(self, ackseq, blksize):
         """Retransmit the failed block"""
         logger.info(("%d of %d sequences were received. "
@@ -1250,3 +1258,6 @@ class BlockDownloadStream(io.RawIOBase):
 
     def writable(self):
         return True
+
+
+# FIXME: Implement ABlockDownloadStream(io_async.RawIOBase)

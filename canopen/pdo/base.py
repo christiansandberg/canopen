@@ -313,7 +313,8 @@ class Map(object):
         # NOTE: Callback. Called from another thread unless async
         is_transmitting = self._task is not None
         if can_id == self.cob_id and not is_transmitting:
-            with self.receive_condition:  # NOTE: Blocking call
+            # NOTE: Blocking call
+            with self.receive_condition:
                 self.is_received = True
                 self.data = data
                 if self.timestamp is not None:
@@ -321,7 +322,8 @@ class Map(object):
                 self.timestamp = timestamp
                 self.receive_condition.notify_all()
                 for callback in self.callbacks:
-                    callback(self)  # FIXME: Assert on couroutines?
+                    # FIXME: Assert on couroutines?
+                    callback(self)
 
     async def aon_message(self, can_id, data, timestamp):
         is_transmitting = self._task is not None
@@ -407,7 +409,8 @@ class Map(object):
                 value = var.od.default
             else:
                 # Get value from SDO
-                value = var.get_raw()  # FIXME: Blocking?
+                # NOTE: Blocking
+                value = var.get_raw()
             try:
                 # Deliver value into read_generator and wait for next object
                 var = gen.send(value)
@@ -456,7 +459,15 @@ class Map(object):
                 # fixed number of entries (count not writable), generate dummy
                 # mappings for an invalid object 0x0000:00 to overwrite any
                 # excess entries with all-zeros.
-                self._fill_map(self.map_array[0].get_raw())  # FIXME: Blocking?
+                #
+                # Async adoption:
+                # Original code
+                #    self._fill_map(self.map_array[0].get_raw())
+                # This function is called from both sync and async, so it cannot
+                # be executed as is. Instead the special value '@@get' is yielded
+                # in order for the save() and asave() to execute the actual
+                # action.
+                yield self.map_array[0], '@@get'
             subindex = 1
             for var in self.map:
                 logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
@@ -490,12 +501,22 @@ class Map(object):
     def save(self) -> None:
         """Read PDO configuration for this map using SDO."""
         for sdo, value in self.save_generator():
-            sdo.set_raw(value)  # FIXME: Blocking?
+            if value == '@@get':
+                # NOTE: Sync implementation of the WORKAROUND in save_generator()
+                # NOTE: Blocking
+                self._fill_map(sdo.get_raw())
+            else:
+                # NOTE: Blocking
+                sdo.set_raw(value)
 
     async def asave(self) -> None:
         """Read PDO configuration for this map using SDO, async variant."""
         for sdo, value in self.save_generator():
-            await sdo.aset_raw(value)
+            if value == '@@get':
+                # NOTE: Async implementation of the WORKAROUND in save_generator()
+                self._fill_map(await sdo.aget_raw())
+            else:
+                await sdo.aset_raw(value)
 
     def subscribe(self) -> None:
         """Register the PDO for reception on the network.
@@ -507,7 +528,7 @@ class Map(object):
         """
         if self.enabled:
             logger.info("Subscribing to enabled PDO 0x%X on the network", self.cob_id)
-            if self.pdo_node.network.loop:
+            if self.pdo_node.network.is_async():
                 self.pdo_node.network.subscribe(self.cob_id, self.aon_message)
             else:
                 self.pdo_node.network.subscribe(self.cob_id, self.on_message)
@@ -605,9 +626,11 @@ class Map(object):
         :param float timeout: Max time to wait in seconds.
         :return: Timestamp of message received or None if timeout.
         """
-        with self.receive_condition:  # NOTE: Blocking call
+        # NOTE: Blocking call
+        with self.receive_condition:
             self.is_received = False
-            self.receive_condition.wait(timeout)  # NOTE: Blocking call
+            # NOTE: Blocking call
+            self.receive_condition.wait(timeout)
         return self.timestamp if self.is_received else None
 
     async def await_for_reception(self, timeout: float = 10) -> float:
@@ -624,6 +647,7 @@ class Map(object):
                 return self.timestamp
             except asyncio.TimeoutError:
                 return None
+
 
 class Variable(variable.Variable):
     """One object dictionary variable mapped to a PDO."""

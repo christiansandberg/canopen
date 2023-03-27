@@ -30,3 +30,5 @@ class BaseNode(object):
         self.object_dictionary = object_dictionary
 
         self.id = node_id or self.object_dictionary.node_id
+
+    # FIXME: Should associate_network() and remove_network() be a part of the base API?

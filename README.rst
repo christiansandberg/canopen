@@ -11,6 +11,28 @@ The library supports Python 3.6+.
 This library is the asyncio port of CANopen. See below for code example.
 
 
+Async status
+------------
+
+The remaining work for feature complete async implementation:
+
+* Implement :code:`ABlockUploadStream`, :code:`ABlockDownloadStream` and
+  :code:`ATextIOWrapper` for async in :code:`SdoClient`
+
+* Implement :code:`EcmyConsumer.wait()` for async
+
+* Implement async in :code:`LssMaster``
+
+* Async implementation of :code:`BaseNode402`
+
+* Implement async variant of :code:`Network.add_node`. This will probably also
+  add need of async variant of :code:`input_from_node` in eds.py
+
+* Update unittests for async
+
+* Update documentation and examples
+
+
 Features
 --------
 

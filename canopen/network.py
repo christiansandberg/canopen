@@ -69,7 +69,7 @@ class Network(MutableMapping):
         self.lss = LssMaster()
         self.lss.network = self
 
-        if self.loop:
+        if self.is_async():
             self.subscribe(self.lss.LSS_RX_COBID, self.lss.aon_message_received)
         else:
             self.subscribe(self.lss.LSS_RX_COBID, self.lss.on_message_received)
@@ -162,6 +162,8 @@ class Network(MutableMapping):
 
     def __exit__(self, type, value, traceback):
         self.disconnect()
+
+    # FIXME: Implement async "aadd_node"
 
     def add_node(
         self,
