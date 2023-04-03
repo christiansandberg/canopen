@@ -144,7 +144,7 @@ class TestEDS(unittest.TestCase):
                     self.assertEqual(type(actual_object), type(expected_object))
                     self.assertEqual(actual_object.name, expected_object.name)
 
-                    if type(actual_object) is canopen.objectdictionary.Variable:
+                    if isinstance(actual_object, canopen.objectdictionary.Variable):
                         expected_vars = [expected_object]
                         actual_vars = [actual_object]
                     else:
