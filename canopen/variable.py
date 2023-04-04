@@ -10,7 +10,7 @@ from . import objectdictionary
 logger = logging.getLogger(__name__)
 
 
-class Variable(object):
+class Variable:
 
     def __init__(self, od: objectdictionary.Variable):
         self.od = od

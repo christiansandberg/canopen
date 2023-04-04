@@ -266,7 +266,7 @@ class Array(Mapping):
         self.names[variable.name] = variable
 
 
-class Variable(object):
+class Variable:
     """Simple variable."""
 
     STRUCT_TYPES = {

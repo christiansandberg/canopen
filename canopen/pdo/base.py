@@ -156,7 +156,7 @@ class Maps(Mapping):
         return len(self.maps)
 
 
-class Map(object):
+class Map:
     """One message which can have up to 8 bytes of variables mapped."""
 
     def __init__(self, pdo_node, com_record, map_array):
