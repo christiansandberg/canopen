@@ -35,7 +35,7 @@ def export_od(od, dest:Union[str,TextIO,None]=None, doc_type:Optional[str]=None)
     """
 
     doctypes = {"eds", "dcf"}
-    if type(dest) is str:
+    if isinstance(dest, str):
         if doc_type is None:
             for t in doctypes:
                 if dest.endswith(f".{t}"):
