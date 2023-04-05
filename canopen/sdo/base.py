@@ -5,8 +5,9 @@ try:
 except ImportError:
     from collections import Mapping
 
-from .. import objectdictionary
-from .. import variable
+from canopen import objectdictionary
+from canopen.objectdictionary import ObjectDictionary
+from canopen import variable
 
 
 class CrcXmodem:
@@ -31,7 +32,7 @@ class SdoBase(Mapping):
         self,
         rx_cobid: int,
         tx_cobid: int,
-        od: objectdictionary.ObjectDictionary,
+        od: ObjectDictionary,
     ):
         """
         :param rx_cobid:
@@ -81,7 +82,7 @@ class SdoBase(Mapping):
 
 class Record(Mapping):
 
-    def __init__(self, sdo_node: SdoBase, od: objectdictionary.ObjectDictionary):
+    def __init__(self, sdo_node: SdoBase, od: ObjectDictionary):
         self.sdo_node = sdo_node
         self.od = od
 
@@ -100,7 +101,7 @@ class Record(Mapping):
 
 class Array(Mapping):
 
-    def __init__(self, sdo_node: SdoBase, od: objectdictionary.ObjectDictionary):
+    def __init__(self, sdo_node: SdoBase, od: ObjectDictionary):
         self.sdo_node = sdo_node
         self.od = od
 
@@ -120,7 +121,7 @@ class Array(Mapping):
 class Variable(variable.Variable):
     """Access object dictionary variable values using SDO protocol."""
 
-    def __init__(self, sdo_node: SdoBase, od: objectdictionary.ObjectDictionary):
+    def __init__(self, sdo_node: SdoBase, od: ObjectDictionary):
         self.sdo_node = sdo_node
         variable.Variable.__init__(self, od)
 

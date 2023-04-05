@@ -1,8 +1,8 @@
 import logging
 
-from .base import SdoBase
-from .constants import *
-from .exceptions import *
+from canopen.sdo.base import SdoBase
+from canopen.sdo.constants import *
+from canopen.sdo.exceptions import *
 
 logger = logging.getLogger(__name__)
 

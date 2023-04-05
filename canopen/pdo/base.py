@@ -8,9 +8,9 @@ except ImportError:
 import logging
 import binascii
 
-from ..sdo import SdoAbortedError
-from .. import objectdictionary
-from .. import variable
+from canopen.sdo import SdoAbortedError
+from canopen import objectdictionary
+from canopen import variable
 
 PDO_NOT_VALID = 1 << 31
 RTR_NOT_ALLOWED = 1 << 30

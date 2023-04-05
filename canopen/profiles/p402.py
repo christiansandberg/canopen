@@ -1,8 +1,9 @@
 # inspired by the NmtMaster code
 import logging
 import time
-from ..node import RemoteNode
-from ..sdo import SdoCommunicationError
+
+from canopen.node import RemoteNode
+from canopen.sdo import SdoCommunicationError
 
 logger = logging.getLogger(__name__)
 
