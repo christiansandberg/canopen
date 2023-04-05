@@ -141,6 +141,8 @@ class Network(MutableMapping):
         node: Union[int, RemoteNode, LocalNode],
         object_dictionary: Union[str, ObjectDictionary, None] = None,
         upload_eds: bool = False,
+        block_transfer: bool = False,
+        eds_format_handler : Callable = None
     ) -> RemoteNode:
         """Add a remote node to the network.
 
@@ -153,6 +155,12 @@ class Network(MutableMapping):
             :class:`canopen.ObjectDictionary` object.
         :param upload_eds:
             Set ``True`` if EDS file should be uploaded from 0x1021.
+        :param block_transfer:
+            Set ``True`` if EDS file should be uploaded using block transfer mechanism
+            This can increase speed if supported
+        :param eds_format_handler:
+            Handler for generating .eds in case a custom format is used (object 0x1022)
+            This is manufacturer specific and can be used to extract a compressed EDS
 
         :return:
             The Node object that was added.
@@ -160,7 +168,7 @@ class Network(MutableMapping):
         if isinstance(node, int):
             if upload_eds:
                 logger.info("Trying to read EDS from node %d", node)
-                object_dictionary = import_from_node(node, self)
+                object_dictionary = import_from_node(node,self,block_transfer,eds_format_handler)
             node = RemoteNode(node, object_dictionary)
         self[node.id] = node
         return node

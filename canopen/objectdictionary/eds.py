@@ -9,7 +9,7 @@ try:
 except ImportError:
     from ConfigParser import RawConfigParser, NoOptionError, NoSectionError
 from canopen import objectdictionary
-from canopen.sdo import SdoClient
+from canopen.sdo import SdoClient, SdoAbortedError
 
 logger = logging.getLogger(__name__)
 
@@ -169,21 +169,39 @@ def import_eds(source, node_id):
     return od
 
 
-def import_from_node(node_id, network):
+def import_from_node(node_id, network,block_transfer =False,eds_format_handler = None):
     """ Download the configuration from the remote node
     :param int node_id: Identifier of the node
     :param network: network object
+    :param block_transfer: use block transfer
+    :param eds_format_handler: Callable with custom logic that should return the EDS
     """
     # Create temporary SDO client
     sdo_client = SdoClient(0x600 + node_id, 0x580 + node_id, objectdictionary.ObjectDictionary())
     sdo_client.network = network
     # Subscribe to SDO responses
     network.subscribe(0x580 + node_id, sdo_client.on_response)
+    # Get Storage format (0x1022)
+    try:
+        storage_format = int.from_bytes(sdo_client.upload(0x1022,0),byteorder="little")
+    except SdoAbortedError as e:
+        # Default to 0 if not present
+        storage_format = 0
+        logger.debug("Failed to read object 0x1022, for EDS storage format, default to ASCII (0)")
     # Create file like object for Store EDS variable
     try:
-        eds_fp = sdo_client.open(0x1021, 0, "rt")
-        od = import_eds(eds_fp, node_id)
+        if eds_format_handler is not None:
+            eds_raw_fp = sdo_client.open(0x1021, 0, "rb",block_transfer=block_transfer)
+            # Custom format handler must return a fp or string to extracted EDS file
+            eds_fp = eds_format_handler(eds_raw_fp,storage_format)
+        else:
+            if storage_format != 0:
+                logger.warning("Trying to read EDS with ASCII format (0) even though storage format is not 0")
+            eds_fp = sdo_client.open(0x1021, 0, "rt", block_transfer=block_transfer)
+        od = import_eds(eds_fp,node_id)
+
     except Exception as e:
+        print(e)
         logger.error("No object dictionary could be loaded for node %d: %s",
                      node_id, e)
         od = None
