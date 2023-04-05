@@ -2,7 +2,7 @@ from typing import TextIO, Union
 from .. import objectdictionary
 
 
-class BaseNode(object):
+class BaseNode:
     """A CANopen node.
 
     :param node_id:

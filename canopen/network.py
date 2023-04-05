@@ -13,8 +13,9 @@ try:
 except ImportError:
     # Do not fail if python-can is not installed
     can = None
-    Listener = object
     CanError = Exception
+    class Listener:
+        """ Dummy listener """
 
 from .node import RemoteNode, LocalNode
 from .sync import SyncProducer
@@ -282,7 +283,7 @@ class Network(MutableMapping):
         return len(self.nodes)
 
 
-class PeriodicMessageTask(object):
+class PeriodicMessageTask:
     """
     Task object to transmit a message periodically using python-can's
     CyclicSendTask
@@ -359,7 +360,7 @@ class MessageListener(Listener):
             logger.error(str(e))
 
 
-class NodeScanner(object):
+class NodeScanner:
     """Observes which nodes are present on the bus.
 
     Listens for the following messages:

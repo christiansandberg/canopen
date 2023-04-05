@@ -9,7 +9,7 @@ from .. import objectdictionary
 from .. import variable
 
 
-class CrcXmodem(object):
+class CrcXmodem:
     """Mimics CrcXmodem from crccheck."""
 
     def __init__(self):
