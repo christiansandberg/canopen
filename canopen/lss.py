@@ -1,10 +1,17 @@
+from __future__ import annotations
+from typing import Optional, TYPE_CHECKING
 import logging
 import time
 import struct
+import asyncio
 try:
     import queue
 except ImportError:
     import Queue as queue
+from .async_guard import ensure_not_async
+
+if TYPE_CHECKING:
+    from .network import Network
 
 logger = logging.getLogger(__name__)
 
@@ -82,10 +89,11 @@ class LssMaster:
     RESPONSE_TIMEOUT = 0.5
 
     def __init__(self):
-        self.network = None
+        self.network: Optional[Network] = None
         self._node_id = 0
         self._data = None
         self.responses = queue.Queue()
+        self.aresponses = asyncio.Queue()
 
     def send_switch_state_global(self, mode):
         """switch mode to CONFIGURATION_STATE or WAITING_STATE
@@ -241,13 +249,15 @@ class LssMaster:
         message[0] = CS_IDENTIFY_NON_CONFIGURED_REMOTE_SLAVE
         self.__send_command(message)
 
+    # FIXME: Make async implementation "afast_scan"
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def fast_scan(self):
-        """This command sends a series of fastscan message 
+        """This command sends a series of fastscan message
         to find unconfigured slave with lowest number of LSS idenities
 
         :return:
             True if a slave is found.
-            False if there is no candidate. 
+            False if there is no candidate.
             list is the LSS identities [vendor_id, product_code, revision_number, serial_number]
         :rtype: bool, list
         """
@@ -257,6 +267,7 @@ class LssMaster:
         lss_next = 0
 
         if self.__send_fast_scan_message(lss_id[0], lss_bit_check, lss_sub, lss_next):
+            # NOTE: Blocking call
             time.sleep(0.01)
             while lss_sub < 4:
                 lss_bit_check = 32
@@ -266,12 +277,14 @@ class LssMaster:
                     if not self.__send_fast_scan_message(lss_id[lss_sub], lss_bit_check, lss_sub, lss_next):
                         lss_id[lss_sub] |= 1<<lss_bit_check
 
+                    # NOTE: Blocking call
                     time.sleep(0.01)
 
                 lss_next = (lss_sub + 1) & 3
                 if not self.__send_fast_scan_message(lss_id[lss_sub], lss_bit_check, lss_sub, lss_next):
                     return False, None
 
+                # NOTE: Blocking call
                 time.sleep(0.01)
 
                 # Now the next 32 bits will be scanned
@@ -296,6 +309,8 @@ class LssMaster:
 
         return False
 
+    # FIXME: Make async implementation "__asend_lss_address"
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def __send_lss_address(self, req_cs, number):
         message = bytearray(8)
 
@@ -304,6 +319,7 @@ class LssMaster:
         response = self.__send_command(message)
         # some device needs these delays between messages
         # because it can't handle messages arriving with no delay
+        # NOTE: Blocking call
         time.sleep(0.2)
 
         return response
@@ -359,6 +375,8 @@ class LssMaster:
             error_msg = "LSS Error: %d" % error_code
             raise LssError(error_msg)
 
+    # FIXME: Make async implementation "__asend_command"
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def __send_command(self, message):
         """Send a LSS operation code to the network
 
@@ -378,6 +396,7 @@ class LssMaster:
         response = None
         if not self.responses.empty():
             logger.info("There were unexpected messages in the queue")
+            # FIXME: Recreating the queue
             self.responses = queue.Queue()
 
         self.network.send_message(self.LSS_TX_COBID, message)
@@ -388,6 +407,7 @@ class LssMaster:
         # Wait for the slave to respond
         # TODO check if the response is LSS response message
         try:
+            # NOTE: Blocking call
             response = self.responses.get(
                 block=True, timeout=self.RESPONSE_TIMEOUT)
         except queue.Empty:
@@ -395,8 +415,14 @@ class LssMaster:
 
         return response
 
+    @ensure_not_async  # NOTE: Safeguard for accidental async use
     def on_message_received(self, can_id, data, timestamp):
+        # NOTE: Callback. Called from another thread
+        # NOTE: Blocking call
         self.responses.put(bytes(data))
+
+    async def aon_message_received(self, can_id, data, timestamp):
+        await self.aresponses.put(bytes(data))
 
 
 class LssError(Exception):

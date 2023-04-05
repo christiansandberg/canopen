@@ -1,16 +1,20 @@
+from __future__ import annotations
 import logging
-from typing import Union, TextIO
+from typing import Union, TextIO, TYPE_CHECKING
 
 from ..sdo import SdoClient
 from ..nmt import NmtMaster
 from ..emcy import EmcyConsumer
 from ..pdo import TPDO, RPDO, PDO
-from ..objectdictionary import Record, Array, Variable
+from ..objectdictionary import Record, Array, Variable, List
 from .base import BaseNode
 
 import canopen
 
 from canopen import objectdictionary
+
+if TYPE_CHECKING:
+    from ..network import Network
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +43,7 @@ class RemoteNode(BaseNode):
         #: Enable WORKAROUND for reversed PDO mapping entries
         self.curtis_hack = False
 
-        self.sdo_channels = []
+        self.sdo_channels: List[SdoClient] = []
         self.sdo = self.add_sdo(0x600 + self.id, 0x580 + self.id)
         self.tpdo = TPDO(self)
         self.rpdo = RPDO(self)
@@ -50,25 +54,38 @@ class RemoteNode(BaseNode):
         if load_od:
             self.load_configuration()
 
-    def associate_network(self, network):
+    def associate_network(self, network: Network):
         self.network = network
         self.sdo.network = network
         self.pdo.network = network
         self.tpdo.network = network
         self.rpdo.network = network
         self.nmt.network = network
-        for sdo in self.sdo_channels:
-            network.subscribe(sdo.tx_cobid, sdo.on_response)
-        network.subscribe(0x700 + self.id, self.nmt.on_heartbeat)
-        network.subscribe(0x80 + self.id, self.emcy.on_emcy)
+        if network.is_async():
+            for sdo in self.sdo_channels:
+                network.subscribe(sdo.tx_cobid, sdo.aon_response)
+            network.subscribe(0x700 + self.id, self.nmt.aon_heartbeat)
+            network.subscribe(0x80 + self.id, self.emcy.aon_emcy)
+        else:
+            for sdo in self.sdo_channels:
+                network.subscribe(sdo.tx_cobid, sdo.on_response)
+            network.subscribe(0x700 + self.id, self.nmt.on_heartbeat)
+            network.subscribe(0x80 + self.id, self.emcy.on_emcy)
         network.subscribe(0, self.nmt.on_command)
 
     def remove_network(self):
-        for sdo in self.sdo_channels:
-            self.network.unsubscribe(sdo.tx_cobid, sdo.on_response)
-        self.network.unsubscribe(0x700 + self.id, self.nmt.on_heartbeat)
-        self.network.unsubscribe(0x80 + self.id, self.emcy.on_emcy)
-        self.network.unsubscribe(0, self.nmt.on_command)
+        network = self.network
+        if network.is_async():
+            for sdo in self.sdo_channels:
+                network.unsubscribe(sdo.tx_cobid, sdo.aon_response)
+            network.unsubscribe(0x700 + self.id, self.nmt.aon_heartbeat)
+            network.unsubscribe(0x80 + self.id, self.emcy.aon_emcy)
+        else:
+            for sdo in self.sdo_channels:
+                network.unsubscribe(sdo.tx_cobid, sdo.on_response)
+            network.unsubscribe(0x700 + self.id, self.nmt.on_heartbeat)
+            network.unsubscribe(0x80 + self.id, self.emcy.on_emcy)
+        network.unsubscribe(0, self.nmt.on_command)
         self.network = None
         self.sdo.network = None
         self.pdo.network = None
@@ -92,7 +109,10 @@ class RemoteNode(BaseNode):
         client = SdoClient(rx_cobid, tx_cobid, self.object_dictionary)
         self.sdo_channels.append(client)
         if self.network is not None:
-            self.network.subscribe(client.tx_cobid, client.on_response)
+            if self.network.is_async():
+                self.network.subscribe(client.tx_cobid, client.aon_response)
+            else:
+                self.network.subscribe(client.tx_cobid, client.on_response)
         return client
 
     def store(self, subindex=1):
@@ -131,9 +151,11 @@ class RemoteNode(BaseNode):
                     subindex=subindex,
                     name=name,
                     value=value)))
-                self.sdo[index][subindex].raw = value
+                # NOTE: Blocking - OK. Protected in SdoClient
+                self.sdo[index][subindex].set_raw(value)
             else:
-                self.sdo[index].raw = value
+                # FIXME: Blocking - OK. Protected in SdoClient
+                self.sdo[index].set_raw(value)
                 logger.info(str('SDO [{index:#06x}]: {name}: {value:#06x}'.format(
                     index=index,
                     name=name,

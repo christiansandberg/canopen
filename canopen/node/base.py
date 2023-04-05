@@ -1,5 +1,9 @@
-from typing import TextIO, Union
+from __future__ import annotations
+from typing import TextIO, Union, Optional, TYPE_CHECKING
 from .. import objectdictionary
+
+if TYPE_CHECKING:
+    from ..network import Network
 
 
 class BaseNode:
@@ -17,7 +21,7 @@ class BaseNode:
         node_id: int,
         object_dictionary: Union[objectdictionary.ObjectDictionary, str, TextIO],
     ):
-        self.network = None
+        self.network: Optional[Network] = None
 
         if not isinstance(object_dictionary,
                           objectdictionary.ObjectDictionary):
@@ -26,3 +30,5 @@ class BaseNode:
         self.object_dictionary = object_dictionary
 
         self.id = node_id or self.object_dictionary.node_id
+
+    # FIXME: Should associate_network() and remove_network() be a part of the base API?

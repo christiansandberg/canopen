@@ -1,5 +1,6 @@
+from __future__ import annotations
 import binascii
-from typing import Iterable, Union
+from typing import Iterable, Union, Optional, TYPE_CHECKING
 try:
     from collections.abc import Mapping
 except ImportError:
@@ -7,6 +8,9 @@ except ImportError:
 
 from .. import objectdictionary
 from .. import variable
+
+if TYPE_CHECKING:
+    from ..network import Network
 
 
 class CrcXmodem:
@@ -43,7 +47,7 @@ class SdoBase(Mapping):
         """
         self.rx_cobid = rx_cobid
         self.tx_cobid = tx_cobid
-        self.network = None
+        self.network: Optional[Network] = None
         self.od = od
 
     def __getitem__(
@@ -69,7 +73,19 @@ class SdoBase(Mapping):
     def upload(self, index: int, subindex: int) -> bytes:
         raise NotImplementedError()
 
+    async def aupload(self, index: int, subindex: int) -> bytes:
+        raise NotImplementedError()
+
     def download(
+        self,
+        index: int,
+        subindex: int,
+        data: bytes,
+        force_segment: bool = False,
+    ) -> None:
+        raise NotImplementedError()
+
+    async def adownload(
         self,
         index: int,
         subindex: int,
@@ -91,6 +107,13 @@ class Record(Mapping):
     def __iter__(self) -> Iterable[int]:
         return iter(self.od)
 
+    async def aiter(self):
+        for i in iter(self.od):
+            yield i
+
+    def __aiter__(self):
+        return self.aiter()
+
     def __len__(self) -> int:
         return len(self.od)
 
@@ -110,8 +133,16 @@ class Array(Mapping):
     def __iter__(self) -> Iterable[int]:
         return iter(range(1, len(self) + 1))
 
+    async def aiter(self):
+        for i in range(1, await self[0].aget_raw() + 1):
+            yield i
+
+    def __aiter__(self):
+        return self.aiter()
+
     def __len__(self) -> int:
-        return self[0].raw
+        # NOTE: Blocking - OK. Protected in SdoClient
+        return self[0].get_raw()
 
     def __contains__(self, subindex: int) -> bool:
         return 0 <= subindex <= len(self)
@@ -127,9 +158,16 @@ class Variable(variable.Variable):
     def get_data(self) -> bytes:
         return self.sdo_node.upload(self.od.index, self.od.subindex)
 
+    async def aget_data(self) -> bytes:
+        return await self.sdo_node.aupload(self.od.index, self.od.subindex)
+
     def set_data(self, data: bytes):
         force_segment = self.od.data_type == objectdictionary.DOMAIN
         self.sdo_node.download(self.od.index, self.od.subindex, data, force_segment)
+
+    async def aset_data(self, data: bytes):
+        force_segment = self.od.data_type == objectdictionary.DOMAIN
+        await self.sdo_node.adownload(self.od.index, self.od.subindex, data, force_segment)
 
     def open(self, mode="rb", encoding="ascii", buffering=1024, size=None,
              block_transfer=False, request_crc_support=True):
@@ -163,4 +201,12 @@ class Variable(variable.Variable):
             A file like object.
         """
         return self.sdo_node.open(self.od.index, self.od.subindex, mode,
-                                  encoding, buffering, size, block_transfer, request_crc_support=request_crc_support)
+                                  encoding, buffering, size, block_transfer,
+                                  request_crc_support=request_crc_support)
+
+    async def aopen(self, mode="rb", encoding="ascii", buffering=1024, size=None,
+                    block_transfer=False, request_crc_support=True):
+        """Open the data stream as a file like object. See open()"""
+        return await self.sdo_node.aopen(self.od.index, self.od.subindex, mode,
+                                         encoding, buffering, size, block_transfer,
+                                         request_crc_support=request_crc_support)
