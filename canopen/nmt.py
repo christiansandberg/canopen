@@ -43,7 +43,7 @@ COMMAND_TO_STATE = {
 
 TCallback = Callable[[int], None]
 
-class NmtBase(object):
+class NmtBase:
     """
     Can set the state of the node it controls using NMT commands and monitor
     the current state using the heartbeat protocol.

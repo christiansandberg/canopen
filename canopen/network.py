@@ -27,8 +27,9 @@ else:
     except ImportError:
         # Do not fail if python-can is not installed
         can = None  # type: ignore
-        Listener = object  # type: ignore
         CanError = Exception
+        class Listener:
+            """ Dummy listener """
 
 from .node import RemoteNode, LocalNode
 from .sync import SyncProducer

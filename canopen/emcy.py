@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 TCallback = Callable[["EmcyError"], None]
 
-class EmcyConsumer(object):
+class EmcyConsumer:
 
     def __init__(self):
         #: Log of all received EMCYs for this node
@@ -84,7 +84,7 @@ class EmcyConsumer(object):
                     return emcy
 
 
-class EmcyProducer(object):
+class EmcyProducer:
 
     def __init__(self, cob_id: int):
         self.network: Optional[Network] = None

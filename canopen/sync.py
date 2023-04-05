@@ -5,7 +5,7 @@ if TYPE_CHECKING:
     from .network import Network
 
 
-class SyncProducer(object):
+class SyncProducer:
     """Transmits a SYNC message periodically."""
 
     #: COB-ID of the SYNC message

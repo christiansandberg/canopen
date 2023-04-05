@@ -270,7 +270,7 @@ class Array(Mapping[Union[int, str], "Variable"]):
         self.names[variable.name] = variable
 
 
-class Variable(object):
+class Variable:
     """Simple variable."""
 
     STRUCT_TYPES = {

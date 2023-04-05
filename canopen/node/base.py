@@ -6,7 +6,7 @@ if TYPE_CHECKING:
     from ..network import Network
 
 
-class BaseNode(object):
+class BaseNode:
     """A CANopen node.
 
     :param node_id:

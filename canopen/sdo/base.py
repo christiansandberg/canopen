@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from ..network import Network
 
 
-class CrcXmodem(object):
+class CrcXmodem:
     """Mimics CrcXmodem from crccheck."""
 
     def __init__(self):

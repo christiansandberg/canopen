@@ -15,7 +15,7 @@ ONE_DAY = 60 * 60 * 24
 TIME_OF_DAY_STRUCT = struct.Struct("<LH")
 
 
-class TimeProducer(object):
+class TimeProducer:
     """Produces timestamp objects."""
 
     #: COB-ID of the SYNC message

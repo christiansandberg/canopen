@@ -70,7 +70,7 @@ ListMessageNeedResponse = [
 ]
 
 
-class LssMaster(object):
+class LssMaster:
     """The Master of Layer Setting Services"""
 
     LSS_TX_COBID = 0x7E5
