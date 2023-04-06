@@ -33,7 +33,11 @@ def import_eds(source, node_id):
     except AttributeError:
         # Python 2
         eds.readfp(fp)
-    fp.close()
+    finally:
+        # Only close object if opened in this fn
+        if not hasattr(source, "read"):
+            fp.close()
+
     od = ObjectDictionary()
 
     if eds.has_section("FileInfo"):
@@ -181,8 +185,8 @@ def import_from_node(node_id, network):
     network.subscribe(0x580 + node_id, sdo_client.on_response)
     # Create file like object for Store EDS variable
     try:
-        eds_fp = sdo_client.open(0x1021, 0, "rt")
-        od = import_eds(eds_fp, node_id)
+        with sdo_client.open(0x1021, 0, "rt") as eds_fp:
+            od = import_eds(eds_fp, node_id)
     except Exception as e:
         logger.error("No object dictionary could be loaded for node %d: %s",
                      node_id, e)
