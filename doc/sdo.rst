@@ -72,14 +72,11 @@ Variables can be opened as readable or writable file objects which can be useful
 when dealing with large amounts of data::
 
     # Open the Store EDS variable as a file like object
-    infile = node.sdo[0x1021].open('r', encoding='ascii')
-    # Open a file for writing to
-    outfile = open('out.eds', 'w', encoding='ascii')
-    # Iteratively read lines from node and write to file
-    outfile.writelines(infile)
-    # Clean-up
-    infile.close()
-    outfile.close()
+    with node.sdo[0x1021].open('r', encoding='ascii') as infile,
+            open('out.eds', 'w', encoding='ascii') as outfile:
+
+       # Iteratively read lines from node and write to file
+       outfile.writelines(infile)
 
 Most APIs accepting file objects should also be able to accept this.
 
@@ -88,17 +85,16 @@ server supports it. This is done through the file object interface::
 
     FIRMWARE_PATH = '/path/to/firmware.bin'
     FILESIZE = os.path.getsize(FIRMWARE_PATH)
-    infile = open(FIRMWARE_PATH, 'rb')
-    outfile = node.sdo['Firmware'].open('wb', size=FILESIZE, block_transfer=True)
 
-    # Iteratively transfer data without having to read all into memory
-    while True:
-        data = infile.read(1024)
-        if not data:
-            break
-        outfile.write(data)
-    infile.close()
-    outfile.close()
+    with open(FIRMWARE_PATH, 'rb') as infile,
+            node.sdo['Firmware'].open('wb', size=FILESIZE, block_transfer=True) as outfile:
+
+        # Iteratively transfer data without having to read all into memory
+        while True:
+            data = infile.read(1024)
+            if not data:
+                break
+            outfile.write(data)
 
 .. warning::
    Block transfer is still in experimental stage!
