@@ -122,9 +122,9 @@ class SdoClient(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        fp = self.open(index, subindex, buffering=0)
-        size = fp.size
-        data = fp.read()
+        with self.open(index, subindex, buffering=0) as fp:
+            size = fp.size
+            data = fp.read()
         if size is None:
             # Node did not specify how many bytes to use
             # Try to find out using Object Dictionary
@@ -163,10 +163,9 @@ class SdoClient(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        fp = self.open(index, subindex, "wb", buffering=7, size=len(data),
-                       force_segment=force_segment)
-        fp.write(data)
-        fp.close()
+        with self.open(index, subindex, "wb", buffering=7, size=len(data),
+                       force_segment=force_segment) as fp:
+            fp.write(data)
 
     def open(self, index, subindex=0, mode="rb", encoding="ascii",
              buffering=1024, size=None, block_transfer=False, force_segment=False, request_crc_support=True):

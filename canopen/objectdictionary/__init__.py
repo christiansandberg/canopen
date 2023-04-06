@@ -54,6 +54,10 @@ def export_od(od, dest:Union[str,TextIO,None]=None, doc_type:Optional[str]=None)
         from . import eds
         return eds.export_dcf(od, dest)
 
+    # If dest is opened in this fn, it should be closed
+    if type(dest) is str:
+        dest.close()
+
 
 def import_od(
     source: Union[str, TextIO, None],
