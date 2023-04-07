@@ -129,8 +129,8 @@ class SdoClient(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        # FIXME: Since mode is "rb" it's guaranteed that the returning object is SdoIO
         with self.open(index, subindex, mode="rb", buffering=0) as fp:
+            # Since mode is "rb" it's guaranteed that the returning object is SdoIO
             assert isinstance(fp, SdoIO)  # For typing
             size = fp.size
             data = fp.read()

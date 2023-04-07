@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Iterable, Iterator, List, Optional, TextIO, Union, TYPE_CHECKING, cast
+from typing import Callable, Dict, Iterable, Iterator, List, Optional, Union, TYPE_CHECKING
 import logging
 import threading
 
@@ -137,8 +137,7 @@ class Network(MutableMapping[int, BaseNode]):
         """
         for node in self.nodes.values():
             if hasattr(node, "pdo"):
-                _node = cast(RemoteNode, node)
-                _node.pdo.stop()
+                node.pdo.stop()  # type: ignore
         if self.notifier is not None:
             self.notifier.stop()
         if self.bus is not None:
@@ -360,7 +359,7 @@ class PeriodicMessageTask:
         self.msg.data = new_data
         assert self._task is not None  # For typing
         if hasattr(self._task, "modify_data"):
-            self._task.modify_data(self.msg)
+            self._task.modify_data(self.msg)  # type: ignore
         elif new_data != old_data:
             # Stop and start (will mess up period unfortunately)
             self._task.stop()

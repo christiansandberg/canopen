@@ -140,7 +140,6 @@ class PdoBase(Mapping[int, "Map"]):
         for pdo_map in self.map.values():
             pdo_map.stop()
 
-# FIXME: Q: Inconsistent use of base class. Is Map() pdo_node.node.sdo PdoBase?
 
 class Maps(Mapping[int, "Map"]):
     """A collection of transmit or receive maps."""
@@ -335,6 +334,8 @@ class Map:
 
     def is_curtis_hack(self) -> bool:
         """ Test if node """
+        # The cast ensure its interpreted as a RemoteNode which contains the
+        # curtis_hack attribute
         node = cast("RemoteNode", self.pdo_node.node)
         return hasattr(node, "curtis_hack") and node.curtis_hack  # Curtis HACK
 

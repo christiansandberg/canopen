@@ -87,9 +87,7 @@ class Variable:
             self.name, self.index,
             self.subindex, value)
         if value in self.od.value_descriptions:
-            # FIXME: value is guaranteed to be int here since the key to
-            #        value_descriptions is int
-            text += " (%s)" % self.od.value_descriptions[cast(int, value)]
+            text += " (%s)" % self.od.value_descriptions[value]  # type: ignore
         logger.debug(text)
         return value
 
@@ -108,7 +106,7 @@ class Variable:
         either a :class:`float` or an :class:`int`.
         Non integers will be passed as is.
         """
-        # FIXME: Need the cast as self.raw is unspecific on the exact type returned
+        # The cast provides the right type
         value = self.od.decode_phys(cast(int, self.raw))
         if self.od.unit:
             logger.debug("Physical value is %s %s", value, self.od.unit)
@@ -121,6 +119,7 @@ class Variable:
     @property
     def desc(self) -> str:
         """Converts to and from a description of the value as a string."""
+        # The cast provides the right type
         value = self.od.decode_desc(cast(int, self.raw))
         logger.debug("Description is '%s'", value)
         return value
@@ -172,7 +171,7 @@ class Variable:
         elif fmt == "phys":
             self.phys = value
         elif fmt == "desc":
-            self.desc = cast(str, value)
+            self.desc = value  # type: ignore
         raise ValueError("Uknown format '{}'".format(fmt))
 
 
@@ -213,7 +212,7 @@ class Bits(Mapping[int, int]):
 
     def read(self):
         # FIXME: How to ensure this is of an integer type?
-        self.raw = self.variable.raw
+        self.raw = self.variable.raw  # type: ignore
 
     def write(self):
         self.variable.raw = self.raw

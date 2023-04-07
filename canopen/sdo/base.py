@@ -1,4 +1,4 @@
-from typing import IO, Any, Iterator, Self, Union, Optional, TYPE_CHECKING, cast
+from typing import IO, Any, Iterator, Self, Union, Optional, TYPE_CHECKING
 import binascii
 import io
 try:
@@ -126,9 +126,6 @@ class SdoBase(Mapping[Union[str, int], Union["Variable", "Array", "Record"]]):
         raise NotImplementedError()
 
 
-# FIXME: Q: The use of unrelated objects "Records", "Array" and "Variable" is confusing.
-#           Its often very hard to see which is used where
-
 class Record(Mapping[Union[int, str], "Variable"]):
 
     # Attribute types
@@ -169,8 +166,8 @@ class Array(Mapping[Union[int, str], "Variable"]):
         return iter(range(1, len(self) + 1))
 
     def __len__(self) -> int:
-        # FIXME: Is it an assumption that index 0 is int?
-        return cast(int, self[0].raw)
+        # FIXME: Is it an assumption that index 0 is int? Should it fail?
+        return self[0].raw  # type: ignore
 
     def __contains__(self, subindex) -> bool:
         return 0 <= subindex <= len(self)

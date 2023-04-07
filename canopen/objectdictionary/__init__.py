@@ -84,8 +84,8 @@ def import_od(
     if isinstance(source, ObjectDictionary):
         return source
     if hasattr(source, "read"):
-        # File like object
-        # FIXME: Python file handles are a bit weird
+        # File like object -- Python file handles are a bit weird, so the cast
+        # is needed to help the type checker
         filename = cast(TextIO, source).name
     elif hasattr(source, "tag"):
         # XML tree, probably from an EPF file
@@ -96,7 +96,7 @@ def import_od(
     suffix = filename[filename.rfind("."):].lower()
     if suffix in (".eds", ".dcf"):
         from . import eds
-        return eds.import_eds(source, node_id)  # FIXME: node_id optional or not?
+        return eds.import_eds(source, node_id)
     elif suffix == ".epf":
         from . import epf
         return epf.import_epf(source)
@@ -130,7 +130,7 @@ class ObjectDictionary(MutableMapping[Union[str, int], TObject]):
                    ) -> Union["Array", "Record", "Variable"]:
         """Get object from object dictionary by name or index."""
         item: Optional[TObject]
-        item = self.names.get(cast(str, index)) or self.indices.get(cast(int, index))
+        item = self.names.get(index) or self.indices.get(index)  # type: ignore
         if item is None:
             name = "0x%X" % index if isinstance(index, int) else index
             raise KeyError("%s was not found in Object Dictionary" % name)

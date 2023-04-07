@@ -1,4 +1,4 @@
-from typing import Any, Callable, List, Optional, Union, TYPE_CHECKING, cast
+from typing import Any, Callable, List, Optional, Union, TYPE_CHECKING
 import threading
 import logging
 import struct
@@ -248,10 +248,11 @@ class NmtSlave(NmtBase):
         # The heartbeat service should start on the transition
         # between INITIALIZING and PRE-OPERATIONAL state
         if old_state == 0 and self._state == 127:
-            # FIXME: Cast to variable
             var = self._local_node.sdo[0x1017]
             assert isinstance(var, variable.Variable)  # For typing
-            heartbeat_time_ms = cast(int, var.raw)
+            data = var.raw
+            assert isinstance(data, int)  # For typing
+            heartbeat_time_ms = data
             self.start_heartbeat(heartbeat_time_ms)
         else:
             self.update_heartbeat()

@@ -507,17 +507,6 @@ class BaseNode402(RemoteNode):
             assert isinstance(data, int)
             return data
 
-    # FIXME: Q: Using
-    #     def get_something(self) -> int:
-    #         return self.sdo[0x1234].raw
-    #
-    # This construct is pretty common, especially in p402.py and it contains a
-    # handful of assumptions that the type checker is (rightfully) complaining
-    # about:
-    #    self.sdo[0x1234]  can be Variable, Array or Record
-    #    .raw  is only present in Variable
-    #    .raw  might be any type, not just int
-
     def check_statusword(self, timeout=None) -> int:
         """Report an up-to-date reading of the Statusword (0x6041) from the device.
 

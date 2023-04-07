@@ -200,7 +200,6 @@ def import_from_node(node_id: int, network: "Network") -> Optional[ObjectDiction
     network.subscribe(0x580 + node_id, sdo_client.on_response)
     # Create file like object for Store EDS variable
     try:
-        # FIXME: What is proper typing for IO-like behavior?
         with sdo_client.open(0x1021, 0, "rt") as eds_fp:
             od = import_eds(eds_fp, node_id)
     except Exception as e:
@@ -388,7 +387,6 @@ def export_eds(od: objectdictionary.ObjectDictionary, dest: Optional[TextIO] = N
                 var.data_type, var.default))
 
         if device_commisioning:
-            # FIXME: Injected value
             if getattr(var, 'value_raw', None) is not None:
                 eds.set(section, "ParameterValue", var.value_raw)
             elif getattr(var, 'value', None) is not None:

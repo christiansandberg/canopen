@@ -50,7 +50,6 @@ class LocalNode(BaseNode):
         self._read_callbacks = []
         self._write_callbacks = []
 
-        # FIXME: The abc of SdoBase
         self.sdo = SdoServer(0x600 + self.id, 0x580 + self.id, self)
         self.tpdo = TPDO(self)
         self.rpdo = RPDO(self)
@@ -79,7 +78,7 @@ class LocalNode(BaseNode):
         self.tpdo.network = None
         self.rpdo.network = None
         self.nmt.network = None
-        self.emcy.network = None  # FIXME: This doesn't allow None
+        self.emcy.network = None
 
     def add_read_callback(self, callback: TRCallback):
         self._read_callbacks.append(callback)
