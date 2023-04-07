@@ -1,11 +1,12 @@
-from __future__ import annotations
+from typing import IO, Any, Iterator, Self, Union, Optional, TYPE_CHECKING, cast
 import binascii
-from typing import Iterable, Union, Optional, TYPE_CHECKING
+import io
 try:
     from collections.abc import Mapping
 except ImportError:
     from collections import Mapping  # type: ignore
 
+from ..objectdictionary import ObjectDictionary
 from .. import objectdictionary
 from .. import variable
 
@@ -18,6 +19,9 @@ if TYPE_CHECKING:
 class CrcXmodem:
     """Mimics CrcXmodem from crccheck."""
 
+    # Attribute types
+    _value: int
+
     def __init__(self):
         self._value = 0
 
@@ -28,7 +32,29 @@ class CrcXmodem:
         return self._value
 
 
+class SdoIO(io.RawIOBase, IO):
+
+    size: Optional[int]
+
+    def read(self, size: int = -1) -> bytes:
+        return b''
+
+    # For typing
+    def __enter__(self) -> Self:
+        return self
+
+    # For typing
+    def write(self, s: Any) -> int:
+        raise Exception()
+
+
 class SdoBase(Mapping[Union[str, int], Union["Variable", "Array", "Record"]]):
+
+    # Attribute types
+    network: Optional["Network"]
+    od: ObjectDictionary
+    rx_cobid: int
+    tx_cobid: int
 
     #: The CRC algorithm used for block transfers
     crc_cls = CrcXmodem
@@ -37,7 +63,7 @@ class SdoBase(Mapping[Union[str, int], Union["Variable", "Array", "Record"]]):
         self,
         rx_cobid: int,
         tx_cobid: int,
-        od: objectdictionary.ObjectDictionary,
+        od: ObjectDictionary,
     ):
         """
         :param rx_cobid:
@@ -64,13 +90,13 @@ class SdoBase(Mapping[Union[str, int], Union["Variable", "Array", "Record"]]):
             return Record(self, entry)
         raise TypeError("Unknown object type")
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(self.od)
 
     def __len__(self) -> int:
         return len(self.od)
 
-    def __contains__(self, key: Union[int, str]) -> bool:
+    def __contains__(self, key) -> bool:
         return key in self.od
 
     def upload(self, index: int, subindex: int) -> bytes:
@@ -86,14 +112,28 @@ class SdoBase(Mapping[Union[str, int], Union["Variable", "Array", "Record"]]):
         raise NotImplementedError()
 
     def open(
-        self, index, subindex=0, mode="rb", encoding="ascii",
-        buffering=1024, size=None, block_transfer=False, force_segment=False,
+        self,
+        index: int,
+        subindex: int = 0,
+        mode: str = "rb",
+        encoding: str = "ascii",
+        buffering: int = 1024,
+        size=None,
+        block_transfer=False,
+        force_segment=False,
         request_crc_support=True
-    ) -> None:
+    ) -> Union[IO, SdoIO]:
         raise NotImplementedError()
 
 
+# FIXME: Q: The use of unrelated objects "Records", "Array" and "Variable" is confusing.
+#           Its often very hard to see which is used where
+
 class Record(Mapping[Union[int, str], "Variable"]):
+
+    # Attribute types
+    sdo_node: SdoBase
+    od: objectdictionary.Record
 
     def __init__(self, sdo_node: SdoBase, od: objectdictionary.Record):
         self.sdo_node = sdo_node
@@ -102,17 +142,21 @@ class Record(Mapping[Union[int, str], "Variable"]):
     def __getitem__(self, subindex: Union[int, str]) -> "Variable":
         return Variable(self.sdo_node, self.od[subindex])
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(self.od)
 
     def __len__(self) -> int:
         return len(self.od)
 
-    def __contains__(self, subindex: Union[int, str]) -> bool:
+    def __contains__(self, subindex) -> bool:
         return subindex in self.od
 
 
 class Array(Mapping[Union[int, str], "Variable"]):
+
+    # Attribute types
+    sdo_node: SdoBase
+    od: objectdictionary.Array
 
     def __init__(self, sdo_node: SdoBase, od: objectdictionary.Array):
         self.sdo_node = sdo_node
@@ -121,18 +165,23 @@ class Array(Mapping[Union[int, str], "Variable"]):
     def __getitem__(self, subindex: Union[int, str]) -> "Variable":
         return Variable(self.sdo_node, self.od[subindex])
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(range(1, len(self) + 1))
 
     def __len__(self) -> int:
-        return self[0].raw
+        # FIXME: Is it an assumption that index 0 is int?
+        return cast(int, self[0].raw)
 
-    def __contains__(self, subindex: int) -> bool:
+    def __contains__(self, subindex) -> bool:
         return 0 <= subindex <= len(self)
 
 
 class Variable(variable.Variable):
     """Access object dictionary variable values using SDO protocol."""
+
+    # Attribute types
+    sdo_node: SdoBase
+    od: objectdictionary.Variable
 
     def __init__(self, sdo_node: SdoBase, od: objectdictionary.Variable):
         self.sdo_node = sdo_node

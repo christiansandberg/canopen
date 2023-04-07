@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Union
 import logging
 import struct
 
@@ -15,7 +15,15 @@ logger = logging.getLogger(__name__)
 class SdoServer(SdoBase):
     """Creates an SDO server."""
 
-    def __init__(self, rx_cobid, tx_cobid, node: "LocalNode"):
+    # Attribute types
+    _node: "LocalNode"
+    _buffer: Optional[bytearray]
+    _toggle: int
+    _index: Optional[int]
+    _subindex: Optional[int]
+    last_received_error: int
+
+    def __init__(self, rx_cobid: int, tx_cobid: int, node: "LocalNode"):
         """
         :param int rx_cobid:
             COB-ID that the server receives on (usually 0x600 + node ID)
@@ -26,13 +34,14 @@ class SdoServer(SdoBase):
         """
         SdoBase.__init__(self, rx_cobid, tx_cobid, node.object_dictionary)
         self._node = node
-        self._buffer: Optional[bytearray] = None
+        self._buffer = None
         self._toggle = 0
         self._index = None
         self._subindex = None
         self.last_received_error = 0x00000000
 
-    def on_request(self, can_id: int, data: bytearray, timestamp: float):
+    def on_request(self, can_id: int, data: Union[bytes, bytearray], timestamp: float):
+        command: int
         command, = struct.unpack_from("B", data, 0)
         ccs = command & 0xE0
 
@@ -61,7 +70,9 @@ class SdoServer(SdoBase):
             self.abort()
             logger.exception(exc)
 
-    def init_upload(self, request):
+    def init_upload(self, request: Union[bytes, bytearray]):
+        index: int
+        subindex: int
         _, index, subindex = SDO_STRUCT.unpack_from(request)
         self._index = index
         self._subindex = subindex
@@ -84,11 +95,11 @@ class SdoServer(SdoBase):
         SDO_STRUCT.pack_into(response, 0, res_command, index, subindex)
         self.send_response(response)
 
-    def segmented_upload(self, command):
+    def segmented_upload(self, command: int):
         if command & TOGGLE_BIT != self._toggle:
             # Toggle bit mismatch
             raise SdoAbortedError(0x05030000)
-        assert self._buffer  # For typing
+        assert self._buffer is not None  # For typing
         data = self._buffer[:7]
         size = len(data)
 
@@ -111,31 +122,38 @@ class SdoServer(SdoBase):
         response[1:1 + size] = data
         self.send_response(response)
 
-    def block_upload(self, data):
+    def block_upload(self, data: Union[bytes, bytearray]):
         # We currently don't support BLOCK UPLOAD
         # according to CIA301 the server is allowed
         # to switch to regular upload
         logger.info("Received block upload, switch to regular SDO upload")
         self.init_upload(data)
 
-    def request_aborted(self, data):
+    def request_aborted(self, data: Union[bytes, bytearray]):
+        index: int
+        subindex: int
+        code: int
         _, index, subindex, code = struct.unpack_from("<BHBL", data)
         self.last_received_error = code
         logger.info("Received request aborted for 0x%X:%d with code 0x%X", index, subindex, code)
 
-    def block_download(self, data):
+    def block_download(self, data: Union[bytes, bytearray]):
         # We currently don't support BLOCK DOWNLOAD
         logger.error("Block download is not supported")
         self.abort(0x05040001)
 
-    def init_download(self, request):
+    def init_download(self, request: Union[bytes, bytearray]):
         # TODO: Check if writable (now would fail on end of segmented downloads)
+        command: int
+        index: int
+        subindex: int
         command, index, subindex = SDO_STRUCT.unpack_from(request)
         self._index = index
         self._subindex = subindex
         res_command = RESPONSE_DOWNLOAD
         response = bytearray(8)
 
+        size: int
         if command & EXPEDITED:
             logger.info("Expedited download for 0x%X:%d", index, subindex)
             if command & SIZE_SPECIFIED:
@@ -154,12 +172,16 @@ class SdoServer(SdoBase):
         SDO_STRUCT.pack_into(response, 0, res_command, index, subindex)
         self.send_response(response)
 
-    def segmented_download(self, command, request):
+    def segmented_download(self, command: int, request: Union[bytes, bytearray]):
+
+        assert self._index is not None  # For typing
+        assert self._subindex is not None  # For typing
+
         if command & TOGGLE_BIT != self._toggle:
             # Toggle bit mismatch
             raise SdoAbortedError(0x05030000)
         last_byte = 8 - ((command >> 1) & 0x7)
-        assert self._buffer  # For typing
+        assert self._buffer is not None  # For typing
         self._buffer.extend(request[1:last_byte])
 
         if command & NO_MORE_DATA:
@@ -178,11 +200,11 @@ class SdoServer(SdoBase):
         response[0] = res_command
         self.send_response(response)
 
-    def send_response(self, response):
-        assert self.network  # For typing
+    def send_response(self, response: Union[bytes, bytearray]):
+        assert self.network is not None  # For typing
         self.network.send_message(self.tx_cobid, response)
 
-    def abort(self, abort_code=0x08000000):
+    def abort(self, abort_code: int = 0x08000000):
         """Abort current transfer."""
         data = struct.pack("<BHBL", RESPONSE_ABORTED,
                            self._index, self._subindex, abort_code)
@@ -211,7 +233,7 @@ class SdoServer(SdoBase):
         data: bytes,
         force_segment: bool = False,
     ):
-        """May be called to make a write operation without an Object Dictionary. 
+        """May be called to make a write operation without an Object Dictionary.
 
         :param index:
             Index of object to write.
@@ -223,4 +245,4 @@ class SdoServer(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        return self._node.set_data(index, subindex, data)
+        self._node.set_data(index, subindex, data)

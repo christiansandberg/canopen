@@ -1,16 +1,22 @@
-from typing import Union, IO
+from typing import TYPE_CHECKING, Optional, TextIO, Union, IO, cast
 import copy
 import logging
 import re
-
-from canopen.objectdictionary import datatypes
 
 try:
     from configparser import RawConfigParser, NoOptionError, NoSectionError
 except ImportError:
     from ConfigParser import RawConfigParser, NoOptionError, NoSectionError  # type: ignore
+
+from ..objectdictionary import datatypes
 from canopen import objectdictionary
+from canopen.objectdictionary import ObjectDictionary
 from canopen.sdo import SdoClient
+
+if TYPE_CHECKING:
+    # Repeat import to ensure the type checker understands the imports
+    from configparser import RawConfigParser
+    from ..network import Network
 
 logger = logging.getLogger(__name__)
 
@@ -21,12 +27,15 @@ ARR = 8
 RECORD = 9
 
 
-def import_eds(source: Union[IO, str], node_id: int) -> objectdictionary.ObjectDictionary:
+def import_eds(source: Union[IO, str], node_id: Optional[int]) -> ObjectDictionary:
     eds = RawConfigParser()
-    eds.optionxform = str
+    eds.optionxform = str  # type: ignore
+
+    fp: IO
     if hasattr(source, "read"):
-        fp = source
+        fp = cast(IO, source)
     else:
+        assert isinstance(source, str)  # For typing
         fp = open(source)
     try:
         # Python 3
@@ -42,6 +51,7 @@ def import_eds(source: Union[IO, str], node_id: int) -> objectdictionary.ObjectD
     od = objectdictionary.ObjectDictionary()
 
     if eds.has_section("FileInfo"):
+        # FIXME: This is injecting private data into the object
         od.__edsFileInfo = {
             opt: eds.get("FileInfo", opt)
             for opt in eds.options("FileInfo")
@@ -119,6 +129,8 @@ def import_eds(source: Union[IO, str], node_id: int) -> objectdictionary.ObjectD
                 # If the keyword ObjectType is missing, this is regarded as
                 # "ObjectType=0x7" (=VAR).
                 object_type = VAR
+
+            storage_location: Optional[str]
             try:
                 storage_location = eds.get(section, "StorageLocation")
             except NoOptionError:
@@ -164,8 +176,10 @@ def import_eds(source: Union[IO, str], node_id: int) -> objectdictionary.ObjectD
             index = int(match.group(1), 16)
             num_of_entries = int(eds.get(section, "NrOfEntries"))
             entry = od[index]
+            # FIXME: Because this should never be Variable
+            assert not isinstance(entry, objectdictionary.Variable)  # For typing
             # For CompactSubObj index 1 is were we find the variable
-            src_var = od[index][1]
+            src_var = entry[1]
             for subindex in range(1, num_of_entries + 1):
                 var = copy_variable(eds, section, subindex, src_var)
                 if var is not None:
@@ -174,7 +188,7 @@ def import_eds(source: Union[IO, str], node_id: int) -> objectdictionary.ObjectD
     return od
 
 
-def import_from_node(node_id, network):
+def import_from_node(node_id: int, network: "Network") -> Optional[ObjectDictionary]:
     """ Download the configuration from the remote node
     :param int node_id: Identifier of the node
     :param network: network object
@@ -186,6 +200,7 @@ def import_from_node(node_id, network):
     network.subscribe(0x580 + node_id, sdo_client.on_response)
     # Create file like object for Store EDS variable
     try:
+        # FIXME: What is proper typing for IO-like behavior?
         with sdo_client.open(0x1021, 0, "rt") as eds_fp:
             od = import_eds(eds_fp, node_id)
     except Exception as e:
@@ -197,7 +212,7 @@ def import_from_node(node_id, network):
     return od
 
 
-def _calc_bit_length(data_type):
+def _calc_bit_length(data_type: int) -> int:
     if data_type == datatypes.INTEGER8:
         return 8
     elif data_type == datatypes.INTEGER16:
@@ -210,7 +225,7 @@ def _calc_bit_length(data_type):
         raise ValueError(f"Invalid data_type '{data_type}', expecting a signed integer data_type.")
 
 
-def _signed_int_from_hex(hex_str, bit_length):
+def _signed_int_from_hex(hex_str: str, bit_length: int) -> int:
     number = int(hex_str, 0)
     limit = ((1 << bit_length - 1) - 1)
     if number > limit:
@@ -219,7 +234,8 @@ def _signed_int_from_hex(hex_str, bit_length):
         return number
 
 
-def _convert_variable(node_id, var_type, value):
+def _convert_variable(node_id: Optional[int], var_type: int, value: str) -> Union[int, bytes, float, str]:
+    # FIXME: What about objectdictionary.BOOLEAN ?
     if var_type in (objectdictionary.OCTET_STRING, objectdictionary.DOMAIN):
         return bytes.fromhex(value)
     elif var_type in (objectdictionary.VISIBLE_STRING, objectdictionary.UNICODE_STRING):
@@ -235,20 +251,25 @@ def _convert_variable(node_id, var_type, value):
             return int(value, 0)
 
 
-def _revert_variable(var_type, value):
+def _revert_variable(var_type: int, value: Union[None, int, float, str, bytes]) -> Union[None, str, float]:
     if value is None:
         return None
     if var_type in (objectdictionary.OCTET_STRING, objectdictionary.DOMAIN):
+        assert isinstance(value, bytes)  # For typing
         return bytes.hex(value)
     elif var_type in (objectdictionary.VISIBLE_STRING, objectdictionary.UNICODE_STRING):
+        assert isinstance(value, str)  # For typing
         return value
     elif var_type in objectdictionary.FLOAT_TYPES:
+        assert isinstance(value, float)  # For typing
         return value
     else:
+        assert isinstance(value, int)  # For typing
         return "0x%02X" % value
 
 
-def build_variable(eds, section, node_id, index, subindex=0):
+def build_variable(eds: RawConfigParser, section: str, node_id: Optional[int],
+                   index: int, subindex: int = 0) -> objectdictionary.Variable:
     """Creates a object dictionary entry.
     :param eds: String stream of the eds file
     :param section:
@@ -298,6 +319,7 @@ def build_variable(eds, section, node_id, index, subindex=0):
             pass
     if eds.has_option(section, "DefaultValue"):
         try:
+            # FIXME: Injection of attr
             var.default_raw = eds.get(section, "DefaultValue")
             if '$NODEID' in var.default_raw:
                 var.relative = True
@@ -306,6 +328,7 @@ def build_variable(eds, section, node_id, index, subindex=0):
             pass
     if eds.has_option(section, "ParameterValue"):
         try:
+            # FIXME: Injection of attr
             var.value_raw = eds.get(section, "ParameterValue")
             var.value = _convert_variable(node_id, var.data_type, eds.get(section, "ParameterValue"))
         except ValueError:
@@ -326,7 +349,9 @@ def export_dcf(od, dest=None, fileInfo={}):
     return export_eds(od, dest, fileInfo, True)
 
 
-def export_eds(od: objectdictionary.ObjectDictionary, dest=None, file_info={}, device_commisioning=False):
+def export_eds(od: objectdictionary.ObjectDictionary, dest: Optional[TextIO] = None,
+               file_info={}, device_commisioning: bool = False):
+
     def export_object(obj, eds):
         if isinstance(obj, objectdictionary.Variable):
             return export_variable(obj, eds)
@@ -363,6 +388,7 @@ def export_eds(od: objectdictionary.ObjectDictionary, dest=None, file_info={}, d
                 var.data_type, var.default))
 
         if device_commisioning:
+            # FIXME: Injected value
             if getattr(var, 'value_raw', None) is not None:
                 eds.set(section, "ParameterValue", var.value_raw)
             elif getattr(var, 'value', None) is not None:
@@ -390,12 +416,16 @@ def export_eds(od: objectdictionary.ObjectDictionary, dest=None, file_info={}, d
 
     eds = RawConfigParser()
     # both disables lowercasing, and allows int keys
-    eds.optionxform = str
+    eds.optionxform = str  # type: ignore
+
+    def edsset(section: str, option: str, value: Union[str, int]):
+        eds.set(section, option, value)  # type: ignore
 
     from datetime import datetime as dt
     defmtime = dt.utcnow()
 
     try:
+        # FIXME: Injection of attrs
         # only if eds was loaded by us
         origFileInfo = od.__edsFileInfo
     except AttributeError:
@@ -438,33 +468,33 @@ def export_eds(od: objectdictionary.ObjectDictionary, dest=None, file_info={}, d
         elif isinstance(val, str):
             eds.set("DeviceInfo", eprop, val)
         elif isinstance(val, (int, bool)):
-            eds.set("DeviceInfo", eprop, int(val))
+            eds.set("DeviceInfo", eprop, int(val))  # type: ignore
 
     # we are also adding out of spec baudrates here.
     for rate in od.device_information.allowed_baudrates.union(
             {10e3, 20e3, 50e3, 125e3, 250e3, 500e3, 800e3, 1000e3}):
-        eds.set(
+        edsset(
             "DeviceInfo", "BaudRate_%i" % (rate/1000),
             int(rate in od.device_information.allowed_baudrates))
 
     if device_commisioning and (od.bitrate or od.node_id):
         eds.add_section("DeviceComissioning")
         if od.bitrate:
-            eds.set("DeviceComissioning", "BaudRate", int(od.bitrate / 1000))
+            edsset("DeviceComissioning", "BaudRate", int(od.bitrate / 1000))
         if od.node_id:
-            eds.set("DeviceComissioning", "NodeID", int(od.node_id))
+            edsset("DeviceComissioning", "NodeID", int(od.node_id))
 
     eds.add_section("Comments")
     i = 0
     for line in od.comments.splitlines():
         i += 1
         eds.set("Comments", "Line%i" % i, line)
-    eds.set("Comments", "Lines", i)
+    edsset("Comments", "Lines", i)
 
     eds.add_section("DummyUsage")
     for i in range(1, 8):
         key = "Dummy%04d" % i
-        eds.set("DummyUsage", key, 1 if (key in od) else 0)
+        edsset("DummyUsage", key, 1 if (key in od) else 0)
 
     def mandatory_indices(x):
         return x in {0x1000, 0x1001, 0x1018}
@@ -485,9 +515,9 @@ def export_eds(od: objectdictionary.ObjectDictionary, dest=None, file_info={}, d
 
     def add_list(section, list):
         eds.add_section(section)
-        eds.set(section, "SupportedObjects", len(list))
+        edsset(section, "SupportedObjects", len(list))
         for i in range(0, len(list)):
-            eds.set(section, (i + 1), "0x%04X" % list[i])
+            eds.set(section, str(i + 1), "0x%04X" % list[i])
         for index in list:
             export_object(od[index], eds)
 
@@ -495,7 +525,7 @@ def export_eds(od: objectdictionary.ObjectDictionary, dest=None, file_info={}, d
     add_list("OptionalObjects", supported_optional_indices)
     add_list("ManufacturerObjects", supported_manufacturer_indices)
 
-    if not dest:
+    if dest is None:
         import sys
         dest = sys.stdout
 

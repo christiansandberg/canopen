@@ -1,11 +1,11 @@
-from __future__ import annotations
-from typing import Callable, Dict, Iterable, List, Optional, Union, TYPE_CHECKING
+from typing import Callable, Dict, Iterable, Iterator, List, Optional, TextIO, Union, TYPE_CHECKING, cast
+import logging
+import threading
+
 try:
     from collections.abc import MutableMapping
 except ImportError:
     from collections import MutableMapping  # type: ignore
-import logging
-import threading
 
 if TYPE_CHECKING:
     # The conditional import and duck typing on the class types confuse the
@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from can.notifier import Notifier
     from can.message import Message
     from can.listener import Listener
+    from can.exceptions import CanError
     import can
 
 else:
@@ -31,24 +32,23 @@ else:
         class Listener:
             """ Dummy listener """
 
-from .node import RemoteNode, LocalNode
+from .node import RemoteNode, LocalNode, BaseNode
 from .sync import SyncProducer
 from .timestamp import TimeProducer
 from .nmt import NmtMaster
 from .lss import LssMaster
 from .objectdictionary.eds import import_from_node
-from .objectdictionary import ObjectDictionary
+from .objectdictionary import TObjectDictionary
 
 logger = logging.getLogger(__name__)
 
 TCallback = Callable[[int, bytearray, float], None]
-TNode = Union[RemoteNode, LocalNode]
 CanData = Union[bytes, bytearray, int, Iterable[int]]
 
-class Network(MutableMapping[int, TNode]):
+class Network(MutableMapping[int, BaseNode]):
     """Representation of one CAN bus containing one or more nodes."""
 
-    def __init__(self, bus: Optional[BusABC] = None):
+    def __init__(self, bus: Optional["BusABC"] = None):
         """
         :param can.BusABC bus:
             A python-can bus instance to re-use.
@@ -62,7 +62,7 @@ class Network(MutableMapping[int, TNode]):
         #: Includes at least MessageListener.
         self.listeners = [MessageListener(self)]
         self.notifier: Optional[Notifier] = None
-        self.nodes: Dict[int, Union[RemoteNode, LocalNode]] = {}
+        self.nodes: Dict[int, BaseNode] = {}
         self.subscribers: Dict[int, List[TCallback]] = {}
         self.send_lock = threading.Lock()
         self.sync = SyncProducer(self)
@@ -86,7 +86,7 @@ class Network(MutableMapping[int, TNode]):
         if callback not in self.subscribers[can_id]:
             self.subscribers[can_id].append(callback)
 
-    def unsubscribe(self, can_id, callback: Optional[TCallback]=None) -> None:
+    def unsubscribe(self, can_id: int, callback: Optional[TCallback]=None) -> None:
         """Stop listening for message.
 
         :param int can_id:
@@ -100,7 +100,7 @@ class Network(MutableMapping[int, TNode]):
         else:
             self.subscribers[can_id].remove(callback)
 
-    def connect(self, *args, **kwargs) -> Network:
+    def connect(self, *args, **kwargs) -> "Network":
         """Connect to CAN bus using python-can.
 
         Arguments are passed directly to :class:`can.BusABC`. Typically these
@@ -125,7 +125,7 @@ class Network(MutableMapping[int, TNode]):
                 if node.object_dictionary.bitrate:
                     kwargs["bitrate"] = node.object_dictionary.bitrate
                     break
-        self.bus = can.interface.Bus(*args, **kwargs)
+        self.bus = can.interface.Bus(*args, **kwargs)  # type: ignore
         logger.info("Connected to '%s'", self.bus.channel_info)
         self.notifier = can.Notifier(self.bus, self.listeners, 1)
         return self
@@ -137,7 +137,8 @@ class Network(MutableMapping[int, TNode]):
         """
         for node in self.nodes.values():
             if hasattr(node, "pdo"):
-                node.pdo.stop()
+                _node = cast(RemoteNode, node)
+                _node.pdo.stop()
         if self.notifier is not None:
             self.notifier.stop()
         if self.bus is not None:
@@ -153,10 +154,10 @@ class Network(MutableMapping[int, TNode]):
 
     def add_node(
         self,
-        node: Union[int, RemoteNode, LocalNode],
-        object_dictionary: Union[str, ObjectDictionary, None] = None,
+        node: Union[int, BaseNode],
+        object_dictionary: TObjectDictionary = None,
         upload_eds: bool = False,
-    ) -> Union[RemoteNode, LocalNode]:
+    ) -> BaseNode:
         """Add a remote node to the network.
 
         :param node:
@@ -164,26 +165,30 @@ class Network(MutableMapping[int, TNode]):
             :class:`canopen.RemoteNode` or :class:`canopen.LocalNode` object.
         :param object_dictionary:
             Can be either a string for specifying the path to an
-            Object Dictionary file or a
-            :class:`canopen.ObjectDictionary` object.
+            Object Dictionary file, a file handle, a
+            :class:`canopen.ObjectDictionary` object. None will create
+            an empty Object Dictionary.
         :param upload_eds:
             Set ``True`` if EDS file should be uploaded from 0x1021.
 
         :return:
             The Node object that was added.
         """
+        nodeobj: BaseNode
         if isinstance(node, int):
             if upload_eds:
                 logger.info("Trying to read EDS from node %d", node)
                 object_dictionary = import_from_node(node, self)
-            node = RemoteNode(node, object_dictionary)
-        self[node.id] = node
-        return node
+            nodeobj = RemoteNode(node, object_dictionary)
+        else:
+            nodeobj = node
+        self[nodeobj.id] = nodeobj
+        return nodeobj
 
     def create_node(
         self,
         node: int,
-        object_dictionary: Union[str, ObjectDictionary, None] = None,
+        object_dictionary: TObjectDictionary = None,
     ) -> LocalNode:
         """Create a local node in the network.
 
@@ -197,10 +202,9 @@ class Network(MutableMapping[int, TNode]):
         :return:
             The Node object that was added.
         """
-        if isinstance(node, int):
-            node = LocalNode(node, object_dictionary)
-        self[node.id] = node
-        return node
+        nodeobj = LocalNode(node, object_dictionary)
+        self[nodeobj.id] = nodeobj
+        return nodeobj
 
     def send_message(self, can_id: int, data: CanData, remote: bool = False) -> None:
         """Send a raw CAN message to the network.
@@ -279,10 +283,10 @@ class Network(MutableMapping[int, TNode]):
                 logger.error("An error has caused receiving of messages to stop")
                 raise exc
 
-    def __getitem__(self, node_id: int) -> Union[RemoteNode, LocalNode]:
+    def __getitem__(self, node_id: int) -> BaseNode:
         return self.nodes[node_id]
 
-    def __setitem__(self, node_id: int, node: Union[RemoteNode, LocalNode]):
+    def __setitem__(self, node_id: int, node: BaseNode):
         assert node_id == node.id
         self.nodes[node_id] = node
         node.associate_network(self)
@@ -291,25 +295,31 @@ class Network(MutableMapping[int, TNode]):
         self.nodes[node_id].remove_network()
         del self.nodes[node_id]
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(self.nodes)
 
     def __len__(self) -> int:
         return len(self.nodes)
 
 
-class PeriodicMessageTask(object):
+class PeriodicMessageTask:
     """
     Task object to transmit a message periodically using python-can's
     CyclicSendTask
     """
+
+    # Attribute types
+    bus: Optional["BusABC"]
+    period: float
+    msg: "Message"
+    _task: Optional[can.broadcastmanager.CyclicSendTaskABC]
 
     def __init__(
         self,
         can_id: int,
         data: CanData,
         period: float,
-        bus: Optional[BusABC],
+        bus: Optional["BusABC"],
         remote: bool = False,
     ):
         """
@@ -327,16 +337,16 @@ class PeriodicMessageTask(object):
         self.msg = can.Message(is_extended_id=can_id > 0x7FF,
                                arbitration_id=can_id,
                                data=data, is_remote_frame=remote)
-        self._task: Optional[can.broadcastmanager.CyclicSendTaskABC] = None
+        self._task = None
         self._start()
 
     def _start(self):
-        assert self.bus  # For typing
+        assert self.bus is not None  # For typing
         self._task = self.bus.send_periodic(self.msg, self.period)
 
     def stop(self):
         """Stop transmission"""
-        assert self._task  # For typing
+        assert self._task is not None  # For typing
         self._task.stop()
 
     def update(self, data: CanData) -> None:
@@ -348,7 +358,7 @@ class PeriodicMessageTask(object):
         new_data = bytearray(data)
         old_data = self.msg.data
         self.msg.data = new_data
-        assert self._task  # For typing
+        assert self._task is not None  # For typing
         if hasattr(self._task, "modify_data"):
             self._task.modify_data(self.msg)
         elif new_data != old_data:
@@ -364,10 +374,13 @@ class MessageListener(Listener):
         The network to notify on new messages.
     """
 
+    # Attribute types
+    network: Network
+
     def __init__(self, network: Network):
         self.network = network
 
-    def on_message_received(self, msg: Message):
+    def on_message_received(self, msg: "Message"):
         if msg.is_error_frame or msg.is_remote_frame:
             return
 
@@ -378,7 +391,7 @@ class MessageListener(Listener):
             logger.error(str(e))
 
 
-class NodeScanner(object):
+class NodeScanner:
     """Observes which nodes are present on the bus.
 
     Listens for the following messages:
@@ -391,6 +404,10 @@ class NodeScanner(object):
         The network to use when doing active searching.
     """
 
+    # Attribute types
+    network: Optional[Network]
+    nodes: List[int]
+
     #: Activate or deactivate scanning
     active = True
 
@@ -399,7 +416,7 @@ class NodeScanner(object):
     def __init__(self, network: Optional[Network] = None):
         self.network = network
         #: A :class:`list` of nodes discovered
-        self.nodes: List[int] = []
+        self.nodes = []
 
     def on_message_received(self, can_id: int):
         service = can_id & 0x780

@@ -1,4 +1,3 @@
-from __future__ import annotations
 from typing import Callable, List, Optional, TYPE_CHECKING, Tuple
 import struct
 import logging
@@ -8,26 +7,40 @@ import time
 if TYPE_CHECKING:
     from .network import Network
 
+TCallback = Callable[["EmcyError"], None]
+
 # Error code, error register, vendor specific data
 EMCY_STRUCT = struct.Struct("<HB5s")
 
 logger = logging.getLogger(__name__)
 
-TCallback = Callable[["EmcyError"], None]
 
-class EmcyConsumer:
+class EmcyBase:
+    """ Baseclass for Emcy """
+
+
+class EmcyConsumer(EmcyBase):
+
+    # Attribute types
+    log: List["EmcyError"]
+    active: List["EmcyError"]
+    callbacks: List[TCallback]
+    emcy_received: threading.Condition
 
     def __init__(self):
         #: Log of all received EMCYs for this node
-        self.log: List["EmcyError"] = []
+        self.log = []
         #: Only active EMCYs. Will be cleared on Error Reset
-        self.active: List["EmcyError"] = []
-        self.callbacks: List[TCallback] = []
+        self.active = []
+        self.callbacks = []
         self.emcy_received = threading.Condition()
 
     def on_emcy(self, can_id: int, data: bytearray, timestamp: float):
-        code, register, data = EMCY_STRUCT.unpack(data)
-        entry = EmcyError(code, register, data, timestamp)
+        code: int
+        register: int
+        edata: bytes
+        code, register, edata = EMCY_STRUCT.unpack(data)
+        entry = EmcyError(code, register, edata, timestamp)
 
         with self.emcy_received:
             if code & 0xFF00 == 0:
@@ -84,25 +97,37 @@ class EmcyConsumer:
                     return emcy
 
 
-class EmcyProducer:
+class EmcyProducer(EmcyBase):
+
+    # Attribute types
+    network: Optional["Network"]
+    cob_id: int
 
     def __init__(self, cob_id: int):
-        self.network: Optional[Network] = None
+        self.network = None
         self.cob_id = cob_id
 
     def send(self, code: int, register: int = 0, data: bytes = b""):
-        assert self.network  # For typing
+        if self.network is None:
+            raise RuntimeError("A Network is required to send")
         payload = EMCY_STRUCT.pack(code, register, data)
         self.network.send_message(self.cob_id, payload)
 
     def reset(self, register: int = 0, data: bytes = b""):
-        assert self.network  # For typing
+        if self.network is None:
+            raise RuntimeError("A Network is required to reset")
         payload = EMCY_STRUCT.pack(0, register, data)
         self.network.send_message(self.cob_id, payload)
 
 
 class EmcyError(Exception):
     """EMCY exception."""
+
+    # Attribute types
+    code: int
+    register: int
+    data: bytes
+    timestamp: float
 
     DESCRIPTIONS: List[Tuple[int, int, str]] = [
         # Code   Mask    Description

@@ -1,6 +1,4 @@
-from __future__ import annotations
-from typing import Iterable, Union, Optional, TYPE_CHECKING
-
+from typing import IO, List, Union, Optional, TYPE_CHECKING
 import struct
 import logging
 import io
@@ -12,8 +10,9 @@ except ImportError:
 
 from ..network import CanError
 from .. import objectdictionary
+from ..objectdictionary import ObjectDictionary
 
-from .base import SdoBase
+from .base import SdoBase, SdoIO, CrcXmodem
 from .constants import *
 from .exceptions import *
 
@@ -27,6 +26,9 @@ logger = logging.getLogger(__name__)
 class SdoClient(SdoBase):
     """Handles communication with an SDO server."""
 
+    # Attribute types
+    responses: queue.Queue[bytes]
+
     #: Max time in seconds to wait for response from server
     RESPONSE_TIMEOUT = 0.3
 
@@ -36,7 +38,7 @@ class SdoClient(SdoBase):
     #: Seconds to wait before sending a request, for rate limiting
     PAUSE_BEFORE_SEND = 0.0
 
-    def __init__(self, rx_cobid, tx_cobid, od):
+    def __init__(self, rx_cobid: int, tx_cobid: int, od: ObjectDictionary):
         """
         :param int rx_cobid:
             COB-ID that the server receives on (usually 0x600 + node ID)
@@ -51,13 +53,16 @@ class SdoClient(SdoBase):
     def on_response(self, can_id: int, data: bytearray, timestamp: float):
         self.responses.put(bytes(data))
 
-    def send_request(self, request):
+    def send_request(self, request: Union[bytes, bytearray]):
+
+        if self.network is None:
+            raise RuntimeError("A Network is required to send a request")
+
         retries_left = self.MAX_RETRIES
         while True:
             try:
                 if self.PAUSE_BEFORE_SEND:
                     time.sleep(self.PAUSE_BEFORE_SEND)
-                assert self.network  # For typing
                 self.network.send_message(self.rx_cobid, request)
             except CanError as e:
                 # Could be a buffer overflow. Wait some time before trying again
@@ -69,19 +74,21 @@ class SdoClient(SdoBase):
             else:
                 break
 
-    def read_response(self):
+    def read_response(self) -> bytes:
         try:
             response = self.responses.get(
                 block=True, timeout=self.RESPONSE_TIMEOUT)
         except queue.Empty:
             raise SdoCommunicationError("No SDO response received")
+        res_command: int
         res_command, = struct.unpack_from("B", response)
         if res_command == RESPONSE_ABORTED:
+            abort_code: int
             abort_code, = struct.unpack_from("<L", response, 4)
             raise SdoAbortedError(abort_code)
         return response
 
-    def request_response(self, sdo_request):
+    def request_response(self, sdo_request: Union[bytes, bytearray]) -> bytes:
         retries_left = self.MAX_RETRIES
         if not self.responses.empty():
             # logger.warning("There were unexpected messages in the queue")
@@ -94,11 +101,11 @@ class SdoClient(SdoBase):
             except SdoCommunicationError as e:
                 retries_left -= 1
                 if not retries_left:
-                    self.abort(0x5040000) 
+                    self.abort(0x5040000)
                     raise
                 logger.warning(str(e))
 
-    def abort(self, abort_code=0x08000000):
+    def abort(self, abort_code: int = 0x08000000):
         """Abort current transfer."""
         request = bytearray(8)
         request[0] = REQUEST_ABORTED
@@ -122,10 +129,13 @@ class SdoClient(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        with self.open(index, subindex, buffering=0) as fp:
+        # FIXME: Since mode is "rb" it's guaranteed that the returning object is SdoIO
+        with self.open(index, subindex, mode="rb", buffering=0) as fp:
+            assert isinstance(fp, SdoIO)  # For typing
             size = fp.size
             data = fp.read()
-        if size is None:
+
+        if size is None and data is not None:
             # Node did not specify how many bytes to use
             # Try to find out using Object Dictionary
             var = self.od.get_variable(index, subindex)
@@ -168,7 +178,8 @@ class SdoClient(SdoBase):
             fp.write(data)
 
     def open(self, index, subindex=0, mode="rb", encoding="ascii",
-             buffering=1024, size=None, block_transfer=False, force_segment=False, request_crc_support=True):
+             buffering=1024, size=None, block_transfer=False, force_segment=False,
+             request_crc_support=True) -> Union[IO, SdoIO]:
         """Open the data stream as a file like object.
 
         :param int index:
@@ -205,39 +216,51 @@ class SdoClient(SdoBase):
             A file like object.
         """
         buffer_size = buffering if buffering > 1 else io.DEFAULT_BUFFER_SIZE
+        raw_stream: io.RawIOBase
+        buffered_stream: IO
         if "r" in mode:
             if block_transfer:
                 raw_stream = BlockUploadStream(self, index, subindex, request_crc_support=request_crc_support)
             else:
                 raw_stream = ReadableStream(self, index, subindex)
-            if buffering:
-                buffered_stream = io.BufferedReader(raw_stream, buffer_size=buffer_size)
-            else:
+            if not buffering:
                 return raw_stream
-        if "w" in mode:
+            # Need buffering
+            buffered_stream = io.BufferedReader(raw_stream, buffer_size=buffer_size)
+        elif "w" in mode:
             if block_transfer:
                 raw_stream = BlockDownloadStream(self, index, subindex, size, request_crc_support=request_crc_support)
             else:
                 raw_stream = WritableStream(self, index, subindex, size, force_segment)
-            if buffering:
-                buffered_stream = io.BufferedWriter(raw_stream, buffer_size=buffer_size)
-            else:
+            if not buffering:
                 return raw_stream
+            # Need buffering
+            buffered_stream = io.BufferedWriter(raw_stream, buffer_size=buffer_size)
+        else:
+            raise ValueError("Must have one of read/write mode")
         if "b" not in mode:
-            # Text mode
+            # Buffered text mode
             line_buffering = buffering == 1
             return io.TextIOWrapper(buffered_stream, encoding,
                                     line_buffering=line_buffering)
+        # Binary buffered stream
         return buffered_stream
 
 
-class ReadableStream(io.RawIOBase):
+class ReadableStream(SdoIO):
     """File like object for reading from a variable."""
 
-    #: Total size of data or ``None`` if not specified
-    size = None
+    # Attribute types
+    sdo_client: SdoClient
+    pos: int
+    exp_data: Optional[bytes]
+    _done: bool
+    _toogle: bool
 
-    def __init__(self, sdo_client, index, subindex=0):
+    #: Total size of data or ``None`` if not specified
+    size: Optional[int] = None
+
+    def __init__(self, sdo_client: SdoClient, index: int, subindex: int = 0):
         """
         :param canopen.sdo.SdoClient sdo_client:
             The SDO client to use for reading.
@@ -256,6 +279,9 @@ class ReadableStream(io.RawIOBase):
         request = bytearray(8)
         SDO_STRUCT.pack_into(request, 0, REQUEST_UPLOAD, index, subindex)
         response = sdo_client.request_response(request)
+        res_command: int
+        res_index: int
+        res_subindex: int
         res_command, res_index, res_subindex = SDO_STRUCT.unpack_from(response)
         res_data = response[4:8]
 
@@ -279,12 +305,14 @@ class ReadableStream(io.RawIOBase):
                 self.exp_data = res_data
             self.pos += len(self.exp_data)
         elif res_command & SIZE_SPECIFIED:
-            self.size, = struct.unpack("<L", res_data)
+            size: int
+            size, = struct.unpack("<L", res_data)
+            self.size = size
             logger.debug("Using segmented transfer of %d bytes", self.size)
         else:
             logger.debug("Using segmented transfer")
 
-    def read(self, size=-1):
+    def read(self, size: int = -1) -> bytes:
         """Read one segment which may be up to 7 bytes.
 
         :param int size:
@@ -306,6 +334,7 @@ class ReadableStream(io.RawIOBase):
         request = bytearray(8)
         request[0] = command
         response = self.sdo_client.request_response(request)
+        res_command: int
         res_command, = struct.unpack_from("B", response)
         if res_command & 0xE0 != RESPONSE_SEGMENT_UPLOAD:
             raise SdoCommunicationError("Unexpected response 0x%02X" % res_command)
@@ -318,26 +347,37 @@ class ReadableStream(io.RawIOBase):
         self.pos += length
         return response[1:length + 1]
 
-    def readinto(self, b):
+    # FIXME: Q: What is the intention here?
+    def readinto(self, b: bytearray) -> int:  # type: ignore[override]
         """
         Read bytes into a pre-allocated, writable bytes-like object b,
         and return the number of bytes read.
         """
         data = self.read(7)
+        # FIXME: Using slicing doesn't seem to be universally supported. What's right?
         b[:len(data)] = data
         return len(data)
 
-    def readable(self):
+    def readable(self) -> bool:
         return True
 
     def tell(self):
         return self.pos
 
 
-class WritableStream(io.RawIOBase):
+class WritableStream(SdoIO):
     """File like object for writing to a variable."""
 
-    def __init__(self, sdo_client, index, subindex=0, size=None, force_segment=False):
+    # Attribute types
+    sdo_client: SdoClient
+    size: Optional[int]
+    pos: int
+    _toggle: int
+    _exp_header: Optional[bytes]
+    _done: bool
+
+    def __init__(self, sdo_client: SdoClient, index: int, subindex: int = 0,
+                 size: Optional[int] = None, force_segment: bool=False):
         """
         :param canopen.sdo.SdoClient sdo_client:
             The SDO client to use for communication.
@@ -366,6 +406,7 @@ class WritableStream(io.RawIOBase):
                 struct.pack_into("<L", request, 4, size)
             SDO_STRUCT.pack_into(request, 0, command, index, subindex)
             response = sdo_client.request_response(request)
+            res_command: int
             res_command, = struct.unpack_from("B", response)
             if res_command != RESPONSE_DOWNLOAD:
                 raise SdoCommunicationError(
@@ -377,16 +418,17 @@ class WritableStream(io.RawIOBase):
             command |= (4 - size) << 2
             self._exp_header = SDO_STRUCT.pack(command, index, subindex)
 
-    def write(self, b):
+    def write(self, b: Union[bytes, bytearray]) -> int:  # type: ignore[override]
         """
         Write the given bytes-like object, b, to the SDO server, and return the
         number of bytes written. This will be at most 7 bytes.
         """
+        res_command: int
         if self._done:
             raise RuntimeError("All expected data has already been transmitted")
         if self._exp_header is not None:
             # Expedited download
-            if len(b) < self.size:
+            if self.size is None or len(b) < self.size:
                 # Not enough data provided
                 return 0
             if len(b) > 4:
@@ -451,17 +493,26 @@ class WritableStream(io.RawIOBase):
         return self.pos
 
 
-class BlockUploadStream(io.RawIOBase):
+class BlockUploadStream(SdoIO):
     """File like object for reading from a variable using block upload."""
 
+    # Attribute types
+    sdo_client: SdoClient
+    pos: int
+    _done: bool
+    _crc: CrcXmodem
+    _server_crc: Optional[int]
+    _ackseq: int
+
     #: Total size of data or ``None`` if not specified
-    size = None
+    size: Optional[int] = None
 
     blksize = 127
 
     crc_supported = False
 
-    def __init__(self, sdo_client, index, subindex=0, request_crc_support=True):
+    def __init__(self, sdo_client: SdoClient, index: int, subindex: int = 0,
+                 request_crc_support: bool = True):
         """
         :param canopen.sdo.SdoClient sdo_client:
             The SDO client to use for reading.
@@ -470,7 +521,7 @@ class BlockUploadStream(io.RawIOBase):
         :param int subindex:
             Object dictionary sub-index to read from.
         :param bool request_crc_support:
-            If crc calculation should be requested when using block transfer            
+            If crc calculation should be requested when using block transfer
         """
         self._done = False
         self.sdo_client = sdo_client
@@ -489,6 +540,9 @@ class BlockUploadStream(io.RawIOBase):
         struct.pack_into("<BHBBB", request, 0,
                          command, index, subindex, self.blksize, 0)
         response = sdo_client.request_response(request)
+        res_command: int
+        res_index: int
+        res_subindex: int
         res_command, res_index, res_subindex = SDO_STRUCT.unpack_from(response)
         if res_command & 0xE0 != RESPONSE_BLOCK_UPLOAD:
             raise SdoCommunicationError("Unexpected response 0x%02X" % res_command)
@@ -499,7 +553,9 @@ class BlockUploadStream(io.RawIOBase):
                 "maybe there is another SDO client communicating "
                 "on the same SDO channel?").format(res_index, res_subindex))
         if res_command & BLOCK_SIZE_SPECIFIED:
-            self.size, = struct.unpack_from("<L", response, 4)
+            size: int
+            size, = struct.unpack_from("<L", response, 4)
+            self.size = size
             logger.debug("Size is %d bytes", self.size)
         self.crc_supported = bool(res_command & CRC_SUPPORTED)
         # Start upload
@@ -507,7 +563,7 @@ class BlockUploadStream(io.RawIOBase):
         request[0] = REQUEST_BLOCK_UPLOAD | START_BLOCK_UPLOAD
         sdo_client.send_request(request)
 
-    def read(self, size=-1):
+    def read(self, size: int = -1) -> bytes:
         """Read one segment which may be up to 7 bytes.
 
         :param int size:
@@ -525,6 +581,7 @@ class BlockUploadStream(io.RawIOBase):
             response = self.sdo_client.read_response()
         except SdoCommunicationError:
             response = self._retransmit()
+        res_command: int
         res_command, = struct.unpack_from("B", response)
         seqno = res_command & 0x7F
         if seqno == self._ackseq + 1:
@@ -551,13 +608,14 @@ class BlockUploadStream(io.RawIOBase):
         self.pos += len(data)
         return data
 
-    def _retransmit(self):
+    def _retransmit(self) -> bytes:
         logger.info("Only %d sequences were received. Requesting retransmission",
                     self._ackseq)
         end_time = time.time() + self.sdo_client.RESPONSE_TIMEOUT
         self._ack_block()
         while time.time() < end_time:
             response = self.sdo_client.read_response()
+            res_command: int
             res_command, = struct.unpack_from("B", response)
             seqno = res_command & 0x7F
             if seqno == self._ackseq + 1:
@@ -575,9 +633,12 @@ class BlockUploadStream(io.RawIOBase):
         if self._ackseq == self.blksize:
             self._ackseq = 0
 
-    def _end_upload(self):
+    def _end_upload(self) -> int:
         response = self.sdo_client.read_response()
-        res_command, self._server_crc = struct.unpack_from("<BH", response)
+        res_command: int
+        server_crc: int
+        res_command, server_crc = struct.unpack_from("<BH", response)
+        self._server_crc = server_crc
         if res_command & 0xE0 != RESPONSE_BLOCK_UPLOAD:
             self.sdo_client.abort(0x05040001)
             raise SdoCommunicationError("Unexpected response 0x%02X" % res_command)
@@ -596,10 +657,10 @@ class BlockUploadStream(io.RawIOBase):
             request[0] = REQUEST_BLOCK_UPLOAD | END_BLOCK_TRANSFER
             self.sdo_client.send_request(request)
 
-    def tell(self):
+    def tell(self) -> int:
         return self.pos
 
-    def readinto(self, b):
+    def readinto(self, b: bytearray) -> int:  # type: ignore[override]
         """
         Read bytes into a pre-allocated, writable bytes-like object b,
         and return the number of bytes read.
@@ -608,14 +669,27 @@ class BlockUploadStream(io.RawIOBase):
         b[:len(data)] = data
         return len(data)
 
-    def readable(self):
+    def readable(self) -> bool:
         return True
 
 
-class BlockDownloadStream(io.RawIOBase):
+class BlockDownloadStream(SdoIO):
     """File like object for block download."""
 
-    def __init__(self, sdo_client, index, subindex=0, size=None, request_crc_support=True):
+    # Attribute types
+    sdo_client: SdoClient
+    size: Optional[int]
+    pos: int
+    _done: bool
+    _seqno: int
+    _crc: CrcXmodem
+    _last_bytes_sent: int
+    _current_block: List[Union[bytes, bytearray]]
+    _retransmitting: bool
+    _blksize: int
+
+    def __init__(self, sdo_client: SdoClient, index: int, subindex: int = 0,
+                 size: Optional[int] = None, request_crc_support: bool=True):
         """
         :param canopen.sdo.SdoClient sdo_client:
             The SDO client to use for communication.
@@ -626,7 +700,7 @@ class BlockDownloadStream(io.RawIOBase):
         :param int size:
             Size of data in number of bytes if known in advance.
         :param bool request_crc_support:
-            If crc calculation should be requested when using block transfer            
+            If crc calculation should be requested when using block transfer
         """
         self.sdo_client = sdo_client
         self.size = size
@@ -662,11 +736,13 @@ class BlockDownloadStream(io.RawIOBase):
                 "Node returned a value for 0x{:X}:{:d} instead, "
                 "maybe there is another SDO client communicating "
                 "on the same SDO channel?").format(res_index, res_subindex))
-        self._blksize, = struct.unpack_from("B", response, 4)
+        blksize: int
+        blksize, = struct.unpack_from("B", response, 4)
+        self._blksize = blksize
         logger.debug("Server requested a block size of %d", self._blksize)
         self.crc_supported = bool(res_command & CRC_SUPPORTED)
 
-    def write(self, b):
+    def write(self, b: Union[bytes, bytearray]) -> int:  # type: ignore[override]
         """
         Write the given bytes-like object, b, to the SDO server, and return the
         number of bytes written. This will be at most 7 bytes.
@@ -677,6 +753,7 @@ class BlockDownloadStream(io.RawIOBase):
         :returns:
             Number of bytes successfully sent or ``None`` if length of data is
             less than 7 bytes and the total size has not been reached yet.
+            FIXME: Rewrite text
         """
         if self._done:
             raise RuntimeError("All expected data has already been transmitted")
@@ -687,12 +764,12 @@ class BlockDownloadStream(io.RawIOBase):
             self.send(data, end=True)
         elif len(data) < 7:
             # We can't send less than 7 bytes in the middle of a transmission
-            return None
+            return 0
         else:
             self.send(data)
         return len(data)
 
-    def send(self, b, end=False):
+    def send(self, b: Union[bytes, bytearray], end: bool = False):
         """Send up to 7 bytes of data.
 
         :param bytes b:
@@ -727,12 +804,15 @@ class BlockDownloadStream(io.RawIOBase):
             # End of this block, wait for ACK
             self._block_ack()
 
-    def tell(self):
+    def tell(self) -> int:
         return self.pos
 
     def _block_ack(self):
         logger.debug("Waiting for acknowledgement of last block...")
         response = self.sdo_client.read_response()
+        res_command: int
+        ackseq: int
+        blksize: int
         res_command, ackseq, blksize = struct.unpack_from("BBB", response)
         if res_command & 0xE0 != RESPONSE_BLOCK_DOWNLOAD:
             self.sdo_client.abort(0x05040001)
@@ -753,8 +833,8 @@ class BlockDownloadStream(io.RawIOBase):
         logger.debug("Server requested a block size of %d", blksize)
         self._blksize = blksize
         self._seqno = 0
-        
-    def _retransmit(self, ackseq, blksize):
+
+    def _retransmit(self, ackseq: int, blksize: int):
         """Retransmit the failed block"""
         logger.info(("%d of %d sequences were received. "
                  "Will start retransmission") % (ackseq, self._blksize))
@@ -792,10 +872,11 @@ class BlockDownloadStream(io.RawIOBase):
             struct.pack_into("<H", request, 1, self._crc.final())
         logger.debug("Ending block transfer...")
         response = self.sdo_client.request_response(request)
+        res_command: int
         res_command, = struct.unpack_from("B", response)
         if not res_command & END_BLOCK_TRANSFER:
             raise SdoCommunicationError("Block download unsuccessful")
         logger.info("Block download successful")
 
-    def writable(self):
+    def writable(self) -> bool:
         return True

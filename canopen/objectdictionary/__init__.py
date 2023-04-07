@@ -1,14 +1,14 @@
 """
 Object Dictionary module
 """
-from __future__ import annotations
-from typing import Dict, Iterable, List, Optional, TextIO, Union, TYPE_CHECKING
+from typing import Dict, Iterator, List, Optional, Set, TextIO, Union, TYPE_CHECKING, cast
 import struct
+import logging
+
 try:
     from collections.abc import MutableMapping, Mapping
 except ImportError:
     from collections import MutableMapping, Mapping  # type: ignore
-import logging
 
 from .datatypes import *
 
@@ -16,11 +16,19 @@ if TYPE_CHECKING:
     # Repeat import to ensure the type checker understands the imports
     from collections.abc import MutableMapping, Mapping
 
+# FIXME: Make better naming for these
+TObject = Union["Array", "Record", "Variable"]
+TParent = Union[TObject, "ObjectDictionary"]
+TValue = Union[int, float, str, bytes, bytearray]
+TPhys = Union[int, float, bool, str, bytes]
+TRaw = Union[int, float, bool, str, bytes]
+TObjectDictionary = Union[str, "ObjectDictionary", TextIO, None]
+
 logger = logging.getLogger(__name__)
 
-TObject = Union["Array", "Record", "Variable"]
 
-def export_od(od, dest:Union[str,TextIO,None]=None, doc_type:Optional[str]=None):
+def export_od(od: "ObjectDictionary", dest: Union[str, TextIO, None] = None,
+              doc_type:Optional[str] = None):
     """ Export :class: ObjectDictionary to a file.
 
     :param od:
@@ -55,12 +63,12 @@ def export_od(od, dest:Union[str,TextIO,None]=None, doc_type:Optional[str]=None)
         return eds.export_dcf(od, dest)
 
     # If dest is opened in this fn, it should be closed
-    if type(dest) is str:
+    if isinstance(dest, str):
         dest.close()
 
 
 def import_od(
-    source: Union[str, TextIO, None],
+    source: TObjectDictionary,
     node_id: Optional[int] = None,
 ) -> "ObjectDictionary":
     """Parse an EDS, DCF, or EPF file.
@@ -73,19 +81,22 @@ def import_od(
     """
     if source is None:
         return ObjectDictionary()
+    if isinstance(source, ObjectDictionary):
+        return source
     if hasattr(source, "read"):
         # File like object
-        filename = source.name
+        # FIXME: Python file handles are a bit weird
+        filename = cast(TextIO, source).name
     elif hasattr(source, "tag"):
         # XML tree, probably from an EPF file
         filename = "od.epf"
     else:
         # Path to file
-        filename = source
+        filename = cast(str, source)
     suffix = filename[filename.rfind("."):].lower()
     if suffix in (".eds", ".dcf"):
         from . import eds
-        return eds.import_eds(source, node_id)
+        return eds.import_eds(source, node_id)  # FIXME: node_id optional or not?
     elif suffix == ".epf":
         from . import epf
         return epf.import_epf(source)
@@ -96,22 +107,30 @@ def import_od(
 class ObjectDictionary(MutableMapping[Union[str, int], TObject]):
     """Representation of the object dictionary as a Python dictionary."""
 
+    # Attribute types
+    indices: Dict[int, TObject]
+    names: Dict[str, TObject]
+    comments: str
+    bitrate: Optional[int]
+    node_id: Optional[int]
+    device_information: "DeviceInformation"
+
     def __init__(self):
-        self.indices: Dict[int, TObject] = {}
-        self.names: Dict[str, TObject] = {}
+        self.indices = {}
+        self.names = {}
         self.comments = ""
         #: Default bitrate if specified by file
-        self.bitrate: Optional[int] = None
+        self.bitrate = None
         #: Node ID if specified by file
-        self.node_id: Optional[int] = None
+        self.node_id = None
         #: Some information about the device
         self.device_information = DeviceInformation()
 
-    def __getitem__(
-        self, index: Union[int, str]
-    ) -> Union["Array", "Record", "Variable"]:
+    def __getitem__(self, index: Union[int, str]
+                   ) -> Union["Array", "Record", "Variable"]:
         """Get object from object dictionary by name or index."""
-        item = self.names.get(index) or self.indices.get(index)
+        item: Optional[TObject]
+        item = self.names.get(cast(str, index)) or self.indices.get(cast(int, index))
         if item is None:
             name = "0x%X" % index if isinstance(index, int) else index
             raise KeyError("%s was not found in Object Dictionary" % name)
@@ -126,13 +145,13 @@ class ObjectDictionary(MutableMapping[Union[str, int], TObject]):
         del self.indices[obj.index]
         del self.names[obj.name]
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(sorted(self.indices))
 
     def __len__(self) -> int:
         return len(self.indices)
 
-    def __contains__(self, index: Union[int, str]):
+    def __contains__(self, index):
         return index in self.names or index in self.indices
 
     def add_object(self, obj: TObject) -> None:
@@ -160,6 +179,7 @@ class ObjectDictionary(MutableMapping[Union[str, int], TObject]):
             return obj
         elif isinstance(obj, (Record, Array)):
             return obj.get(subindex)
+        return None
 
 
 class Record(MutableMapping[Union[int, str], "Variable"]):
@@ -167,23 +187,31 @@ class Record(MutableMapping[Union[int, str], "Variable"]):
     subindices.
     """
 
-    #: Description for the whole record
-    description = ""
+    # Attribute types
+    parent: Optional[TParent]
+    index: int
+    name: str
+    storage_location: Optional[str]
+    subindices: Dict[int, "Variable"]
+    names: Dict[str, "Variable"]
+    description: str
 
     def __init__(self, name: str, index: int):
         #: The :class:`~canopen.ObjectDictionary` owning the record.
-        self.parent: Optional[ObjectDictionary] = None
+        self.parent = None
         #: 16-bit address of the record
         self.index = index
         #: Name of record
         self.name = name
         #: Storage location of index
         self.storage_location = None
-        self.subindices: Dict[int, "Variable"] = {}
-        self.names: Dict[str, "Variable"] = {}
+        self.subindices = {}
+        self.names = {}
+        #: Description for the whole record
+        self.description = ""
 
     def __getitem__(self, subindex: Union[int, str]) -> "Variable":
-        item = self.names.get(subindex) or self.subindices.get(subindex)
+        item = self.names.get(subindex) or self.subindices.get(subindex)  # type: ignore
         if item is None:
             raise KeyError("Subindex %s was not found" % subindex)
         return item
@@ -200,13 +228,15 @@ class Record(MutableMapping[Union[int, str], "Variable"]):
     def __len__(self) -> int:
         return len(self.subindices)
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(sorted(self.subindices))
 
-    def __contains__(self, subindex: Union[int, str]) -> bool:
+    def __contains__(self, subindex) -> bool:
         return subindex in self.names or subindex in self.subindices
 
-    def __eq__(self, other: "Record") -> bool:
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Record):
+            raise NotImplementedError()
         return self.index == other.index
 
     def add_member(self, variable: "Variable") -> None:
@@ -223,23 +253,31 @@ class Array(Mapping[Union[int, str], "Variable"]):
     Actual length of array must be read from the node using SDO.
     """
 
-    #: Description for the whole array
-    description = ""
+    # Attribute types
+    parent: Optional[TParent]
+    index: int
+    name: str
+    storage_location: Optional[str]
+    subindices: Dict[int, "Variable"]
+    names: Dict[str, "Variable"]
+    description: str
 
     def __init__(self, name: str, index: int):
         #: The :class:`~canopen.ObjectDictionary` owning the record.
-        self.parent: Optional[ObjectDictionary] = None
+        self.parent = None
         #: 16-bit address of the array
         self.index = index
         #: Name of array
         self.name = name
         #: Storage location of index
         self.storage_location = None
-        self.subindices: Dict[int, "Variable"] = {}
-        self.names: Dict[str, "Variable"] = {}
+        self.subindices = {}
+        self.names = {}
+        #: Description for the whole array
+        self.description = ""
 
     def __getitem__(self, subindex: Union[int, str]) -> "Variable":
-        var = self.names.get(subindex) or self.subindices.get(subindex)
+        var = self.names.get(subindex) or self.subindices.get(subindex)  # type: ignore
         if var is not None:
             # This subindex is defined
             pass
@@ -261,10 +299,12 @@ class Array(Mapping[Union[int, str], "Variable"]):
     def __len__(self) -> int:
         return len(self.subindices)
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(sorted(self.subindices))
 
-    def __eq__(self, other: "Array") -> bool:
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Array):
+            raise NotImplementedError()
         return self.index == other.index
 
     def add_member(self, variable: "Variable") -> None:
@@ -278,30 +318,30 @@ class Variable:
     """Simple variable."""
 
     STRUCT_TYPES = {
-        BOOLEAN: struct.Struct("?"),
-        INTEGER8: struct.Struct("b"),
-        INTEGER16: struct.Struct("<h"),
-        INTEGER32: struct.Struct("<l"),
-        INTEGER64: struct.Struct("<q"),
-        UNSIGNED8: struct.Struct("B"),
-        UNSIGNED16: struct.Struct("<H"),
-        UNSIGNED32: struct.Struct("<L"),
-        UNSIGNED64: struct.Struct("<Q"),
-        REAL32: struct.Struct("<f"),
-        REAL64: struct.Struct("<d")
+        BOOLEAN:    struct.Struct("?"),   # bool
+        INTEGER8:   struct.Struct("b"),   # int
+        INTEGER16:  struct.Struct("<h"),  # int
+        INTEGER32:  struct.Struct("<l"),  # int
+        INTEGER64:  struct.Struct("<q"),  # int
+        UNSIGNED8:  struct.Struct("B"),   # int
+        UNSIGNED16: struct.Struct("<H"),  # int
+        UNSIGNED32: struct.Struct("<L"),  # int
+        UNSIGNED64: struct.Struct("<Q"),  # int
+        REAL32:     struct.Struct("<f"),  # float
+        REAL64:     struct.Struct("<d"),  # float
     }
 
     def __init__(self, name: str, index: int, subindex: int = 0):
         #: The :class:`~canopen.ObjectDictionary`,
         #: :class:`~canopen.objectdictionary.Record` or
         #: :class:`~canopen.objectdictionary.Array` owning the variable
-        self.parent: Optional[ObjectDictionary] = None
+        self.parent: Optional[TParent] = None
         #: 16-bit address of the object in the dictionary
-        self.index = index
+        self.index: int = index
         #: 8-bit sub-index of the object in the dictionary
-        self.subindex = subindex
+        self.subindex: int = subindex
         #: String representation of the variable
-        self.name = name
+        self.name: str = name
         #: Physical unit
         self.unit: str = ""
         #: Factor between physical unit and integer value
@@ -311,11 +351,11 @@ class Variable:
         #: Maximum allowed value
         self.max: Optional[int] = None
         #: Default value at start-up
-        self.default: Optional[int] = None
+        self.default: Optional[TRaw] = None
         #: Is the default value relative to the node-ID (only applies to COB-IDs)
-        self.relative = False
+        self.relative: bool = False
         #: The value of this variable stored in the object dictionary
-        self.value: Optional[int] = None
+        self.value: Optional[TRaw] = None
         #: Data type according to the standard as an :class:`int`
         self.data_type: Optional[int] = None
         #: Access type, should be "rw", "ro", "wo", or "const"
@@ -327,12 +367,14 @@ class Variable:
         #: Dictionary of bitfield definitions
         self.bit_definitions: Dict[str, List[int]] = {}
         #: Storage location of index
-        self.storage_location = None
+        self.storage_location: Optional[str] = None
         #: Can this variable be mapped to a PDO
-        self.pdo_mappable = False
+        self.pdo_mappable: bool = False
 
 
-    def __eq__(self, other: "Variable") -> bool:
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Variable):
+            raise NotImplementedError()
         return (self.index == other.index and
                 self.subindex == other.subindex)
 
@@ -366,32 +408,53 @@ class Variable:
         """
         self.bit_definitions[name] = bits
 
-    def decode_raw(self, data: bytes) -> Union[int, float, str, bytes, bytearray]:
+    def decode_raw(self, data: bytes) -> TRaw:
         if self.data_type == VISIBLE_STRING:
+            # Return str
             return data.rstrip(b"\x00").decode("ascii", errors="ignore")
         elif self.data_type == UNICODE_STRING:
+            # Returns str
             # Is this correct?
             return data.rstrip(b"\x00").decode("utf_16_le", errors="ignore")
         elif self.data_type in self.STRUCT_TYPES:
             try:
+                # Returns one of bool, int, float
+                value: Union[bool, int, float]
                 value, = self.STRUCT_TYPES[self.data_type].unpack(data)
                 return value
             except struct.error:
                 raise ObjectDictionaryError(
                     "Mismatch between expected and actual data size")
         else:
-            # Just return the data as is
+            # Just return the data as is (type: bytes)
             return data
 
-    def encode_raw(self, value: Union[int, float, str, bytes, bytearray]) -> bytes:
+    # FIXME: Q: Keeping type of the dictionary object separate (self.data_type)
+    #        from the actual type of value. How to deal with that?
+
+    def encode_raw(self, value: TRaw) -> bytes:
         if isinstance(value, (bytes, bytearray)):
+            # FIXME: Is this right? If the type is bytes then the self.data_type
+            #        is not checked
             return value
         elif self.data_type == VISIBLE_STRING:
+            if not isinstance(value, str):
+                raise TypeError("Value of type '%s' doesn't match VISIBLE_STRING" % (
+                    type(value)
+                ))
             return value.encode("ascii")
         elif self.data_type == UNICODE_STRING:
+            if not isinstance(value, str):
+                raise TypeError("Value of type '%s' doesn't match UNICODE_STRING" % (
+                    type(value)
+                ))
             # Is this correct?
             return value.encode("utf_16_le")
         elif self.data_type in self.STRUCT_TYPES:
+            if not isinstance(value, (bool, int, float)):
+                raise TypeError("Value of type '%s' is unexpected for numeric types" % (
+                    type(value)
+                ))
             if self.data_type in INTEGER_TYPES:
                 value = int(value)
             if self.data_type in NUMBER_TYPES:
@@ -414,13 +477,27 @@ class Variable:
                 "Do not know how to encode %r to data type %Xh" % (
                     value, self.data_type))
 
-    def decode_phys(self, value: int) -> Union[int, bool, float, str, bytes]:
+    # FIXME: Q: What is the correct type of .phys? Is it anything (depending
+    #        on the type of the od), or should it be int?
+
+    def decode_phys(self, value: TRaw) -> TPhys:
         if self.data_type in INTEGER_TYPES:
+            # FIXME: Allow float?
+            if not isinstance(value, (int, float)):
+                raise TypeError("Value of type '%s' is unexpected for numeric types" % (
+                    type(value)
+                ))
             value *= self.factor
+            # FIXME: Convert to int?
         return value
 
-    def encode_phys(self, value: Union[int, bool, float, str, bytes]) -> int:
+    def encode_phys(self, value: TPhys) -> TRaw:
         if self.data_type in INTEGER_TYPES:
+            # FIXME: Allow float?
+            if not isinstance(value, (int, float)):
+                raise TypeError("Value of type '%s' is unexpected for numeric types" % (
+                    type(value)
+                ))
             value /= self.factor
             value = int(round(value))
         return value
@@ -445,6 +522,7 @@ class Variable:
         error_text = "No value corresponds to '%s'. Valid values are: %s"
         raise ValueError(error_text % (desc, valid_values))
 
+    # FIXME: bits typing might be wrong here.
     def decode_bits(self, value: int, bits: List[int]) -> int:
         try:
             bits = self.bit_definitions[bits]
@@ -455,6 +533,7 @@ class Variable:
             mask |= 1 << bit
         return (value & mask) >> min(bits)
 
+    # FIXME: bits typing might be wrong here.
     def encode_bits(self, original_value: int, bits: List[int], bit_value: int):
         try:
             bits = self.bit_definitions[bits]
@@ -471,21 +550,21 @@ class Variable:
 
 class DeviceInformation:
     def __init__(self):
-        self.allowed_baudrates = set()
-        self.vendor_name:Optional[str] = None
-        self.vendor_number:Optional[int] = None
-        self.product_name:Optional[str] = None
-        self.product_number:Optional[int] = None
-        self.revision_number:Optional[int] = None
-        self.order_code:Optional[str] = None
-        self.simple_boot_up_master:Optional[bool] = None
-        self.simple_boot_up_slave:Optional[bool] = None
-        self.granularity:Optional[int] = None
-        self.dynamic_channels_supported:Optional[bool] = None
-        self.group_messaging:Optional[bool] = None
-        self.nr_of_RXPDO:Optional[bool] = None
-        self.nr_of_TXPDO:Optional[bool] = None
-        self.LSS_supported:Optional[bool] = None
+        self.allowed_baudrates: Set[int] = set()
+        self.vendor_name: Optional[str] = None
+        self.vendor_number: Optional[int] = None
+        self.product_name: Optional[str] = None
+        self.product_number: Optional[int] = None
+        self.revision_number: Optional[int] = None
+        self.order_code: Optional[str] = None
+        self.simple_boot_up_master: Optional[bool] = None
+        self.simple_boot_up_slave: Optional[bool] = None
+        self.granularity: Optional[int] = None
+        self.dynamic_channels_supported: Optional[bool] = None
+        self.group_messaging: Optional[bool] = None
+        self.nr_of_RXPDO: Optional[bool] = None
+        self.nr_of_TXPDO: Optional[bool] = None
+        self.LSS_supported: Optional[bool] = None
 
 
 class ObjectDictionaryError(Exception):

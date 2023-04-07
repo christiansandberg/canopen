@@ -1,19 +1,23 @@
-from __future__ import annotations
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .network import Network
+    from .network import Network, PeriodicMessageTask
 
 
 class SyncProducer:
     """Transmits a SYNC message periodically."""
 
+    # Attribute types
+    network: "Network"
+    period: Optional[float]
+    _task: Optional["PeriodicMessageTask"]
+
     #: COB-ID of the SYNC message
     cob_id = 0x80
 
-    def __init__(self, network: Network):
+    def __init__(self, network: "Network"):
         self.network = network
-        self.period: Optional[float] = None
+        self.period = None
         self._task = None
 
     def transmit(self, count: Optional[int] = None):

@@ -1,12 +1,18 @@
-from __future__ import annotations
-from typing import TextIO, Union, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
+from abc import ABC, abstractmethod
+
 from .. import objectdictionary
+from ..objectdictionary import ObjectDictionary, TObjectDictionary
 
 if TYPE_CHECKING:
     from ..network import Network
+    from ..sdo.base import SdoBase
+    from ..nmt import NmtBase
+    from ..emcy import EmcyBase
+    from ..pdo import TPDO, RPDO
 
 
-class BaseNode:
+class BaseNode(ABC):
     """A CANopen node.
 
     :param node_id:
@@ -16,17 +22,38 @@ class BaseNode:
         or a file like object.
     """
 
+    # Attribute types
+    network: Optional["Network"]
+    object_dictionary: ObjectDictionary
+    id: int
+
+    sdo: "SdoBase"
+    tpdo: "TPDO"
+    rpdo: "RPDO"
+    nmt: "NmtBase"
+    emcy: "EmcyBase"
+
     def __init__(
         self,
         node_id: Optional[int],
-        object_dictionary: Union[objectdictionary.ObjectDictionary, str, TextIO],
+        object_dictionary: TObjectDictionary,
     ):
-        self.network: Optional[Network] = None
+        self.network = None
 
-        if not isinstance(object_dictionary,
-                          objectdictionary.ObjectDictionary):
-            object_dictionary = objectdictionary.import_od(
+        self.object_dictionary = objectdictionary.import_od(
                 object_dictionary, node_id)
-        self.object_dictionary = object_dictionary
 
-        self.id = node_id or self.object_dictionary.node_id
+        # The rest of the Node class depend on a numeric ID, so unless
+        # the OD provides one, return an error
+        _node_id = node_id or self.object_dictionary.node_id
+        if _node_id is None:
+            raise RuntimeError("Missing node id for node")
+        self.id = _node_id
+
+    @abstractmethod
+    def associate_network(self, network: "Network"):
+        raise RuntimeError("Not implemented")
+
+    @abstractmethod
+    def remove_network(self):
+        raise RuntimeError("Not implemented")

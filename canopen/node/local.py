@@ -1,5 +1,4 @@
-from __future__ import annotations
-from typing import Callable, Dict, List, Optional, Union, TYPE_CHECKING, Protocol
+from typing import Dict, List, Optional, TYPE_CHECKING, Protocol
 import logging
 
 from .base import BaseNode
@@ -15,25 +14,43 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class TCallback(Protocol):
+class TWCallback(Protocol):
     def __call__(self, *, index: int, subindex: int,
-                 od: objectdictionary.Variable, data: bytes) -> None:
-        ''' LocalNode Callback '''
+                 od: objectdictionary.Variable,
+                 data: bytes) -> None:
+        ''' Write Callback '''
+
+class TRCallback(Protocol):
+    def __call__(self, *, index: int, subindex: int,
+                 od: objectdictionary.Variable
+                 ) -> Optional[objectdictionary.TValue]:
+        ''' Read Callback '''
 
 
 class LocalNode(BaseNode):
 
+    # Attribute types
+    data_store: Dict[int, Dict[int, bytes]]
+    _read_callbacks: List[TRCallback]
+    _write_callbacks: List[TWCallback]
+    sdo: SdoServer
+    tpdo: TPDO
+    rpdo: RPDO
+    nmt: NmtSlave
+    emcy: EmcyProducer
+
     def __init__(
         self,
         node_id: Optional[int],
-        object_dictionary: Union[objectdictionary.ObjectDictionary, str],
+        object_dictionary: objectdictionary.TObjectDictionary,
     ):
         super(LocalNode, self).__init__(node_id, object_dictionary)
 
-        self.data_store: Dict[int, Dict[int, bytes]] = {}
-        self._read_callbacks: List[TCallback] = []
-        self._write_callbacks: List[TCallback] = []
+        self.data_store = {}
+        self._read_callbacks = []
+        self._write_callbacks = []
 
+        # FIXME: The abc of SdoBase
         self.sdo = SdoServer(0x600 + self.id, 0x580 + self.id, self)
         self.tpdo = TPDO(self)
         self.rpdo = RPDO(self)
@@ -43,7 +60,7 @@ class LocalNode(BaseNode):
         self.add_write_callback(self.nmt.on_write)
         self.emcy = EmcyProducer(0x80 + self.id)
 
-    def associate_network(self, network: Network):
+    def associate_network(self, network: "Network"):
         self.network = network
         self.sdo.network = network
         self.tpdo.network = network
@@ -54,20 +71,20 @@ class LocalNode(BaseNode):
         network.subscribe(0, self.nmt.on_command)
 
     def remove_network(self):
-        assert self.network  # For typing
-        self.network.unsubscribe(self.sdo.rx_cobid, self.sdo.on_request)
-        self.network.unsubscribe(0, self.nmt.on_command)
+        if self.network is not None:
+            self.network.unsubscribe(self.sdo.rx_cobid, self.sdo.on_request)
+            self.network.unsubscribe(0, self.nmt.on_command)
         self.network = None
         self.sdo.network = None
         self.tpdo.network = None
         self.rpdo.network = None
         self.nmt.network = None
-        self.emcy.network = None
+        self.emcy.network = None  # FIXME: This doesn't allow None
 
-    def add_read_callback(self, callback: TCallback):
+    def add_read_callback(self, callback: TRCallback):
         self._read_callbacks.append(callback)
 
-    def add_write_callback(self, callback: TCallback):
+    def add_write_callback(self, callback: TWCallback):
         self._write_callbacks.append(callback)
 
     def get_data(

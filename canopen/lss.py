@@ -1,4 +1,3 @@
-from __future__ import annotations
 from typing import List, Optional, TYPE_CHECKING, Tuple
 import logging
 import time
@@ -9,6 +8,8 @@ except ImportError:
     import Queue as queue  # type: ignore
 
 if TYPE_CHECKING:
+    # Repeat import to ensure the type checker understands the imports
+    import queue
     from .network import Network
 
 logger = logging.getLogger(__name__)
@@ -73,6 +74,12 @@ ListMessageNeedResponse = [
 class LssMaster:
     """The Master of Layer Setting Services"""
 
+    # Attribute types
+    network: Optional["Network"]
+    responses: queue.Queue[bytes]
+    _node_id: int
+    _data: Optional[None]
+
     LSS_TX_COBID = 0x7E5
     LSS_RX_COBID = 0x7E4
 
@@ -87,10 +94,10 @@ class LssMaster:
     RESPONSE_TIMEOUT = 0.5
 
     def __init__(self):
-        self.network: Optional[Network] = None
+        self.network = None
         self._node_id = 0
         self._data = None
-        self.responses: queue.Queue[bytes] = queue.Queue()
+        self.responses = queue.Queue()
 
     def send_switch_state_global(self, mode: int):
         """switch mode to CONFIGURATION_STATE or WAITING_STATE
@@ -140,9 +147,9 @@ class LssMaster:
         self.__send_lss_address(CS_SWITCH_STATE_SELECTIVE_PRODUCT_CODE, productCode)
         self.__send_lss_address(CS_SWITCH_STATE_SELECTIVE_REVISION_NUMBER, revisionNumber)
         response = self.__send_lss_address(CS_SWITCH_STATE_SELECTIVE_SERIAL_NUMBER, serialNumber)
-        assert response  # For typing
+        assert response is not None  # For typing
 
-        cs = struct.unpack_from("<B", response)[0]
+        cs: int = struct.unpack_from("<B", response)[0]
         if cs == CS_SWITCH_STATE_SELECTIVE_RESPONSE:
             return True
 
@@ -296,9 +303,9 @@ class LssMaster:
             recv_msg = self.__send_command(message)
         except LssError:
             return False
-        assert recv_msg  # For typing
+        assert recv_msg is not None # For typing
 
-        cs = struct.unpack_from("<B", recv_msg)[0]
+        cs: int = struct.unpack_from("<B", recv_msg)[0]
         if cs == CS_IDENTIFY_SLAVE:
                 return True
 
@@ -325,8 +332,9 @@ class LssMaster:
         message = bytearray(8)
         message[0] = CS_INQUIRE_NODE_ID
         response = self.__send_command(message)
-        assert response  # For typing
+        assert response is not None  # For typing
 
+        cs: int
         current_node_id: int
         cs, current_node_id = struct.unpack_from("<BB", response)
 
@@ -344,8 +352,9 @@ class LssMaster:
         message = bytearray(8)
         message[0] = req_cs
         response = self.__send_command(message)
-        assert response  # For typing
+        assert response is not None  # For typing
 
+        res_cs: int
         part_of_address: int
         res_cs, part_of_address = struct.unpack_from("<BI", response)
 
@@ -361,8 +370,10 @@ class LssMaster:
         message[1] = value1
         message[2] = value2
         response = self.__send_command(message)
-        assert response  # For typing
+        assert response is not None  # For typing
 
+        res_cs: int
+        error_code: int
         res_cs, error_code = struct.unpack_from("<BB", response)
 
         if res_cs != req_cs:
@@ -393,7 +404,8 @@ class LssMaster:
             logger.info("There were unexpected messages in the queue")
             self.responses = queue.Queue()
 
-        assert self.network  # For typing
+        if self.network is None:
+            raise RuntimeError("A Network is required to do send messages")
         self.network.send_message(self.LSS_TX_COBID, message)
 
         if not bool(message[0] in ListMessageNeedResponse):
