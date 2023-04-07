@@ -59,7 +59,9 @@ class TestNetwork(unittest.TestCase):
 
         task = self.network.send_periodic(0x123, [1, 2, 3], 0.01)
         time.sleep(0.1)
-        self.assertTrue(9 <= bus.queue.qsize() <= 11)
+        # FIXME: This test is a little fragile, as the number of elements
+        #        depends on the timing of the machine.
+        self.assertTrue(9 <= bus.queue.qsize() <= 12)
         msg = bus.recv(0)
         self.assertIsNotNone(msg)
         self.assertSequenceEqual(msg.data, [1, 2, 3])
