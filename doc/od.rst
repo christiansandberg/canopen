@@ -40,7 +40,7 @@ Here is an example where the entire object dictionary gets printed out::
     node = network.add_node(6, 'od.eds')
     for obj in node.object_dictionary.values():
         print('0x%X: %s' % (obj.index, obj.name))
-        if isinstance(obj, canopen.objectdictionary.Record):
+        if isinstance(obj, canopen.objectdictionary.ODRecord):
             for subobj in obj.values():
                 print('  %d: %s' % (subobj.subindex, subobj.name))
 
@@ -79,7 +79,7 @@ API
       Return a list of objects (records, arrays and variables).
 
 
-.. autoclass:: canopen.objectdictionary.Variable
+.. autoclass:: canopen.objectdictionary.ODVariable
    :members:
 
    .. describe:: len(var)
@@ -91,12 +91,12 @@ API
       Return ``True`` if the variables have the same index and subindex.
 
 
-.. autoclass:: canopen.objectdictionary.Record
+.. autoclass:: canopen.objectdictionary.ODRecord
    :members:
 
    .. describe:: record[subindex]
 
-      Return the :class:`~canopen.objectdictionary.Variable` for the specified
+      Return the :class:`~canopen.objectdictionary.ODVariable` for the specified
       subindex (as int) or name (as string).
 
    .. describe:: iter(record)
@@ -118,15 +118,15 @@ API
 
    .. method:: values()
 
-      Return a list of :class:`~canopen.objectdictionary.Variable` in the record.
+      Return a list of :class:`~canopen.objectdictionary.ODVariable` in the record.
 
 
-.. autoclass:: canopen.objectdictionary.Array
+.. autoclass:: canopen.objectdictionary.ODArray
    :members:
 
    .. describe:: array[subindex]
 
-      Return the :class:`~canopen.objectdictionary.Variable` for the specified
+      Return the :class:`~canopen.objectdictionary.ODVariable` for the specified
       subindex (as int) or name (as string).
       This will work for all subindexes between 1 and 255. If the requested
       subindex has not been specified in the object dictionary, it will be

@@ -163,25 +163,25 @@ API
        Return a list of objects (records, arrays and variables).
 
 
-.. autoclass:: canopen.sdo.Variable
+.. autoclass:: canopen.sdo.SdoVariable
     :members:
     :inherited-members:
 
     .. py:attribute:: od
 
-       The :class:`canopen.objectdictionary.Variable` associated with this object.
+       The :class:`canopen.objectdictionary.ODVariable` associated with this object.
 
 
-.. autoclass:: canopen.sdo.Record
+.. autoclass:: canopen.sdo.SdoRecord
     :members:
 
     .. py:attribute:: od
 
-       The :class:`canopen.objectdictionary.Record` associated with this object.
+       The :class:`canopen.objectdictionary.ODRecord` associated with this object.
 
     .. describe:: record[subindex]
 
-       Return the :class:`canopen.sdo.Variable` for the specified subindex
+       Return the :class:`canopen.sdo.SdoVariable` for the specified subindex
        (as int) or name (as string).
 
     .. describe:: iter(record)
@@ -199,19 +199,19 @@ API
 
     .. method:: values()
 
-       Return a list of :class:`canopen.sdo.Variable` in the record.
+       Return a list of :class:`canopen.sdo.SdoVariable` in the record.
 
 
-.. autoclass:: canopen.sdo.Array
+.. autoclass:: canopen.sdo.SdoArray
     :members:
 
     .. py:attribute:: od
 
-       The :class:`canopen.objectdictionary.Array` associated with this object.
+       The :class:`canopen.objectdictionary.ODArray` associated with this object.
 
     .. describe:: array[subindex]
 
-       Return the :class:`canopen.sdo.Variable` for the specified subindex
+       Return the :class:`canopen.sdo.SdoVariable` for the specified subindex
        (as int) or name (as string).
 
     .. describe:: iter(array)
@@ -234,7 +234,7 @@ API
 
     .. method:: values()
 
-       Return a list of :class:`canopen.sdo.Variable` in the array.
+       Return a list of :class:`canopen.sdo.SdoVariable` in the array.
        This will make a SDO read operation on subindex 0 in order to get the
        actual length of the array.
 

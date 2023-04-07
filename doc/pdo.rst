@@ -106,22 +106,22 @@ API
 
    .. describe:: map[name]
 
-      Return the :class:`canopen.pdo.Variable` for the variable specified as
+      Return the :class:`canopen.pdo.PdoVariable` for the variable specified as
       ``"Group.Variable"`` or ``"Variable"`` or as a position starting at 0.
 
    .. describe:: iter(map)
 
-      Return an iterator of the :class:`canopen.pdo.Variable` entries in the map.
+      Return an iterator of the :class:`canopen.pdo.PdoVariable` entries in the map.
 
    .. describe:: len(map)
 
       Return the number of variables in the map.
 
 
-.. autoclass:: canopen.pdo.Variable
+.. autoclass:: canopen.pdo.PdoVariable
    :members:
    :inherited-members:
 
    .. py:attribute:: od
 
-      The :class:`canopen.objectdictionary.Variable` associated with this object.
+      The :class:`canopen.objectdictionary.ODVariable` associated with this object.

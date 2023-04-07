@@ -103,7 +103,7 @@ class ObjectDictionary(MutableMapping):
 
     def __getitem__(
         self, index: Union[int, str]
-    ) -> Union["Array", "Record", "Variable"]:
+    ) -> Union["ODArray", "ODRecord", "ODVariable"]:
         """Get object from object dictionary by name or index."""
         item = self.names.get(index) or self.indices.get(index)
         if item is None:
@@ -112,7 +112,7 @@ class ObjectDictionary(MutableMapping):
         return item
 
     def __setitem__(
-        self, index: Union[int, str], obj: Union["Array", "Record", "Variable"]
+        self, index: Union[int, str], obj: Union["ODArray", "ODRecord", "ODVariable"]
     ):
         assert index == obj.index or index == obj.name
         self.add_object(obj)
@@ -131,14 +131,14 @@ class ObjectDictionary(MutableMapping):
     def __contains__(self, index: Union[int, str]):
         return index in self.names or index in self.indices
 
-    def add_object(self, obj: Union["Array", "Record", "Variable"]) -> None:
+    def add_object(self, obj: Union["ODArray", "ODRecord", "ODVariable"]) -> None:
         """Add object to the object dictionary.
 
         :param obj:
             Should be either one of
-            :class:`~canopen.objectdictionary.Variable`,
-            :class:`~canopen.objectdictionary.Record`, or
-            :class:`~canopen.objectdictionary.Array`.
+            :class:`~canopen.objectdictionary.ODVariable`,
+            :class:`~canopen.objectdictionary.ODRecord`, or
+            :class:`~canopen.objectdictionary.ODArray`.
         """
         obj.parent = self
         self.indices[obj.index] = obj
@@ -146,20 +146,20 @@ class ObjectDictionary(MutableMapping):
 
     def get_variable(
         self, index: Union[int, str], subindex: int = 0
-    ) -> Optional["Variable"]:
+    ) -> Optional["ODVariable"]:
         """Get the variable object at specified index (and subindex if applicable).
 
-        :return: Variable if found, else `None`
+        :return: ODVariable if found, else `None`
         """
         obj = self.get(index)
-        if isinstance(obj, Variable):
+        if isinstance(obj, ODVariable):
             return obj
-        elif isinstance(obj, (Record, Array)):
+        elif isinstance(obj, (ODRecord, ODArray)):
             return obj.get(subindex)
 
 
-class Record(MutableMapping):
-    """Groups multiple :class:`~canopen.objectdictionary.Variable` objects using
+class ODRecord(MutableMapping):
+    """Groups multiple :class:`~canopen.objectdictionary.ODVariable` objects using
     subindices.
     """
 
@@ -178,13 +178,13 @@ class Record(MutableMapping):
         self.subindices = {}
         self.names = {}
 
-    def __getitem__(self, subindex: Union[int, str]) -> "Variable":
+    def __getitem__(self, subindex: Union[int, str]) -> "ODVariable":
         item = self.names.get(subindex) or self.subindices.get(subindex)
         if item is None:
             raise KeyError("Subindex %s was not found" % subindex)
         return item
 
-    def __setitem__(self, subindex: Union[int, str], var: "Variable"):
+    def __setitem__(self, subindex: Union[int, str], var: "ODVariable"):
         assert subindex == var.subindex
         self.add_member(var)
 
@@ -202,18 +202,18 @@ class Record(MutableMapping):
     def __contains__(self, subindex: Union[int, str]) -> bool:
         return subindex in self.names or subindex in self.subindices
 
-    def __eq__(self, other: "Record") -> bool:
+    def __eq__(self, other: "ODRecord") -> bool:
         return self.index == other.index
 
-    def add_member(self, variable: "Variable") -> None:
-        """Adds a :class:`~canopen.objectdictionary.Variable` to the record."""
+    def add_member(self, variable: "ODVariable") -> None:
+        """Adds a :class:`~canopen.objectdictionary.ODVariable` to the record."""
         variable.parent = self
         self.subindices[variable.subindex] = variable
         self.names[variable.name] = variable
 
 
-class Array(Mapping):
-    """An array of :class:`~canopen.objectdictionary.Variable` objects using
+class ODArray(Mapping):
+    """An array of :class:`~canopen.objectdictionary.ODVariable` objects using
     subindices.
 
     Actual length of array must be read from the node using SDO.
@@ -234,7 +234,7 @@ class Array(Mapping):
         self.subindices = {}
         self.names = {}
 
-    def __getitem__(self, subindex: Union[int, str]) -> "Variable":
+    def __getitem__(self, subindex: Union[int, str]) -> "ODVariable":
         var = self.names.get(subindex) or self.subindices.get(subindex)
         if var is not None:
             # This subindex is defined
@@ -243,7 +243,7 @@ class Array(Mapping):
             # Create a new variable based on first array item
             template = self.subindices[1]
             name = "%s_%x" % (template.name, subindex)
-            var = Variable(name, self.index, subindex)
+            var = ODVariable(name, self.index, subindex)
             var.parent = self
             for attr in ("data_type", "unit", "factor", "min", "max", "default",
                          "access_type", "description", "value_descriptions",
@@ -260,17 +260,17 @@ class Array(Mapping):
     def __iter__(self) -> Iterable[int]:
         return iter(sorted(self.subindices))
 
-    def __eq__(self, other: "Array") -> bool:
+    def __eq__(self, other: "ODArray") -> bool:
         return self.index == other.index
 
-    def add_member(self, variable: "Variable") -> None:
-        """Adds a :class:`~canopen.objectdictionary.Variable` to the record."""
+    def add_member(self, variable: "ODVariable") -> None:
+        """Adds a :class:`~canopen.objectdictionary.ODVariable` to the record."""
         variable.parent = self
         self.subindices[variable.subindex] = variable
         self.names[variable.name] = variable
 
 
-class Variable:
+class ODVariable:
     """Simple variable."""
 
     STRUCT_TYPES = {
@@ -289,8 +289,8 @@ class Variable:
 
     def __init__(self, name: str, index: int, subindex: int = 0):
         #: The :class:`~canopen.ObjectDictionary`,
-        #: :class:`~canopen.objectdictionary.Record` or
-        #: :class:`~canopen.objectdictionary.Array` owning the variable
+        #: :class:`~canopen.objectdictionary.ODRecord` or
+        #: :class:`~canopen.objectdictionary.ODArray` owning the variable
         self.parent = None
         #: 16-bit address of the object in the dictionary
         self.index = index
@@ -328,7 +328,7 @@ class Variable:
         self.pdo_mappable = False
 
 
-    def __eq__(self, other: "Variable") -> bool:
+    def __eq__(self, other: "ODVariable") -> bool:
         return (self.index == other.index and
                 self.subindex == other.subindex)
 
@@ -486,3 +486,9 @@ class DeviceInformation:
 
 class ObjectDictionaryError(Exception):
     """Unsupported operation with the current Object Dictionary."""
+
+
+# Compatibility for old names
+Record = ODRecord
+Array = ODArray
+Variable = ODVariable

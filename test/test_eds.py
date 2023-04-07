@@ -21,7 +21,7 @@ class TestEDS(unittest.TestCase):
 
     def test_variable(self):
         var = self.od['Producer heartbeat time']
-        self.assertIsInstance(var, canopen.objectdictionary.Variable)
+        self.assertIsInstance(var, canopen.objectdictionary.ODVariable)
         self.assertEqual(var.index, 0x1017)
         self.assertEqual(var.subindex, 0)
         self.assertEqual(var.name, 'Producer heartbeat time')
@@ -37,12 +37,12 @@ class TestEDS(unittest.TestCase):
 
     def test_record(self):
         record = self.od['Identity object']
-        self.assertIsInstance(record, canopen.objectdictionary.Record)
+        self.assertIsInstance(record, canopen.objectdictionary.ODRecord)
         self.assertEqual(len(record), 5)
         self.assertEqual(record.index, 0x1018)
         self.assertEqual(record.name, 'Identity object')
         var = record['Vendor-ID']
-        self.assertIsInstance(var, canopen.objectdictionary.Variable)
+        self.assertIsInstance(var, canopen.objectdictionary.ODVariable)
         self.assertEqual(var.name, 'Vendor-ID')
         self.assertEqual(var.index, 0x1018)
         self.assertEqual(var.subindex, 1)
@@ -65,11 +65,11 @@ class TestEDS(unittest.TestCase):
 
     def test_array_compact_subobj(self):
         array = self.od[0x1003]
-        self.assertIsInstance(array, canopen.objectdictionary.Array)
+        self.assertIsInstance(array, canopen.objectdictionary.ODArray)
         self.assertEqual(array.index, 0x1003)
         self.assertEqual(array.name, 'Pre-defined error field')
         var = array[5]
-        self.assertIsInstance(var, canopen.objectdictionary.Variable)
+        self.assertIsInstance(var, canopen.objectdictionary.ODVariable)
         self.assertEqual(var.name, 'Pre-defined error field_5')
         self.assertEqual(var.index, 0x1003)
         self.assertEqual(var.subindex, 5)
@@ -100,7 +100,7 @@ class TestEDS(unittest.TestCase):
 
     def test_dummy_variable(self):
         var = self.od['Dummy0003']
-        self.assertIsInstance(var, canopen.objectdictionary.Variable)
+        self.assertIsInstance(var, canopen.objectdictionary.ODVariable)
         self.assertEqual(var.index, 0x0003)
         self.assertEqual(var.subindex, 0)
         self.assertEqual(var.name, 'Dummy0003')
@@ -145,7 +145,7 @@ class TestEDS(unittest.TestCase):
                     self.assertEqual(type(actual_object), type(expected_object))
                     self.assertEqual(actual_object.name, expected_object.name)
 
-                    if isinstance(actual_object, canopen.objectdictionary.Variable):
+                    if isinstance(actual_object, canopen.objectdictionary.ODVariable):
                         expected_vars = [expected_object]
                         actual_vars = [actual_object]
                     else:

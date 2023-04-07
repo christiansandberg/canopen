@@ -1,8 +1,11 @@
-from .base import PdoBase, Maps, Map, Variable
+from .base import PdoBase, Maps, Map, PdoVariable
 
 import logging
 import itertools
 import canopen
+
+# Compatibility
+from .base import Variable
 
 logger = logging.getLogger(__name__)
 

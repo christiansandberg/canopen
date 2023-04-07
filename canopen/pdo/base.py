@@ -180,7 +180,7 @@ class Map:
         #: Ignores SYNC objects up to this SYNC counter value (optional)
         self.sync_start_value: Optional[int] = None
         #: List of variables mapped to this PDO
-        self.map: List["Variable"] = []
+        self.map: List["PdoVariable"] = []
         self.length: int = 0
         #: Current message data
         self.data = bytearray()
@@ -214,7 +214,7 @@ class Map:
         raise KeyError('{0} not found in map. Valid entries are {1}'.format(
             value, ', '.join(valid_values)))
 
-    def __getitem__(self, key: Union[int, str]) -> "Variable":
+    def __getitem__(self, key: Union[int, str]) -> "PdoVariable":
         var = None
         if isinstance(key, int):
             # there is a maximum available of 8 slots per PDO map
@@ -229,7 +229,7 @@ class Map:
                 var = self.__getitem_by_name(key)
         return var
 
-    def __iter__(self) -> Iterable["Variable"]:
+    def __iter__(self) -> Iterable["PdoVariable"]:
         return iter(self.map)
 
     def __len__(self) -> int:
@@ -237,9 +237,9 @@ class Map:
 
     def _get_variable(self, index, subindex):
         obj = self.pdo_node.node.object_dictionary[index]
-        if isinstance(obj, (objectdictionary.Record, objectdictionary.Array)):
+        if isinstance(obj, (objectdictionary.ODRecord, objectdictionary.ODArray)):
             obj = obj[subindex]
-        var = Variable(obj)
+        var = PdoVariable(obj)
         var.pdo_parent = self
         return var
 
@@ -248,8 +248,8 @@ class Map:
         logger.info("Filling up fixed-length mapping array")
         while len(self.map) < needed:
             # Generate a dummy mapping for an invalid object with zero length.
-            obj = objectdictionary.Variable('Dummy', 0, 0)
-            var = Variable(obj)
+            obj = objectdictionary.ODVariable('Dummy', 0, 0)
+            var = PdoVariable(obj)
             var.length = 0
             self.map.append(var)
 
@@ -440,13 +440,13 @@ class Map:
         index: Union[str, int],
         subindex: Union[str, int] = 0,
         length: Optional[int] = None,
-    ) -> "Variable":
+    ) -> "PdoVariable":
         """Add a variable from object dictionary as the next entry.
 
         :param index: Index of variable as name or number
         :param subindex: Sub-index of variable as name or number
         :param length: Size of data in number of bits
-        :return: Variable that was added
+        :return: PdoVariable that was added
         """
         try:
             var = self._get_variable(index, subindex)
@@ -528,11 +528,11 @@ class Map:
         return self.timestamp if self.is_received else None
 
 
-class Variable(variable.Variable):
+class PdoVariable(variable.Variable):
     """One object dictionary variable mapped to a PDO."""
 
-    def __init__(self, od: objectdictionary.Variable):
-        #: PDO object that is associated with this Variable Object
+    def __init__(self, od: objectdictionary.ODVariable):
+        #: PDO object that is associated with this ODVariable Object
         self.pdo_parent = None
         #: Location of variable in the message in bits
         self.offset = None
@@ -542,7 +542,7 @@ class Variable(variable.Variable):
     def get_data(self) -> bytes:
         """Reads the PDO variable from the last received message.
 
-        :return: Variable value as :class:`bytes`.
+        :return: PdoVariable value as :class:`bytes`.
         """
         byte_offset, bit_offset = divmod(self.offset, 8)
 
@@ -598,3 +598,7 @@ class Variable(variable.Variable):
             self.pdo_parent.data[byte_offset:byte_offset + len(data)] = data
 
         self.pdo_parent.update()
+
+
+# For compatibility
+Variable = PdoVariable
