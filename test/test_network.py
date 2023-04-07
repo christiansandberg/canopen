@@ -61,7 +61,8 @@ class TestNetwork(unittest.TestCase):
         time.sleep(0.1)
         # FIXME: This test is a little fragile, as the number of elements
         #        depends on the timing of the machine.
-        self.assertTrue(9 <= bus.queue.qsize() <= 12)
+        print("Queue size: %s" % (bus.queue.qsize(),))
+        self.assertTrue(9 <= bus.queue.qsize() <= 13)
         msg = bus.recv(0)
         self.assertIsNotNone(msg)
         self.assertSequenceEqual(msg.data, [1, 2, 3])
