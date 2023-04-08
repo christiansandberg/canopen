@@ -50,10 +50,10 @@ class PdoBase(Mapping):
     def __len__(self):
         return len(self.map)
 
-    def read(self):
+    def read(self, from_od=False):
         """Read PDO configuration from node using SDO."""
         for pdo_map in self.map.values():
-            pdo_map.read()
+            pdo_map.read(from_od=from_od)
 
     def save(self):
         """Save PDO configuration to node using SDO."""
@@ -313,43 +313,49 @@ class Map:
         """
         self.callbacks.append(callback)
 
-    def read(self) -> None:
+    def read(self, from_od=False) -> None:
         """Read PDO configuration for this map using SDO."""
-        cob_id = self.com_record[1].raw
+
+        def _raw_from(param):
+            if from_od:
+                return param.od.default
+            return param.raw
+
+        cob_id = _raw_from(self.com_record[1])
         self.cob_id = cob_id & 0x1FFFFFFF
         logger.info("COB-ID is 0x%X", self.cob_id)
         self.enabled = cob_id & PDO_NOT_VALID == 0
         logger.info("PDO is %s", "enabled" if self.enabled else "disabled")
         self.rtr_allowed = cob_id & RTR_NOT_ALLOWED == 0
         logger.info("RTR is %s", "allowed" if self.rtr_allowed else "not allowed")
-        self.trans_type = self.com_record[2].raw
+        self.trans_type = _raw_from(self.com_record[2])
         logger.info("Transmission type is %d", self.trans_type)
         if self.trans_type >= 254:
             try:
-                self.inhibit_time = self.com_record[3].raw
+                self.inhibit_time = _raw_from(self.com_record[3])
             except (KeyError, SdoAbortedError) as e:
                 logger.info("Could not read inhibit time (%s)", e)
             else:
                 logger.info("Inhibit time is set to %d ms", self.inhibit_time)
 
             try:
-                self.event_timer = self.com_record[5].raw
+                self.event_timer = _raw_from(self.com_record[5])
             except (KeyError, SdoAbortedError) as e:
                 logger.info("Could not read event timer (%s)", e)
             else:
                 logger.info("Event timer is set to %d ms", self.event_timer)
 
             try:
-                self.sync_start_value = self.com_record[6].raw
+                self.sync_start_value = _raw_from(self.com_record[6])
             except (KeyError, SdoAbortedError) as e:
                 logger.info("Could not read SYNC start value (%s)", e)
             else:
                 logger.info("SYNC start value is set to %d ms", self.sync_start_value)
 
         self.clear()
-        nof_entries = self.map_array[0].raw
+        nof_entries = _raw_from(self.map_array[0])
         for subindex in range(1, nof_entries + 1):
-            value = self.map_array[subindex].raw
+            value = _raw_from(self.map_array[subindex])
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
