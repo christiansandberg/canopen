@@ -269,6 +269,9 @@ class Network(MutableMapping):
 
     def __setitem__(self, node_id: int, node: Union[RemoteNode, LocalNode]):
         assert node_id == node.id
+        if node_id in self.nodes:
+            # Remove old callbacks
+            self.nodes[node_id].remove_network()
         self.nodes[node_id] = node
         node.associate_network(self)
 
