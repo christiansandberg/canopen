@@ -122,12 +122,15 @@ class TestEDS(unittest.TestCase):
 
     def test_export_eds(self):
         import tempfile
-        for doctype in {"eds", "dcf"}:
-            with tempfile.NamedTemporaryFile(suffix="." + doctype, mode="w+") as tempeds:
-                print("exporting %s to " % doctype + tempeds.name)
-                canopen.export_od(self.od, tempeds, doc_type=doctype)
-                tempeds.flush()
-                exported_od = canopen.import_od(tempeds.name)
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as tempdir:
+            for doctype in {"eds", "dcf"}:
+                tempfile = str(Path(tempdir, "test." + doctype))
+                with open(tempfile, "w+") as tempeds:
+                    print("exporting %s to " % doctype + tempeds.name)
+                    canopen.export_od(self.od, tempeds, doc_type=doctype)
+
+                exported_od = canopen.import_od(tempfile)
 
                 for index in exported_od:
                     self.assertIn(exported_od[index].name, self.od)
