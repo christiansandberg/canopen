@@ -1,30 +1,30 @@
 from typing import IO, Union
 import logging
-
 try:
     import xml.etree.cElementTree as etree
 except ImportError:
     import xml.etree.ElementTree as etree  # type: ignore
 
 from canopen import objectdictionary
+from canopen.objectdictionary import ObjectDictionary, datatypes
 
 logger = logging.getLogger(__name__)
 
 DATA_TYPES = {
-    "BOOLEAN": objectdictionary.BOOLEAN,
-    "INTEGER8": objectdictionary.INTEGER8,
-    "INTEGER16": objectdictionary.INTEGER16,
-    "INTEGER32": objectdictionary.INTEGER32,
-    "UNSIGNED8": objectdictionary.UNSIGNED8,
-    "UNSIGNED16": objectdictionary.UNSIGNED16,
-    "UNSIGNED32": objectdictionary.UNSIGNED32,
-    "REAL32": objectdictionary.REAL32,
-    "VISIBLE_STRING": objectdictionary.VISIBLE_STRING,
-    "DOMAIN": objectdictionary.DOMAIN
+    "BOOLEAN": datatypes.BOOLEAN,
+    "INTEGER8": datatypes.INTEGER8,
+    "INTEGER16": datatypes.INTEGER16,
+    "INTEGER32": datatypes.INTEGER32,
+    "UNSIGNED8": datatypes.UNSIGNED8,
+    "UNSIGNED16": datatypes.UNSIGNED16,
+    "UNSIGNED32": datatypes.UNSIGNED32,
+    "REAL32": datatypes.REAL32,
+    "VISIBLE_STRING": datatypes.VISIBLE_STRING,
+    "DOMAIN": datatypes.DOMAIN
 }
 
 
-def import_epf(epf: Union[str, IO, etree.Element]) -> objectdictionary.ObjectDictionary:
+def import_epf(epf: Union[str, IO, etree.Element]) -> ObjectDictionary:
     """Import an EPF file.
 
     :param epf:
@@ -35,7 +35,7 @@ def import_epf(epf: Union[str, IO, etree.Element]) -> objectdictionary.ObjectDic
         The Object Dictionary.
     :rtype: canopen.ObjectDictionary
     """
-    od = objectdictionary.ObjectDictionary()
+    od = ObjectDictionary()
     if etree.iselement(epf):
         tree = epf
     else:

@@ -10,7 +10,7 @@ except ImportError:
 if TYPE_CHECKING:
     # Repeat import to ensure the type checker understands the imports
     import queue
-    from .network import Network
+    from canopen.network import Network
 
 logger = logging.getLogger(__name__)
 

@@ -1,18 +1,16 @@
-from typing import Optional, Union, TextIO, TYPE_CHECKING, List
+from typing import Optional, TYPE_CHECKING, List
 import logging
 
-from .. import sdo
-from ..sdo import SdoClient
-from ..nmt import NmtMaster
-from ..emcy import EmcyConsumer
-from ..pdo import TPDO, RPDO, PDO
-from .base import BaseNode
-
-import canopen
+from canopen import sdo
+from canopen.sdo import SdoClient
+from canopen.nmt import NmtMaster
+from canopen.emcy import EmcyConsumer
+from canopen.pdo import TPDO, RPDO, PDO
+from canopen.node.base import BaseNode
 from canopen import objectdictionary
 
 if TYPE_CHECKING:
-    from ..network import Network
+    from canopen.network import Network
 
 logger = logging.getLogger(__name__)
 
@@ -154,9 +152,9 @@ class RemoteNode(BaseNode):
                     index=index,
                     name=name,
                     value=value)))
-        except canopen.SdoCommunicationError as e:
+        except sdo.SdoCommunicationError as e:
             logger.warning(str(e))
-        except canopen.SdoAbortedError as e:
+        except sdo.SdoAbortedError as e:
             # WORKAROUND for broken implementations: the SDO is set but the error
             # "Attempt to write a read-only object" is raised any way.
             if e.code != 0x06010002:

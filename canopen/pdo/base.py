@@ -3,23 +3,23 @@ import threading
 import math
 import logging
 import binascii
-
 try:
     from collections.abc import Mapping
 except ImportError:
     from collections import Mapping  # type: ignore
 
-from ..sdo import SdoAbortedError
-from .. import objectdictionary
-from .. import variable
+from canopen.sdo import SdoAbortedError
+from canopen import objectdictionary
+from canopen import variable
 
 if TYPE_CHECKING:
     # The type checker doesn't like the conditional import above, so lets import
     # it for the type checker
     from collections.abc import Mapping
-    from ..network import Network, PeriodicMessageTask
-    from ..node.base import BaseNode
-    from ..node import RemoteNode
+
+    from canopen.network import Network, PeriodicMessageTask
+    from canopen.node.base import BaseNode
+    from canopen.node import RemoteNode
 
 TCallback = Callable[["Map"], None]
 

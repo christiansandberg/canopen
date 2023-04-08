@@ -4,11 +4,11 @@ import logging
 import struct
 import time
 
-from . import variable
+from canopen import variable
 
 if TYPE_CHECKING:
-    from .node import LocalNode
-    from .network import Network, PeriodicMessageTask
+    from canopen.node import LocalNode
+    from canopen.network import Network, PeriodicMessageTask
 
 TCallback = Callable[[int], None]
 

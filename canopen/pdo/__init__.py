@@ -1,12 +1,11 @@
 from typing import TYPE_CHECKING, Dict
-
 import logging
-import canopen
 
-from .base import PdoBase, Map, Maps
+import canopen
+from canopen.pdo.base import PdoBase, Map, Maps
 
 if TYPE_CHECKING:
-    from ..node.base import BaseNode
+    from canopen.node.base import BaseNode
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +75,7 @@ class TPDO(PdoBase):
         :raise TypeError: Exception is thrown if the node associated with the PDO does not
         support this function.
         """
-        if isinstance(canopen.LocalNode, type(self.node)):
+        if isinstance(self.node, canopen.LocalNode):
             for pdo in self.map.values():
                 pdo.stop()
         else:

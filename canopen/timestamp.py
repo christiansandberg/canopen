@@ -3,7 +3,7 @@ import time
 import struct
 
 if TYPE_CHECKING:
-    from .network import Network
+    from canopen.network import Network
 
 
 # 1 Jan 1984

@@ -3,13 +3,12 @@ from typing import Dict, TYPE_CHECKING, Tuple
 import logging
 import time
 
-from ..node import RemoteNode
-from ..sdo import SdoCommunicationError
-from ..pdo import base as pdobase
+from canopen.node import RemoteNode
+from canopen.sdo import SdoCommunicationError
+from canopen.pdo import base as pdobase
 
 if TYPE_CHECKING:
     from canopen import variable
-    from canopen.pdo.base import Variable
 
 logger = logging.getLogger(__name__)
 

@@ -5,7 +5,7 @@ import threading
 import time
 
 if TYPE_CHECKING:
-    from .network import Network
+    from canopen.network import Network
 
 TCallback = Callable[["EmcyError"], None]
 

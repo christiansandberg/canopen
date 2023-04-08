@@ -5,8 +5,8 @@ try:
 except ImportError:
     from collections import Mapping  # type: ignore
 
-from . import objectdictionary
-from .objectdictionary import TPhys, TRaw
+from canopen import objectdictionary
+from canopen.objectdictionary import TPhys, TRaw
 
 if TYPE_CHECKING:
     # Repeat import to ensure the type checker understands the imports

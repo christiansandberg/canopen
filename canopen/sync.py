@@ -1,7 +1,7 @@
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .network import Network, PeriodicMessageTask
+    from canopen.network import Network, PeriodicMessageTask
 
 
 class SyncProducer:

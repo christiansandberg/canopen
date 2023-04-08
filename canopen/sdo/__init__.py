@@ -1,7 +1,7 @@
-from .base import Variable, Record, Array
-from .client import SdoClient
-from .server import SdoServer
-from .exceptions import SdoAbortedError, SdoCommunicationError
+from canopen.sdo.base import Variable, Record, Array
+from canopen.sdo.client import SdoClient
+from canopen.sdo.server import SdoServer
+from canopen.sdo.exceptions import SdoAbortedError, SdoCommunicationError
 
 __all__ = [
     "Variable",

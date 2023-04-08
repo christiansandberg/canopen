@@ -8,13 +8,12 @@ try:
 except ImportError:
     import Queue as queue  # type: ignore
 
-from ..network import CanError
-from .. import objectdictionary
-from ..objectdictionary import ObjectDictionary
-
-from .base import SdoBase, SdoIO, CrcXmodem
-from .constants import *
-from .exceptions import *
+from canopen.network import CanError
+from canopen import objectdictionary
+from canopen.objectdictionary import ObjectDictionary
+from canopen.sdo.base import SdoBase, SdoIO, CrcXmodem
+from canopen.sdo.constants import *
+from canopen.sdo.exceptions import *
 
 if TYPE_CHECKING:
     # Repeat import to ensure the type checker understands the imports

@@ -1,7 +1,6 @@
 from typing import Callable, Dict, Iterable, Iterator, List, Optional, Union, TYPE_CHECKING
 import logging
 import threading
-
 try:
     from collections.abc import MutableMapping
 except ImportError:
@@ -32,13 +31,13 @@ else:
         class Listener:
             """ Dummy listener """
 
-from .node import RemoteNode, LocalNode, BaseNode
-from .sync import SyncProducer
-from .timestamp import TimeProducer
-from .nmt import NmtMaster
-from .lss import LssMaster
-from .objectdictionary.eds import import_from_node
-from .objectdictionary import TObjectDictionary
+from canopen.node import RemoteNode, LocalNode, BaseNode
+from canopen.sync import SyncProducer
+from canopen.timestamp import TimeProducer
+from canopen.nmt import NmtMaster
+from canopen.lss import LssMaster
+from canopen.objectdictionary.eds import import_from_node
+from canopen.objectdictionary import TObjectDictionary
 
 logger = logging.getLogger(__name__)
 
@@ -287,6 +286,9 @@ class Network(MutableMapping[int, BaseNode]):
 
     def __setitem__(self, node_id: int, node: BaseNode):
         assert node_id == node.id
+        if node_id in self.nodes:
+            # Remove old callbacks
+            self.nodes[node_id].remove_network()
         self.nodes[node_id] = node
         node.associate_network(self)
 

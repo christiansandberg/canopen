@@ -1,15 +1,15 @@
 from typing import Optional, TYPE_CHECKING
 from abc import ABC, abstractmethod
 
-from .. import objectdictionary
-from ..objectdictionary import ObjectDictionary, TObjectDictionary
+from canopen import objectdictionary
+from canopen.objectdictionary import ObjectDictionary, TObjectDictionary
 
 if TYPE_CHECKING:
-    from ..network import Network
-    from ..sdo.base import SdoBase
-    from ..nmt import NmtBase
-    from ..emcy import EmcyBase
-    from ..pdo import TPDO, RPDO
+    from canopen.network import Network
+    from canopen.sdo.base import SdoBase
+    from canopen.nmt import NmtBase
+    from canopen.emcy import EmcyBase
+    from canopen.pdo import TPDO, RPDO
 
 
 class BaseNode(ABC):

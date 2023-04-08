@@ -1,15 +1,15 @@
 from typing import Dict, List, Optional, TYPE_CHECKING, Protocol
 import logging
 
-from .base import BaseNode
-from ..sdo import SdoServer, SdoAbortedError
-from ..pdo import PDO, TPDO, RPDO
-from ..nmt import NmtSlave
-from ..emcy import EmcyProducer
-from .. import objectdictionary
+from canopen.node.base import BaseNode
+from canopen.sdo import SdoServer, SdoAbortedError
+from canopen.pdo import PDO, TPDO, RPDO
+from canopen.nmt import NmtSlave
+from canopen.emcy import EmcyProducer
+from canopen import objectdictionary
 
 if TYPE_CHECKING:
-    from ..network import Network
+    from canopen.network import Network
 
 logger = logging.getLogger(__name__)
 

@@ -6,14 +6,14 @@ try:
 except ImportError:
     from collections import Mapping  # type: ignore
 
-from ..objectdictionary import ObjectDictionary
-from .. import objectdictionary
-from .. import variable
+from canopen.objectdictionary import ObjectDictionary
+from canopen import objectdictionary
+from canopen import variable
 
 if TYPE_CHECKING:
     # Repeat import to ensure the type checker understands the imports
     from collections.abc import Mapping
-    from ..network import Network
+    from canopen.network import Network
 
 
 class CrcXmodem:

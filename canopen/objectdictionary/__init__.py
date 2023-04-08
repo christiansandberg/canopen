@@ -4,13 +4,12 @@ Object Dictionary module
 from typing import Dict, Iterator, List, Optional, Set, TextIO, Union, TYPE_CHECKING, cast
 import struct
 import logging
-
 try:
     from collections.abc import MutableMapping, Mapping
 except ImportError:
     from collections import MutableMapping, Mapping  # type: ignore
 
-from .datatypes import *
+from canopen.objectdictionary.datatypes import *
 
 if TYPE_CHECKING:
     # Repeat import to ensure the type checker understands the imports
@@ -56,10 +55,10 @@ def export_od(od: "ObjectDictionary", dest: Union[str, TextIO, None] = None,
     assert doc_type in doctypes
 
     if doc_type == "eds":
-        from . import eds
+        from canopen.objectdictionary import eds
         return eds.export_eds(od, dest)
     elif doc_type == "dcf":
-        from . import eds
+        from canopen.objectdictionary import eds
         return eds.export_dcf(od, dest)
 
     # If dest is opened in this fn, it should be closed
@@ -95,10 +94,10 @@ def import_od(
         filename = cast(str, source)
     suffix = filename[filename.rfind("."):].lower()
     if suffix in (".eds", ".dcf"):
-        from . import eds
+        from canopen.objectdictionary import eds
         return eds.import_eds(source, node_id)
     elif suffix == ".epf":
-        from . import epf
+        from canopen.objectdictionary import epf
         return epf.import_epf(source)
     else:
         raise NotImplementedError("No support for this format")

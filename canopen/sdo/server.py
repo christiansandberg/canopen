@@ -2,12 +2,12 @@ from typing import TYPE_CHECKING, Optional, Union
 import logging
 import struct
 
-from .base import SdoBase
-from .constants import *
-from .exceptions import *
+from canopen.sdo.base import SdoBase
+from canopen.sdo.constants import *
+from canopen.sdo.exceptions import *
 
 if TYPE_CHECKING:
-    from ..node.local import LocalNode
+    from canopen.node.local import LocalNode
 
 logger = logging.getLogger(__name__)
 
