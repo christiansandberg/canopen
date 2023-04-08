@@ -8,9 +8,9 @@ except ImportError:
 import logging
 import binascii
 
-from ..sdo import SdoAbortedError
-from .. import objectdictionary
-from .. import variable
+from canopen.sdo import SdoAbortedError
+from canopen import objectdictionary
+from canopen import variable
 
 PDO_NOT_VALID = 1 << 31
 RTR_NOT_ALLOWED = 1 << 30
@@ -156,7 +156,7 @@ class Maps(Mapping):
         return len(self.maps)
 
 
-class Map(object):
+class Map:
     """One message which can have up to 8 bytes of variables mapped."""
 
     def __init__(self, pdo_node, com_record, map_array):

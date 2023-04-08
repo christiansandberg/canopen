@@ -1,8 +1,7 @@
-from .base import PdoBase, Maps, Map, Variable
-
 import logging
-import itertools
-import canopen
+
+from canopen import node
+from canopen.pdo.base import PdoBase, Maps, Map, Variable
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +44,7 @@ class RPDO(PdoBase):
         :raise TypeError: Exception is thrown if the node associated with the PDO does not
         support this function.
         """
-        if isinstance(self.node, canopen.RemoteNode):
+        if isinstance(self.node, node.RemoteNode):
             for pdo in self.map.values():
                 pdo.stop()
         else:
@@ -70,7 +69,7 @@ class TPDO(PdoBase):
         :raise TypeError: Exception is thrown if the node associated with the PDO does not
         support this function.
         """
-        if isinstance(canopen.LocalNode, self.node):
+        if isinstance(self.node, node.LocalNode):
             for pdo in self.map.values():
                 pdo.stop()
         else:

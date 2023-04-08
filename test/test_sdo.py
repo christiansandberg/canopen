@@ -110,10 +110,9 @@ class TestSDO(unittest.TestCase):
             (RX, b'\xa1\x00\x00\x00\x00\x00\x00\x00')
         ]
         data = b'A really really long string...'
-        fp = self.network[2].sdo['Writable string'].open(
-            'wb', size=len(data), block_transfer=True)
-        fp.write(data)
-        fp.close()
+        with self.network[2].sdo['Writable string'].open(
+            'wb', size=len(data), block_transfer=True) as fp:
+            fp.write(data)
 
     def test_block_upload(self):
         self.data = [
@@ -128,9 +127,8 @@ class TestSDO(unittest.TestCase):
             (RX, b'\xc9\x40\xe1\x00\x00\x00\x00\x00'),
             (TX, b'\xa1\x00\x00\x00\x00\x00\x00\x00')
         ]
-        fp = self.network[2].sdo[0x1008].open('r', block_transfer=True)
-        data = fp.read()
-        fp.close()
+        with self.network[2].sdo[0x1008].open('r', block_transfer=True) as fp:
+            data = fp.read()
         self.assertEqual(data, 'Tiny Node - Mega Domains !')
 
     def test_writable_file(self):
@@ -144,10 +142,9 @@ class TestSDO(unittest.TestCase):
             (TX, b'\x0f\x00\x00\x00\x00\x00\x00\x00'),
             (RX, b'\x20\x00\x20\x00\x00\x00\x00\x00')
         ]
-        fp = self.network[2].sdo['Writable string'].open('wb')
-        fp.write(b'1234')
-        fp.write(b'56789')
-        fp.close()
+        with self.network[2].sdo['Writable string'].open('wb') as fp:
+            fp.write(b'1234')
+            fp.write(b'56789')
         self.assertTrue(fp.closed)
         # Write on closed file
         with self.assertRaises(ValueError):

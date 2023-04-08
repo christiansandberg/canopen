@@ -9,7 +9,7 @@ except ImportError:
     from collections import MutableMapping, Mapping
 import logging
 
-from .datatypes import *
+from canopen.objectdictionary.datatypes import *
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def export_od(od, dest:Union[str,TextIO,None]=None, doc_type:Optional[str]=None)
     """
 
     doctypes = {"eds", "dcf"}
-    if type(dest) is str:
+    if isinstance(dest, str):
         if doc_type is None:
             for t in doctypes:
                 if dest.endswith(f".{t}"):
@@ -42,11 +42,15 @@ def export_od(od, dest:Union[str,TextIO,None]=None, doc_type:Optional[str]=None)
     assert doc_type in doctypes
 
     if doc_type == "eds":
-        from . import eds
+        from canopen.objectdictionary import eds
         return eds.export_eds(od, dest)
     elif doc_type == "dcf":
-        from . import eds
+        from canopen.objectdictionary import eds
         return eds.export_dcf(od, dest)
+
+    # If dest is opened in this fn, it should be closed
+    if type(dest) is str:
+        dest.close()
 
 
 def import_od(
@@ -74,10 +78,10 @@ def import_od(
         filename = source
     suffix = filename[filename.rfind("."):].lower()
     if suffix in (".eds", ".dcf"):
-        from . import eds
+        from canopen.objectdictionary import eds
         return eds.import_eds(source, node_id)
     elif suffix == ".epf":
-        from . import epf
+        from canopen.objectdictionary import epf
         return epf.import_epf(source)
     else:
         raise NotImplementedError("No support for this format")
@@ -266,7 +270,7 @@ class Array(Mapping):
         self.names[variable.name] = variable
 
 
-class Variable(object):
+class Variable:
     """Simple variable."""
 
     STRUCT_TYPES = {

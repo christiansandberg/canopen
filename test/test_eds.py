@@ -15,7 +15,8 @@ class TestEDS(unittest.TestCase):
             canopen.import_od('/path/to/wrong_file.eds')
 
     def test_load_file_object(self):
-        od = canopen.import_od(open(EDS_PATH))
+        with open(EDS_PATH) as fp:
+            od = canopen.import_od(fp)
         self.assertTrue(len(od) > 0)
 
     def test_variable(self):
@@ -121,12 +122,15 @@ class TestEDS(unittest.TestCase):
 
     def test_export_eds(self):
         import tempfile
-        for doctype in {"eds", "dcf"}:
-            with tempfile.NamedTemporaryFile(suffix="." + doctype, mode="w+") as tempeds:
-                print("exporting %s to " % doctype + tempeds.name)
-                canopen.export_od(self.od, tempeds, doc_type=doctype)
-                tempeds.flush()
-                exported_od = canopen.import_od(tempeds.name)
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as tempdir:
+            for doctype in {"eds", "dcf"}:
+                tempfile = str(Path(tempdir, "test." + doctype))
+                with open(tempfile, "w+") as tempeds:
+                    print("exporting %s to " % doctype + tempeds.name)
+                    canopen.export_od(self.od, tempeds, doc_type=doctype)
+
+                exported_od = canopen.import_od(tempfile)
 
                 for index in exported_od:
                     self.assertIn(exported_od[index].name, self.od)
@@ -144,7 +148,7 @@ class TestEDS(unittest.TestCase):
                     self.assertEqual(type(actual_object), type(expected_object))
                     self.assertEqual(actual_object.name, expected_object.name)
 
-                    if type(actual_object) is canopen.objectdictionary.Variable:
+                    if isinstance(actual_object, canopen.objectdictionary.Variable):
                         expected_vars = [expected_object]
                         actual_vars = [actual_object]
                     else:
