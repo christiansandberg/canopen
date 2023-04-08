@@ -17,13 +17,13 @@ except ImportError:
     class Listener:
         """ Dummy listener """
 
-from .node import RemoteNode, LocalNode
-from .sync import SyncProducer
-from .timestamp import TimeProducer
-from .nmt import NmtMaster
-from .lss import LssMaster
-from .objectdictionary.eds import import_from_node
-from .objectdictionary import ObjectDictionary
+from canopen.node import RemoteNode, LocalNode
+from canopen.sync import SyncProducer
+from canopen.timestamp import TimeProducer
+from canopen.nmt import NmtMaster
+from canopen.lss import LssMaster
+from canopen.objectdictionary.eds import import_from_node
+from canopen.objectdictionary import ObjectDictionary
 
 logger = logging.getLogger(__name__)
 
@@ -269,6 +269,9 @@ class Network(MutableMapping):
 
     def __setitem__(self, node_id: int, node: Union[RemoteNode, LocalNode]):
         assert node_id == node.id
+        if node_id in self.nodes:
+            # Remove old callbacks
+            self.nodes[node_id].remove_network()
         self.nodes[node_id] = node
         node.associate_network(self)
 

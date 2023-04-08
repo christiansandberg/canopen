@@ -1,12 +1,13 @@
 import logging
 from typing import Dict, Union
 
-from .base import BaseNode
-from ..sdo import SdoServer, SdoAbortedError
-from ..pdo import PDO, TPDO, RPDO
-from ..nmt import NmtSlave
-from ..emcy import EmcyProducer
-from .. import objectdictionary
+from canopen.node.base import BaseNode
+from canopen.sdo import SdoServer, SdoAbortedError
+from canopen.pdo import PDO, TPDO, RPDO
+from canopen.nmt import NmtSlave
+from canopen.emcy import EmcyProducer
+from canopen.objectdictionary import ObjectDictionary
+from canopen import objectdictionary
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ class LocalNode(BaseNode):
     def __init__(
         self,
         node_id: int,
-        object_dictionary: Union[objectdictionary.ObjectDictionary, str],
+        object_dictionary: Union[ObjectDictionary, str],
     ):
         super(LocalNode, self).__init__(node_id, object_dictionary)
 

@@ -1,16 +1,12 @@
 import logging
 from typing import Union, TextIO
 
-from ..sdo import SdoClient
-from ..nmt import NmtMaster
-from ..emcy import EmcyConsumer
-from ..pdo import TPDO, RPDO, PDO
-from ..objectdictionary import ODRecord, ODArray, ODVariable
-from .base import BaseNode
-
-import canopen
-
-from canopen import objectdictionary
+from canopen.sdo import SdoClient, SdoCommunicationError, SdoAbortedError
+from canopen.nmt import NmtMaster
+from canopen.emcy import EmcyConsumer
+from canopen.pdo import TPDO, RPDO, PDO
+from canopen.objectdictionary import ODRecord, ODArray, ODVariable, ObjectDictionary
+from canopen.node.base import BaseNode
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +27,7 @@ class RemoteNode(BaseNode):
     def __init__(
         self,
         node_id: int,
-        object_dictionary: Union[objectdictionary.ObjectDictionary, str, TextIO],
+        object_dictionary: Union[ObjectDictionary, str, TextIO],
         load_od: bool = False,
     ):
         super(RemoteNode, self).__init__(node_id, object_dictionary)
@@ -138,9 +134,9 @@ class RemoteNode(BaseNode):
                     index=index,
                     name=name,
                     value=value)))
-        except canopen.SdoCommunicationError as e:
+        except SdoCommunicationError as e:
             logger.warning(str(e))
-        except canopen.SdoAbortedError as e:
+        except SdoAbortedError as e:
             # WORKAROUND for broken implementations: the SDO is set but the error
             # "Attempt to write a read-only object" is raised any way.
             if e.code != 0x06010002:

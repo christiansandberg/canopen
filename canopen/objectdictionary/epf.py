@@ -3,7 +3,9 @@ try:
 except ImportError:
     import xml.etree.ElementTree as etree
 import logging
+
 from canopen import objectdictionary
+from canopen.objectdictionary import ObjectDictionary
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +34,7 @@ def import_epf(epf):
         The Object Dictionary.
     :rtype: canopen.ObjectDictionary
     """
-    od = objectdictionary.ObjectDictionary()
+    od = ObjectDictionary()
     if etree.iselement(epf):
         tree = epf
     else:

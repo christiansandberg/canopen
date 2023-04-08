@@ -5,7 +5,7 @@ try:
 except ImportError:
     from collections import Mapping
 
-from . import objectdictionary
+from canopen import objectdictionary
 
 logger = logging.getLogger(__name__)
 
