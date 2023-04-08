@@ -2,13 +2,13 @@ import copy
 import logging
 import re
 
-from canopen.objectdictionary import datatypes
-
 try:
     from configparser import RawConfigParser, NoOptionError, NoSectionError
 except ImportError:
     from ConfigParser import RawConfigParser, NoOptionError, NoSectionError
+
 from canopen import objectdictionary
+from canopen.objectdictionary import ObjectDictionary, datatypes
 from canopen.sdo import SdoClient
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ def import_eds(source, node_id):
         if not hasattr(source, "read"):
             fp.close()
 
-    od = objectdictionary.ObjectDictionary()
+    od = ObjectDictionary()
 
     if eds.has_section("FileInfo"):
         od.__edsFileInfo = {
@@ -130,7 +130,7 @@ def import_eds(source, node_id):
                 arr = objectdictionary.Array(name, index)
                 last_subindex = objectdictionary.Variable(
                     "Number of entries", index, 0)
-                last_subindex.data_type = objectdictionary.UNSIGNED8
+                last_subindex.data_type = datatypes.UNSIGNED8
                 arr.add_member(last_subindex)
                 arr.add_member(build_variable(eds, section, node_id, index, 1))
                 arr.storage_location = storage_location
@@ -179,7 +179,7 @@ def import_from_node(node_id, network):
     :param network: network object
     """
     # Create temporary SDO client
-    sdo_client = SdoClient(0x600 + node_id, 0x580 + node_id, objectdictionary.ObjectDictionary())
+    sdo_client = SdoClient(0x600 + node_id, 0x580 + node_id, ObjectDictionary())
     sdo_client.network = network
     # Subscribe to SDO responses
     network.subscribe(0x580 + node_id, sdo_client.on_response)
@@ -219,11 +219,11 @@ def _signed_int_from_hex(hex_str, bit_length):
 
 
 def _convert_variable(node_id, var_type, value):
-    if var_type in (objectdictionary.OCTET_STRING, objectdictionary.DOMAIN):
+    if var_type in (datatypes.OCTET_STRING, datatypes.DOMAIN):
         return bytes.fromhex(value)
-    elif var_type in (objectdictionary.VISIBLE_STRING, objectdictionary.UNICODE_STRING):
+    elif var_type in (datatypes.VISIBLE_STRING, datatypes.UNICODE_STRING):
         return value
-    elif var_type in objectdictionary.FLOAT_TYPES:
+    elif var_type in datatypes.FLOAT_TYPES:
         return float(value)
     else:
         # COB-ID can contain '$NODEID+' so replace this with node_id before converting
@@ -237,11 +237,11 @@ def _convert_variable(node_id, var_type, value):
 def _revert_variable(var_type, value):
     if value is None:
         return None
-    if var_type in (objectdictionary.OCTET_STRING, objectdictionary.DOMAIN):
+    if var_type in (datatypes.OCTET_STRING, datatypes.DOMAIN):
         return bytes.hex(value)
-    elif var_type in (objectdictionary.VISIBLE_STRING, objectdictionary.UNICODE_STRING):
+    elif var_type in (datatypes.VISIBLE_STRING, datatypes.UNICODE_STRING):
         return value
-    elif var_type in objectdictionary.FLOAT_TYPES:
+    elif var_type in datatypes.FLOAT_TYPES:
         return value
     else:
         return "0x%02X" % value
@@ -273,14 +273,14 @@ def build_variable(eds, section, node_id, index, subindex=0):
         except NoSectionError:
             logger.warning("%s has an unknown or unsupported data type (%X)", name, var.data_type)
             # Assume DOMAIN to force application to interpret the byte data
-            var.data_type = objectdictionary.DOMAIN
+            var.data_type = datatypes.DOMAIN
 
     var.pdo_mappable = bool(int(eds.get(section, "PDOMapping", fallback="0"), 0))
 
     if eds.has_option(section, "LowLimit"):
         try:
             min_string = eds.get(section, "LowLimit")
-            if var.data_type in objectdictionary.SIGNED_TYPES:
+            if var.data_type in datatypes.SIGNED_TYPES:
                 var.min = _signed_int_from_hex(min_string, _calc_bit_length(var.data_type))
             else:
                 var.min = int(min_string, 0)
@@ -289,7 +289,7 @@ def build_variable(eds, section, node_id, index, subindex=0):
     if eds.has_option(section, "HighLimit"):
         try:
             max_string = eds.get(section, "HighLimit")
-            if var.data_type in objectdictionary.SIGNED_TYPES:
+            if var.data_type in datatypes.SIGNED_TYPES:
                 var.max = _signed_int_from_hex(max_string, _calc_bit_length(var.data_type))
             else:
                 var.max = int(max_string, 0)
@@ -341,7 +341,7 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
             eds.set(section, "StorageLocation", var.storage_location)
 
     def export_variable(var, eds):
-        if isinstance(var.parent, objectdictionary.ObjectDictionary):
+        if isinstance(var.parent, ObjectDictionary):
             # top level variable
             section = "%04X" % var.index
         else:

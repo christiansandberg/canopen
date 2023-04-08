@@ -4,8 +4,6 @@ import struct
 import time
 from typing import Callable, Optional
 
-from .network import CanError
-
 logger = logging.getLogger(__name__)
 
 NMT_STATES = {

@@ -7,12 +7,11 @@ try:
 except ImportError:
     import Queue as queue
 
-from ..network import CanError
-from .. import objectdictionary
-
-from .base import SdoBase
-from .constants import *
-from .exceptions import *
+from canopen.network import CanError
+from canopen import objectdictionary
+from canopen.sdo.base import SdoBase
+from canopen.sdo.constants import *
+from canopen.sdo.exceptions import *
 
 logger = logging.getLogger(__name__)
 
@@ -192,7 +191,7 @@ class SdoClient(SdoBase):
             Force use of segmented download regardless of data size.
         :param bool request_crc_support:
             If crc calculation should be requested when using block transfer
-        
+
         :returns:
             A file like object.
         """
