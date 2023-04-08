@@ -1,6 +1,10 @@
+from typing import Optional, TYPE_CHECKING
 import time
 import struct
-from typing import Optional
+
+if TYPE_CHECKING:
+    from canopen.network import Network
+
 
 # 1 Jan 1984
 OFFSET = 441763200
@@ -13,10 +17,13 @@ TIME_OF_DAY_STRUCT = struct.Struct("<LH")
 class TimeProducer:
     """Produces timestamp objects."""
 
+    # Attribute types
+    network: "Network"
+
     #: COB-ID of the SYNC message
     cob_id = 0x100
 
-    def __init__(self, network):
+    def __init__(self, network: "Network"):
         self.network = network
 
     def transmit(self, timestamp: Optional[float] = None):

@@ -46,9 +46,9 @@ class SdoAbortedError(SdoError):
 
     def __init__(self, code: int):
         #: Abort code
-        self.code = code
+        self.code: int = code
 
-    def __str__(self):
+    def __str__(self) -> str:
         text = "Code 0x{:08X}".format(self.code)
         if self.code in self.CODES:
             text = text + ", " + self.CODES[self.code]

@@ -1,8 +1,18 @@
-from typing import TextIO, Union
-from canopen.objectdictionary import ObjectDictionary, import_od
+from typing import Optional, TYPE_CHECKING
+from abc import ABC, abstractmethod
+
+from canopen import objectdictionary
+from canopen.objectdictionary import ObjectDictionary, TObjectDictionary
+
+if TYPE_CHECKING:
+    from canopen.network import Network
+    from canopen.sdo.base import SdoBase
+    from canopen.nmt import NmtBase
+    from canopen.emcy import EmcyBase
+    from canopen.pdo import TPDO, RPDO
 
 
-class BaseNode:
+class BaseNode(ABC):
     """A CANopen node.
 
     :param node_id:
@@ -12,15 +22,38 @@ class BaseNode:
         or a file like object.
     """
 
+    # Attribute types
+    network: Optional["Network"]
+    object_dictionary: ObjectDictionary
+    id: int
+
+    sdo: "SdoBase"
+    tpdo: "TPDO"
+    rpdo: "RPDO"
+    nmt: "NmtBase"
+    emcy: "EmcyBase"
+
     def __init__(
         self,
-        node_id: int,
-        object_dictionary: Union[ObjectDictionary, str, TextIO],
+        node_id: Optional[int],
+        object_dictionary: TObjectDictionary,
     ):
         self.network = None
 
-        if not isinstance(object_dictionary, ObjectDictionary):
-            object_dictionary = import_od(object_dictionary, node_id)
-        self.object_dictionary = object_dictionary
+        self.object_dictionary = objectdictionary.import_od(
+                object_dictionary, node_id)
 
-        self.id = node_id or self.object_dictionary.node_id
+        # The rest of the Node class depend on a numeric ID, so unless
+        # the OD provides one, return an error
+        _node_id = node_id or self.object_dictionary.node_id
+        if _node_id is None:
+            raise RuntimeError("Missing node id for node")
+        self.id = _node_id
+
+    @abstractmethod
+    def associate_network(self, network: "Network"):
+        raise RuntimeError("Not implemented")
+
+    @abstractmethod
+    def remove_network(self):
+        raise RuntimeError("Not implemented")

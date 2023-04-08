@@ -1,9 +1,14 @@
 # inspired by the NmtMaster code
+from typing import Dict, TYPE_CHECKING, Tuple
 import logging
 import time
 
 from canopen.node import RemoteNode
 from canopen.sdo import SdoCommunicationError
+from canopen.pdo import base as pdobase
+
+if TYPE_CHECKING:
+    from canopen import variable
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +63,7 @@ class State402:
     }
 
     # Tansition table from the DS402 State Machine
-    TRANSITIONTABLE = {
+    TRANSITIONTABLE: Dict[Tuple[str, str], int] = {
         # disable_voltage ---------------------------------------------------------------------
         ('READY TO SWITCH ON', 'SWITCH ON DISABLED'):     CW_DISABLE_VOLTAGE,  # transition 7
         ('OPERATION ENABLED', 'SWITCH ON DISABLED'):      CW_DISABLE_VOLTAGE,  # transition 9
@@ -202,6 +207,11 @@ class BaseNode402(RemoteNode):
     :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary`
     """
 
+    # Attribute types
+    tpdo_values: Dict[int, int]
+    tpdo_pointers: Dict[int, pdobase.Variable]
+    rpdo_pointers: Dict[int, pdobase.Variable]
+
     TIMEOUT_RESET_FAULT = 0.4           # seconds
     TIMEOUT_SWITCH_OP_MODE = 0.5        # seconds
     TIMEOUT_SWITCH_STATE_FINAL = 0.8    # seconds
@@ -237,7 +247,7 @@ class BaseNode402(RemoteNode):
             When the node's NMT state disallows SDOs for reading the PDO configuration.
         """
         if upload:
-            assert self.nmt.state in 'PRE-OPERATIONAL', 'OPERATIONAL'
+            assert self.nmt.state in ('PRE-OPERATIONAL', 'OPERATIONAL')
             self.pdo.read()  # TPDO and RPDO configurations
         else:
             self.pdo.subscribe()  # Get notified on reception, usually a side-effect of read()
@@ -342,8 +352,7 @@ class BaseNode402(RemoteNode):
         """
         if timeout is None:
             timeout = self.TIMEOUT_HOMING_DEFAULT
-        if restore_op_mode:
-            previous_op_mode = self.op_mode
+        previous_op_mode = self.op_mode
         self.op_mode = 'HOMING'
         # The homing process will initialize at operation enabled
         self.state = 'OPERATION ENABLED'
@@ -394,6 +403,7 @@ class BaseNode402(RemoteNode):
         """
         try:
             pdo = self.tpdo_pointers[0x6061].pdo_parent
+            assert pdo is not None  # For typing
             if pdo.is_periodic:
                 timestamp = pdo.wait_for_reception(timeout=self.TIMEOUT_CHECK_TPDO)
                 if timestamp is None:
@@ -402,7 +412,12 @@ class BaseNode402(RemoteNode):
             code = self.tpdo_values[0x6061]
         except KeyError:
             logger.warning('The object 0x6061 is not a configured TPDO, fallback to SDO')
-            code = self.sdo[0x6061].raw
+            # FIXME: Q: Example of numerous checkings
+            obj = self.sdo[0x6061]
+            assert isinstance(obj, variable.Variable)
+            data = obj.raw
+            assert isinstance(data, int)
+            code = data
         return OperationMode.CODE2NAME[code]
 
     @op_mode.setter
@@ -415,10 +430,13 @@ class BaseNode402(RemoteNode):
             if 0x6060 in self.rpdo_pointers:
                 self.rpdo_pointers[0x6060].raw = OperationMode.NAME2CODE[mode]
                 pdo = self.rpdo_pointers[0x6060].pdo_parent
+                assert pdo is not None  # For typing
                 if not pdo.is_periodic:
                     pdo.transmit()
             else:
-                self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
+                obj = self.sdo[0x6060]
+                assert isinstance(obj, variable.Variable)
+                obj.raw = OperationMode.NAME2CODE[mode]
             timeout = time.monotonic() + self.TIMEOUT_SWITCH_OP_MODE
             while self.op_mode != mode:
                 if time.monotonic() > timeout:
@@ -435,7 +453,9 @@ class BaseNode402(RemoteNode):
         # [target velocity, target position, target torque]
         for target_index in [0x60FF, 0x607A, 0x6071]:
             if target_index in self.sdo.keys():
-                self.sdo[target_index].raw = 0
+                obj = self.sdo[target_index]
+                assert isinstance(obj, variable.Variable)
+                obj.raw = 0
 
     def is_op_mode_supported(self, mode):
         """Check if the operation mode is supported by the node.
@@ -449,7 +469,12 @@ class BaseNode402(RemoteNode):
         """
         if not hasattr(self, '_op_mode_support'):
             # Cache value only on first lookup, this object should never change.
-            self._op_mode_support = self.sdo[0x6502].raw
+            obj = self.sdo[0x6502]
+            assert isinstance(obj, variable.Variable)
+            data = obj.raw
+            assert isinstance(data, int)
+            # FIXME: Outside __init__
+            self._op_mode_support = data
             logger.info('Caching node {n} supported operation modes 0x{m:04X}'.format(
                 n=self.id, m=self._op_mode_support))
         bits = OperationMode.SUPPORTED[mode]
@@ -465,7 +490,7 @@ class BaseNode402(RemoteNode):
             self.tpdo_values[obj.index] = obj.raw
 
     @property
-    def statusword(self):
+    def statusword(self) -> int:
         """Return the last read value of the Statusword (0x6041) from the device.
 
         If the object 0x6041 is not configured in any TPDO it will fall back to the SDO
@@ -475,9 +500,13 @@ class BaseNode402(RemoteNode):
             return self.tpdo_values[0x6041]
         except KeyError:
             logger.warning('The object 0x6041 is not a configured TPDO, fallback to SDO')
-            return self.sdo[0x6041].raw
+            obj = self.sdo[0x6041]
+            assert isinstance(obj, variable.Variable)
+            data = obj.raw
+            assert isinstance(data, int)
+            return data
 
-    def check_statusword(self, timeout=None):
+    def check_statusword(self, timeout=None) -> int:
         """Report an up-to-date reading of the Statusword (0x6041) from the device.
 
         If the TPDO with the Statusword is configured as periodic, this method blocks
@@ -491,12 +520,17 @@ class BaseNode402(RemoteNode):
         """
         if 0x6041 in self.tpdo_pointers:
             pdo = self.tpdo_pointers[0x6041].pdo_parent
+            assert pdo is not None
             if pdo.is_periodic:
                 timestamp = pdo.wait_for_reception(timeout or self.TIMEOUT_CHECK_TPDO)
                 if timestamp is None:
                     raise RuntimeError('Timeout waiting for updated statusword')
             else:
-                return self.sdo[0x6041].raw
+                obj = self.sdo[0x6041]
+                assert isinstance(obj, variable.Variable)
+                data = obj.raw
+                assert isinstance(data, int)
+                return data
         return self.statusword
 
     @property
@@ -509,14 +543,17 @@ class BaseNode402(RemoteNode):
         raise RuntimeError('The Controlword is write-only.')
 
     @controlword.setter
-    def controlword(self, value):
+    def controlword(self, value: int):
         if 0x6040 in self.rpdo_pointers:
             self.rpdo_pointers[0x6040].raw = value
             pdo = self.rpdo_pointers[0x6040].pdo_parent
+            assert pdo is not None
             if not pdo.is_periodic:
                 pdo.transmit()
         else:
-            self.sdo[0x6040].raw = value
+            obj = self.sdo[0x6040]
+            assert isinstance(obj, variable.Variable)
+            obj.raw = value
 
     @property
     def state(self):

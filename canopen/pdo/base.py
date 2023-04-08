@@ -1,16 +1,27 @@
+from typing import Callable, Dict, Iterator, List, Optional, Union, TYPE_CHECKING, cast
 import threading
 import math
-from typing import Callable, Dict, Iterable, List, Optional, Union
+import logging
+import binascii
 try:
     from collections.abc import Mapping
 except ImportError:
-    from collections import Mapping
-import logging
-import binascii
+    from collections import Mapping  # type: ignore
 
 from canopen.sdo import SdoAbortedError
 from canopen import objectdictionary
 from canopen import variable
+
+if TYPE_CHECKING:
+    # The type checker doesn't like the conditional import above, so lets import
+    # it for the type checker
+    from collections.abc import Mapping
+
+    from canopen.network import Network, PeriodicMessageTask
+    from canopen.node.base import BaseNode
+    from canopen.node import RemoteNode
+
+TCallback = Callable[["Map"], None]
 
 PDO_NOT_VALID = 1 << 31
 RTR_NOT_ALLOWED = 1 << 30
@@ -18,22 +29,28 @@ RTR_NOT_ALLOWED = 1 << 30
 logger = logging.getLogger(__name__)
 
 
-class PdoBase(Mapping):
+class PdoBase(Mapping[int, "Map"]):
     """Represents the base implementation for the PDO object.
 
     :param object node:
         Parent object associated with this PDO instance
     """
 
-    def __init__(self, node):
+    # Attribute types
+    network: Optional["Network"]
+    map: "Maps"
+    node: "BaseNode"
+
+    def __init__(self, node: "BaseNode"):
         self.network = None
-        self.map = None  # instance of Maps
         self.node = node
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator:
         return iter(self.map)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key) -> Union["Map", "Variable"]:  # type: ignore[override]
+        # FIXME: There is an inconsistency in this code. The first return
+        #        returns 'Map', while the second return return 'Variable'.
         if isinstance(key, int) and (0x1A00 <= key <= 0x1BFF or   # By TPDO ID (512)
                                      0x1600 <= key <= 0x17FF or   # By RPDO ID (512)
                                      0 < key <= 512):             # By PDO Index
@@ -124,8 +141,11 @@ class PdoBase(Mapping):
             pdo_map.stop()
 
 
-class Maps(Mapping):
+class Maps(Mapping[int, "Map"]):
     """A collection of transmit or receive maps."""
+
+    # Attribute types
+    maps: Dict[int, "Map"]
 
     def __init__(self, com_offset, map_offset, pdo_node: PdoBase, cob_base=None):
         """
@@ -134,7 +154,7 @@ class Maps(Mapping):
         :param pdo_node:
         :param cob_base:
         """
-        self.maps: Dict[int, "Map"] = {}
+        self.maps = {}
         for map_no in range(512):
             if com_offset + map_no in pdo_node.node.object_dictionary:
                 new_map = Map(
@@ -149,7 +169,7 @@ class Maps(Mapping):
     def __getitem__(self, key: int) -> "Map":
         return self.maps[key]
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(self.maps)
 
     def __len__(self) -> int:
@@ -159,8 +179,8 @@ class Maps(Mapping):
 class Map:
     """One message which can have up to 8 bytes of variables mapped."""
 
-    def __init__(self, pdo_node, com_record, map_array):
-        self.pdo_node = pdo_node
+    def __init__(self, pdo_node: PdoBase, com_record, map_array):
+        self.pdo_node: PdoBase = pdo_node
         self.com_record = com_record
         self.map_array = map_array
         #: If this map is valid
@@ -189,13 +209,13 @@ class Map:
         #: Period of receive message transmission in seconds.
         #: Set explicitly or using the :meth:`start()` method.
         self.period: Optional[float] = None
-        self.callbacks = []
+        self.callbacks: List[TCallback] = []
         self.receive_condition = threading.Condition()
         self.is_received: bool = False
-        self._task = None
+        self._task: Optional[PeriodicMessageTask] = None
 
     def __getitem_by_index(self, value):
-        valid_values = []
+        valid_values: List[int] = []
         for var in self.map:
             if var.length:
                 valid_values.append(var.index)
@@ -205,7 +225,7 @@ class Map:
             value, ', '.join(str(v) for v in valid_values)))
 
     def __getitem_by_name(self, value):
-        valid_values = []
+        valid_values: List[str] = []
         for var in self.map:
             if var.length:
                 valid_values.append(var.name)
@@ -215,7 +235,6 @@ class Map:
             value, ', '.join(valid_values)))
 
     def __getitem__(self, key: Union[int, str]) -> "Variable":
-        var = None
         if isinstance(key, int):
             # there is a maximum available of 8 slots per PDO map
             if key in range(0, 8):
@@ -229,7 +248,7 @@ class Map:
                 var = self.__getitem_by_name(key)
         return var
 
-    def __iter__(self) -> Iterable["Variable"]:
+    def __iter__(self) -> Iterator["Variable"]:
         return iter(self.map)
 
     def __len__(self) -> int:
@@ -291,7 +310,7 @@ class Map:
         # Unknown transmission type, assume non-periodic
         return False
 
-    def on_message(self, can_id, data, timestamp):
+    def on_message(self, can_id: int, data: bytearray, timestamp: float):
         is_transmitting = self._task is not None
         if can_id == self.cob_id and not is_transmitting:
             with self.receive_condition:
@@ -304,7 +323,7 @@ class Map:
                 for callback in self.callbacks:
                     callback(self)
 
-    def add_callback(self, callback: Callable[["Map"], None]) -> None:
+    def add_callback(self, callback: TCallback) -> None:
         """Add a callback which will be called on receive.
 
         :param callback:
@@ -312,6 +331,13 @@ class Map:
             :class:`~canopen.pdo.Map`.
         """
         self.callbacks.append(callback)
+
+    def is_curtis_hack(self) -> bool:
+        """ Test if node """
+        # The cast ensure its interpreted as a RemoteNode which contains the
+        # curtis_hack attribute
+        node = cast("RemoteNode", self.pdo_node.node)
+        return hasattr(node, "curtis_hack") and node.curtis_hack  # Curtis HACK
 
     def read(self) -> None:
         """Read PDO configuration for this map using SDO."""
@@ -324,7 +350,7 @@ class Map:
         logger.info("RTR is %s", "allowed" if self.rtr_allowed else "not allowed")
         self.trans_type = self.com_record[2].raw
         logger.info("Transmission type is %d", self.trans_type)
-        if self.trans_type >= 254:
+        if self.trans_type is not None and self.trans_type >= 254:
             try:
                 self.inhibit_time = self.com_record[3].raw
             except (KeyError, SdoAbortedError) as e:
@@ -353,7 +379,7 @@ class Map:
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
-            if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
+            if self.is_curtis_hack():  # Curtis HACK: mixed up field order
                 index = value & 0xFFFF
                 subindex = (value >> 16) & 0xFF
                 size = (value >> 24) & 0xFF
@@ -366,6 +392,7 @@ class Map:
         """Save PDO configuration for this map using SDO."""
         logger.info("Setting COB-ID 0x%X and temporarily disabling PDO",
                     self.cob_id)
+        assert isinstance(self.cob_id, int)  # For typing
         self.com_record[1].raw = self.cob_id | PDO_NOT_VALID | (RTR_NOT_ALLOWED if not self.rtr_allowed else 0x0)
         if self.trans_type is not None:
             logger.info("Setting transmission type to %d", self.trans_type)
@@ -393,7 +420,7 @@ class Map:
             for var in self.map:
                 logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
                             var.name, var.index, var.subindex, var.length)
-                if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
+                if self.is_curtis_hack():  # Curtis HACK: mixed up field order
                     self.map_array[subindex].raw = (var.index |
                                                     var.subindex << 16 |
                                                     var.length << 24)
@@ -427,6 +454,9 @@ class Map:
         known to match what's stored on the node.
         """
         if self.enabled:
+            if self.pdo_node.network is None:
+               raise RuntimeError("A Network is required subscribe")
+            assert isinstance(self.cob_id, int)  # For typing
             logger.info("Subscribing to enabled PDO 0x%X on the network", self.cob_id)
             self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
@@ -440,7 +470,7 @@ class Map:
         index: Union[str, int],
         subindex: Union[str, int] = 0,
         length: Optional[int] = None,
-    ) -> "Variable":
+    ) -> Optional["Variable"]:
         """Add a variable from object dictionary as the next entry.
 
         :param index: Index of variable as name or number
@@ -474,6 +504,8 @@ class Map:
 
     def transmit(self) -> None:
         """Transmit the message once."""
+        assert self.pdo_node.network is not None  # For typing
+        assert isinstance(self.cob_id, int)  # For typing
         self.pdo_node.network.send_message(self.cob_id, self.data)
 
     def start(self, period: Optional[float] = None) -> None:
@@ -484,6 +516,11 @@ class Map:
             on the object before.
         :raises ValueError: When neither the argument nor the :attr:`period` is given.
         """
+
+        if self.pdo_node.network is None:
+            raise RuntimeError("A Network is required to send")
+        assert isinstance(self.cob_id, int)  # For typing
+
         # Stop an already running transmission if we have one, otherwise we
         # overwrite the reference and can lose our handle to shut it down
         self.stop()
@@ -514,9 +551,11 @@ class Map:
         Silently ignore if not allowed.
         """
         if self.enabled and self.rtr_allowed:
-            self.pdo_node.network.send_message(self.cob_id, None, remote=True)
+            assert self.pdo_node.network is not None  # For typing
+            assert isinstance(self.cob_id, int)  # For typing
+            self.pdo_node.network.send_message(self.cob_id, [], remote=True)
 
-    def wait_for_reception(self, timeout: float = 10) -> float:
+    def wait_for_reception(self, timeout: float = 10) -> Optional[float]:
         """Wait for the next transmit PDO.
 
         :param float timeout: Max time to wait in seconds.
@@ -531,6 +570,11 @@ class Map:
 class Variable(variable.Variable):
     """One object dictionary variable mapped to a PDO."""
 
+    # Attribute types
+    pdo_parent: Optional[Map]
+    offset: Optional[int]
+    length: int
+
     def __init__(self, od: objectdictionary.Variable):
         #: PDO object that is associated with this Variable Object
         self.pdo_parent = None
@@ -544,6 +588,10 @@ class Variable(variable.Variable):
 
         :return: Variable value as :class:`bytes`.
         """
+        assert self.offset is not None  # For typing
+        assert self.pdo_parent is not None  # For typing
+        assert self.od.data_type is not None  # For typing
+
         byte_offset, bit_offset = divmod(self.offset, 8)
 
         if bit_offset or self.length % 8:
@@ -552,7 +600,10 @@ class Variable(variable.Variable):
             if data_type == objectdictionary.BOOLEAN:
                 # A boolean type needs to be treated as an U08
                 data_type = objectdictionary.UNSIGNED8
+            # FIXME: What about float datatypes?
+            assert data_type not in objectdictionary.FLOAT_TYPES  # For typing
             od_struct = self.od.STRUCT_TYPES[data_type]
+            data: int
             data = od_struct.unpack_from(self.pdo_parent.data, byte_offset)[0]
             # Shift and mask to get the correct values
             data = (data >> bit_offset) & ((1 << self.length) - 1)
@@ -560,40 +611,47 @@ class Variable(variable.Variable):
             if od_struct.format.islower() and (1 << (self.length - 1)) < data:
                 # fill up the rest of the bits to get the correct signedness
                 data = data | (~((1 << self.length) - 1))
-            data = od_struct.pack(data)
+            bdata = od_struct.pack(data)
         else:
-            data = self.pdo_parent.data[byte_offset:byte_offset + len(self.od) // 8]
+            bdata = self.pdo_parent.data[byte_offset:byte_offset + len(self.od) // 8]
 
-        return data
+        return bdata
 
     def set_data(self, data: bytes):
         """Set for the given variable the PDO data.
 
         :param data: Value for the PDO variable in the PDO message.
         """
+
+        assert self.offset is not None  # For typing
+        assert self.pdo_parent is not None  # For typing
+        assert self.od.data_type is not None  # For typing
+
         byte_offset, bit_offset = divmod(self.offset, 8)
         logger.debug("Updating %s to %s in %s",
                      self.name, binascii.hexlify(data), self.pdo_parent.name)
 
         if bit_offset or self.length % 8:
-            cur_msg_data = self.pdo_parent.data[byte_offset:byte_offset + len(self.od) // 8]
+            bdata = self.pdo_parent.data[byte_offset:byte_offset + len(self.od) // 8]
             # Need information of the current variable type (unsigned vs signed)
             data_type = self.od.data_type
             if data_type == objectdictionary.BOOLEAN:
                 # A boolean type needs to be treated as an U08
                 data_type = objectdictionary.UNSIGNED8
+            # FIXME: What about float datatypes?
+            assert data_type not in objectdictionary.FLOAT_TYPES
             od_struct = self.od.STRUCT_TYPES[data_type]
-            cur_msg_data = od_struct.unpack(cur_msg_data)[0]
+            cur_msg_data: int = od_struct.unpack(bdata)[0]
             # data has to have the same size as old_data
-            data = od_struct.unpack(data)[0]
+            idata: int = od_struct.unpack(data)[0]
             # Mask out the old data value
             # At the end we need to mask for correct variable length (bitwise operation failure)
             shifted = (((1 << self.length) - 1) << bit_offset) & ((1 << len(self.od)) - 1)
             bitwise_not = (~shifted) & ((1 << len(self.od)) - 1)
             cur_msg_data = cur_msg_data & bitwise_not
             # Set the new data on the correct position
-            data = (data << bit_offset) | cur_msg_data
-            data = od_struct.pack_into(self.pdo_parent.data, byte_offset, data)
+            new_data = (idata << bit_offset) | cur_msg_data
+            od_struct.pack_into(self.pdo_parent.data, byte_offset, new_data)
         else:
             self.pdo_parent.data[byte_offset:byte_offset + len(data)] = data
 

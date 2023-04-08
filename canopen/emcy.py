@@ -1,8 +1,13 @@
+from typing import Callable, List, Optional, TYPE_CHECKING, Tuple
 import struct
 import logging
 import threading
 import time
-from typing import Callable, List, Optional
+
+if TYPE_CHECKING:
+    from canopen.network import Network
+
+TCallback = Callable[["EmcyError"], None]
 
 # Error code, error register, vendor specific data
 EMCY_STRUCT = struct.Struct("<HB5s")
@@ -10,19 +15,32 @@ EMCY_STRUCT = struct.Struct("<HB5s")
 logger = logging.getLogger(__name__)
 
 
-class EmcyConsumer:
+class EmcyBase:
+    """ Baseclass for Emcy """
+
+
+class EmcyConsumer(EmcyBase):
+
+    # Attribute types
+    log: List["EmcyError"]
+    active: List["EmcyError"]
+    callbacks: List[TCallback]
+    emcy_received: threading.Condition
 
     def __init__(self):
         #: Log of all received EMCYs for this node
-        self.log: List["EmcyError"] = []
+        self.log = []
         #: Only active EMCYs. Will be cleared on Error Reset
-        self.active: List["EmcyError"] = []
+        self.active = []
         self.callbacks = []
         self.emcy_received = threading.Condition()
 
-    def on_emcy(self, can_id, data, timestamp):
-        code, register, data = EMCY_STRUCT.unpack(data)
-        entry = EmcyError(code, register, data, timestamp)
+    def on_emcy(self, can_id: int, data: bytearray, timestamp: float):
+        code: int
+        register: int
+        edata: bytes
+        code, register, edata = EMCY_STRUCT.unpack(data)
+        entry = EmcyError(code, register, edata, timestamp)
 
         with self.emcy_received:
             if code & 0xFF00 == 0:
@@ -36,7 +54,7 @@ class EmcyConsumer:
         for callback in self.callbacks:
             callback(entry)
 
-    def add_callback(self, callback: Callable[["EmcyError"], None]):
+    def add_callback(self, callback: TCallback):
         """Get notified on EMCY messages from this node.
 
         :param callback:
@@ -52,7 +70,7 @@ class EmcyConsumer:
 
     def wait(
         self, emcy_code: Optional[int] = None, timeout: float = 10
-    ) -> "EmcyError":
+    ) -> Optional["EmcyError"]:
         """Wait for a new EMCY to arrive.
 
         :param emcy_code: EMCY code to wait for
@@ -79,17 +97,25 @@ class EmcyConsumer:
                     return emcy
 
 
-class EmcyProducer:
+class EmcyProducer(EmcyBase):
+
+    # Attribute types
+    network: Optional["Network"]
+    cob_id: int
 
     def __init__(self, cob_id: int):
         self.network = None
         self.cob_id = cob_id
 
     def send(self, code: int, register: int = 0, data: bytes = b""):
+        if self.network is None:
+            raise RuntimeError("A Network is required to send")
         payload = EMCY_STRUCT.pack(code, register, data)
         self.network.send_message(self.cob_id, payload)
 
     def reset(self, register: int = 0, data: bytes = b""):
+        if self.network is None:
+            raise RuntimeError("A Network is required to reset")
         payload = EMCY_STRUCT.pack(0, register, data)
         self.network.send_message(self.cob_id, payload)
 
@@ -97,7 +123,13 @@ class EmcyProducer:
 class EmcyError(Exception):
     """EMCY exception."""
 
-    DESCRIPTIONS = [
+    # Attribute types
+    code: int
+    register: int
+    data: bytes
+    timestamp: float
+
+    DESCRIPTIONS: List[Tuple[int, int, str]] = [
         # Code   Mask    Description
         (0x0000, 0xFF00, "Error Reset / No Error"),
         (0x1000, 0xFF00, "Generic Error"),

@@ -1,27 +1,52 @@
+from typing import Dict, List, Optional, TYPE_CHECKING, Protocol
 import logging
-from typing import Dict, Union
 
 from canopen.node.base import BaseNode
 from canopen.sdo import SdoServer, SdoAbortedError
 from canopen.pdo import PDO, TPDO, RPDO
 from canopen.nmt import NmtSlave
 from canopen.emcy import EmcyProducer
-from canopen.objectdictionary import ObjectDictionary
 from canopen import objectdictionary
+
+if TYPE_CHECKING:
+    from canopen.network import Network
 
 logger = logging.getLogger(__name__)
 
 
+class TWCallback(Protocol):
+    def __call__(self, *, index: int, subindex: int,
+                 od: objectdictionary.Variable,
+                 data: bytes) -> None:
+        ''' Write Callback '''
+
+class TRCallback(Protocol):
+    def __call__(self, *, index: int, subindex: int,
+                 od: objectdictionary.Variable
+                 ) -> Optional[objectdictionary.TValue]:
+        ''' Read Callback '''
+
+
 class LocalNode(BaseNode):
+
+    # Attribute types
+    data_store: Dict[int, Dict[int, bytes]]
+    _read_callbacks: List[TRCallback]
+    _write_callbacks: List[TWCallback]
+    sdo: SdoServer
+    tpdo: TPDO
+    rpdo: RPDO
+    nmt: NmtSlave
+    emcy: EmcyProducer
 
     def __init__(
         self,
-        node_id: int,
-        object_dictionary: Union[ObjectDictionary, str],
+        node_id: Optional[int],
+        object_dictionary: objectdictionary.TObjectDictionary,
     ):
         super(LocalNode, self).__init__(node_id, object_dictionary)
 
-        self.data_store: Dict[int, Dict[int, bytes]] = {}
+        self.data_store = {}
         self._read_callbacks = []
         self._write_callbacks = []
 
@@ -34,7 +59,7 @@ class LocalNode(BaseNode):
         self.add_write_callback(self.nmt.on_write)
         self.emcy = EmcyProducer(0x80 + self.id)
 
-    def associate_network(self, network):
+    def associate_network(self, network: "Network"):
         self.network = network
         self.sdo.network = network
         self.tpdo.network = network
@@ -45,8 +70,9 @@ class LocalNode(BaseNode):
         network.subscribe(0, self.nmt.on_command)
 
     def remove_network(self):
-        self.network.unsubscribe(self.sdo.rx_cobid, self.sdo.on_request)
-        self.network.unsubscribe(0, self.nmt.on_command)
+        if self.network is not None:
+            self.network.unsubscribe(self.sdo.rx_cobid, self.sdo.on_request)
+            self.network.unsubscribe(0, self.nmt.on_command)
         self.network = None
         self.sdo.network = None
         self.tpdo.network = None
@@ -54,10 +80,10 @@ class LocalNode(BaseNode):
         self.nmt.network = None
         self.emcy.network = None
 
-    def add_read_callback(self, callback):
+    def add_read_callback(self, callback: TRCallback):
         self._read_callbacks.append(callback)
 
-    def add_write_callback(self, callback):
+    def add_write_callback(self, callback: TWCallback):
         self._write_callbacks.append(callback)
 
     def get_data(
@@ -115,7 +141,7 @@ class LocalNode(BaseNode):
         self.data_store.setdefault(index, {})
         self.data_store[index][subindex] = bytes(data)
 
-    def _find_object(self, index, subindex):
+    def _find_object(self, index: int, subindex: int) -> objectdictionary.Variable:
         if index not in self.object_dictionary:
             # Index does not exist
             raise SdoAbortedError(0x06020000)

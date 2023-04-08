@@ -1,16 +1,26 @@
+from typing import Iterator, Union, TYPE_CHECKING, cast
 import logging
-from typing import Union
 try:
     from collections.abc import Mapping
 except ImportError:
-    from collections import Mapping
+    from collections import Mapping  # type: ignore
 
 from canopen import objectdictionary
+from canopen.objectdictionary import TPhys, TRaw
+
+if TYPE_CHECKING:
+    # Repeat import to ensure the type checker understands the imports
+    from collections.abc import Mapping
 
 logger = logging.getLogger(__name__)
 
 
 class Variable:
+
+    od: objectdictionary.Variable
+    name: str
+    index: int
+    subindex: int
 
     def __init__(self, od: objectdictionary.Variable):
         self.od = od
@@ -28,7 +38,7 @@ class Variable:
     def get_data(self) -> bytes:
         raise NotImplementedError("Variable is not readable")
 
-    def set_data(self, data: bytes):
+    def set_data(self, data: bytes) -> None:
         raise NotImplementedError("Variable is not writable")
 
     @property
@@ -41,7 +51,7 @@ class Variable:
         self.set_data(data)
 
     @property
-    def raw(self) -> Union[int, bool, float, str, bytes]:
+    def raw(self) -> TRaw:
         """Raw representation of the object.
 
         This table lists the translations between object dictionary data types
@@ -77,38 +87,40 @@ class Variable:
             self.name, self.index,
             self.subindex, value)
         if value in self.od.value_descriptions:
-            text += " (%s)" % self.od.value_descriptions[value]
+            text += " (%s)" % self.od.value_descriptions[value]  # type: ignore
         logger.debug(text)
         return value
 
     @raw.setter
-    def raw(self, value: Union[int, bool, float, str, bytes]):
+    def raw(self, value: TRaw):
         logger.debug("Writing %s (0x%X:%d) = %r",
                      self.name, self.index,
                      self.subindex, value)
         self.data = self.od.encode_raw(value)
 
     @property
-    def phys(self) -> Union[int, bool, float, str, bytes]:
+    def phys(self) -> TPhys:
         """Physical value scaled with some factor (defaults to 1).
 
         On object dictionaries that support specifying a factor, this can be
         either a :class:`float` or an :class:`int`.
         Non integers will be passed as is.
         """
-        value = self.od.decode_phys(self.raw)
+        # The cast provides the right type
+        value = self.od.decode_phys(cast(int, self.raw))
         if self.od.unit:
             logger.debug("Physical value is %s %s", value, self.od.unit)
         return value
 
     @phys.setter
-    def phys(self, value: Union[int, bool, float, str, bytes]):
+    def phys(self, value: TPhys):
         self.raw = self.od.encode_phys(value)
 
     @property
     def desc(self) -> str:
         """Converts to and from a description of the value as a string."""
-        value = self.od.decode_desc(self.raw)
+        # The cast provides the right type
+        value = self.od.decode_desc(cast(int, self.raw))
         logger.debug("Description is '%s'", value)
         return value
 
@@ -121,7 +133,7 @@ class Variable:
         """Access bits using integers, slices, or bit descriptions."""
         return Bits(self)
 
-    def read(self, fmt: str = "raw") -> Union[int, bool, float, str, bytes]:
+    def read(self, fmt: str = "raw") -> TRaw:
         """Alternative way of reading using a function instead of attributes.
 
         May be useful for asynchronous reading.
@@ -141,10 +153,9 @@ class Variable:
             return self.phys
         elif fmt == "desc":
             return self.desc
+        raise ValueError("Uknown format '{}'".format(fmt))
 
-    def write(
-        self, value: Union[int, bool, float, str, bytes], fmt: str = "raw"
-    ) -> None:
+    def write(self, value: TRaw, fmt: str = "raw") -> None:
         """Alternative way of writing using a function instead of attributes.
 
         May be useful for asynchronous writing.
@@ -160,17 +171,23 @@ class Variable:
         elif fmt == "phys":
             self.phys = value
         elif fmt == "desc":
-            self.desc = value
+            self.desc = value  # type: ignore
+        raise ValueError("Uknown format '{}'".format(fmt))
 
 
-class Bits(Mapping):
+class Bits(Mapping[int, int]):
+
+    # Attribute types
+    variable: Variable
+    raw: int
 
     def __init__(self, variable: Variable):
         self.variable = variable
         self.read()
 
     @staticmethod
-    def _get_bits(key):
+    def _get_bits(key: Union[int, slice]):
+        # FIXME: Q: How is this supposed to work?
         if isinstance(key, slice):
             bits = range(key.start, key.stop, key.step)
         elif isinstance(key, int):
@@ -187,14 +204,15 @@ class Bits(Mapping):
             self.raw, self._get_bits(key), value)
         self.write()
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[int]:
         return iter(self.variable.od.bit_definitions)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.variable.od.bit_definitions)
 
     def read(self):
-        self.raw = self.variable.raw
+        # FIXME: How to ensure this is of an integer type?
+        self.raw = self.variable.raw  # type: ignore
 
     def write(self):
         self.variable.raw = self.raw

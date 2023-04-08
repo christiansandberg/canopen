@@ -1,7 +1,11 @@
+from typing import TYPE_CHECKING, Dict
 import logging
 
-from canopen import node
-from canopen.pdo.base import PdoBase, Maps, Map, Variable
+import canopen
+from canopen.pdo.base import PdoBase, Map, Maps
+
+if TYPE_CHECKING:
+    from canopen.node.base import BaseNode
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +17,9 @@ class PDO(PdoBase):
     :param tpdo: TPDO object holding the Transmit PDO mappings
     """
 
-    def __init__(self, node, rpdo, tpdo):
+    map: Dict[int, Map]  # type: ignore
+
+    def __init__(self, node: "BaseNode", rpdo: "RPDO", tpdo: "TPDO"):
         super(PDO, self).__init__(node)
         self.rx = rpdo.map
         self.tx = tpdo.map
@@ -33,7 +39,7 @@ class RPDO(PdoBase):
     :param object node: Parent node for this object.
     """
 
-    def __init__(self, node):
+    def __init__(self, node: "BaseNode"):
         super(RPDO, self).__init__(node)
         self.map = Maps(0x1400, 0x1600, self, 0x200)
         logger.debug('RPDO Map as {0}'.format(len(self.map)))
@@ -44,7 +50,7 @@ class RPDO(PdoBase):
         :raise TypeError: Exception is thrown if the node associated with the PDO does not
         support this function.
         """
-        if isinstance(self.node, node.RemoteNode):
+        if isinstance(self.node, canopen.RemoteNode):
             for pdo in self.map.values():
                 pdo.stop()
         else:
@@ -58,7 +64,7 @@ class TPDO(PdoBase):
     :param object node: Parent node for this object.
     """
 
-    def __init__(self, node):
+    def __init__(self, node: "BaseNode"):
         super(TPDO, self).__init__(node)
         self.map = Maps(0x1800, 0x1A00, self, 0x180)
         logger.debug('TPDO Map as {0}'.format(len(self.map)))
@@ -69,7 +75,7 @@ class TPDO(PdoBase):
         :raise TypeError: Exception is thrown if the node associated with the PDO does not
         support this function.
         """
-        if isinstance(self.node, node.LocalNode):
+        if isinstance(self.node, canopen.LocalNode):
             for pdo in self.map.values():
                 pdo.stop()
         else:

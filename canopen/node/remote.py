@@ -1,12 +1,16 @@
+from typing import Optional, TYPE_CHECKING, List
 import logging
-from typing import Union, TextIO
 
-from canopen.sdo import SdoClient, SdoCommunicationError, SdoAbortedError
+from canopen import sdo
+from canopen.sdo import SdoClient
 from canopen.nmt import NmtMaster
 from canopen.emcy import EmcyConsumer
 from canopen.pdo import TPDO, RPDO, PDO
-from canopen.objectdictionary import Record, Array, Variable, ObjectDictionary
 from canopen.node.base import BaseNode
+from canopen import objectdictionary
+
+if TYPE_CHECKING:
+    from canopen.network import Network
 
 logger = logging.getLogger(__name__)
 
@@ -24,10 +28,19 @@ class RemoteNode(BaseNode):
         node at startup.
     """
 
+    # Attribute types
+    sdo_channels: List[SdoClient]
+    sdo: SdoClient
+    tpdo: TPDO
+    rpdo: RPDO
+    nmt: NmtMaster
+    emcy: EmcyConsumer
+    curtis_hack: bool
+
     def __init__(
         self,
-        node_id: int,
-        object_dictionary: Union[ObjectDictionary, str, TextIO],
+        node_id: Optional[int],
+        object_dictionary: objectdictionary.TObjectDictionary,
         load_od: bool = False,
     ):
         super(RemoteNode, self).__init__(node_id, object_dictionary)
@@ -46,7 +59,7 @@ class RemoteNode(BaseNode):
         if load_od:
             self.load_configuration()
 
-    def associate_network(self, network):
+    def associate_network(self, network: "Network"):
         self.network = network
         self.sdo.network = network
         self.pdo.network = network
@@ -60,11 +73,12 @@ class RemoteNode(BaseNode):
         network.subscribe(0, self.nmt.on_command)
 
     def remove_network(self):
-        for sdo in self.sdo_channels:
-            self.network.unsubscribe(sdo.tx_cobid, sdo.on_response)
-        self.network.unsubscribe(0x700 + self.id, self.nmt.on_heartbeat)
-        self.network.unsubscribe(0x80 + self.id, self.emcy.on_emcy)
-        self.network.unsubscribe(0, self.nmt.on_command)
+        if self.network is not None:
+            for sdo in self.sdo_channels:
+                self.network.unsubscribe(sdo.tx_cobid, sdo.on_response)
+            self.network.unsubscribe(0x700 + self.id, self.nmt.on_heartbeat)
+            self.network.unsubscribe(0x80 + self.id, self.emcy.on_emcy)
+            self.network.unsubscribe(0, self.nmt.on_command)
         self.network = None
         self.sdo.network = None
         self.pdo.network = None
@@ -72,7 +86,7 @@ class RemoteNode(BaseNode):
         self.rpdo.network = None
         self.nmt.network = None
 
-    def add_sdo(self, rx_cobid, tx_cobid):
+    def add_sdo(self, rx_cobid: int, tx_cobid: int):
         """Add an additional SDO channel.
 
         The SDO client will be added to :attr:`sdo_channels`.
@@ -91,7 +105,7 @@ class RemoteNode(BaseNode):
             self.network.subscribe(client.tx_cobid, client.on_response)
         return client
 
-    def store(self, subindex=1):
+    def store(self, subindex: int=1):
         """Store parameters in non-volatile memory.
 
         :param int subindex:
@@ -113,7 +127,7 @@ class RemoteNode(BaseNode):
         """
         self.sdo.download(0x1011, subindex, b"load")
 
-    def __load_configuration_helper(self, index, subindex, name, value):
+    def __load_configuration_helper(self, index: int, subindex: Optional[int], name: str, value):
         """Helper function to send SDOs to the remote node
         :param index: Object index
         :param subindex: Object sub-index (if it does not exist e should be None)
@@ -127,31 +141,36 @@ class RemoteNode(BaseNode):
                     subindex=subindex,
                     name=name,
                     value=value)))
-                self.sdo[index][subindex].raw = value
+                var = self.sdo[index]
+                assert not isinstance(var, sdo.Variable)  # For typing
+                var[subindex].raw = value
             else:
-                self.sdo[index].raw = value
+                var = self.sdo[index]
+                assert isinstance(var, sdo.Variable)  # For typing
+                var.raw = value
                 logger.info(str('SDO [{index:#06x}]: {name}: {value:#06x}'.format(
                     index=index,
                     name=name,
                     value=value)))
-        except SdoCommunicationError as e:
+        except sdo.SdoCommunicationError as e:
             logger.warning(str(e))
-        except SdoAbortedError as e:
+        except sdo.SdoAbortedError as e:
             # WORKAROUND for broken implementations: the SDO is set but the error
             # "Attempt to write a read-only object" is raised any way.
             if e.code != 0x06010002:
                 # Abort codes other than "Attempt to write a read-only object"
                 # should still be reported.
-                logger.warning('[ERROR SETTING object {0:#06x}:{1:#06x}]  {2}'.format(index, subindex, str(e)))
+                tsubindex = ":{:#06x}".format(subindex) if subindex is not None else ''
+                logger.warning('[ERROR SETTING object {0:#06x}{1}]  {2}'.format(index, tsubindex, str(e)))
                 raise
 
     def load_configuration(self):
         ''' Load the configuration of the node from the object dictionary.'''
         for obj in self.object_dictionary.values():
-            if isinstance(obj, Record) or isinstance(obj, Array):
+            if isinstance(obj, objectdictionary.Record) or isinstance(obj, objectdictionary.Array):
                 for subobj in obj.values():
-                    if isinstance(subobj, Variable) and subobj.writable and (subobj.value is not None):
+                    if isinstance(subobj, objectdictionary.Variable) and subobj.writable and (subobj.value is not None):
                         self.__load_configuration_helper(subobj.index, subobj.subindex, subobj.name, subobj.value)
-            elif isinstance(obj, Variable) and obj.writable and (obj.value is not None):
+            elif isinstance(obj, objectdictionary.Variable) and obj.writable and (obj.value is not None):
                 self.__load_configuration_helper(obj.index, None, obj.name, obj.value)
         self.pdo.read()  # reads the new configuration from the driver
