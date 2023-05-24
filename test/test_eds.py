@@ -116,9 +116,11 @@ class TestEDS(unittest.TestCase):
         var = self.od['EDS file extensions']['FactorAndDescription']
         self.assertEqual(var.factor, 0.1)
         self.assertEqual(var.description, "This is the a test description")
+        self.assertEqual(var.unit,'mV')
         var2 = self.od['EDS file extensions']['Error Factor and No Description']
         self.assertEqual(var2.description, '')
         self.assertEqual(var2.factor, 1)
+        self.assertEqual(var2.unit, '')
         
 
 

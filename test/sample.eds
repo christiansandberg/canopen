@@ -961,6 +961,7 @@ AccessType=ro
 PDOMapping=0x0
 Factor=0.1
 Description=This is the a test description
+Unit=mV
 
 [3050sub2]
 ParameterName=Error Factor and No Description
@@ -970,3 +971,4 @@ AccessType=ro
 PDOMapping=0x0
 Factor=ERROR
 Description=
+Unit=
