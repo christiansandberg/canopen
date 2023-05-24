@@ -309,9 +309,10 @@ def build_variable(eds, section, node_id, index, subindex=0):
             var.value = _convert_variable(node_id, var.data_type, eds.get(section, "ParameterValue"))
         except ValueError:
             pass
+    # Factor and Description are not standard according to the CANopen specifications, but they are implemented in the python canopen package, so we can at least try to use them
     if eds.has_option(section, "Factor"):
         try:
-            var.factor = float(eds.get(section, "Factor"), 1)
+            var.factor = float(eds.get(section, "Factor"))
         except ValueError:
             pass
     if eds.has_option(section, "Description"):
