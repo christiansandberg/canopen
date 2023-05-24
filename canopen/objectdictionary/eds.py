@@ -392,6 +392,13 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
         if getattr(var, 'max', None) is not None:
             eds.set(section, "HighLimit", var.max)
 
+        if getattr(var, 'description', None) is not None:
+            eds.set(section, "Description", var.description)
+        if getattr(var, 'factor', None) is not None:
+            eds.set(section, "Factor", var.factor)
+        if getattr(var, 'unit', None) is not None:
+            eds.set(section, "Unit", var.unit)
+
     def export_record(var, eds):
         section = "%04X" % var.index
         export_common(var, eds, section)
