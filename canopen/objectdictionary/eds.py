@@ -21,7 +21,7 @@ RECORD = 9
 
 
 def import_eds(source, node_id):
-    eds = RawConfigParser()
+    eds = RawConfigParser(inline_comment_prefixes=(';',))
     eds.optionxform = str
     if hasattr(source, "read"):
         fp = source
