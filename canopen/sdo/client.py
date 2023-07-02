@@ -85,7 +85,7 @@ class SdoClient(SdoBase):
             except SdoCommunicationError as e:
                 retries_left -= 1
                 if not retries_left:
-                    self.abort(0x5040000) 
+                    self.abort(0x5040000)
                     raise
                 logger.warning(str(e))
 
@@ -461,7 +461,7 @@ class BlockUploadStream(io.RawIOBase):
         :param int subindex:
             Object dictionary sub-index to read from.
         :param bool request_crc_support:
-            If crc calculation should be requested when using block transfer            
+            If crc calculation should be requested when using block transfer
         """
         self._done = False
         self.sdo_client = sdo_client
@@ -617,8 +617,9 @@ class BlockDownloadStream(io.RawIOBase):
         :param int size:
             Size of data in number of bytes if known in advance.
         :param bool request_crc_support:
-            If crc calculation should be requested when using block transfer            
+            If crc calculation should be requested when using block transfer
         """
+        self.uncompleteData = []
         self.sdo_client = sdo_client
         self.size = size
         self.pos = 0
@@ -672,16 +673,26 @@ class BlockDownloadStream(io.RawIOBase):
         if self._done:
             raise RuntimeError("All expected data has already been transmitted")
         # Can send up to 7 bytes at a time
-        data = b[0:7]
+        data = bytearray(7)
+        data[0:len(self.uncompleteData)] = self.uncompleteData
+        data[len(self.uncompleteData):] = b[0:7-len(self.uncompleteData)]
+
+        newDataLength = 0
         if self.size is not None and self.pos + len(data) >= self.size:
             # This is the last data to be transmitted based on expected size
+            newDataLength = len(data)-len(self.uncompleteData)
             self.send(data, end=True)
-        elif len(data) < 7:
-            # We can't send less than 7 bytes in the middle of a transmission
-            return None
         else:
-            self.send(data)
-        return len(data)
+            if len(data) == 7:
+                newDataLength = len(data)-len(self.uncompleteData)
+                self.uncompleteData = []
+                self.send(data)
+            else:
+                newDataLength = len(data)
+                self.uncompleteData = data
+
+        return newDataLength
+
 
     def send(self, b, end=False):
         """Send up to 7 bytes of data.
@@ -744,7 +755,7 @@ class BlockDownloadStream(io.RawIOBase):
         logger.debug("Server requested a block size of %d", blksize)
         self._blksize = blksize
         self._seqno = 0
-        
+
     def _retransmit(self, ackseq, blksize):
         """Retransmit the failed block"""
         logger.info(("%d of %d sequences were received. "
