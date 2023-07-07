@@ -274,8 +274,10 @@ def build_variable(eds, section, node_id, index, subindex=0):
             logger.warning("%s has an unknown or unsupported data type (%X)", name, var.data_type)
             # Assume DOMAIN to force application to interpret the byte data
             var.data_type = datatypes.DOMAIN
-
-    var.pdo_mappable = bool(int(eds.get(section, "PDOMapping", fallback="0"), 0))
+    try:
+        var.pdo_mappable = bool(int(eds.get(section, "PDOMapping", fallback="0"), 0))
+    except ValueError:
+        pass
 
     if eds.has_option(section, "LowLimit"):
         try:
