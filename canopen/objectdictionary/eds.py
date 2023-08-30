@@ -309,6 +309,22 @@ def build_variable(eds, section, node_id, index, subindex=0):
             var.value = _convert_variable(node_id, var.data_type, eds.get(section, "ParameterValue"))
         except ValueError:
             pass
+    # Factor, Description and Unit are not standard according to the CANopen specifications, but they are implemented in the python canopen package, so we can at least try to use them
+    if eds.has_option(section, "Factor"):
+        try:
+            var.factor = float(eds.get(section, "Factor"))
+        except ValueError:
+            pass
+    if eds.has_option(section, "Description"):
+        try:
+            var.description = eds.get(section, "Description")
+        except ValueError:
+            pass
+    if eds.has_option(section, "Unit"):
+        try:
+            var.unit = eds.get(section, "Unit")
+        except ValueError:
+            pass
     return var
 
 
@@ -375,6 +391,13 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
             eds.set(section, "LowLimit", var.min)
         if getattr(var, 'max', None) is not None:
             eds.set(section, "HighLimit", var.max)
+
+        if getattr(var, 'description', '') != '':
+            eds.set(section, "Description", var.description)
+        if getattr(var, 'factor', 1) != 1:
+            eds.set(section, "Factor", var.factor)
+        if getattr(var, 'unit', '') != '':
+            eds.set(section, "Unit", var.unit)
 
     def export_record(var, eds):
         section = "%04X" % var.index
