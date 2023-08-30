@@ -48,25 +48,25 @@ That works only in the 'OPERATIONAL' or 'PRE-OPERATIONAL' states of the
 Write Controlword and read Statusword::
 
     # command to go to 'READY TO SWITCH ON' from 'NOT READY TO SWITCH ON' or 'SWITCHED ON'
-    some_node.sdo[0x6040].raw = 0x06
+    some_node.sdo[0x6040].set_raw(0x06)
 
     # Read the state of the Statusword
-    some_node.sdo[0x6041].raw
+    some_node.sdo[0x6041].get_raw()
 
 During operation the state can change to states which cannot be commanded by the
 Controlword, for example a 'FAULT' state.  Therefore the :class:`BaseNode402`
 class (in similarity to :class:`NmtMaster`) automatically monitors state changes
 of the Statusword which is sent by TPDO.  The available callback on that TPDO
 will then extract the information and mirror the state change in the
-:attr:`BaseNode402.state` attribute.
+:meth:`BaseNode402.get_state()` method.
 
 Similar to the :class:`NmtMaster` class, the states of the :class:`BaseNode402`
-class :attr:`.state` attribute can be read and set (command) by a string::
+class can be read and set (command) by a string::
 
     # command a state (an SDO message will be called)
-    some_node.state = 'SWITCHED ON'
+    some_node.set_state('SWITCHED ON')
     # read the current state
-    some_node.state
+    some_node.get_state()
 
 Available states:
 

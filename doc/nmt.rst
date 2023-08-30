@@ -27,25 +27,24 @@ Examples
 --------
 
 Access the NMT functionality using the :attr:`canopen.Node.nmt` attribute.
-Changing state can be done using the :attr:`~canopen.nmt.NmtMaster.state`
-attribute::
+Changing state can be done using the :meth:`~canopen.nmt.NmtMaster.set_state()`
+method::
 
-    node.nmt.state = 'OPERATIONAL'
+    node.nmt.set_state('OPERATIONAL')
     # Same as sending NMT start
     node.nmt.send_command(0x1)
 
 You can also change state of all nodes simulaneously as a broadcast message::
 
-    network.nmt.state = 'OPERATIONAL'
+    network.nmt.set_state('OPERATIONAL')
 
-If the node transmits heartbeat messages, the
-:attr:`~canopen.nmt.NmtMaster.state` attribute gets automatically updated with
-current state::
+If the node transmits heartbeat messages, the state can be read with
+:meth:`~canopen.nmt.NmtMaster.get_state()`::
 
     # Send NMT start to all nodes
     network.send_message(0x0, [0x1, 0])
     node.nmt.wait_for_heartbeat()
-    assert node.nmt.state == 'OPERATIONAL'
+    assert node.nmt.get_state() == 'OPERATIONAL'
 
 
 API

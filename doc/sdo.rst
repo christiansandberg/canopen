@@ -44,23 +44,24 @@ The code below only creates objects, no messages are sent or received yet::
     # Arrays
     error_log = node.sdo[0x1003]
 
-To actually read or write the variables, use the ``.raw``, ``.phys``, ``.desc``,
-or ``.bits`` attributes::
+To actually read or write the variables, use the
+``.get_raw()``, ``.set_raw()``, ``.get_phys()``, ``.set_phys()``,
+``.get_desc()``, ``.set_desc()``, ``.get_bits()`` methods::
 
-    print("The device type is 0x%X" % device_type.raw)
+    print("The device type is 0x%X" % device_type.get_raw())
 
     # Using value descriptions instead of integers (if supported by OD)
-    control_mode.desc = 'Speed Mode'
+    control_mode.set_desc('Speed Mode')
 
     # Set individual bit
-    command_all.bits[3] = 1
+    command_all.get_bits()[3] = 1
 
     # Read and write physical values scaled by a factor (if supported by OD)
-    print("The actual speed is %f rpm" % actual_speed.phys)
+    print("The actual speed is %f rpm" % actual_speed.get_phys())
 
     # Iterate over arrays or records
     for error in error_log.values():
-        print("Error 0x%X was found in the log" % error.raw)
+        print("Error 0x%X was found in the log" % error.get_raw())
 
 It is also possible to read and write to variables that are not in the Object
 Dictionary, but only using raw bytes::

@@ -28,7 +28,7 @@ class TestNetwork(unittest.TestCase):
         self.network.notify(0x82, b'\x01\x20\x02\x00\x01\x02\x03\x04', 1473418396.0)
         self.assertEqual(len(node.emcy.active), 1)
         self.network.notify(0x702, b'\x05', 1473418396.0)
-        self.assertEqual(node.nmt.state, 'OPERATIONAL')
+        self.assertEqual(node.nmt.get_state(), 'OPERATIONAL')
         self.assertListEqual(self.network.scanner.nodes, [2])
 
     def test_send(self):

@@ -51,20 +51,20 @@ starts at 1, not 0)::
     node.rpdo[4].enabled = True
 
     # Save new configuration (node must be in pre-operational)
-    node.nmt.state = 'PRE-OPERATIONAL'
+    node.nmt.set_state('PRE-OPERATIONAL')
     node.tpdo.save()
     node.rpdo.save()
 
     # Start RPDO4 with an interval of 100 ms
-    node.rpdo[4]['Application Commands.Command Speed'].phys = 1000
+    node.rpdo[4]['Application Commands.Command Speed'].set_phys(1000)
     node.rpdo[4].start(0.1)
-    node.nmt.state = 'OPERATIONAL'
+    node.nmt.set_state('OPERATIONAL')
 
     # Read 50 values of speed and save to a file
     with open('output.txt', 'w') as f:
         for i in range(50):
             node.tpdo[4].wait_for_reception()
-            speed = node.tpdo['Application Status.Actual Speed'].phys
+            speed = node.tpdo['Application Status.Actual Speed'].get_phys()
             f.write('%s\n' % speed)
 
     # Using a callback to asynchronously receive values
@@ -72,7 +72,7 @@ starts at 1, not 0)::
     def print_speed(message):
         print('%s received' % message.name)
         for var in message:
-            print('%s = %d' % (var.name, var.raw))
+            print('%s = %d' % (var.name, var.get_raw()))
 
     node.tpdo[4].add_callback(print_speed)
     time.sleep(5)
