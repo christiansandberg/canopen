@@ -114,21 +114,22 @@ class SdoClient(SdoBase):
             When node responds with an error.
         """
         with self.open(index, subindex, buffering=0) as fp:
-            size = fp.size
+            response_size = fp.size
             data = fp.read()
-        if size is None:
-            # Node did not specify how many bytes to use
-            # Try to find out using Object Dictionary
-            var = self.od.get_variable(index, subindex)
-            if var is not None:
-                # Found a matching variable in OD
-                # If this is a data type (string, domain etc) the size is
-                # unknown anyway so keep the data as is
-                if var.data_type not in objectdictionary.DATA_TYPES:
-                    # Get the size in bytes for this variable
-                    size = len(var) // 8
+
+        # If size is available through variable in OD, then use the smaller of the two sizes.
+        # Some devices send U32/I32 even if variable is smaller in OD
+        var = self.od.get_variable(index, subindex)
+        if var is not None:
+            # Found a matching variable in OD
+            # If this is a data type (string, domain etc) the size is
+            # unknown anyway so keep the data as is
+            if var.data_type not in objectdictionary.DATA_TYPES:
+                # Get the size in bytes for this variable
+                var_size = len(var) // 8
+                if response_size is None or var_size < response_size:
                     # Truncate the data to specified size
-                    data = data[0:size]
+                    data = data[0:var_size]
         return data
 
     def download(
