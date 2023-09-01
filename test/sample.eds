@@ -926,8 +926,8 @@ ParameterName=INTEGER32 only negative values
 ObjectType=0x7
 DataType=0x04
 AccessType=rw
-HighLimit=0x00000000
-LowLimit=0xFFFFFFFF
+HighLimit=0xFFFFFFFF
+LowLimit=0x80000000
 PDOMapping=0
 
 [3040]
