@@ -926,8 +926,8 @@ ParameterName=INTEGER32 only negative values
 ObjectType=0x7
 DataType=0x04
 AccessType=rw
-HighLimit=0x00000000
-LowLimit=0xFFFFFFFF
+HighLimit=0xFFFFFFFF
+LowLimit=0x80000000
 PDOMapping=0
 
 [3040]
@@ -936,9 +936,8 @@ ObjectType=0x7
 DataType=0x15
 AccessType=rw
 HighLimit=0x000000000000000A
-LowLimit=0x8000000000000009
+LowLimit=0xFFFFFFFFFFFFFFF6
 PDOMapping=0
-
 
 [3050]
 ParameterName=EDS file extensions

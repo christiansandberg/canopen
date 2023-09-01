@@ -1,11 +1,43 @@
 import os
 import unittest
 import canopen
+from canopen.objectdictionary.eds import _signed_int_from_hex
 
 EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
 
 
 class TestEDS(unittest.TestCase):
+
+    test_data = {
+        "int8": [
+            {"hex_str": "7F", "bit_length": 8, "expected": 127},
+            {"hex_str": "80", "bit_length": 8, "expected": -128},
+            {"hex_str": "FF", "bit_length": 8, "expected": -1},
+            {"hex_str": "00", "bit_length": 8, "expected": 0},
+            {"hex_str": "01", "bit_length": 8, "expected": 1}
+        ],
+        "int16": [
+            {"hex_str": "7FFF", "bit_length": 16, "expected": 32767},
+            {"hex_str": "8000", "bit_length": 16, "expected": -32768},
+            {"hex_str": "FFFF", "bit_length": 16, "expected": -1},
+            {"hex_str": "0000", "bit_length": 16, "expected": 0},
+            {"hex_str": "0001", "bit_length": 16, "expected": 1}
+        ],
+        "int32": [
+            {"hex_str": "7FFFFFFF", "bit_length": 32, "expected": 2147483647},
+            {"hex_str": "80000000", "bit_length": 32, "expected": -2147483648},
+            {"hex_str": "FFFFFFFF", "bit_length": 32, "expected": -1},
+            {"hex_str": "00000000", "bit_length": 32, "expected": 0},
+            {"hex_str": "00000001", "bit_length": 32, "expected": 1}
+        ],
+        "int64": [
+            {"hex_str": "7FFFFFFFFFFFFFFF", "bit_length": 64, "expected": 9223372036854775807},
+            {"hex_str": "8000000000000000", "bit_length": 64, "expected": -9223372036854775808},
+            {"hex_str": "FFFFFFFFFFFFFFFF", "bit_length": 64, "expected": -1},
+            {"hex_str": "0000000000000000", "bit_length": 64, "expected": 0},
+            {"hex_str": "0000000000000001", "bit_length": 64, "expected": 1}
+        ]
+    }
 
     def setUp(self):
         self.od = canopen.import_od(EDS_PATH, 2)
@@ -58,10 +90,17 @@ class TestEDS(unittest.TestCase):
         self.assertEqual(uint8.max, 10)
         int32 = self.od[0x3030]
         self.assertEqual(int32.min, -2147483648)
-        self.assertEqual(int32.max, 0)
+        self.assertEqual(int32.max, -1)
         int64 = self.od[0x3040]
         self.assertEqual(int64.min, -10)
         self.assertEqual(int64.max, +10)
+
+    def test_signed_int_from_hex(self):
+        for data_type, test_cases in self.test_data.items():
+            for test_case in test_cases:
+                with self.subTest(data_type=data_type, test_case=test_case):
+                    result = _signed_int_from_hex('0x' + test_case["hex_str"], test_case["bit_length"])
+                    self.assertEqual(result, test_case["expected"])
 
     def test_array_compact_subobj(self):
         array = self.od[0x1003]

@@ -211,9 +211,10 @@ def _calc_bit_length(data_type):
 
 def _signed_int_from_hex(hex_str, bit_length):
     number = int(hex_str, 0)
-    limit = ((1 << bit_length - 1) - 1)
-    if number > limit:
-        return limit - number
+    max_value = (1 << (bit_length - 1)) - 1
+    
+    if number > max_value:
+        return number - (1 << bit_length)
     else:
         return number
 
