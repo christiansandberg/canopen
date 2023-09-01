@@ -49,14 +49,14 @@ class SdoBase(Mapping):
 
     def __getitem__(
         self, index: Union[str, int]
-    ) -> Union["Variable", "Array", "Record"]:
+    ) -> Union["SdoVariable", "SdoArray", "SdoRecord"]:
         entry = self.od[index]
-        if isinstance(entry, objectdictionary.Variable):
-            return Variable(self, entry)
-        elif isinstance(entry, objectdictionary.Array):
-            return Array(self, entry)
-        elif isinstance(entry, objectdictionary.Record):
-            return Record(self, entry)
+        if isinstance(entry, objectdictionary.ODVariable):
+            return SdoVariable(self, entry)
+        elif isinstance(entry, objectdictionary.ODArray):
+            return SdoArray(self, entry)
+        elif isinstance(entry, objectdictionary.ODRecord):
+            return SdoRecord(self, entry)
 
     def __iter__(self) -> Iterable[int]:
         return iter(self.od)
@@ -80,14 +80,14 @@ class SdoBase(Mapping):
         raise NotImplementedError()
 
 
-class Record(Mapping):
+class SdoRecord(Mapping):
 
     def __init__(self, sdo_node: SdoBase, od: ObjectDictionary):
         self.sdo_node = sdo_node
         self.od = od
 
-    def __getitem__(self, subindex: Union[int, str]) -> "Variable":
-        return Variable(self.sdo_node, self.od[subindex])
+    def __getitem__(self, subindex: Union[int, str]) -> "SdoVariable":
+        return SdoVariable(self.sdo_node, self.od[subindex])
 
     def __iter__(self) -> Iterable[int]:
         return iter(self.od)
@@ -99,14 +99,14 @@ class Record(Mapping):
         return subindex in self.od
 
 
-class Array(Mapping):
+class SdoArray(Mapping):
 
     def __init__(self, sdo_node: SdoBase, od: ObjectDictionary):
         self.sdo_node = sdo_node
         self.od = od
 
-    def __getitem__(self, subindex: Union[int, str]) -> "Variable":
-        return Variable(self.sdo_node, self.od[subindex])
+    def __getitem__(self, subindex: Union[int, str]) -> "SdoVariable":
+        return SdoVariable(self.sdo_node, self.od[subindex])
 
     def __iter__(self) -> Iterable[int]:
         return iter(range(1, len(self) + 1))
@@ -118,7 +118,7 @@ class Array(Mapping):
         return 0 <= subindex <= len(self)
 
 
-class Variable(variable.Variable):
+class SdoVariable(variable.Variable):
     """Access object dictionary variable values using SDO protocol."""
 
     def __init__(self, sdo_node: SdoBase, od: ObjectDictionary):
@@ -165,3 +165,9 @@ class Variable(variable.Variable):
         """
         return self.sdo_node.open(self.od.index, self.od.subindex, mode,
                                   encoding, buffering, size, block_transfer, request_crc_support=request_crc_support)
+
+
+# For compatibility
+Record = SdoRecord
+Array = SdoArray
+Variable = SdoVariable

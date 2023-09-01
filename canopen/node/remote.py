@@ -5,7 +5,7 @@ from canopen.sdo import SdoClient, SdoCommunicationError, SdoAbortedError
 from canopen.nmt import NmtMaster
 from canopen.emcy import EmcyConsumer
 from canopen.pdo import TPDO, RPDO, PDO
-from canopen.objectdictionary import Record, Array, Variable, ObjectDictionary
+from canopen.objectdictionary import ODRecord, ODArray, ODVariable, ObjectDictionary
 from canopen.node.base import BaseNode
 
 logger = logging.getLogger(__name__)
@@ -148,10 +148,10 @@ class RemoteNode(BaseNode):
     def load_configuration(self):
         ''' Load the configuration of the node from the object dictionary.'''
         for obj in self.object_dictionary.values():
-            if isinstance(obj, Record) or isinstance(obj, Array):
+            if isinstance(obj, ODRecord) or isinstance(obj, ODArray):
                 for subobj in obj.values():
-                    if isinstance(subobj, Variable) and subobj.writable and (subobj.value is not None):
+                    if isinstance(subobj, ODVariable) and subobj.writable and (subobj.value is not None):
                         self.__load_configuration_helper(subobj.index, subobj.subindex, subobj.name, subobj.value)
-            elif isinstance(obj, Variable) and obj.writable and (obj.value is not None):
+            elif isinstance(obj, ODVariable) and obj.writable and (obj.value is not None):
                 self.__load_configuration_helper(obj.index, None, obj.name, obj.value)
         self.pdo.read()  # reads the new configuration from the driver

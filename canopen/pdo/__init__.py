@@ -1,7 +1,10 @@
 import logging
 
 from canopen import node
-from canopen.pdo.base import PdoBase, Maps, Map, Variable
+from canopen.pdo.base import PdoBase, Maps
+
+# Compatibility
+from .base import Variable
 
 logger = logging.getLogger(__name__)
 

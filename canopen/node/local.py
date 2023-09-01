@@ -120,7 +120,7 @@ class LocalNode(BaseNode):
             # Index does not exist
             raise SdoAbortedError(0x06020000)
         obj = self.object_dictionary[index]
-        if not isinstance(obj, objectdictionary.Variable):
+        if not isinstance(obj, objectdictionary.ODVariable):
             # Group or array
             if subindex not in obj:
                 # Subindex does not exist

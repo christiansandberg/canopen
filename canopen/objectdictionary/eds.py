@@ -101,7 +101,7 @@ def import_eds(source, node_id):
             for i in range(1, 8):
                 key = "Dummy%04d" % i
                 if eds.getint(section, key) == 1:
-                    var = objectdictionary.Variable(key, i, 0)
+                    var = objectdictionary.ODVariable(key, i, 0)
                     var.data_type = i
                     var.access_type = "const"
                     od.add_object(var)
@@ -127,8 +127,8 @@ def import_eds(source, node_id):
                 var = build_variable(eds, section, node_id, index)
                 od.add_object(var)
             elif object_type == ARR and eds.has_option(section, "CompactSubObj"):
-                arr = objectdictionary.Array(name, index)
-                last_subindex = objectdictionary.Variable(
+                arr = objectdictionary.ODArray(name, index)
+                last_subindex = objectdictionary.ODVariable(
                     "Number of entries", index, 0)
                 last_subindex.data_type = datatypes.UNSIGNED8
                 arr.add_member(last_subindex)
@@ -136,11 +136,11 @@ def import_eds(source, node_id):
                 arr.storage_location = storage_location
                 od.add_object(arr)
             elif object_type == ARR:
-                arr = objectdictionary.Array(name, index)
+                arr = objectdictionary.ODArray(name, index)
                 arr.storage_location = storage_location
                 od.add_object(arr)
             elif object_type == RECORD:
-                record = objectdictionary.Record(name, index)
+                record = objectdictionary.ODRecord(name, index)
                 record.storage_location = storage_location
                 od.add_object(record)
 
@@ -152,8 +152,8 @@ def import_eds(source, node_id):
             index = int(match.group(1), 16)
             subindex = int(match.group(2), 16)
             entry = od[index]
-            if isinstance(entry, (objectdictionary.Record,
-                                  objectdictionary.Array)):
+            if isinstance(entry, (objectdictionary.ODRecord,
+                                  objectdictionary.ODArray)):
                 var = build_variable(eds, section, node_id, index, subindex)
                 entry.add_member(var)
 
@@ -257,7 +257,7 @@ def build_variable(eds, section, node_id, index, subindex=0):
     :param subindex: Subindex of the CANOpen object (if presente, else 0)
     """
     name = eds.get(section, "ParameterName")
-    var = objectdictionary.Variable(name, index, subindex)
+    var = objectdictionary.ODVariable(name, index, subindex)
     try:
         var.storage_location = eds.get(section, "StorageLocation")
     except NoOptionError:
@@ -344,11 +344,11 @@ def export_dcf(od, dest=None, fileInfo={}):
 
 def export_eds(od, dest=None, file_info={}, device_commisioning=False):
     def export_object(obj, eds):
-        if isinstance(obj, objectdictionary.Variable):
+        if isinstance(obj, objectdictionary.ODVariable):
             return export_variable(obj, eds)
-        if isinstance(obj, objectdictionary.Record):
+        if isinstance(obj, objectdictionary.ODRecord):
             return export_record(obj, eds)
-        if isinstance(obj, objectdictionary.Array):
+        if isinstance(obj, objectdictionary.ODArray):
             return export_array(obj, eds)
 
     def export_common(var, eds, section):
@@ -404,7 +404,7 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
         section = "%04X" % var.index
         export_common(var, eds, section)
         eds.set(section, "SubNumber", "0x%X" % len(var.subindices))
-        ot = RECORD if isinstance(var, objectdictionary.Record) else ARR
+        ot = RECORD if isinstance(var, objectdictionary.ODRecord) else ARR
         eds.set(section, "ObjectType", "0x%X" % ot)
         for i in var:
             export_variable(var[i], eds)

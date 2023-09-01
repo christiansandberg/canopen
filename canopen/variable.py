@@ -12,12 +12,12 @@ logger = logging.getLogger(__name__)
 
 class Variable:
 
-    def __init__(self, od: objectdictionary.Variable):
+    def __init__(self, od: objectdictionary.ODVariable):
         self.od = od
         #: Description of this variable from Object Dictionary, overridable
         self.name = od.name
-        if isinstance(od.parent, (objectdictionary.Record,
-                                  objectdictionary.Array)):
+        if isinstance(od.parent, (objectdictionary.ODRecord,
+                                  objectdictionary.ODArray)):
             # Include the parent object's name for subentries
             self.name = od.parent.name + "." + od.name
         #: Holds a local, overridable copy of the Object Index
