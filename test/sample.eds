@@ -936,9 +936,8 @@ ObjectType=0x7
 DataType=0x15
 AccessType=rw
 HighLimit=0x000000000000000A
-LowLimit=0x8000000000000009
+LowLimit=0xFFFFFFFFFFFFFFF6
 PDOMapping=0
-
 
 [3050]
 ParameterName=EDS file extensions
