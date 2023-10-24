@@ -122,11 +122,8 @@ class NmtMaster(NmtBase):
             logger.debug("Received heartbeat can-id %d, state is %d", can_id, new_state)
             for callback in self._callbacks:
                 callback(new_state)
-            if new_state == 0:
-                # Boot-up, will go to PRE-OPERATIONAL automatically
-                self._state = 127
-            else:
-                self._state = new_state
+            
+            self._state = new_state
             self._state_received = new_state
             self.state_update.notify_all()
 
