@@ -33,7 +33,7 @@ Callback = Callable[[int, bytearray, float], None]
 class Network(MutableMapping):
     """Representation of one CAN bus containing one or more nodes."""
 
-    def __init__(self, bus=None):
+    def __init__(self, bus: can.BusABC | None = None):
         """
         :param can.BusABC bus:
             A python-can bus instance to re-use.
@@ -110,7 +110,8 @@ class Network(MutableMapping):
                 if node.object_dictionary.bitrate:
                     kwargs["bitrate"] = node.object_dictionary.bitrate
                     break
-        self.bus = can.interface.Bus(*args, **kwargs)
+        if self.bus is None:
+            self.bus = can.Bus(*args, **kwargs)
         logger.info("Connected to '%s'", self.bus.channel_info)
         self.notifier = can.Notifier(self.bus, self.listeners, 1)
         return self
