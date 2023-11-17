@@ -172,6 +172,7 @@ class SdoServer(SdoBase):
         self.send_response(response)
 
     def send_response(self, response):
+        logger.debug(f"Sending to {self.tx_cobid} data {response}.")
         self.network.send_message(self.tx_cobid, response)
 
     def abort(self, abort_code=0x08000000):

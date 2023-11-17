@@ -28,6 +28,9 @@ class SdoClient(SdoBase):
     #: Seconds to wait before sending a request, for rate limiting
     PAUSE_BEFORE_SEND = 0.0
 
+    # Seconds to wait before next read attempt for response in queue. For delayed responses.
+    RETRY_DELAY = 0.0
+
     def __init__(self, rx_cobid, tx_cobid, od):
         """
         :param int rx_cobid:
@@ -88,6 +91,7 @@ class SdoClient(SdoBase):
                     self.abort(0x5040000) 
                     raise
                 logger.warning(str(e))
+                time.sleep(self.RETRY_DELAY)
 
     def abort(self, abort_code=0x08000000):
         """Abort current transfer."""
