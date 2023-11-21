@@ -23,6 +23,13 @@ class TestEDS(unittest.TestCase):
             {"hex_str": "0000", "bit_length": 16, "expected": 0},
             {"hex_str": "0001", "bit_length": 16, "expected": 1}
         ],
+        "int24": [
+            {"hex_str": "7FFFFF", "bit_length": 24, "expected": 8388607},
+            {"hex_str": "800000", "bit_length": 24, "expected": -8388608},
+            {"hex_str": "FFFFFF", "bit_length": 24, "expected": -1},
+            {"hex_str": "000000", "bit_length": 24, "expected": 0},
+            {"hex_str": "000001", "bit_length": 24, "expected": 1}
+        ],
         "int32": [
             {"hex_str": "7FFFFFFF", "bit_length": 32, "expected": 2147483647},
             {"hex_str": "80000000", "bit_length": 32, "expected": -2147483648},
