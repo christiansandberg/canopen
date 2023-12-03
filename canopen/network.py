@@ -13,16 +13,17 @@ try:
 except ImportError:
     # Do not fail if python-can is not installed
     can = None
-    Listener = object
     CanError = Exception
+    class Listener:
+        """ Dummy listener """
 
-from .node import RemoteNode, LocalNode
-from .sync import SyncProducer
-from .timestamp import TimeProducer
-from .nmt import NmtMaster
-from .lss import LssMaster
-from .objectdictionary.eds import import_from_node
-from .objectdictionary import ObjectDictionary
+from canopen.node import RemoteNode, LocalNode
+from canopen.sync import SyncProducer
+from canopen.timestamp import TimeProducer
+from canopen.nmt import NmtMaster
+from canopen.lss import LssMaster
+from canopen.objectdictionary.eds import import_from_node
+from canopen.objectdictionary import ObjectDictionary
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ Callback = Callable[[int, bytearray, float], None]
 class Network(MutableMapping):
     """Representation of one CAN bus containing one or more nodes."""
 
-    def __init__(self, bus=None):
+    def __init__(self, bus: can.BusABC | None = None):
         """
         :param can.BusABC bus:
             A python-can bus instance to re-use.
@@ -109,7 +110,8 @@ class Network(MutableMapping):
                 if node.object_dictionary.bitrate:
                     kwargs["bitrate"] = node.object_dictionary.bitrate
                     break
-        self.bus = can.interface.Bus(*args, **kwargs)
+        if self.bus is None:
+            self.bus = can.Bus(*args, **kwargs)
         logger.info("Connected to '%s'", self.bus.channel_info)
         self.notifier = can.Notifier(self.bus, self.listeners, 1)
         return self
@@ -268,6 +270,9 @@ class Network(MutableMapping):
 
     def __setitem__(self, node_id: int, node: Union[RemoteNode, LocalNode]):
         assert node_id == node.id
+        if node_id in self.nodes:
+            # Remove old callbacks
+            self.nodes[node_id].remove_network()
         self.nodes[node_id] = node
         node.associate_network(self)
 
@@ -282,7 +287,7 @@ class Network(MutableMapping):
         return len(self.nodes)
 
 
-class PeriodicMessageTask(object):
+class PeriodicMessageTask:
     """
     Task object to transmit a message periodically using python-can's
     CyclicSendTask
@@ -359,7 +364,7 @@ class MessageListener(Listener):
             logger.error(str(e))
 
 
-class NodeScanner(object):
+class NodeScanner:
     """Observes which nodes are present on the bus.
 
     Listens for the following messages:

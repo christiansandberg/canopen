@@ -7,10 +7,10 @@ except ImportError:
     from collections import Mapping
 import logging
 import binascii
-from .. import node
-from ..sdo import SdoAbortedError
-from .. import objectdictionary
-from .. import variable
+
+from canopen.sdo import SdoAbortedError
+from canopen import objectdictionary
+from canopen import variable
 
 PDO_NOT_VALID = 1 << 31
 RTR_NOT_ALLOWED = 1 << 30
@@ -50,10 +50,10 @@ class PdoBase(Mapping):
     def __len__(self):
         return len(self.map)
 
-    def read(self):
+    def read(self, from_od=False):
         """Read PDO configuration from node using SDO."""
         for pdo_map in self.map.values():
-            pdo_map.read()
+            pdo_map.read(from_od=from_od)
 
     def save(self):
         """Save PDO configuration to node using SDO."""
@@ -156,7 +156,7 @@ class Maps(Mapping):
         return len(self.maps)
 
 
-class Map(object):
+class Map:
     """One message which can have up to 8 bytes of variables mapped."""
 
     def __init__(self, pdo_node, com_record, map_array):
@@ -180,7 +180,7 @@ class Map(object):
         #: Ignores SYNC objects up to this SYNC counter value (optional)
         self.sync_start_value: Optional[int] = None
         #: List of variables mapped to this PDO
-        self.map: List["Variable"] = []
+        self.map: List["PdoVariable"] = []
         self.length: int = 0
         #: Current message data
         self.data = bytearray()
@@ -193,8 +193,6 @@ class Map(object):
         self.receive_condition = threading.Condition()
         self.is_received: bool = False
         self._task = None
-        #: Internal sync count for synchronous PDOs (used as a prescaler)
-        self._internal_sync_count = 0
 
     def __getitem_by_index(self, value):
         valid_values = []
@@ -216,7 +214,7 @@ class Map(object):
         raise KeyError('{0} not found in map. Valid entries are {1}'.format(
             value, ', '.join(valid_values)))
 
-    def __getitem__(self, key: Union[int, str]) -> "Variable":
+    def __getitem__(self, key: Union[int, str]) -> "PdoVariable":
         var = None
         if isinstance(key, int):
             # there is a maximum available of 8 slots per PDO map
@@ -231,7 +229,7 @@ class Map(object):
                 var = self.__getitem_by_name(key)
         return var
 
-    def __iter__(self) -> Iterable["Variable"]:
+    def __iter__(self) -> Iterable["PdoVariable"]:
         return iter(self.map)
 
     def __len__(self) -> int:
@@ -239,9 +237,9 @@ class Map(object):
 
     def _get_variable(self, index, subindex):
         obj = self.pdo_node.node.object_dictionary[index]
-        if isinstance(obj, (objectdictionary.Record, objectdictionary.Array)):
+        if isinstance(obj, (objectdictionary.ODRecord, objectdictionary.ODArray)):
             obj = obj[subindex]
-        var = Variable(obj)
+        var = PdoVariable(obj)
         var.pdo_parent = self
         return var
 
@@ -250,8 +248,8 @@ class Map(object):
         logger.info("Filling up fixed-length mapping array")
         while len(self.map) < needed:
             # Generate a dummy mapping for an invalid object with zero length.
-            obj = objectdictionary.Variable('Dummy', 0, 0)
-            var = Variable(obj)
+            obj = objectdictionary.ODVariable('Dummy', 0, 0)
+            var = PdoVariable(obj)
             var.length = 0
             self.map.append(var)
 
@@ -299,10 +297,6 @@ class Map(object):
             with self.receive_condition:
                 self.is_received = True
                 self.data = data
-                # Also update object dictionary in case of local node
-                if(isinstance(self.pdo_node.node,node.LocalNode)):
-                    for var in self:
-                        self.pdo_node.node.set_data(var.index,var.subindex,data=var.data)
                 if self.timestamp is not None:
                     self.period = timestamp - self.timestamp
                 self.timestamp = timestamp
@@ -319,43 +313,49 @@ class Map(object):
         """
         self.callbacks.append(callback)
 
-    def read(self) -> None:
+    def read(self, from_od=False) -> None:
         """Read PDO configuration for this map using SDO."""
-        cob_id = self.com_record[1].raw
+
+        def _raw_from(param):
+            if from_od:
+                return param.od.default
+            return param.raw
+
+        cob_id = _raw_from(self.com_record[1])
         self.cob_id = cob_id & 0x1FFFFFFF
         logger.info("COB-ID is 0x%X", self.cob_id)
         self.enabled = cob_id & PDO_NOT_VALID == 0
         logger.info("PDO is %s", "enabled" if self.enabled else "disabled")
         self.rtr_allowed = cob_id & RTR_NOT_ALLOWED == 0
         logger.info("RTR is %s", "allowed" if self.rtr_allowed else "not allowed")
-        self.trans_type = self.com_record[2].raw
+        self.trans_type = _raw_from(self.com_record[2])
         logger.info("Transmission type is %d", self.trans_type)
         if self.trans_type >= 254:
             try:
-                self.inhibit_time = self.com_record[3].raw
+                self.inhibit_time = _raw_from(self.com_record[3])
             except (KeyError, SdoAbortedError) as e:
                 logger.info("Could not read inhibit time (%s)", e)
             else:
                 logger.info("Inhibit time is set to %d ms", self.inhibit_time)
 
             try:
-                self.event_timer = self.com_record[5].raw
+                self.event_timer = _raw_from(self.com_record[5])
             except (KeyError, SdoAbortedError) as e:
                 logger.info("Could not read event timer (%s)", e)
             else:
                 logger.info("Event timer is set to %d ms", self.event_timer)
 
             try:
-                self.sync_start_value = self.com_record[6].raw
+                self.sync_start_value = _raw_from(self.com_record[6])
             except (KeyError, SdoAbortedError) as e:
                 logger.info("Could not read SYNC start value (%s)", e)
             else:
                 logger.info("SYNC start value is set to %d ms", self.sync_start_value)
 
         self.clear()
-        nof_entries = self.map_array[0].raw
+        nof_entries = _raw_from(self.map_array[0])
         for subindex in range(1, nof_entries + 1):
-            value = self.map_array[subindex].raw
+            value = _raw_from(self.map_array[subindex])
             index = value >> 16
             subindex = (value >> 8) & 0xFF
             size = value & 0xFF
@@ -446,13 +446,13 @@ class Map(object):
         index: Union[str, int],
         subindex: Union[str, int] = 0,
         length: Optional[int] = None,
-    ) -> "Variable":
+    ) -> "PdoVariable":
         """Add a variable from object dictionary as the next entry.
 
         :param index: Index of variable as name or number
         :param subindex: Sub-index of variable as name or number
         :param length: Size of data in number of bits
-        :return: Variable that was added
+        :return: PdoVariable that was added
         """
         try:
             var = self._get_variable(index, subindex)
@@ -534,11 +534,11 @@ class Map(object):
         return self.timestamp if self.is_received else None
 
 
-class Variable(variable.Variable):
+class PdoVariable(variable.Variable):
     """One object dictionary variable mapped to a PDO."""
 
-    def __init__(self, od: objectdictionary.Variable):
-        #: PDO object that is associated with this Variable Object
+    def __init__(self, od: objectdictionary.ODVariable):
+        #: PDO object that is associated with this ODVariable Object
         self.pdo_parent = None
         #: Location of variable in the message in bits
         self.offset = None
@@ -548,7 +548,7 @@ class Variable(variable.Variable):
     def get_data(self) -> bytes:
         """Reads the PDO variable from the last received message.
 
-        :return: Variable value as :class:`bytes`.
+        :return: PdoVariable value as :class:`bytes`.
         """
         byte_offset, bit_offset = divmod(self.offset, 8)
 
@@ -604,3 +604,7 @@ class Variable(variable.Variable):
             self.pdo_parent.data[byte_offset:byte_offset + len(data)] = data
 
         self.pdo_parent.update()
+
+
+# For compatibility
+Variable = PdoVariable

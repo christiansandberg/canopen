@@ -42,7 +42,8 @@ class TestSDO(unittest.TestCase):
 
     def test_block_upload_switch_to_expedite_upload(self):
         with self.assertRaises(canopen.SdoCommunicationError) as context:
-            self.remote_node.sdo[0x1008].open('r', block_transfer=True)
+            with self.remote_node.sdo[0x1008].open('r', block_transfer=True) as fp:
+                pass
         # We get this since the sdo client don't support the switch
         # from block upload to expedite upload
         self.assertEqual("Unexpected response 0x41", str(context.exception))
@@ -50,9 +51,10 @@ class TestSDO(unittest.TestCase):
     def test_block_download_not_supported(self):
         data = b"TEST DEVICE"
         with self.assertRaises(canopen.SdoAbortedError) as context:
-            self.remote_node.sdo[0x1008].open('wb',
-                                              size=len(data),
-                                              block_transfer=True)
+            with self.remote_node.sdo[0x1008].open('wb',
+                                                   size=len(data),
+                                                   block_transfer=True) as fp:
+                pass
         self.assertEqual(context.exception.code, 0x05040001)
 
     def test_expedited_upload_default_value_visible_string(self):

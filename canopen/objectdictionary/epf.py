@@ -3,7 +3,9 @@ try:
 except ImportError:
     import xml.etree.ElementTree as etree
 import logging
+
 from canopen import objectdictionary
+from canopen.objectdictionary import ObjectDictionary
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +34,7 @@ def import_epf(epf):
         The Object Dictionary.
     :rtype: canopen.ObjectDictionary
     """
-    od = objectdictionary.ObjectDictionary()
+    od = ObjectDictionary()
     if etree.iselement(epf):
         tree = epf
     else:
@@ -59,7 +61,7 @@ def import_epf(epf):
             od.add_object(var)
         elif len(parameters) == 2 and parameters[1].get("ObjectType") == "ARRAY":
             # Array
-            arr = objectdictionary.Array(name, index)
+            arr = objectdictionary.ODArray(name, index)
             for par_tree in parameters:
                 var = build_variable(par_tree)
                 arr.add_member(var)
@@ -69,7 +71,7 @@ def import_epf(epf):
             od.add_object(arr)
         else:
             # Complex record
-            record = objectdictionary.Record(name, index)
+            record = objectdictionary.ODRecord(name, index)
             for par_tree in parameters:
                 var = build_variable(par_tree)
                 record.add_member(var)
@@ -87,7 +89,7 @@ def build_variable(par_tree):
     name = par_tree.get("SymbolName")
     data_type = par_tree.get("DataType")
 
-    par = objectdictionary.Variable(name, index, subindex)
+    par = objectdictionary.ODVariable(name, index, subindex)
     factor = par_tree.get("Factor", "1")
     par.factor = int(factor) if factor.isdigit() else float(factor)
     unit = par_tree.get("Unit")

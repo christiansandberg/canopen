@@ -1,9 +1,7 @@
-
-
 from typing import Optional
 
 
-class SyncProducer(object):
+class SyncProducer:
     """Transmits a SYNC message periodically."""
 
     #: COB-ID of the SYNC message
