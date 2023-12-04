@@ -10,6 +10,7 @@ except ImportError:
 import logging
 
 from canopen.objectdictionary.datatypes import *
+from canopen.objectdictionary.datatypes_24bit import Integer24, Unsigned24
 
 logger = logging.getLogger(__name__)
 
@@ -277,10 +278,12 @@ class ODVariable:
         BOOLEAN: struct.Struct("?"),
         INTEGER8: struct.Struct("b"),
         INTEGER16: struct.Struct("<h"),
+        INTEGER24: Integer24(),
         INTEGER32: struct.Struct("<l"),
         INTEGER64: struct.Struct("<q"),
         UNSIGNED8: struct.Struct("B"),
         UNSIGNED16: struct.Struct("<H"),
+        UNSIGNED24: Unsigned24(),
         UNSIGNED32: struct.Struct("<L"),
         UNSIGNED64: struct.Struct("<Q"),
         REAL32: struct.Struct("<f"),

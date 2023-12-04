@@ -24,6 +24,12 @@ class TestDataConversions(unittest.TestCase):
         self.assertEqual(var.decode_raw(b"\xfe\xff"), 65534)
         self.assertEqual(var.encode_raw(65534), b"\xfe\xff")
 
+    def test_unsigned24(self):
+        var = od.ODVariable("Test UNSIGNED24", 0x1000)
+        var.data_type = od.UNSIGNED24
+        self.assertEqual(var.decode_raw(b"\xfd\xfe\xff"), 16776957)
+        self.assertEqual(var.encode_raw(16776957), b"\xfd\xfe\xff")
+
     def test_unsigned32(self):
         var = od.ODVariable("Test UNSIGNED32", 0x1000)
         var.data_type = od.UNSIGNED32
@@ -45,6 +51,14 @@ class TestDataConversions(unittest.TestCase):
         self.assertEqual(var.decode_raw(b"\x01\x00"), 1)
         self.assertEqual(var.encode_raw(-2), b"\xfe\xff")
         self.assertEqual(var.encode_raw(1), b"\x01\x00")
+
+    def test_integer24(self):
+        var = od.ODVariable("Test INTEGER24", 0x1000)
+        var.data_type = od.INTEGER24
+        self.assertEqual(var.decode_raw(b"\xfe\xff\xff"), -2)
+        self.assertEqual(var.decode_raw(b"\x01\x00\x00"), 1)
+        self.assertEqual(var.encode_raw(-2), b"\xfe\xff\xff")
+        self.assertEqual(var.encode_raw(1), b"\x01\x00\x00")
 
     def test_integer32(self):
         var = od.ODVariable("Test INTEGER32", 0x1000)
