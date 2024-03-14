@@ -1,12 +1,13 @@
 import logging
 from typing import Dict, Union
 
-from .base import BaseNode
-from ..sdo import SdoServer, SdoAbortedError
-from ..pdo import PDO, TPDO, RPDO
-from ..nmt import NmtSlave
-from ..emcy import EmcyProducer
-from .. import objectdictionary
+from canopen.node.base import BaseNode
+from canopen.sdo import SdoServer, SdoAbortedError
+from canopen.pdo import PDO, TPDO, RPDO
+from canopen.nmt import NmtSlave
+from canopen.emcy import EmcyProducer
+from canopen.objectdictionary import ObjectDictionary
+from canopen import objectdictionary
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ class LocalNode(BaseNode):
     def __init__(
         self,
         node_id: int,
-        object_dictionary: Union[objectdictionary.ObjectDictionary, str],
+        object_dictionary: Union[ObjectDictionary, str],
     ):
         super(LocalNode, self).__init__(node_id, object_dictionary)
 
@@ -100,6 +101,12 @@ class LocalNode(BaseNode):
         if check_writable and not obj.writable:
             raise SdoAbortedError(0x06010002)
 
+        # Check length matches type (length of od variable is in bits)
+        if obj.data_type in objectdictionary.NUMBER_TYPES and (
+            not 8 * len(data) == len(obj)
+        ):
+            raise SdoAbortedError(0x06070010)
+
         # Try callbacks
         for callback in self._write_callbacks:
             callback(index=index, subindex=subindex, od=obj, data=data)
@@ -113,7 +120,7 @@ class LocalNode(BaseNode):
             # Index does not exist
             raise SdoAbortedError(0x06020000)
         obj = self.object_dictionary[index]
-        if not isinstance(obj, objectdictionary.Variable):
+        if not isinstance(obj, objectdictionary.ODVariable):
             # Group or array
             if subindex not in obj:
                 # Subindex does not exist

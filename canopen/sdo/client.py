@@ -7,12 +7,11 @@ try:
 except ImportError:
     import Queue as queue
 
-from ..network import CanError
-from .. import objectdictionary
-
-from .base import SdoBase
-from .constants import *
-from .exceptions import *
+from canopen.network import CanError
+from canopen import objectdictionary
+from canopen.sdo.base import SdoBase
+from canopen.sdo.constants import *
+from canopen.sdo.exceptions import *
 
 logger = logging.getLogger(__name__)
 
@@ -114,22 +113,23 @@ class SdoClient(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        fp = self.open(index, subindex, buffering=0)
-        size = fp.size
-        data = fp.read()
-        if size is None:
-            # Node did not specify how many bytes to use
-            # Try to find out using Object Dictionary
-            var = self.od.get_variable(index, subindex)
-            if var is not None:
-                # Found a matching variable in OD
-                # If this is a data type (string, domain etc) the size is
-                # unknown anyway so keep the data as is
-                if var.data_type not in objectdictionary.DATA_TYPES:
-                    # Get the size in bytes for this variable
-                    size = len(var) // 8
+        with self.open(index, subindex, buffering=0) as fp:
+            response_size = fp.size
+            data = fp.read()
+
+        # If size is available through variable in OD, then use the smaller of the two sizes.
+        # Some devices send U32/I32 even if variable is smaller in OD
+        var = self.od.get_variable(index, subindex)
+        if var is not None:
+            # Found a matching variable in OD
+            # If this is a data type (string, domain etc) the size is
+            # unknown anyway so keep the data as is
+            if var.data_type not in objectdictionary.DATA_TYPES:
+                # Get the size in bytes for this variable
+                var_size = len(var) // 8
+                if response_size is None or var_size < response_size:
                     # Truncate the data to specified size
-                    data = data[0:size]
+                    data = data[0:var_size]
         return data
 
     def download(
@@ -155,10 +155,9 @@ class SdoClient(SdoBase):
         :raises canopen.SdoAbortedError:
             When node responds with an error.
         """
-        fp = self.open(index, subindex, "wb", buffering=7, size=len(data),
-                       force_segment=force_segment)
-        fp.write(data)
-        fp.close()
+        with self.open(index, subindex, "wb", buffering=7, size=len(data),
+                       force_segment=force_segment) as fp:
+            fp.write(data)
 
     def open(self, index, subindex=0, mode="rb", encoding="ascii",
              buffering=1024, size=None, block_transfer=False, force_segment=False, request_crc_support=True):
@@ -193,7 +192,7 @@ class SdoClient(SdoBase):
             Force use of segmented download regardless of data size.
         :param bool request_crc_support:
             If crc calculation should be requested when using block transfer
-        
+
         :returns:
             A file like object.
         """

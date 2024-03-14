@@ -1,16 +1,12 @@
 import logging
 from typing import Union, TextIO
 
-from ..sdo import SdoClient
-from ..nmt import NmtMaster
-from ..emcy import EmcyConsumer
-from ..pdo import TPDO, RPDO, PDO
-from ..objectdictionary import Record, Array, Variable
-from .base import BaseNode
-
-import canopen
-
-from canopen import objectdictionary
+from canopen.sdo import SdoClient, SdoCommunicationError, SdoAbortedError
+from canopen.nmt import NmtMaster
+from canopen.emcy import EmcyConsumer
+from canopen.pdo import TPDO, RPDO, PDO
+from canopen.objectdictionary import ODRecord, ODArray, ODVariable, ObjectDictionary
+from canopen.node.base import BaseNode
 
 logger = logging.getLogger(__name__)
 
@@ -24,14 +20,14 @@ class RemoteNode(BaseNode):
         Object dictionary as either a path to a file, an ``ObjectDictionary``
         or a file like object.
     :param load_od:
-        Enable the Object Dictionary to be sent trough SDO's to the remote
+        Enable the Object Dictionary to be sent through SDO's to the remote
         node at startup.
     """
 
     def __init__(
         self,
         node_id: int,
-        object_dictionary: Union[objectdictionary.ObjectDictionary, str, TextIO],
+        object_dictionary: Union[ObjectDictionary, str, TextIO],
         load_od: bool = False,
     ):
         super(RemoteNode, self).__init__(node_id, object_dictionary)
@@ -138,9 +134,9 @@ class RemoteNode(BaseNode):
                     index=index,
                     name=name,
                     value=value)))
-        except canopen.SdoCommunicationError as e:
+        except SdoCommunicationError as e:
             logger.warning(str(e))
-        except canopen.SdoAbortedError as e:
+        except SdoAbortedError as e:
             # WORKAROUND for broken implementations: the SDO is set but the error
             # "Attempt to write a read-only object" is raised any way.
             if e.code != 0x06010002:
@@ -152,10 +148,10 @@ class RemoteNode(BaseNode):
     def load_configuration(self):
         ''' Load the configuration of the node from the object dictionary.'''
         for obj in self.object_dictionary.values():
-            if isinstance(obj, Record) or isinstance(obj, Array):
+            if isinstance(obj, ODRecord) or isinstance(obj, ODArray):
                 for subobj in obj.values():
-                    if isinstance(subobj, Variable) and subobj.writable and (subobj.value is not None):
+                    if isinstance(subobj, ODVariable) and subobj.writable and (subobj.value is not None):
                         self.__load_configuration_helper(subobj.index, subobj.subindex, subobj.name, subobj.value)
-            elif isinstance(obj, Variable) and obj.writable and (obj.value is not None):
+            elif isinstance(obj, ODVariable) and obj.writable and (obj.value is not None):
                 self.__load_configuration_helper(obj.index, None, obj.name, obj.value)
         self.pdo.read()  # reads the new configuration from the driver

@@ -902,3 +902,72 @@ DataType=0x0008
 AccessType=ro
 DefaultValue=0
 PDOMapping=1
+
+[3020]
+ParameterName=INTEGER8 only positive values
+ObjectType=0x7
+DataType=0x02
+AccessType=rw
+HighLimit=0x7F
+LowLimit=0x00
+PDOMapping=0
+
+[3021]
+ParameterName=UNSIGNED8 value range +2 to +10
+ObjectType=0x7
+DataType=0x05
+AccessType=rw
+HighLimit=0x0A
+LowLimit=0x02
+PDOMapping=0
+
+[3030]
+ParameterName=INTEGER32 only negative values
+ObjectType=0x7
+DataType=0x04
+AccessType=rw
+HighLimit=0xFFFFFFFF
+LowLimit=0x80000000
+PDOMapping=0
+
+[3040]
+ParameterName=INTEGER64 value range -10 to +10
+ObjectType=0x7
+DataType=0x15
+AccessType=rw
+HighLimit=0x000000000000000A
+LowLimit=0xFFFFFFFFFFFFFFF6
+PDOMapping=0
+
+[3050]
+ParameterName=EDS file extensions
+SubNumber=0x7
+ObjectType=0x9
+
+[3050sub0]
+ParameterName=Highest subindex
+ObjectType=0x7
+DataType=0x0005
+AccessType=ro
+DefaultValue=0x02
+PDOMapping=0x0
+
+[3050sub1]
+ParameterName=FactorAndDescription
+ObjectType=0x7
+DataType=0x0004
+AccessType=ro
+PDOMapping=0x0
+Factor=0.1
+Description=This is the a test description
+Unit=mV
+
+[3050sub2]
+ParameterName=Error Factor and No Description
+ObjectType=0x7
+DataType=0x0004
+AccessType=ro
+PDOMapping=0x0
+Factor=ERROR
+Description=
+Unit=

@@ -40,7 +40,8 @@ class TestSDO(unittest.TestCase):
 
     def test_block_upload_switch_to_expedite_upload(self):
         with self.assertRaises(canopen.SdoCommunicationError) as context:
-            self.remote_node.sdo[0x1008].open('r', block_transfer=True)
+            with self.remote_node.sdo[0x1008].open('r', block_transfer=True) as fp:
+                pass
         # We get this since the sdo client don't support the switch
         # from block upload to expedite upload
         self.assertEqual("Unexpected response 0x41", str(context.exception))
@@ -48,9 +49,10 @@ class TestSDO(unittest.TestCase):
     def test_block_download_not_supported(self):
         data = b"TEST DEVICE"
         with self.assertRaises(canopen.SdoAbortedError) as context:
-            self.remote_node.sdo[0x1008].open('wb',
-                                              size=len(data),
-                                              block_transfer=True)
+            with self.remote_node.sdo[0x1008].open('wb',
+                                                   size=len(data),
+                                                   block_transfer=True) as fp:
+                pass
         self.assertEqual(context.exception.code, 0x05040001)
 
     def test_expedited_upload_default_value_visible_string(self):
@@ -70,6 +72,16 @@ class TestSDO(unittest.TestCase):
         self.remote_node.sdo[0x2004].raw = 0xfeff
         value = self.local_node.sdo[0x2004].raw
         self.assertEqual(value, 0xfeff)
+
+    def test_expedited_download_wrong_datatype(self):
+        # Try to write 32 bit in integer16 type
+        with self.assertRaises(canopen.SdoAbortedError) as error:
+            self.remote_node.sdo.download(0x2001, 0x0, bytes([10, 10, 10, 10]))
+        self.assertEqual(error.exception.code, 0x06070010)
+        # Try to write normal 16 bit word, should be ok
+        self.remote_node.sdo.download(0x2001, 0x0, bytes([10, 10]))
+        value = self.remote_node.sdo.upload(0x2001, 0x0)
+        self.assertEqual(value, bytes([10, 10]))
 
     def test_segmented_download(self):
         self.remote_node.sdo[0x2000].raw = "Another cool device"
