@@ -383,7 +383,7 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
                 eds.set(section, "ParameterValue", var.value_raw)
             elif getattr(var, 'value', None) is not None:
                 eds.set(section, "ParameterValue",
-                        _revert_variable(var.data_type, var.default))
+                        _revert_variable(var.data_type, var.value))
 
         eds.set(section, "DataType", "0x%04X" % var.data_type)
         eds.set(section, "PDOMapping", hex(var.pdo_mappable))
