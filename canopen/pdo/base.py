@@ -358,11 +358,12 @@ class Map:
             value = _raw_from(self.map_array[subindex])
             index = value >> 16
             subindex = (value >> 8) & 0xFF
-            size = value & 0xFF
+            # Ignore the highest bit, it is never valid for <= 64 PDO length
+            size = value & 0x7F
             if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
                 index = value & 0xFFFF
                 subindex = (value >> 16) & 0xFF
-                size = (value >> 24) & 0xFF
+                size = (value >> 24) & 0x7F
             if index and size:
                 self.add_variable(index, subindex, size)
 
