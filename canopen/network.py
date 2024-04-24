@@ -363,6 +363,9 @@ class MessageListener(Listener):
             # Exceptions in any callbaks should not affect CAN processing
             logger.error(str(e))
 
+    def stop(self) -> None:
+        """Override abstract base method to release any resources."""
+
 
 class NodeScanner:
     """Observes which nodes are present on the bus.
