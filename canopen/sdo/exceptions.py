@@ -54,6 +54,10 @@ class SdoAbortedError(SdoError):
             text = text + ", " + self.CODES[self.code]
         return text
 
+    def __eq__(self, other):
+        """Compare two exception objects based on SDO abort code."""
+        return self.code == other.code
+
 
 class SdoCommunicationError(SdoError):
     """No or unexpected response from slave."""
