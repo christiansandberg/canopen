@@ -1,5 +1,5 @@
 import binascii
-from typing import Iterable, Union
+from typing import Iterable, Optional, Union
 try:
     from collections.abc import Mapping
 except ImportError:
@@ -67,6 +67,19 @@ class SdoBase(Mapping):
     def __contains__(self, key: Union[int, str]) -> bool:
         return key in self.od
 
+    def get_variable(
+        self, index: Union[int, str], subindex: int = 0
+    ) -> Optional["SdoVariable"]:
+        """Get the variable object at specified index (and subindex if applicable).
+
+        :return: SdoVariable if found, else `None`
+        """
+        obj = self.get(index)
+        if isinstance(obj, SdoVariable):
+            return obj
+        elif isinstance(obj, (SdoRecord, SdoArray)):
+            return obj.get(subindex)
+
     def upload(self, index: int, subindex: int) -> bytes:
         raise NotImplementedError()
 
@@ -131,6 +144,14 @@ class SdoVariable(variable.Variable):
     def set_data(self, data: bytes):
         force_segment = self.od.data_type == objectdictionary.DOMAIN
         self.sdo_node.download(self.od.index, self.od.subindex, data, force_segment)
+
+    @property
+    def writable(self) -> bool:
+        return self.od.writable
+
+    @property
+    def readable(self) -> bool:
+        return self.od.readable
 
     def open(self, mode="rb", encoding="ascii", buffering=1024, size=None,
              block_transfer=False, request_crc_support=True):
