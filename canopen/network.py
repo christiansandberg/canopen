@@ -33,7 +33,7 @@ Callback = Callable[[int, bytearray, float], None]
 class Network(MutableMapping):
     """Representation of one CAN bus containing one or more nodes."""
 
-    def __init__(self, bus: can.BusABC | None = None):
+    def __init__(self, bus: Optional[can.BusABC] = None):
         """
         :param can.BusABC bus:
             A python-can bus instance to re-use.
