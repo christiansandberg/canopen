@@ -139,11 +139,11 @@ The :code:`n` is the PDO index (normally 1 to 4). The second form of access is f
     # network.connect(bustype='nican', channel='CAN0', bitrate=250000)
 
     # Read a variable using SDO
-    device_name = node.sdo['Manufacturer device name'].get_raw()
-    vendor_id = node.sdo[0x1018][1].get_raw()
+    device_name = node.sdo['Manufacturer device name'].raw
+    vendor_id = node.sdo[0x1018][1].raw
 
     # Write a variable using SDO
-    node.sdo['Producer heartbeat time'].set_raw(1000)
+    node.sdo['Producer heartbeat time'].raw = 1000
 
     # Read PDO configuration from node
     node.tpdo.read()
@@ -167,8 +167,8 @@ The :code:`n` is the PDO index (normally 1 to 4). The second form of access is f
 
     # Read a value from TPDO[1]
     node.tpdo[1].wait_for_reception()
-    speed = node.tpdo[1]['Velocity actual value'].get_phys()
-    val = node.tpdo['Some group.Some subindex'].get_raw()
+    speed = node.tpdo[1]['Velocity actual value'].phys
+    val = node.tpdo['Some group.Some subindex'].raw
 
     # Disconnect from CAN bus
     network.sync.stop()

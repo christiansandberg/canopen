@@ -1,4 +1,3 @@
-from __future__ import annotations
 import threading
 import logging
 import struct
@@ -10,7 +9,6 @@ from canopen.async_guard import ensure_not_async
 
 if TYPE_CHECKING:
     from canopen.network import Network
-
 
 logger = logging.getLogger(__name__)
 

@@ -1,4 +1,3 @@
-from __future__ import annotations
 import binascii
 from typing import Iterable, Union, Optional, TYPE_CHECKING
 try:

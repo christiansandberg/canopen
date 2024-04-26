@@ -73,7 +73,7 @@ class SdoClient(SdoBase):
                 logger.info(str(e))
                 if self.PAUSE_AFTER_SEND:
                     # NOTE: Blocking call
-                    time.sleep(0.1)
+                    time.sleep(self.PAUSE_AFTER_SEND)
             else:
                 break
 
@@ -91,7 +91,7 @@ class SdoClient(SdoBase):
                     raise
                 logger.info(str(e))
                 if self.PAUSE_AFTER_SEND:
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(self.PAUSE_AFTER_SEND)
             else:
                 break
 
