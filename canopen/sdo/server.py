@@ -1,13 +1,13 @@
 from typing import TYPE_CHECKING
 import logging
 
-from .base import SdoBase
-from .constants import *
-from .exceptions import *
-from ..async_guard import ensure_not_async
+from canopen.sdo.base import SdoBase
+from canopen.sdo.constants import *
+from canopen.sdo.exceptions import *
+from canopen.async_guard import ensure_not_async
 
 if TYPE_CHECKING:
-    from ..node.local import LocalNode
+    from canopen.node.local import LocalNode
 
 logger = logging.getLogger(__name__)
 

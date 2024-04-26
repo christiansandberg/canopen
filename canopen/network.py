@@ -19,17 +19,18 @@ try:
 except ImportError:
     # Do not fail if python-can is not installed
     can = None
-    Listener = object
     CanError = Exception
+    class Listener:
+        """ Dummy listener """
 
-from .node import RemoteNode, LocalNode
-from .sync import SyncProducer
-from .timestamp import TimeProducer
-from .nmt import NmtMaster
-from .lss import LssMaster
-from .objectdictionary.eds import import_from_node
-from .objectdictionary import ObjectDictionary
-from .async_guard import set_async_sentinel
+from canopen.node import RemoteNode, LocalNode
+from canopen.sync import SyncProducer
+from canopen.timestamp import TimeProducer
+from canopen.nmt import NmtMaster
+from canopen.lss import LssMaster
+from canopen.objectdictionary.eds import import_from_node
+from canopen.objectdictionary import ObjectDictionary
+from canopen.async_guard import set_async_sentinel
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +42,8 @@ class Network(MutableMapping):
 
     def __init__(
         self,
-        bus: Optional[BusABC] = None,
-        loop: Optional[AbstractEventLoop] = None
+        bus: can.BusABC | None = None,
+        loop: AbstractEventLoop | None = None
     ):
         """
         :param can.BusABC bus:
@@ -137,7 +138,8 @@ class Network(MutableMapping):
             # async mode. This enables the @ensure_not_async() decorator to
             # work. See async_guard.py
             set_async_sentinel(self.is_async)
-        self.bus = can.Bus(*args, **kwargs)
+        if self.bus is None:
+            self.bus = can.Bus(*args, **kwargs)
         logger.info("Connected to '%s'", self.bus.channel_info)
         self.notifier = can.Notifier(self.bus, self.listeners, 1, **kwargs_notifier)
         return self
@@ -307,6 +309,9 @@ class Network(MutableMapping):
 
     def __setitem__(self, node_id: int, node: Union[RemoteNode, LocalNode]):
         assert node_id == node.id
+        if node_id in self.nodes:
+            # Remove old callbacks
+            self.nodes[node_id].remove_network()
         self.nodes[node_id] = node
         node.associate_network(self)
 
@@ -321,7 +326,7 @@ class Network(MutableMapping):
         return len(self.nodes)
 
 
-class PeriodicMessageTask(object):
+class PeriodicMessageTask:
     """
     Task object to transmit a message periodically using python-can's
     CyclicSendTask
@@ -399,8 +404,11 @@ class MessageListener(Listener):
             # Exceptions in any callbaks should not affect CAN processing
             logger.error(str(e))
 
+    def stop(self) -> None:
+        """Override abstract base method to release any resources."""
 
-class NodeScanner(object):
+
+class NodeScanner:
     """Observes which nodes are present on the bus.
 
     Listens for the following messages:

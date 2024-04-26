@@ -1,13 +1,14 @@
 # inspired by the NmtMaster code
 import logging
 import time
-from ..node import RemoteNode
-from ..sdo import SdoCommunicationError
+
+from canopen.node import RemoteNode
+from canopen.sdo import SdoCommunicationError
 
 logger = logging.getLogger(__name__)
 
 
-class State402(object):
+class State402:
     # Controlword (0x6040) commands
     CW_OPERATION_ENABLED = 0x000F
     CW_SHUTDOWN = 0x0006
@@ -101,7 +102,7 @@ class State402(object):
                 return next_state
 
 
-class OperationMode(object):
+class OperationMode:
     NO_MODE = 0
     PROFILED_POSITION = 1
     VELOCITY = 2
@@ -155,7 +156,7 @@ class OperationMode(object):
     }
 
 
-class Homing(object):
+class Homing:
     CW_START = 0x10
     CW_HALT = 0x100
 

@@ -6,11 +6,10 @@ import time
 import asyncio
 from typing import Callable, Optional, TYPE_CHECKING
 
-from .network import CanError
-from .async_guard import ensure_not_async
+from canopen.async_guard import ensure_not_async
 
 if TYPE_CHECKING:
-    from .network import Network
+    from canopen.network import Network
 
 
 logger = logging.getLogger(__name__)
@@ -46,7 +45,7 @@ COMMAND_TO_STATE = {
 }
 
 
-class NmtBase(object):
+class NmtBase:
     """
     Can set the state of the node it controls using NMT commands and monitor
     the current state using the heartbeat protocol.

@@ -8,10 +8,11 @@ try:
     import queue
 except ImportError:
     import Queue as queue
-from .async_guard import ensure_not_async
+
+from canopen.async_guard import ensure_not_async
 
 if TYPE_CHECKING:
-    from .network import Network
+    from canopen.network import Network
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,7 @@ ListMessageNeedResponse = [
 ]
 
 
-class LssMaster(object):
+class LssMaster:
     """The Master of Layer Setting Services"""
 
     LSS_TX_COBID = 0x7E5
