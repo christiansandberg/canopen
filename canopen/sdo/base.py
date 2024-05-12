@@ -168,6 +168,9 @@ class SdoVariable(variable.Variable):
         self.sdo_node = sdo_node
         variable.Variable.__init__(self, od)
 
+    def __await__(self):
+        return self.aget_raw().__await__()
+
     def get_data(self) -> bytes:
         return self.sdo_node.upload(self.od.index, self.od.subindex)
 

@@ -108,6 +108,9 @@ class ObjectDictionary(MutableMapping):
         """Get object from object dictionary by name or index."""
         item = self.names.get(index) or self.indices.get(index)
         if item is None:
+            if isinstance(index, str) and '.' in index:
+                parts = index.split('.')
+                return self[parts[0]][".".join(parts[1:])]
             name = "0x%X" % index if isinstance(index, int) else index
             raise KeyError("%s was not found in Object Dictionary" % name)
         return item

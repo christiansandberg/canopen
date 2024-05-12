@@ -151,7 +151,7 @@ class SdoClient(SdoBase):
             except SdoCommunicationError as e:
                 retries_left -= 1
                 if not retries_left:
-                    self.abort(0x5040000)
+                    await self.aabort(0x5040000)
                     raise
                 logger.warning(str(e))
 
@@ -162,6 +162,15 @@ class SdoClient(SdoBase):
         # TODO: Is it necessary to include index and subindex?
         struct.pack_into("<L", request, 4, abort_code)
         self.send_request(request)
+        logger.error("Transfer aborted by client with code 0x{:08X}".format(abort_code))
+
+    async def aabort(self, abort_code=0x08000000):
+        """Abort current transfer."""
+        request = bytearray(8)
+        request[0] = REQUEST_ABORTED
+        # TODO: Is it necessary to include index and subindex?
+        struct.pack_into("<L", request, 4, abort_code)
+        await self.asend_request(request)
         logger.error("Transfer aborted by client with code 0x{:08X}".format(abort_code))
 
     @ensure_not_async  # NOTE: Safeguard for accidental async use
