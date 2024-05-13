@@ -147,8 +147,16 @@ class RemoteNode(BaseNode):
 
     def load_configuration(self):
         ''' Load the configuration of the node from the object dictionary.'''
+        # First apply PDO configuration from object dictionary
+        self.pdo.read(from_od=True)
+        self.pdo.save()
+
+        # Now apply all other records in object dictionary
         for obj in self.object_dictionary.values():
-            if isinstance(obj, ODRecord) or isinstance(obj, ODArray):
+            if 0x1400 <= obj.index < 0x1c00:
+                # Ignore PDO related objects
+                pass
+            elif isinstance(obj, ODRecord) or isinstance(obj, ODArray):
                 for subobj in obj.values():
                     if isinstance(subobj, ODVariable) and subobj.writable and (subobj.value is not None):
                         self.__load_configuration_helper(subobj.index, subobj.subindex, subobj.name, subobj.value)
