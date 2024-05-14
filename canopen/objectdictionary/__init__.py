@@ -179,6 +179,9 @@ class ODRecord(MutableMapping):
         self.subindices = {}
         self.names = {}
 
+    def __repr__(self) -> str:
+        return f"<{type(self).__qualname__} '{self.name}' at 0x{self.index:04x}>"
+
     def __getitem__(self, subindex: Union[int, str]) -> "ODVariable":
         item = self.names.get(subindex) or self.subindices.get(subindex)
         if item is None:
@@ -234,6 +237,9 @@ class ODArray(Mapping):
         self.storage_location = None
         self.subindices = {}
         self.names = {}
+
+    def __repr__(self) -> str:
+        return f"<{type(self).__qualname__} '{self.name}' at 0x{self.index:04x}>"
 
     def __getitem__(self, subindex: Union[int, str]) -> "ODVariable":
         var = self.names.get(subindex) or self.subindices.get(subindex)
@@ -330,6 +336,15 @@ class ODVariable:
         #: Can this variable be mapped to a PDO
         self.pdo_mappable = False
 
+    def __repr__(self) -> str:
+        suffix = f":{self.subindex:02x}" if isinstance(self.parent, (ODRecord, ODArray)) else ""
+        return f"<{type(self).__qualname__} '{self.qualname}' at 0x{self.index:04x}{suffix}>"
+
+    @property
+    def qualname(self) -> str:
+        if isinstance(self.parent, (ODRecord, ODArray)):
+            return f"{self.parent.name}.{self.name}"
+        return self.name
 
     def __eq__(self, other: "ODVariable") -> bool:
         return (self.index == other.index and

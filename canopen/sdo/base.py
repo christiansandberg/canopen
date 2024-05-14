@@ -99,6 +99,9 @@ class SdoRecord(Mapping):
         self.sdo_node = sdo_node
         self.od = od
 
+    def __repr__(self) -> str:
+        return f"<{type(self).__qualname__} '{self.od.name}' at 0x{self.od.index:04x}>"
+
     def __getitem__(self, subindex: Union[int, str]) -> "SdoVariable":
         return SdoVariable(self.sdo_node, self.od[subindex])
 
@@ -117,6 +120,9 @@ class SdoArray(Mapping):
     def __init__(self, sdo_node: SdoBase, od: ObjectDictionary):
         self.sdo_node = sdo_node
         self.od = od
+
+    def __repr__(self) -> str:
+        return f"<{type(self).__qualname__} '{self.od.name}' at 0x{self.od.index:04x}>"
 
     def __getitem__(self, subindex: Union[int, str]) -> "SdoVariable":
         return SdoVariable(self.sdo_node, self.od[subindex])
