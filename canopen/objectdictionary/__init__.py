@@ -180,7 +180,7 @@ class ODRecord(MutableMapping):
         self.names = {}
 
     def __repr__(self) -> str:
-        return f"<{type(self).__qualname__} '{self.name}' at 0x{self.index:04x}>"
+        return f"<{type(self).__qualname__} {self.name!r} at 0x{self.index:04x}>"
 
     def __getitem__(self, subindex: Union[int, str]) -> "ODVariable":
         item = self.names.get(subindex) or self.subindices.get(subindex)
@@ -239,7 +239,7 @@ class ODArray(Mapping):
         self.names = {}
 
     def __repr__(self) -> str:
-        return f"<{type(self).__qualname__} '{self.name}' at 0x{self.index:04x}>"
+        return f"<{type(self).__qualname__} {self.name!r} at 0x{self.index:04x}>"
 
     def __getitem__(self, subindex: Union[int, str]) -> "ODVariable":
         var = self.names.get(subindex) or self.subindices.get(subindex)
@@ -338,7 +338,7 @@ class ODVariable:
 
     def __repr__(self) -> str:
         suffix = f":{self.subindex:02x}" if isinstance(self.parent, (ODRecord, ODArray)) else ""
-        return f"<{type(self).__qualname__} '{self.qualname}' at 0x{self.index:04x}{suffix}>"
+        return f"<{type(self).__qualname__} {self.qualname!r} at 0x{self.index:04x}{suffix}>"
 
     @property
     def qualname(self) -> str:

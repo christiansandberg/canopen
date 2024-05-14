@@ -29,7 +29,7 @@ class Variable:
         suffix = f":{self.subindex:02x}" if isinstance(self.od.parent,
             (objectdictionary.ODRecord, objectdictionary.ODArray)
         ) else ""
-        return f"<{type(self).__qualname__} '{self.name}' at 0x{self.index:04x}{suffix}>"
+        return f"<{type(self).__qualname__} {self.name!r} at 0x{self.index:04x}{suffix}>"
 
     def get_data(self) -> bytes:
         raise NotImplementedError("Variable is not readable")
