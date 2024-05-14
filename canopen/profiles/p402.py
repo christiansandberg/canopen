@@ -214,8 +214,8 @@ class BaseNode402(RemoteNode):
     def __init__(self, node_id, object_dictionary):
         super(BaseNode402, self).__init__(node_id, object_dictionary)
         self.tpdo_values = {}  # { index: value from last received TPDO }
-        self.tpdo_pointers = {}  # { index: pdo.Map instance }
-        self.rpdo_pointers = {}  # { index: pdo.Map instance }
+        self.tpdo_pointers = {}  # { index: pdo.PdoMap instance }
+        self.rpdo_pointers = {}  # { index: pdo.PdoMap instance }
 
     def setup_402_state_machine(self, read_pdos=True):
         """Configure the state machine by searching for a TPDO that has the StatusWord mapped.
@@ -474,7 +474,7 @@ class BaseNode402(RemoteNode):
         """Cache updated values from a TPDO received from this node.
 
         :param mapobject: The received PDO message.
-        :type mapobject: canopen.pdo.Map
+        :type mapobject: canopen.pdo.PdoMap
         """
         # NOTE: Callback. Called from another thread unless async
         for obj in mapobject:

@@ -114,6 +114,9 @@ class SdoRecord(Mapping):
         self.sdo_node = sdo_node
         self.od = od
 
+    def __repr__(self) -> str:
+        return f"<{type(self).__qualname__} {self.od.name!r} at 0x{self.od.index:04x}>"
+
     def __getitem__(self, subindex: Union[int, str]) -> "SdoVariable":
         return SdoVariable(self.sdo_node, self.od[subindex])
 
@@ -130,6 +133,9 @@ class SdoRecord(Mapping):
     def __len__(self) -> int:
         return len(self.od)
 
+    async def alen(self) -> int:
+        return len(self.od)
+
     def __contains__(self, subindex: Union[int, str]) -> bool:
         return subindex in self.od
 
@@ -140,14 +146,17 @@ class SdoArray(Mapping):
         self.sdo_node = sdo_node
         self.od = od
 
+    def __repr__(self) -> str:
+        return f"<{type(self).__qualname__} {self.od.name!r} at 0x{self.od.index:04x}>"
+
     def __getitem__(self, subindex: Union[int, str]) -> "SdoVariable":
         return SdoVariable(self.sdo_node, self.od[subindex])
 
     def __iter__(self) -> Iterable[int]:
-        return iter(range(1, len(self) + 1))
+        return iter(self.od)
 
     async def aiter(self):
-        for i in range(1, await self[0].aget_raw() + 1):
+        for i in iter(self.od):
             yield i
 
     def __aiter__(self):
@@ -156,6 +165,9 @@ class SdoArray(Mapping):
     def __len__(self) -> int:
         # NOTE: Blocking - OK. Protected in SdoClient
         return self[0].get_raw()
+
+    async def alen(self) -> int:
+        return await self[0].aget_raw()
 
     def __contains__(self, subindex: int) -> bool:
         return 0 <= subindex <= len(self)

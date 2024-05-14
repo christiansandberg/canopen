@@ -25,6 +25,12 @@ class Variable:
         #: Holds a local, overridable copy of the Object Subindex
         self.subindex = od.subindex
 
+    def __repr__(self) -> str:
+        suffix = f":{self.subindex:02x}" if isinstance(self.od.parent,
+            (objectdictionary.ODRecord, objectdictionary.ODArray)
+        ) else ""
+        return f"<{type(self).__qualname__} {self.name!r} at 0x{self.index:04x}{suffix}>"
+
     def get_data(self) -> bytes:
         """Byte representation of the object as :class:`bytes`."""
         raise NotImplementedError("Variable is not readable")
