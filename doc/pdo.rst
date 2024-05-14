@@ -89,7 +89,7 @@ API
 
    .. describe:: pdo[no]
 
-      Return the :class:`canopen.pdo.Map` for the specified map number.
+      Return the :class:`canopen.pdo.PdoMap` for the specified map number.
       First map starts at 1.
 
    .. describe:: iter(pdo)
@@ -101,7 +101,7 @@ API
       Return the number of supported maps.
 
 
-.. autoclass:: canopen.pdo.Map
+.. autoclass:: canopen.pdo.PdoMap
    :members:
 
    .. describe:: map[name]

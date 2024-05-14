@@ -27,7 +27,7 @@ class PdoBase(Mapping):
 
     def __init__(self, node):
         self.network = None
-        self.map = None  # instance of Maps
+        self.map = None  # instance of PdoMaps
         self.node = node
 
     def __iter__(self):
@@ -124,7 +124,7 @@ class PdoBase(Mapping):
             pdo_map.stop()
 
 
-class Maps(Mapping):
+class PdoMaps(Mapping[int, "PdoMap"]):
     """A collection of transmit or receive maps."""
 
     def __init__(self, com_offset, map_offset, pdo_node: PdoBase, cob_base=None):
@@ -134,10 +134,10 @@ class Maps(Mapping):
         :param pdo_node:
         :param cob_base:
         """
-        self.maps: Dict[int, "Map"] = {}
+        self.maps: Dict[int, "PdoMap"] = {}
         for map_no in range(512):
             if com_offset + map_no in pdo_node.node.object_dictionary:
-                new_map = Map(
+                new_map = PdoMap(
                     pdo_node,
                     pdo_node.node.sdo[com_offset + map_no],
                     pdo_node.node.sdo[map_offset + map_no])
@@ -146,7 +146,7 @@ class Maps(Mapping):
                     new_map.predefined_cob_id = cob_base + map_no * 0x100 + pdo_node.node.id
                 self.maps[map_no + 1] = new_map
 
-    def __getitem__(self, key: int) -> "Map":
+    def __getitem__(self, key: int) -> "PdoMap":
         return self.maps[key]
 
     def __iter__(self) -> Iterable[int]:
@@ -156,7 +156,7 @@ class Maps(Mapping):
         return len(self.maps)
 
 
-class Map:
+class PdoMap:
     """One message which can have up to 8 bytes of variables mapped."""
 
     def __init__(self, pdo_node, com_record, map_array):
@@ -304,12 +304,12 @@ class Map:
                 for callback in self.callbacks:
                     callback(self)
 
-    def add_callback(self, callback: Callable[["Map"], None]) -> None:
+    def add_callback(self, callback: Callable[["PdoMap"], None]) -> None:
         """Add a callback which will be called on receive.
 
         :param callback:
             The function to call which must take one argument of a
-            :class:`~canopen.pdo.Map`.
+            :class:`~canopen.pdo.PdoMap`.
         """
         self.callbacks.append(callback)
 
@@ -609,3 +609,5 @@ class PdoVariable(variable.Variable):
 
 # For compatibility
 Variable = PdoVariable
+Maps = PdoMaps
+Map = PdoMap
