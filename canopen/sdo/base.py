@@ -122,7 +122,7 @@ class SdoArray(Mapping):
         return SdoVariable(self.sdo_node, self.od[subindex])
 
     def __iter__(self) -> Iterable[int]:
-        return iter(range(1, len(self) + 1))
+        return iter(self.od)
 
     def __len__(self) -> int:
         return self[0].raw
