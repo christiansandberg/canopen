@@ -1,10 +1,7 @@
 import threading
 import math
 from typing import Callable, Dict, Iterable, List, Optional, Union
-try:
-    from collections.abc import Mapping
-except ImportError:
-    from collections import Mapping
+from collections.abc import Mapping
 import logging
 import binascii
 
