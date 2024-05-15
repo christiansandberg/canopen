@@ -1,10 +1,7 @@
 import logging
 import time
 import struct
-try:
-    import queue
-except ImportError:
-    import Queue as queue
+import queue
 
 logger = logging.getLogger(__name__)
 
