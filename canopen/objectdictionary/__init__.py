@@ -3,10 +3,7 @@ Object Dictionary module
 """
 import struct
 from typing import Dict, Iterable, List, Optional, TextIO, Union
-try:
-    from collections.abc import MutableMapping, Mapping
-except ImportError:
-    from collections import MutableMapping, Mapping
+from collections.abc import MutableMapping, Mapping
 import logging
 
 from canopen.objectdictionary.datatypes import *

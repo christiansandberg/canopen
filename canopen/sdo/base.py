@@ -1,9 +1,6 @@
 import binascii
 from typing import Iterable, Optional, Union
-try:
-    from collections.abc import Mapping
-except ImportError:
-    from collections import Mapping
+from collections.abc import Mapping
 
 from canopen import objectdictionary
 from canopen.objectdictionary import ObjectDictionary

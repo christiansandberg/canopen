@@ -4,7 +4,7 @@ from canopen import node
 from canopen.pdo.base import PdoBase, Maps
 
 # Compatibility
-from .base import Variable
+from canopen.pdo.base import Variable
 
 logger = logging.getLogger(__name__)
 
