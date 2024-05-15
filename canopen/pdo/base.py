@@ -124,7 +124,7 @@ class PdoBase(Mapping):
             pdo_map.stop()
 
 
-class PdoMaps(Mapping[int, "PdoMap"]):
+class PdoMaps(Mapping):
     """A collection of transmit or receive maps."""
 
     def __init__(self, com_offset, map_offset, pdo_node: PdoBase, cob_base=None):
