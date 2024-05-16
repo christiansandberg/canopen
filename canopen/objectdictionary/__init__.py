@@ -339,6 +339,8 @@ class ODVariable:
 
     @property
     def qualname(self) -> str:
+        """Fully qualified name of the variable. If the variable is a subindex
+        of a record or array, the name will be prefixed with the parent's name."""
         if isinstance(self.parent, (ODRecord, ODArray)):
             return f"{self.parent.name}.{self.name}"
         return self.name
