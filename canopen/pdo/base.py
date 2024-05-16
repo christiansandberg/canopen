@@ -191,6 +191,9 @@ class PdoMap:
         self.is_received: bool = False
         self._task = None
 
+    def __repr__(self) -> str:
+        return f"<{type(self).__qualname__} {self.name!r} at COB-ID 0x{self.cob_id:X}>"
+
     def __getitem_by_index(self, value):
         valid_values = []
         for var in self.map:
