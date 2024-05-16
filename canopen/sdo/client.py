@@ -25,6 +25,9 @@ class SdoClient(SdoBase):
     #: Seconds to wait before sending a request, for rate limiting
     PAUSE_BEFORE_SEND = 0.0
 
+    #: Seconds to wait after sending a request
+    PAUSE_AFTER_SEND = 0.1
+
     def __init__(self, rx_cobid, tx_cobid, od):
         """
         :param int rx_cobid:
@@ -53,7 +56,8 @@ class SdoClient(SdoBase):
                 if not retries_left:
                     raise
                 logger.info(str(e))
-                time.sleep(0.1)
+                if self.PAUSE_AFTER_SEND:
+                    time.sleep(self.PAUSE_AFTER_SEND)
             else:
                 break
 
