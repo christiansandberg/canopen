@@ -30,11 +30,14 @@ Examples
 --------
 
 SDO objects can be accessed using the ``.sdo`` member which works like a Python
-dictionary. Indexes and subindexes can be identified by either name or number.
+dictionary. Indexes can be identified by either name or number.
+There are two ways to idenity subindexes, either by using the index and subindex
+as separate arguments or by using a combined syntax using a dot.
 The code below only creates objects, no messages are sent or received yet::
 
     # Complex records
     command_all = node.sdo['ApplicationCommands']['CommandAll']
+    command_all = node.sdo['ApplicationCommands.CommandAll']
     actual_speed = node.sdo['ApplicationStatus']['ActualSpeed']
     control_mode = node.sdo['ApplicationSetupParameters']['RequestedControlMode']
 

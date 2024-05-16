@@ -48,7 +48,8 @@ You can access the objects using either index/subindex or names::
 
     device_name_obj = node.object_dictionary['ManufacturerDeviceName']
     vendor_id_obj = node.object_dictionary[0x1018][1]
-
+    actual_speed = node.object_dictionary['ApplicationStatus.ActualSpeed']
+    command_all = node.object_dictionary['ApplicationCommands.CommandAll']
 
 API
 ---
