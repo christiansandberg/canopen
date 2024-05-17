@@ -28,8 +28,8 @@ class SdoClient(SdoBase):
     #: Seconds to wait before sending a request, for rate limiting
     PAUSE_BEFORE_SEND = 0.0
 
-    #: Seconds to wait after sending a request
-    PAUSE_AFTER_SEND = 0.1
+    #: Seconds to wait before retrying a request after a send error
+    RETRY_DELAY = 0.1
 
     def __init__(self, rx_cobid, tx_cobid, od):
         """
@@ -48,10 +48,10 @@ class SdoClient(SdoBase):
 
     def send_request(self, request):
         retries_left = self.MAX_RETRIES
+        if self.PAUSE_BEFORE_SEND:
+            time.sleep(self.PAUSE_BEFORE_SEND)
         while True:
             try:
-                if self.PAUSE_BEFORE_SEND:
-                    time.sleep(self.PAUSE_BEFORE_SEND)
                 self.network.send_message(self.rx_cobid, request)
             except CanError as e:
                 # Could be a buffer overflow. Wait some time before trying again
@@ -59,8 +59,8 @@ class SdoClient(SdoBase):
                 if not retries_left:
                     raise
                 logger.info(str(e))
-                if self.PAUSE_AFTER_SEND:
-                    time.sleep(self.PAUSE_AFTER_SEND)
+                if self.RETRY_DELAY:
+                    time.sleep(self.RETRY_DELAY)
             else:
                 break
 
