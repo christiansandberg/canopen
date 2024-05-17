@@ -1,10 +1,7 @@
 import threading
 import math
 from typing import Callable, Dict, Iterable, List, Optional, Union
-try:
-    from collections.abc import Mapping
-except ImportError:
-    from collections import Mapping
+from collections.abc import Mapping
 import logging
 import binascii
 
@@ -27,7 +24,7 @@ class PdoBase(Mapping):
 
     def __init__(self, node):
         self.network = None
-        self.map = None  # instance of Maps
+        self.map = None  # instance of PdoMaps
         self.node = node
 
     def __iter__(self):
@@ -124,7 +121,7 @@ class PdoBase(Mapping):
             pdo_map.stop()
 
 
-class Maps(Mapping):
+class PdoMaps(Mapping):
     """A collection of transmit or receive maps."""
 
     def __init__(self, com_offset, map_offset, pdo_node: PdoBase, cob_base=None):
@@ -134,10 +131,10 @@ class Maps(Mapping):
         :param pdo_node:
         :param cob_base:
         """
-        self.maps: Dict[int, "Map"] = {}
+        self.maps: Dict[int, "PdoMap"] = {}
         for map_no in range(512):
             if com_offset + map_no in pdo_node.node.object_dictionary:
-                new_map = Map(
+                new_map = PdoMap(
                     pdo_node,
                     pdo_node.node.sdo[com_offset + map_no],
                     pdo_node.node.sdo[map_offset + map_no])
@@ -146,7 +143,7 @@ class Maps(Mapping):
                     new_map.predefined_cob_id = cob_base + map_no * 0x100 + pdo_node.node.id
                 self.maps[map_no + 1] = new_map
 
-    def __getitem__(self, key: int) -> "Map":
+    def __getitem__(self, key: int) -> "PdoMap":
         return self.maps[key]
 
     def __iter__(self) -> Iterable[int]:
@@ -156,7 +153,7 @@ class Maps(Mapping):
         return len(self.maps)
 
 
-class Map:
+class PdoMap:
     """One message which can have up to 8 bytes of variables mapped."""
 
     def __init__(self, pdo_node, com_record, map_array):
@@ -193,6 +190,9 @@ class Map:
         self.receive_condition = threading.Condition()
         self.is_received: bool = False
         self._task = None
+
+    def __repr__(self) -> str:
+        return f"<{type(self).__qualname__} {self.name!r} at COB-ID 0x{self.cob_id:X}>"
 
     def __getitem_by_index(self, value):
         valid_values = []
@@ -304,12 +304,12 @@ class Map:
                 for callback in self.callbacks:
                     callback(self)
 
-    def add_callback(self, callback: Callable[["Map"], None]) -> None:
+    def add_callback(self, callback: Callable[["PdoMap"], None]) -> None:
         """Add a callback which will be called on receive.
 
         :param callback:
             The function to call which must take one argument of a
-            :class:`~canopen.pdo.Map`.
+            :class:`~canopen.pdo.PdoMap`.
         """
         self.callbacks.append(callback)
 
@@ -609,3 +609,5 @@ class PdoVariable(variable.Variable):
 
 # For compatibility
 Variable = PdoVariable
+Maps = PdoMaps
+Map = PdoMap

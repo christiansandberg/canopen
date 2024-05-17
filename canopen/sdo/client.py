@@ -2,10 +2,7 @@ import struct
 import logging
 import io
 import time
-try:
-    import queue
-except ImportError:
-    import Queue as queue
+import queue
 
 from canopen.network import CanError
 from canopen import objectdictionary

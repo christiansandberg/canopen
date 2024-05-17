@@ -136,6 +136,20 @@ class TestObjectDictionary(unittest.TestCase):
         self.assertEqual(test_od["Test Array"], array)
         self.assertEqual(test_od[0x1002], array)
 
+    def test_get_item_dot(self):
+        test_od = od.ObjectDictionary()
+        array = od.ODArray("Test Array", 0x1000)
+        last_subindex = od.ODVariable("Last subindex", 0x1000, 0)
+        last_subindex.data_type = od.UNSIGNED8
+        member1 = od.ODVariable("Test Variable", 0x1000, 1)
+        member2 = od.ODVariable("Test Variable 2", 0x1000, 2)
+        array.add_member(last_subindex)
+        array.add_member(member1)
+        array.add_member(member2)
+        test_od.add_object(array)
+        self.assertEqual(test_od["Test Array.Last subindex"], last_subindex)
+        self.assertEqual(test_od["Test Array.Test Variable"], member1)
+        self.assertEqual(test_od["Test Array.Test Variable 2"], member2)
 
 class TestArray(unittest.TestCase):
 

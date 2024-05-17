@@ -1,10 +1,10 @@
 import logging
 
 from canopen import node
-from canopen.pdo.base import PdoBase, Maps
+from canopen.pdo.base import PdoBase, PdoMaps
 
 # Compatibility
-from .base import Variable
+from canopen.pdo.base import Variable
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ class RPDO(PdoBase):
 
     def __init__(self, node):
         super(RPDO, self).__init__(node)
-        self.map = Maps(0x1400, 0x1600, self, 0x200)
+        self.map = PdoMaps(0x1400, 0x1600, self, 0x200)
         logger.debug('RPDO Map as {0}'.format(len(self.map)))
 
     def stop(self):
@@ -63,7 +63,7 @@ class TPDO(PdoBase):
 
     def __init__(self, node):
         super(TPDO, self).__init__(node)
-        self.map = Maps(0x1800, 0x1A00, self, 0x180)
+        self.map = PdoMaps(0x1800, 0x1A00, self, 0x180)
         logger.debug('TPDO Map as {0}'.format(len(self.map)))
 
     def stop(self):
