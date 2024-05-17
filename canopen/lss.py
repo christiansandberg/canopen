@@ -2,8 +2,8 @@ from typing import Optional, TYPE_CHECKING
 import logging
 import time
 import struct
-import asyncio
 import queue
+import asyncio
 
 from canopen.async_guard import ensure_not_async
 
