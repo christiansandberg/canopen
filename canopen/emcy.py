@@ -33,7 +33,7 @@ class EmcyConsumer:
         code, register, data = EMCY_STRUCT.unpack(data)
         entry = EmcyError(code, register, data, timestamp)
 
-        # NOTE: Blocking call
+        # NOTE: Blocking lock
         with self.emcy_received:
             if code & 0xFF00 == 0:
                 # Error reset
@@ -95,7 +95,7 @@ class EmcyConsumer:
         """
         end_time = time.time() + timeout
         while True:
-            # NOTE: Blocking call
+            # NOTE: Blocking lock
             with self.emcy_received:
                 prev_log_size = len(self.log)
                 # NOTE: Blocking call

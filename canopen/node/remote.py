@@ -1,6 +1,6 @@
 from __future__ import annotations
 import logging
-from typing import Union, TextIO, TYPE_CHECKING
+from typing import Union, TextIO, List, TYPE_CHECKING
 
 from canopen.sdo import SdoClient, SdoCommunicationError, SdoAbortedError
 from canopen.nmt import NmtMaster
@@ -39,7 +39,7 @@ class RemoteNode(BaseNode):
         #: Enable WORKAROUND for reversed PDO mapping entries
         self.curtis_hack = False
 
-        self.sdo_channels: list[SdoClient] = []
+        self.sdo_channels: List[SdoClient] = []
         self.sdo = self.add_sdo(0x600 + self.id, 0x580 + self.id)
         self.tpdo = TPDO(self)
         self.rpdo = RPDO(self)
@@ -147,11 +147,11 @@ class RemoteNode(BaseNode):
                     subindex=subindex,
                     name=name,
                     value=value)))
-                # NOTE: Blocking - OK. Protected in SdoClient
-                self.sdo[index][subindex].set_raw(value)
+                # NOTE: Blocking call - OK. Protected in SdoClient
+                self.sdo[index][subindex].raw = value
             else:
-                # FIXME: Blocking - OK. Protected in SdoClient
-                self.sdo[index].set_raw(value)
+                # NOTE: Blocking call - OK. Protected in SdoClient
+                self.sdo[index].raw = value
                 logger.info(str('SDO [{index:#06x}]: {name}: {value:#06x}'.format(
                     index=index,
                     name=name,

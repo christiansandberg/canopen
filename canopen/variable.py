@@ -1,9 +1,6 @@
 import logging
 from typing import Union
-try:
-    from collections.abc import Mapping
-except ImportError:
-    from collections import Mapping
+from collections.abc import Mapping
 
 from canopen import objectdictionary
 
@@ -26,17 +23,15 @@ class Variable:
         self.subindex = od.subindex
 
     def __repr__(self) -> str:
-        suffix = f":{self.subindex:02x}" if isinstance(self.od.parent,
+        suffix = f":{self.subindex:02X}" if isinstance(self.od.parent,
             (objectdictionary.ODRecord, objectdictionary.ODArray)
         ) else ""
-        return f"<{type(self).__qualname__} {self.name!r} at 0x{self.index:04x}{suffix}>"
+        return f"<{type(self).__qualname__} {self.name!r} at 0x{self.index:04X}{suffix}>"
 
     def get_data(self) -> bytes:
-        """Byte representation of the object as :class:`bytes`."""
         raise NotImplementedError("Variable is not readable")
 
     async def aget_data(self) -> bytes:
-        """Byte representation of the object as :class:`bytes`. Async variant."""
         raise NotImplementedError("Variable is not readable")
 
     def set_data(self, data: bytes):
@@ -52,15 +47,10 @@ class Variable:
 
     @data.setter
     def data(self, data: bytes):
-        """Set the variable data."""
         self.set_data(data)
 
     @property
     def raw(self) -> Union[int, bool, float, str, bytes]:
-        """Raw representation of the object."""
-        return self.get_raw()
-
-    def get_raw(self) -> Union[int, bool, float, str, bytes]:
         """Raw representation of the object.
 
         This table lists the translations between object dictionary data types
@@ -109,11 +99,6 @@ class Variable:
 
     @raw.setter
     def raw(self, value: Union[int, bool, float, str, bytes]):
-        """Set the raw value of the object"""
-        self.set_raw(value)
-
-    def set_raw(self, value: Union[int, bool, float, str, bytes]):
-        """Set the raw value of the object"""
         self.set_data(self._set_raw(value))
 
     async def aset_raw(self, value: Union[int, bool, float, str, bytes]):
@@ -128,10 +113,6 @@ class Variable:
 
     @property
     def phys(self) -> Union[int, bool, float, str, bytes]:
-        """Physical value scaled with some factor (defaults to 1)."""
-        return self.get_phys()
-
-    def get_phys(self) -> Union[int, bool, float, str, bytes]:
         """Physical value scaled with some factor (defaults to 1).
 
         On object dictionaries that support specifying a factor, this can be
@@ -152,25 +133,16 @@ class Variable:
 
     @phys.setter
     def phys(self, value: Union[int, bool, float, str, bytes]):
-        """Set the physical value."""
-        self.set_phys(value)
-
-    def set_phys(self, value: Union[int, bool, float, str, bytes]):
-        """Set the physical value."""
-        self.set_raw(self.od.encode_phys(value))
+        self.raw = self.od.encode_phys(value)
 
     async def aset_phys(self, value: Union[int, bool, float, str, bytes]):
-        """Set the physical value, async variant."""
+        """Set physical value scaled with some factor (defaults to 1). Async variant"""
         await self.aset_raw(self.od.encode_phys(value))
 
     @property
     def desc(self) -> str:
         """Converts to and from a description of the value as a string."""
-        return self.get_desc()
-
-    def get_desc(self) -> str:
-        """Converts to and from a description of the value as a string."""
-        value = self.od.decode_desc(self.get_raw())
+        value = self.od.decode_desc(self.raw)
         logger.debug("Description is '%s'", value)
         return value
 
@@ -182,23 +154,14 @@ class Variable:
 
     @desc.setter
     def desc(self, desc: str):
-        """Set description."""
-        self.set_desc(desc)
-
-    def set_desc(self, desc: str):
-        """Set description."""
-        self.set_raw(self.od.encode_desc(desc))
+        self.raw = self.od.encode_desc(desc)
 
     async def aset_desc(self, desc: str):
-        """Set description, async variant."""
+        """Set variable description, async variant."""
         await self.aset_raw(self.od.encode_desc(desc))
 
     @property
     def bits(self) -> "Bits":
-        """Access bits using integers, slices, or bit descriptions."""
-        return self.get_bits()
-
-    def get_bits(self) -> "Bits":
         """Access bits using integers, slices, or bit descriptions."""
         return Bits(self)
 
@@ -217,11 +180,11 @@ class Variable:
             The value of the variable.
         """
         if fmt == "raw":
-            return self.get_raw()
+            return self.raw
         elif fmt == "phys":
-            return self.get_phys()
+            return self.phys
         elif fmt == "desc":
-            return self.get_desc()
+            return self.desc
 
     async def aread(self, fmt: str = "raw") -> Union[int, bool, float, str, bytes]:
         """Alternative way of reading using a function instead of attributes. Async variant."""
@@ -246,11 +209,11 @@ class Variable:
              - 'desc'
         """
         if fmt == "raw":
-            self.set_raw(value)
+            self.raw = value
         elif fmt == "phys":
-            self.set_phys(value)
+            self.phys = value
         elif fmt == "desc":
-            self.set_desc(value)
+            self.desc = value
 
     async def awrite(
         self, value: Union[int, bool, float, str, bytes], fmt: str = "raw"
@@ -295,7 +258,10 @@ class Bits(Mapping):
         return len(self.variable.od.bit_definitions)
 
     def read(self):
-        self.raw = self.variable.get_raw()
+        self.raw = self.variable.raw
 
     def write(self):
-        self.variable.set_raw(self.raw)
+        self.variable.raw = self.raw
+
+    # FIXME: Implement aread() and awrite()
+

@@ -1,11 +1,7 @@
 import copy
 import logging
 import re
-
-try:
-    from configparser import RawConfigParser, NoOptionError, NoSectionError
-except ImportError:
-    from ConfigParser import RawConfigParser, NoOptionError, NoSectionError
+from configparser import RawConfigParser, NoOptionError, NoSectionError
 
 from canopen import objectdictionary
 from canopen.objectdictionary import ObjectDictionary, datatypes

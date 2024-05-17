@@ -2,10 +2,7 @@ from __future__ import annotations
 import threading
 import math
 from typing import Callable, Dict, Iterable, List, Optional, Union, TYPE_CHECKING
-try:
-    from collections.abc import Mapping
-except ImportError:
-    from collections import Mapping
+from collections.abc import Mapping
 import logging
 import binascii
 import asyncio
@@ -140,7 +137,7 @@ class PdoBase(Mapping):
             pdo_map.stop()
 
 
-class PdoMaps(Mapping[int, "PdoMap"]):
+class PdoMaps(Mapping):
     """A collection of transmit or receive maps."""
 
     def __init__(self, com_offset, map_offset, pdo_node: PdoBase, cob_base=None):
@@ -212,7 +209,7 @@ class PdoMap:
         self._task = None
 
     def __repr__(self) -> str:
-        return f"<{type(self).__qualname__} {self.name!r} at COB-ID 0x{self.cob_id}>"
+        return f"<{type(self).__qualname__} {self.name!r} at COB-ID 0x{self.cob_id:X}>"
 
     def __getitem_by_index(self, value):
         valid_values = []
@@ -316,7 +313,7 @@ class PdoMap:
         # NOTE: Callback. Called from another thread unless async
         is_transmitting = self._task is not None
         if can_id == self.cob_id and not is_transmitting:
-            # NOTE: Blocking call
+            # NOTE: Blocking lock
             with self.receive_condition:
                 self.is_received = True
                 self.data = data
@@ -413,8 +410,8 @@ class PdoMap:
                 value = var.od.default
             else:
                 # Get value from SDO
-                # NOTE: Blocking
-                value = var.get_raw()
+                # NOTE: Blocking call
+                value = var.raw
             try:
                 # Deliver value into read_generator and wait for next object
                 var = gen.send(value)
@@ -507,10 +504,10 @@ class PdoMap:
         for sdo, value in self.save_generator():
             if value == '@@get':
                 # NOTE: Sync implementation of the WORKAROUND in save_generator()
-                # NOTE: Blocking
-                self._fill_map(sdo.get_raw())
+                # NOTE: Blocking call
+                self._fill_map(sdo.raw)
             else:
-                # NOTE: Blocking
+                # NOTE: Blocking call
                 sdo.set_raw(value)
 
     async def asave(self) -> None:
@@ -630,7 +627,7 @@ class PdoMap:
         :param float timeout: Max time to wait in seconds.
         :return: Timestamp of message received or None if timeout.
         """
-        # NOTE: Blocking call
+        # NOTE: Blocking lock
         with self.receive_condition:
             self.is_received = False
             # NOTE: Blocking call
@@ -692,7 +689,7 @@ class PdoVariable(variable.Variable):
         return data
 
     async def aget_data(self) -> bytes:
-        # As long as get_data() is not making any IO, it can be called
+        # Since get_data() is not making any IO, it can be called
         # directly with no special async variant
         return self.get_data()
 
@@ -730,7 +727,7 @@ class PdoVariable(variable.Variable):
         self.pdo_parent.update()
 
     async def aset_data(self, data: bytes):
-        # As long as get_data() is not making any IO, it can be called
+        # Since get_data() is not making any IO, it can be called
         # directly with no special async variant
         return self.set_data(data)
 

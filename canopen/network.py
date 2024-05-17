@@ -1,8 +1,5 @@
 from __future__ import annotations
-try:
-    from collections.abc import MutableMapping
-except ImportError:
-    from collections import MutableMapping
+from collections.abc import MutableMapping
 import logging
 import threading
 from typing import Callable, Dict, Iterable, List, Optional, Union, TYPE_CHECKING
@@ -42,8 +39,8 @@ class Network(MutableMapping):
 
     def __init__(
         self,
-        bus: can.BusABC | None = None,
-        loop: AbstractEventLoop | None = None
+        bus: Optional[BusABC] = None,
+        loop: Optional[AbstractEventLoop] = None
     ):
         """
         :param can.BusABC bus:

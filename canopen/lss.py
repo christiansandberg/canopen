@@ -3,10 +3,7 @@ import logging
 import time
 import struct
 import asyncio
-try:
-    import queue
-except ImportError:
-    import Queue as queue
+import queue
 
 from canopen.async_guard import ensure_not_async
 
@@ -376,6 +373,7 @@ class LssMaster:
             raise LssError(error_msg)
 
     # FIXME: Make async implementation "__asend_command"
+
     @ensure_not_async  # NOTE: Safeguard for accidental async use
     def __send_command(self, message):
         """Send a LSS operation code to the network

@@ -2,10 +2,7 @@ import struct
 import logging
 import io
 import time
-try:
-    import queue
-except ImportError:
-    import Queue as queue
+import queue
 import asyncio
 
 from canopen.network import CanError
@@ -32,7 +29,7 @@ class SdoClient(SdoBase):
     PAUSE_BEFORE_SEND = 0.0
 
     #: Seconds to wait after sending a request
-    PAUSE_AFTER_SEND = 0.0
+    PAUSE_AFTER_SEND = 0.1
 
     def __init__(self, rx_cobid, tx_cobid, od):
         """

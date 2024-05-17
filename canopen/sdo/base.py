@@ -1,9 +1,6 @@
 import binascii
-from typing import Iterable, Union, Optional, TYPE_CHECKING
-try:
-    from collections.abc import Mapping
-except ImportError:
-    from collections import Mapping
+from typing import Iterable, Optional, Union, TYPE_CHECKING
+from collections.abc import Mapping
 
 from canopen import objectdictionary
 from canopen.objectdictionary import ObjectDictionary
@@ -115,7 +112,7 @@ class SdoRecord(Mapping):
         self.od = od
 
     def __repr__(self) -> str:
-        return f"<{type(self).__qualname__} {self.od.name!r} at 0x{self.od.index:04x}>"
+        return f"<{type(self).__qualname__} {self.od.name!r} at 0x{self.od.index:04X}>"
 
     def __getitem__(self, subindex: Union[int, str]) -> "SdoVariable":
         return SdoVariable(self.sdo_node, self.od[subindex])
@@ -147,7 +144,7 @@ class SdoArray(Mapping):
         self.od = od
 
     def __repr__(self) -> str:
-        return f"<{type(self).__qualname__} {self.od.name!r} at 0x{self.od.index:04x}>"
+        return f"<{type(self).__qualname__} {self.od.name!r} at 0x{self.od.index:04X}>"
 
     def __getitem__(self, subindex: Union[int, str]) -> "SdoVariable":
         return SdoVariable(self.sdo_node, self.od[subindex])
@@ -164,7 +161,7 @@ class SdoArray(Mapping):
 
     def __len__(self) -> int:
         # NOTE: Blocking - OK. Protected in SdoClient
-        return self[0].get_raw()
+        return self[0].raw
 
     async def alen(self) -> int:
         return await self[0].aget_raw()

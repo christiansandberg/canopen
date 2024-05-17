@@ -101,10 +101,6 @@ class NmtBase:
 
     @state.setter
     def state(self, new_state: str):
-        logger.warning("Accessing NmtBase.state setter is deprecated, use set_state()")
-        self.set_state(new_state)
-
-    def set_state(self, new_state: str):
         if new_state in NMT_COMMANDS:
             code = NMT_COMMANDS[new_state]
         else:
@@ -129,7 +125,7 @@ class NmtMaster(NmtBase):
     @ensure_not_async  # NOTE: Safeguard for accidental async use
     def on_heartbeat(self, can_id, data, timestamp):
         # NOTE: Callback. Called from another thread unless async
-        # NOTE: Blocking call
+        # NOTE: Blocking lock
         with self.state_update:
             self.timestamp = timestamp
             new_state, = struct.unpack_from("B", data)
@@ -180,7 +176,7 @@ class NmtMaster(NmtBase):
     @ensure_not_async  # NOTE: Safeguard for accidental async use
     def wait_for_heartbeat(self, timeout: float = 10):
         """Wait until a heartbeat message is received."""
-        # NOTE: Blocking call
+        # NOTE: Blocking lock
         with self.state_update:
             self._state_received = None
             # NOTE: Blocking call
@@ -205,7 +201,7 @@ class NmtMaster(NmtBase):
         end_time = time.time() + timeout
         while True:
             now = time.time()
-            # NOTE: Blocking call
+            # NOTE: Blocking lock
             with self.state_update:
                 self._state_received = None
                 # NOTE: Blocking call
@@ -286,7 +282,7 @@ class NmtSlave(NmtBase):
         # between INITIALIZING and PRE-OPERATIONAL state
         if old_state == 0 and self._state == 127:
             # NOTE: Blocking - OK. Protected in SdoClient
-            heartbeat_time_ms = self._local_node.sdo[0x1017].get_raw()
+            heartbeat_time_ms = self._local_node.sdo[0x1017].raw
             self.start_heartbeat(heartbeat_time_ms)
         else:
             self.update_heartbeat()

@@ -3,10 +3,7 @@ Object Dictionary module
 """
 import struct
 from typing import Dict, Iterable, List, Optional, TextIO, Union
-try:
-    from collections.abc import MutableMapping, Mapping
-except ImportError:
-    from collections import MutableMapping, Mapping
+from collections.abc import MutableMapping, Mapping
 import logging
 
 from canopen.objectdictionary.datatypes import *
@@ -183,7 +180,7 @@ class ODRecord(MutableMapping):
         self.names = {}
 
     def __repr__(self) -> str:
-        return f"<{type(self).__qualname__} {self.name!r} at 0x{self.index:04x}>"
+        return f"<{type(self).__qualname__} {self.name!r} at 0x{self.index:04X}>"
 
     def __getitem__(self, subindex: Union[int, str]) -> "ODVariable":
         item = self.names.get(subindex) or self.subindices.get(subindex)
@@ -242,7 +239,7 @@ class ODArray(Mapping):
         self.names = {}
 
     def __repr__(self) -> str:
-        return f"<{type(self).__qualname__} {self.name!r} at 0x{self.index:04x}>"
+        return f"<{type(self).__qualname__} {self.name!r} at 0x{self.index:04X}>"
 
     def __getitem__(self, subindex: Union[int, str]) -> "ODVariable":
         var = self.names.get(subindex) or self.subindices.get(subindex)
@@ -340,11 +337,13 @@ class ODVariable:
         self.pdo_mappable = False
 
     def __repr__(self) -> str:
-        suffix = f":{self.subindex:02x}" if isinstance(self.parent, (ODRecord, ODArray)) else ""
-        return f"<{type(self).__qualname__} {self.qualname!r} at 0x{self.index:04x}{suffix}>"
+        suffix = f":{self.subindex:02X}" if isinstance(self.parent, (ODRecord, ODArray)) else ""
+        return f"<{type(self).__qualname__} {self.qualname!r} at 0x{self.index:04X}{suffix}>"
 
     @property
     def qualname(self) -> str:
+        """Fully qualified name of the variable. If the variable is a subindex
+        of a record or array, the name will be prefixed with the parent's name."""
         if isinstance(self.parent, (ODRecord, ODArray)):
             return f"{self.parent.name}.{self.name}"
         return self.name

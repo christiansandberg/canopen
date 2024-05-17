@@ -190,6 +190,7 @@ class Homing:
         'ERROR VELOCITY IS ZERO':       (0x3400, 0x2400),
     }
 
+# FIXME: Add async implementation of this class
 
 class BaseNode402(RemoteNode):
     """A CANopen CiA 402 profile slave node.
@@ -201,8 +202,6 @@ class BaseNode402(RemoteNode):
         or a file like object.
     :type object_dictionary: :class:`str`, :class:`canopen.ObjectDictionary`
     """
-
-    # FIXME: Add async implementation to this class
 
     TIMEOUT_RESET_FAULT = 0.4           # seconds
     TIMEOUT_SWITCH_OP_MODE = 0.5        # seconds
@@ -249,6 +248,7 @@ class BaseNode402(RemoteNode):
     def _init_tpdo_values(self):
         for tpdo in self.tpdo.values():
             if tpdo.enabled:
+                # NOTE: Adding blocking callback
                 tpdo.add_callback(self.on_TPDOs_update_callback)
                 for obj in tpdo:
                     logger.debug('Configured TPDO: {0}'.format(obj.index))
@@ -288,35 +288,47 @@ class BaseNode402(RemoteNode):
                 "Operation Mode Display not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
                     self.id))
 
+    # NOTE: Blocking
     def reset_from_fault(self):
         """Reset node from fault and set it to Operation Enable state."""
-        if self.get_state() == 'FAULT':
+        # NOTE: Blocking getter on errors
+        if self.state == 'FAULT':
             # Resets the Fault Reset bit (rising edge 0 -> 1)
-            self.set_controlword(State402.CW_DISABLE_VOLTAGE)
+            # NOTE: Blocking setter
+            self.controlword = State402.CW_DISABLE_VOLTAGE
             # FIXME! The rising edge happens with the transitions toward OPERATION
             # ENABLED below, but until then the loop will always reach the timeout!
             timeout = time.monotonic() + self.TIMEOUT_RESET_FAULT
+            # NOTE: Blocking on errors
             while self.is_faulted():
                 if time.monotonic() > timeout:
                     break
+                # NOTE: Blocking
                 self.check_statusword()
-            self.set_state('OPERATION ENABLED')
+            # NOTE: Blocking setter
+            self.state = 'OPERATION ENABLED'
 
+    # NOTE: Blocking on errors
     def is_faulted(self):
         bitmask, bits = State402.SW_MASK['FAULT']
-        return self.get_statusword() & bitmask == bits
+        # NOTE: Blocking getter on errors
+        return self.statusword & bitmask == bits
 
+    # NOTE Blocking
     def _homing_status(self):
         """Interpret the current Statusword bits as homing state string."""
         # Wait to make sure a TPDO was received
+        # NOTE: Blocking
         self.check_statusword()
         status = None
         for key, value in Homing.STATES.items():
             bitmask, bits = value
-            if self.get_statusword() & bitmask == bits:
+            # NOTE: Blocking getter on errors
+            if self.statusword & bitmask == bits:
                 status = key
         return status
 
+    # NOTE: Blocking
     def is_homed(self, restore_op_mode=False):
         """Switch to homing mode and determine its status.
 
@@ -324,15 +336,20 @@ class BaseNode402(RemoteNode):
         :return: If the status indicates successful homing.
         :rtype: bool
         """
-        previous_op_mode = self.get_op_mode()
+        # NOTE: Blocking getter
+        previous_op_mode = self.op_mode
         if previous_op_mode != 'HOMING':
             logger.info('Switch to HOMING from %s', previous_op_mode)
-            self.set_op_mode('HOMING')  # blocks until confirmed
+            # NOTE: Blocking setter
+            self.op_mode = 'HOMING'  # blocks until confirmed
+        # NOTE: Blocking
         homingstatus = self._homing_status()
         if restore_op_mode:
-            self.set_op_mode(previous_op_mode)
+            # NOTE: Blocking setter
+            self.op_mode = previous_op_mode
         return homingstatus in ('TARGET REACHED', 'ATTAINED')
 
+    # NOTE: Blocking
     def homing(self, timeout=None, restore_op_mode=False):
         """Execute the configured Homing method on the node.
 
@@ -345,17 +362,23 @@ class BaseNode402(RemoteNode):
         if timeout is None:
             timeout = self.TIMEOUT_HOMING_DEFAULT
         if restore_op_mode:
-            previous_op_mode = self.get_op_mode()
-        self.set_op_mode('HOMING')
+            # NOTE: Blocking getter
+            previous_op_mode = self.op_mode
+        # NOTE: Blocking setter
+        self.op_mode = 'HOMING'
         # The homing process will initialize at operation enabled
-        self.set_state('OPERATION ENABLED')
+        # NOTE: Blocking setter
+        self.state = 'OPERATION ENABLED'
         homingstatus = 'UNKNOWN'
-        self.set_controlword(State402.CW_OPERATION_ENABLED | Homing.CW_START)  # does not block
+        # NOTE: Blocking setter
+        self.controlword = State402.CW_OPERATION_ENABLED | Homing.CW_START  # does not block
         # Wait for one extra cycle, to make sure the controlword was received
+        # NOTE: Blocking
         self.check_statusword()
         t = time.monotonic() + timeout
         try:
             while homingstatus not in ('TARGET REACHED', 'ATTAINED'):
+                # NOTE: Blocking
                 homingstatus = self._homing_status()
                 if homingstatus in ('INTERRUPTED', 'ERROR VELOCITY IS NOT ZERO',
                                     'ERROR VELOCITY IS ZERO'):
@@ -368,15 +391,13 @@ class BaseNode402(RemoteNode):
             logger.info(str(e))
         finally:
             if restore_op_mode:
-                self.set_op_mode(previous_op_mode)
+                # NOTE: Blocking setter
+                self.op_mode = previous_op_mode
         return False
 
+    # NOTE: Blocking getter
     @property
     def op_mode(self):
-        logger.warning("Accessing BaseNode402.op_mode property is deprecated, use get_op_mode()")
-        return self.get_op_mode()
-
-    def get_op_mode(self):
         """The node's Operation Mode stored in the object 0x6061.
 
         Uses SDO or PDO to access the current value.  The modes are passed as one of the
@@ -401,6 +422,7 @@ class BaseNode402(RemoteNode):
         try:
             pdo = self.tpdo_pointers[0x6061].pdo_parent
             if pdo.is_periodic:
+                # NOTE: Call to blocking method
                 timestamp = pdo.wait_for_reception(timeout=self.TIMEOUT_CHECK_TPDO)
                 if timestamp is None:
                     raise RuntimeError("Timeout getting node {0}'s mode of operation.".format(
@@ -409,15 +431,12 @@ class BaseNode402(RemoteNode):
         except KeyError:
             logger.warning('The object 0x6061 is not a configured TPDO, fallback to SDO')
             # NOTE: Blocking - OK. Protected in SdoClient
-            code = self.sdo[0x6061].get_raw()
+            code = self.sdo[0x6061].raw
         return OperationMode.CODE2NAME[code]
 
+    # NOTE: Blocking setter
     @op_mode.setter
     def op_mode(self, mode):
-        logger.warning("Accessing BaseNode402.op_mode setter is deprecated, use set_op_mode()")
-        self.set_op_mode(mode)
-
-    def set_op_mode(self, mode):
         try:
             if not self.is_op_mode_supported(mode):
                 raise TypeError(
@@ -425,15 +444,16 @@ class BaseNode402(RemoteNode):
             # Update operation mode in RPDO if possible, fall back to SDO
             if 0x6060 in self.rpdo_pointers:
                 # NOTE: Blocking - OK. Protected in SdoClient
-                self.rpdo_pointers[0x6060].set_raw(OperationMode.NAME2CODE[mode])
+                self.rpdo_pointers[0x6060].raw = OperationMode.NAME2CODE[mode]
                 pdo = self.rpdo_pointers[0x6060].pdo_parent
                 if not pdo.is_periodic:
                     pdo.transmit()
             else:
                 # NOTE: Blocking - OK. Protected in SdoClient
-                self.sdo[0x6060].set_raw(OperationMode.NAME2CODE[mode])
+                self.sdo[0x6060].raw = OperationMode.NAME2CODE[mode]
             timeout = time.monotonic() + self.TIMEOUT_SWITCH_OP_MODE
-            while self.get_op_mode() != mode:
+            # NOTE: Blocking getter
+            while self.op_mode != mode:
                 if time.monotonic() > timeout:
                     raise RuntimeError(
                         "Timeout setting node {0}'s new mode of operation to {1}.".format(
@@ -444,13 +464,15 @@ class BaseNode402(RemoteNode):
         except (RuntimeError, ValueError) as e:
             logger.warning('{0}'.format(str(e)))
 
+    # NOTE: Blocking
     def _clear_target_values(self):
         # [target velocity, target position, target torque]
         for target_index in [0x60FF, 0x607A, 0x6071]:
             if target_index in self.sdo.keys():
                 # NOTE: Blocking - OK. Protected in SdoClient
-                self.sdo[target_index].set_raw(0)
+                self.sdo[target_index].raw = 0
 
+    # NOTE: Blocking
     def is_op_mode_supported(self, mode):
         """Check if the operation mode is supported by the node.
 
@@ -464,12 +486,13 @@ class BaseNode402(RemoteNode):
         if not hasattr(self, '_op_mode_support'):
             # Cache value only on first lookup, this object should never change.
             # NOTE: Blocking - OK. Protected in SdoClient
-            self._op_mode_support = self.sdo[0x6502].get_raw()
+            self._op_mode_support = self.sdo[0x6502].raw
             logger.info('Caching node {n} supported operation modes 0x{m:04X}'.format(
                 n=self.id, m=self._op_mode_support))
         bits = OperationMode.SUPPORTED[mode]
         return self._op_mode_support & bits == bits
 
+    # NOTE: Blocking
     def on_TPDOs_update_callback(self, mapobject):
         """Cache updated values from a TPDO received from this node.
 
@@ -480,14 +503,11 @@ class BaseNode402(RemoteNode):
         for obj in mapobject:
             # FIXME: Is this thread-safe?
             # NOTE: Blocking - OK. Protected in SdoClient
-            self.tpdo_values[obj.index] = obj.get_raw()
+            self.tpdo_values[obj.index] = obj.raw
 
+    # NOTE: Blocking getter on errors
     @property
     def statusword(self):
-        logger.warning("Accessing BaseNode402.statusword property is deprecated, use get_statusword()")
-        return self.get_statusword()
-
-    def get_statusword(self):
         """Return the last read value of the Statusword (0x6041) from the device.
 
         If the object 0x6041 is not configured in any TPDO it will fall back to the SDO
@@ -498,8 +518,9 @@ class BaseNode402(RemoteNode):
         except KeyError:
             logger.warning('The object 0x6041 is not a configured TPDO, fallback to SDO')
             # NOTE: Blocking - OK. Protected in SdoClient
-            return self.sdo[0x6041].get_raw()
+            return self.sdo[0x6041].raw
 
+    # NOTE: Blocking, conditional
     def check_statusword(self, timeout=None):
         """Report an up-to-date reading of the Statusword (0x6041) from the device.
 
@@ -520,8 +541,9 @@ class BaseNode402(RemoteNode):
                     raise RuntimeError('Timeout waiting for updated statusword')
             else:
                 # NOTE: Blocking - OK. Protected in SdoClient
-                return self.sdo[0x6041].get_raw()
-        return self.get_statusword()
+                return self.sdo[0x6041].raw
+        # NOTE: Blocking getter on errors
+        return self.statusword
 
     @property
     def controlword(self):
@@ -532,28 +554,22 @@ class BaseNode402(RemoteNode):
         """
         raise RuntimeError('The Controlword is write-only.')
 
+    # NOTE: Blocking setter
     @controlword.setter
     def controlword(self, value):
-        logger.warning("Accessing BaseNode402.controlword setter is deprecated, use set_controlword()")
-        self.set_controlword(value)
-
-    def set_controlword(self, value):
         if 0x6040 in self.rpdo_pointers:
             # NOTE: Blocking - OK. Protected in SdoClient
-            self.rpdo_pointers[0x6040].set_raw(value)
+            self.rpdo_pointers[0x6040].raw = value
             pdo = self.rpdo_pointers[0x6040].pdo_parent
             if not pdo.is_periodic:
                 pdo.transmit()
         else:
             # NOTE: Blocking - OK. Protected in SdoClient
-            self.sdo[0x6040].set_raw(value)
+            self.sdo[0x6040].raw = value
 
+    # NOTE: Blocking getter on errors
     @property
     def state(self):
-        logger.warning("Accessing BaseNode402.state property is deprecated, use get_state()")
-        return self.get_state()
-
-    def get_state(self):
         """Manipulate current state of the DS402 State Machine on the node.
 
         Uses the last received Statusword value for read access, and manipulates the
@@ -575,46 +591,55 @@ class BaseNode402(RemoteNode):
         """
         for state, mask_val_pair in State402.SW_MASK.items():
             bitmask, bits = mask_val_pair
-            if self.get_statusword() & bitmask == bits:
+            # NOTE: Blocking getter on errors
+            if self.statusword & bitmask == bits:
                 return state
         return 'UNKNOWN'
 
+    # NOTE: Blocking setter
     @state.setter
     def state(self, target_state):
-        logger.warning("Accessing BaseNode402.state setter is deprecated, use set_state()")
-        self.set_state(target_state)
-
-    def set_state(self, target_state):
         timeout = time.monotonic() + self.TIMEOUT_SWITCH_STATE_FINAL
-        while self.get_state() != target_state:
+        # NOTE: Blocking getter on errors
+        while self.state != target_state:
+            # NOTE: Blocking
             next_state = self._next_state(target_state)
+            # NOTE: Blocking
             if self._change_state(next_state):
                 continue
             if time.monotonic() > timeout:
                 raise RuntimeError('Timeout when trying to change state')
+            # NOTE: Blocking
             self.check_statusword()
 
+    # NOTE: Blocking
     def _next_state(self, target_state):
         if target_state in ('NOT READY TO SWITCH ON',
                             'FAULT REACTION ACTIVE',
                             'FAULT'):
             raise ValueError(
                 'Target state {} cannot be entered programmatically'.format(target_state))
-        from_state = self.get_state()
+        # NOTE: Blocking getter on errors
+        from_state = self.state
         if (from_state, target_state) in State402.TRANSITIONTABLE:
             return target_state
         else:
             return State402.next_state_indirect(from_state)
 
+    # NOTE: Blocking
     def _change_state(self, target_state):
         try:
-            self.set_controlword(State402.TRANSITIONTABLE[(self.get_state(), target_state)])
+            # NOTE: Blocking setter, getter on errors
+            self.controlword = State402.TRANSITIONTABLE[(self.state, target_state)]
         except KeyError:
+            # NOTE: Blocking getter on errors
             raise ValueError(
-                'Illegal state transition from {f} to {t}'.format(f=self.get_state(), t=target_state))
+                'Illegal state transition from {f} to {t}'.format(f=self.state, t=target_state))
         timeout = time.monotonic() + self.TIMEOUT_SWITCH_STATE_SINGLE
-        while self.get_state() != target_state:
+        # NOTE: Blocking getter on errors
+        while self.state != target_state:
             if time.monotonic() > timeout:
                 return False
+            # NOTE: Blocking
             self.check_statusword()
         return True
