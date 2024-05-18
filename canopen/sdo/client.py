@@ -74,10 +74,10 @@ class SdoClient(SdoBase):
 
     async def asend_request(self, request):
         retries_left = self.MAX_RETRIES
+        if self.PAUSE_BEFORE_SEND:
+            await asyncio.sleep(self.PAUSE_BEFORE_SEND)
         while True:
             try:
-                if self.PAUSE_BEFORE_SEND:
-                    await asyncio.sleep(self.PAUSE_BEFORE_SEND)
                 self.network.send_message(self.rx_cobid, request)
             except CanError as e:
                 # Could be a buffer overflow. Wait some time before trying again
@@ -85,8 +85,8 @@ class SdoClient(SdoBase):
                 if not retries_left:
                     raise
                 logger.info(str(e))
-                if self.PAUSE_AFTER_SEND:
-                    await asyncio.sleep(self.PAUSE_AFTER_SEND)
+                if self.RETRY_DELAY:
+                    await asyncio.sleep(self.RETRY_DELAY)
             else:
                 break
 
