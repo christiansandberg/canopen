@@ -150,10 +150,10 @@ class SdoArray(Mapping):
         return SdoVariable(self.sdo_node, self.od[subindex])
 
     def __iter__(self) -> Iterable[int]:
-        return iter(self.od)
+        return iter(range(1, len(self) + 1))
 
     async def aiter(self):
-        for i in iter(self.od):
+        for i in range(1, await self.alen() + 1):
             yield i
 
     def __aiter__(self):

@@ -57,28 +57,24 @@ class RemoteNode(BaseNode):
         self.tpdo.network = network
         self.rpdo.network = network
         self.nmt.network = network
+        for sdo in self.sdo_channels:
+            network.subscribe(sdo.tx_cobid, sdo.on_response)
         if network.is_async():
-            for sdo in self.sdo_channels:
-                network.subscribe(sdo.tx_cobid, sdo.aon_response)
             network.subscribe(0x700 + self.id, self.nmt.aon_heartbeat)
             network.subscribe(0x80 + self.id, self.emcy.aon_emcy)
         else:
-            for sdo in self.sdo_channels:
-                network.subscribe(sdo.tx_cobid, sdo.on_response)
             network.subscribe(0x700 + self.id, self.nmt.on_heartbeat)
             network.subscribe(0x80 + self.id, self.emcy.on_emcy)
         network.subscribe(0, self.nmt.on_command)
 
     def remove_network(self):
         network = self.network
+        for sdo in self.sdo_channels:
+            network.unsubscribe(sdo.tx_cobid, sdo.on_response)
         if network.is_async():
-            for sdo in self.sdo_channels:
-                network.unsubscribe(sdo.tx_cobid, sdo.aon_response)
             network.unsubscribe(0x700 + self.id, self.nmt.aon_heartbeat)
             network.unsubscribe(0x80 + self.id, self.emcy.aon_emcy)
         else:
-            for sdo in self.sdo_channels:
-                network.unsubscribe(sdo.tx_cobid, sdo.on_response)
             network.unsubscribe(0x700 + self.id, self.nmt.on_heartbeat)
             network.unsubscribe(0x80 + self.id, self.emcy.on_emcy)
         network.unsubscribe(0, self.nmt.on_command)
@@ -105,10 +101,7 @@ class RemoteNode(BaseNode):
         client = SdoClient(rx_cobid, tx_cobid, self.object_dictionary)
         self.sdo_channels.append(client)
         if self.network is not None:
-            if self.network.is_async():
-                self.network.subscribe(client.tx_cobid, client.aon_response)
-            else:
-                self.network.subscribe(client.tx_cobid, client.on_response)
+            self.network.subscribe(client.tx_cobid, client.on_response)
         return client
 
     def store(self, subindex=1):
