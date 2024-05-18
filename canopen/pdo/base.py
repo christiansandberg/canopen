@@ -508,7 +508,7 @@ class PdoMap:
                 self._fill_map(sdo.raw)
             else:
                 # NOTE: Blocking call
-                sdo.set_raw(value)
+                sdo.raw = value
 
     async def asave(self) -> None:
         """Read PDO configuration for this map using SDO, async variant."""
