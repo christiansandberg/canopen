@@ -19,19 +19,17 @@ RECORD = 9
 def import_eds(source, node_id):
     eds = RawConfigParser(inline_comment_prefixes=(';',))
     eds.optionxform = str
-    if hasattr(source, "read"):
-        fp = source
-    else:
-        fp = open(source)
+    opened_here = False
     try:
-        # Python 3
+        if hasattr(source, "read"):
+            fp = source
+        else:
+            fp = open(source)
+            opened_here = True
         eds.read_file(fp)
-    except AttributeError:
-        # Python 2
-        eds.readfp(fp)
     finally:
         # Only close object if opened in this fn
-        if not hasattr(source, "read"):
+        if opened_here:
             fp.close()
 
     od = ObjectDictionary()
