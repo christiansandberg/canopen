@@ -357,7 +357,7 @@ class BaseNode402(RemoteNode):
                 homingstatus = self._homing_status()
                 if homingstatus in ('INTERRUPTED', 'ERROR VELOCITY IS NOT ZERO',
                                     'ERROR VELOCITY IS ZERO'):
-                    raise RuntimeError('Unable to home. Reason: {0}'.format(homingstatus))
+                    raise RuntimeError(f'Unable to home. Reason: {homingstatus}')
                 if timeout and time.monotonic() > t:
                     raise RuntimeError('Unable to home, timeout reached')
             logger.info('Homing mode carried out successfully.')
@@ -397,8 +397,7 @@ class BaseNode402(RemoteNode):
             if pdo.is_periodic:
                 timestamp = pdo.wait_for_reception(timeout=self.TIMEOUT_CHECK_TPDO)
                 if timestamp is None:
-                    raise RuntimeError("Timeout getting node {0}'s mode of operation.".format(
-                        self.id))
+                    raise RuntimeError(f"Timeout getting node {self.id}'s mode of operation.")
             code = self.tpdo_values[0x6061]
         except KeyError:
             logger.warning('The object 0x6061 is not a configured TPDO, fallback to SDO')
@@ -410,7 +409,7 @@ class BaseNode402(RemoteNode):
         try:
             if not self.is_op_mode_supported(mode):
                 raise TypeError(
-                    'Operation mode {m} not suppported on node {n}.'.format(n=self.id, m=mode))
+                    f'Operation mode {mode} not suppported on node {self.id}.')
             # Update operation mode in RPDO if possible, fall back to SDO
             if 0x6060 in self.rpdo_pointers:
                 self.rpdo_pointers[0x6060].raw = OperationMode.NAME2CODE[mode]
@@ -423,8 +422,7 @@ class BaseNode402(RemoteNode):
             while self.op_mode != mode:
                 if time.monotonic() > timeout:
                     raise RuntimeError(
-                        "Timeout setting node {0}'s new mode of operation to {1}.".format(
-                            self.id, mode))
+                        f"Timeout setting node {self.id}'s new mode of operation to {mode}.")
             logger.info('Set node {n} operation mode to {m}.'.format(n=self.id, m=mode))
         except SdoCommunicationError as e:
             logger.warning('[SDO communication error] Cause: {0}'.format(str(e)))
@@ -561,7 +559,7 @@ class BaseNode402(RemoteNode):
                             'FAULT REACTION ACTIVE',
                             'FAULT'):
             raise ValueError(
-                'Target state {} cannot be entered programmatically'.format(target_state))
+                f'Target state {target_state} cannot be entered programmatically')
         from_state = self.state
         if (from_state, target_state) in State402.TRANSITIONTABLE:
             return target_state
@@ -573,7 +571,7 @@ class BaseNode402(RemoteNode):
             self.controlword = State402.TRANSITIONTABLE[(self.state, target_state)]
         except KeyError:
             raise ValueError(
-                'Illegal state transition from {f} to {t}'.format(f=self.state, t=target_state))
+                f'Illegal state transition from {self.state} to {target_state}')
         timeout = time.monotonic() + self.TIMEOUT_SWITCH_STATE_SINGLE
         while self.state != target_state:
             if time.monotonic() > timeout:

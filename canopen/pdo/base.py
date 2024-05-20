@@ -42,7 +42,7 @@ class PdoBase(Mapping):
                 except KeyError:
                     # ignore if one specific PDO does not have the key and try the next one
                     continue
-        raise KeyError("PDO: {0} was not found in any map".format(key))
+        raise KeyError(f"PDO: {key} was not found in any map")
 
     def __len__(self):
         return len(self.map)
@@ -201,8 +201,8 @@ class PdoMap:
                 valid_values.append(var.index)
                 if var.index == value:
                     return var
-        raise KeyError('{0} not found in map. Valid entries are {1}'.format(
-            value, ', '.join(str(v) for v in valid_values)))
+        raise KeyError(f'{value} not found in map. Valid entries are ' +
+            ", ".join(str(v) for v in valid_values))
 
     def __getitem_by_name(self, value):
         valid_values = []
@@ -211,8 +211,8 @@ class PdoMap:
                 valid_values.append(var.name)
                 if var.name == value:
                     return var
-        raise KeyError('{0} not found in map. Valid entries are {1}'.format(
-            value, ', '.join(valid_values)))
+        raise KeyError(f'{value} not found in map. Valid entries are ' +
+            ', '.join(valid_values))
 
     def __getitem__(self, key: Union[int, str]) -> "PdoVariable":
         var = None

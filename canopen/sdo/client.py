@@ -257,10 +257,10 @@ class ReadableStream(io.RawIOBase):
 
         # Check that the message is for us
         if res_index != index or res_subindex != subindex:
-            raise SdoCommunicationError((
-                "Node returned a value for 0x{:X}:{:d} instead, "
+            raise SdoCommunicationError(
+                f"Node returned a value for 0x{res_index:X}:{res_subindex:d} instead, "
                 "maybe there is another SDO client communicating "
-                "on the same SDO channel?").format(res_index, res_subindex))
+                "on the same SDO channel?")
 
         self.exp_data = None
         if res_command & EXPEDITED:
@@ -491,10 +491,10 @@ class BlockUploadStream(io.RawIOBase):
         # Check that the message is for us
         if res_index != index or res_subindex != subindex:
             self._error = True
-            raise SdoCommunicationError((
-                "Node returned a value for 0x{:X}:{:d} instead, "
+            raise SdoCommunicationError(
+                f"Node returned a value for 0x{res_index:X}:{res_subindex:d} instead, "
                 "maybe there is another SDO client communicating "
-                "on the same SDO channel?").format(res_index, res_subindex))
+                "on the same SDO channel?")
         if res_command & BLOCK_SIZE_SPECIFIED:
             self.size, = struct.unpack_from("<L", response, 4)
             logger.debug("Size is %d bytes", self.size)
@@ -660,10 +660,10 @@ class BlockDownloadStream(io.RawIOBase):
         # Check that the message is for us
         if res_index != index or res_subindex != subindex:
             self.sdo_client.abort()
-            raise SdoCommunicationError((
-                "Node returned a value for 0x{:X}:{:d} instead, "
+            raise SdoCommunicationError(
+                f"Node returned a value for 0x{res_index:X}:{res_subindex:d} instead, "
                 "maybe there is another SDO client communicating "
-                "on the same SDO channel?").format(res_index, res_subindex))
+                "on the same SDO channel?")
         self._blksize, = struct.unpack_from("B", response, 4)
         logger.debug("Server requested a block size of %d", self._blksize)
         self.crc_supported = bool(res_command & CRC_SUPPORTED)
