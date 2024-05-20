@@ -268,7 +268,7 @@ def build_variable(eds, section, node_id, index, subindex=0):
         try:
             var.data_type = int(eds.get(f"{var.data_type:X}sub1", "DefaultValue"), 0)
         except NoSectionError:
-            logger.warning("%s has an unknown or unsupported data type (%X)", name, var.data_type)
+            logger.warning("%s has an unknown or unsupported data type (0x%X)", name, var.data_type)
             # Assume DOMAIN to force application to interpret the byte data
             var.data_type = datatypes.DOMAIN
 

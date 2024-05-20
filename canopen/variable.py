@@ -76,7 +76,7 @@ class Variable:
         written as :class:`bytes`.
         """
         value = self.od.decode_raw(self.data)
-        text = f"Value of {self.name} (0x{self.index:X}:{self.subindex:X}) is {value!r}"
+        text = f"Value of {self.name!r} (0x{self.index:04X}:{self.subindex:02X}) is {value!r}"
         if value in self.od.value_descriptions:
             text += f" ({self.od.value_descriptions[value]})"
         logger.debug(text)
@@ -84,7 +84,7 @@ class Variable:
 
     @raw.setter
     def raw(self, value: Union[int, bool, float, str, bytes]):
-        logger.debug("Writing %s (0x%X:%d) = %r",
+        logger.debug("Writing %r (0x%04X:%02X) = %r",
                      self.name, self.index,
                      self.subindex, value)
         self.data = self.od.encode_raw(value)

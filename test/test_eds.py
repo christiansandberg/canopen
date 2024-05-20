@@ -236,15 +236,15 @@ class TestEDS(unittest.TestCase):
 
                     for evar, avar in zip(expected_vars, actual_vars):
                         self.assertEqual(getattr(avar, "data_type", None), getattr(evar, "data_type", None),
-                                         f" mismatch on {evar.index:04X}:{evar.subindex:X}")
+                                         f" mismatch on 0x{evar.index:04X}:{evar.subindex:02X}")
                         self.assertEqual(getattr(avar, "default_raw", None), getattr(evar, "default_raw", None),
-                                         f" mismatch on {evar.index:04X}:{evar.subindex:X}")
+                                         f" mismatch on 0x{evar.index:04X}:{evar.subindex:02X}")
                         self.assertEqual(getattr(avar, "min", None), getattr(evar, "min", None),
-                                         f" mismatch on {evar.index:04X}:{evar.subindex:X}")
+                                         f" mismatch on 0x{evar.index:04X}:{evar.subindex:02X}")
                         self.assertEqual(getattr(avar, "max", None), getattr(evar, "max", None),
-                                         f" mismatch on {evar.index:04X}:{evar.subindex:X}")
+                                         f" mismatch on 0x{evar.index:04X}:{evar.subindex:02X}")
                         if doctype == "dcf":
                             self.assertEqual(getattr(avar, "value", None), getattr(evar, "value", None),
-                                             f" mismatch on {evar.index:04X}:{evar.subindex:X}")
+                                             f" mismatch on 0x{evar.index:04X}:{evar.subindex:02X}")
 
                         self.assertEqual(self.od.comments, exported_od.comments)

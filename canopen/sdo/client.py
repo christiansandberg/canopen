@@ -244,7 +244,7 @@ class ReadableStream(io.RawIOBase):
         self._toggle = 0
         self.pos = 0
 
-        logger.debug("Reading 0x%X:%d from node %d", index, subindex,
+        logger.debug("Reading 0x%04X:%02X from node %d", index, subindex,
                      sdo_client.rx_cobid - 0x600)
         request = bytearray(8)
         SDO_STRUCT.pack_into(request, 0, REQUEST_UPLOAD, index, subindex)
@@ -258,7 +258,7 @@ class ReadableStream(io.RawIOBase):
         # Check that the message is for us
         if res_index != index or res_subindex != subindex:
             raise SdoCommunicationError(
-                f"Node returned a value for 0x{res_index:X}:{res_subindex:d} instead, "
+                f"Node returned a value for 0x{res_index:04X}:{res_subindex:02X} instead, "
                 "maybe there is another SDO client communicating "
                 "on the same SDO channel?")
 
@@ -414,8 +414,8 @@ class WritableStream(io.RawIOBase):
             res_command, = struct.unpack("B", response[0:1])
             if res_command & 0xE0 != RESPONSE_SEGMENT_DOWNLOAD:
                 raise SdoCommunicationError(
-                    "Unexpected response 0x%02X (expected 0x%02X)" %
-                    (res_command, RESPONSE_SEGMENT_DOWNLOAD))
+                    f"Unexpected response 0x{res_command:02X} "
+                    f"(expected 0x{RESPONSE_SEGMENT_DOWNLOAD:02X})")
         # Advance position
         self.pos += bytes_sent
         return bytes_sent
@@ -473,7 +473,7 @@ class BlockUploadStream(io.RawIOBase):
         self._ackseq = 0
         self._error = False
 
-        logger.debug("Reading 0x%X:%d from node %d", index, subindex,
+        logger.debug("Reading 0x%04X:%02X from node %d", index, subindex,
                      sdo_client.rx_cobid - 0x600)
         # Initiate Block Upload
         request = bytearray(8)
@@ -492,7 +492,7 @@ class BlockUploadStream(io.RawIOBase):
         if res_index != index or res_subindex != subindex:
             self._error = True
             raise SdoCommunicationError(
-                f"Node returned a value for 0x{res_index:X}:{res_subindex:d} instead, "
+                f"Node returned a value for 0x{res_index:04X}:{res_subindex:02X} instead, "
                 "maybe there is another SDO client communicating "
                 "on the same SDO channel?")
         if res_command & BLOCK_SIZE_SPECIFIED:
@@ -643,7 +643,7 @@ class BlockDownloadStream(io.RawIOBase):
         if request_crc_support:
             command |= CRC_SUPPORTED
         request = bytearray(8)
-        logger.info("Initiating block download for 0x%X:%d", index, subindex)
+        logger.info("Initiating block download for 0x%04X:%02X", index, subindex)
         if size is not None:
             logger.debug("Expected size of data is %d bytes", size)
             command |= BLOCK_SIZE_SPECIFIED
@@ -661,7 +661,7 @@ class BlockDownloadStream(io.RawIOBase):
         if res_index != index or res_subindex != subindex:
             self.sdo_client.abort()
             raise SdoCommunicationError(
-                f"Node returned a value for 0x{res_index:X}:{res_subindex:d} instead, "
+                f"Node returned a value for 0x{res_index:04X}:{res_subindex:02X} instead, "
                 "maybe there is another SDO client communicating "
                 "on the same SDO channel?")
         self._blksize, = struct.unpack_from("B", response, 4)

@@ -66,12 +66,12 @@ class SdoServer(SdoBase):
         data = self._node.get_data(index, subindex, check_readable=True)
         size = len(data)
         if size <= 4:
-            logger.info("Expedited upload for 0x%X:%d", index, subindex)
+            logger.info("Expedited upload for 0x%04X:%02X", index, subindex)
             res_command |= EXPEDITED
             res_command |= (4 - size) << 2
             response[4:4 + size] = data
         else:
-            logger.info("Initiating segmented upload for 0x%X:%d", index, subindex)
+            logger.info("Initiating segmented upload for 0x%04X:%02X", index, subindex)
             struct.pack_into("<L", response, 4, size)
             self._buffer = bytearray(data)
             self._toggle = 0
@@ -115,7 +115,7 @@ class SdoServer(SdoBase):
     def request_aborted(self, data):
         _, index, subindex, code = struct.unpack_from("<BHBL", data)
         self.last_received_error = code
-        logger.info("Received request aborted for 0x%X:%d with code 0x%X", index, subindex, code)
+        logger.info("Received request aborted for 0x%04X:%02X with code 0x%X", index, subindex, code)
 
     def block_download(self, data):
         # We currently don't support BLOCK DOWNLOAD
@@ -131,14 +131,14 @@ class SdoServer(SdoBase):
         response = bytearray(8)
 
         if command & EXPEDITED:
-            logger.info("Expedited download for 0x%X:%d", index, subindex)
+            logger.info("Expedited download for 0x%04X:%02X", index, subindex)
             if command & SIZE_SPECIFIED:
                 size = 4 - ((command >> 2) & 0x3)
             else:
                 size = 4
             self._node.set_data(index, subindex, request[4:4 + size], check_writable=True)
         else:
-            logger.info("Initiating segmented download for 0x%X:%d", index, subindex)
+            logger.info("Initiating segmented download for 0x%04X:%02X", index, subindex)
             if command & SIZE_SPECIFIED:
                 size, = struct.unpack_from("<L", request, 4)
                 logger.info("Size is %d bytes", size)

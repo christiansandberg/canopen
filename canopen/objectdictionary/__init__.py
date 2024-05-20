@@ -108,7 +108,7 @@ class ObjectDictionary(MutableMapping):
             if isinstance(index, str) and '.' in index:
                 idx, sub = index.split('.', maxsplit=1)
                 return self[idx][sub]
-            name = f"0x{index:X}" if isinstance(index, int) else index
+            name = f"0x{index:04X}" if isinstance(index, int) else f"{index!r}"
             raise KeyError(f"{name} was not found in Object Dictionary")
         return item
 
@@ -185,7 +185,7 @@ class ODRecord(MutableMapping):
     def __getitem__(self, subindex: Union[int, str]) -> "ODVariable":
         item = self.names.get(subindex) or self.subindices.get(subindex)
         if item is None:
-            raise KeyError(f"Subindex {subindex} was not found")
+            raise KeyError(f"Subindex {subindex!r} was not found")
         return item
 
     def __setitem__(self, subindex: Union[int, str], var: "ODVariable"):

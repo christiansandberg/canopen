@@ -398,7 +398,7 @@ class PdoMap:
                 self._fill_map(self.map_array[0].raw)
             subindex = 1
             for var in self.map:
-                logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
+                logger.info("Writing %s (0x%04X:%02X, %d bits) to PDO map",
                             var.name, var.index, var.subindex, var.length)
                 if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
                     self.map_array[subindex].raw = (var.index |
@@ -467,7 +467,7 @@ class PdoMap:
             # We want to see the bit fields within the PDO
             start_bit = var.offset
             end_bit = start_bit + var.length - 1
-            logger.info("Adding %s (0x%X:%d) at bits %d - %d to PDO map",
+            logger.info("Adding %s (0x%04X:%02X) at bits %d - %d to PDO map",
                         var.name, var.index, var.subindex, start_bit, end_bit)
             self.map.append(var)
             self.length += var.length
