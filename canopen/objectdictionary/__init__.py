@@ -108,8 +108,8 @@ class ObjectDictionary(MutableMapping):
             if isinstance(index, str) and '.' in index:
                 idx, sub = index.split('.', maxsplit=1)
                 return self[idx][sub]
-            name = "0x%X" % index if isinstance(index, int) else index
-            raise KeyError("%s was not found in Object Dictionary" % name)
+            name = f"0x{index:X}" if isinstance(index, int) else index
+            raise KeyError(f"{name} was not found in Object Dictionary")
         return item
 
     def __setitem__(
@@ -185,7 +185,7 @@ class ODRecord(MutableMapping):
     def __getitem__(self, subindex: Union[int, str]) -> "ODVariable":
         item = self.names.get(subindex) or self.subindices.get(subindex)
         if item is None:
-            raise KeyError("Subindex %s was not found" % subindex)
+            raise KeyError(f"Subindex {subindex} was not found")
         return item
 
     def __setitem__(self, subindex: Union[int, str], var: "ODVariable"):
@@ -249,7 +249,7 @@ class ODArray(Mapping):
         elif isinstance(subindex, int) and 0 < subindex < 256:
             # Create a new variable based on first array item
             template = self.subindices[1]
-            name = "%s_%x" % (template.name, subindex)
+            name = f"{template.name}_{subindex:x}"
             var = ODVariable(name, self.index, subindex)
             var.parent = self
             for attr in ("data_type", "unit", "factor", "min", "max", "default",
@@ -258,7 +258,7 @@ class ODArray(Mapping):
                 if attr in template.__dict__:
                     var.__dict__[attr] = template.__dict__[attr]
         else:
-            raise KeyError("Could not find subindex %r" % subindex)
+            raise KeyError(f"Could not find subindex {subindex!r}")
         return var
 
     def __len__(self) -> int:
@@ -427,8 +427,7 @@ class ODVariable:
             raise ObjectDictionaryError("Data type has not been specified")
         else:
             raise TypeError(
-                "Do not know how to encode %r to data type %Xh" % (
-                    value, self.data_type))
+                f"Do not know how to encode {value!r} to data type {self.data_type:X}h")
 
     def decode_phys(self, value: int) -> Union[int, bool, float, str, bytes]:
         if self.data_type in INTEGER_TYPES:
@@ -446,7 +445,7 @@ class ODVariable:
             raise ObjectDictionaryError("No value descriptions exist")
         elif value not in self.value_descriptions:
             raise ObjectDictionaryError(
-                "No value description exists for %d" % value)
+                f"No value description exists for {value}")
         else:
             return self.value_descriptions[value]
 
@@ -458,8 +457,8 @@ class ODVariable:
                 if description == desc:
                     return value
         valid_values = ", ".join(self.value_descriptions.values())
-        error_text = "No value corresponds to '%s'. Valid values are: %s"
-        raise ValueError(error_text % (desc, valid_values))
+        raise ValueError(
+            f"No value corresponds to '{desc}'. Valid values are: {valid_values}")
 
     def decode_bits(self, value: int, bits: List[int]) -> int:
         try:

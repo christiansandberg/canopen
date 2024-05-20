@@ -353,7 +353,7 @@ class LssMaster:
             raise LssError("Response message is not for the request")
 
         if error_code != ERROR_NONE:
-            error_msg = "LSS Error: %d" % error_code
+            error_msg = f"LSS Error: {error_code}"
             raise LssError(error_msg)
 
     def __send_command(self, message):

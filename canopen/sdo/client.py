@@ -253,7 +253,7 @@ class ReadableStream(io.RawIOBase):
         res_data = response[4:8]
 
         if res_command & 0xE0 != RESPONSE_UPLOAD:
-            raise SdoCommunicationError("Unexpected response 0x%02X" % res_command)
+            raise SdoCommunicationError(f"Unexpected response 0x{res_command:02X}")
 
         # Check that the message is for us
         if res_index != index or res_subindex != subindex:
@@ -301,7 +301,7 @@ class ReadableStream(io.RawIOBase):
         response = self.sdo_client.request_response(request)
         res_command, = struct.unpack_from("B", response)
         if res_command & 0xE0 != RESPONSE_SEGMENT_UPLOAD:
-            raise SdoCommunicationError("Unexpected response 0x%02X" % res_command)
+            raise SdoCommunicationError(f"Unexpected response 0x{res_command:02X}")
         if res_command & TOGGLE_BIT != self._toggle:
             raise SdoCommunicationError("Toggle bit mismatch")
         length = 7 - ((res_command >> 1) & 0x7)
@@ -362,7 +362,7 @@ class WritableStream(io.RawIOBase):
             res_command, = struct.unpack_from("B", response)
             if res_command != RESPONSE_DOWNLOAD:
                 raise SdoCommunicationError(
-                    "Unexpected response 0x%02X" % res_command)
+                    f"Unexpected response 0x{res_command:02X}")
         else:
             # Expedited download
             # Prepare header (first 4 bytes in CAN message)
@@ -390,7 +390,7 @@ class WritableStream(io.RawIOBase):
             res_command, = struct.unpack_from("B", response)
             if res_command & 0xE0 != RESPONSE_DOWNLOAD:
                 raise SdoCommunicationError(
-                    "Unexpected response 0x%02X" % res_command)
+                    f"Unexpected response 0x{res_command:02X}")
             bytes_sent = len(b)
             self._done = True
         else:
@@ -487,7 +487,7 @@ class BlockUploadStream(io.RawIOBase):
         if res_command & 0xE0 != RESPONSE_BLOCK_UPLOAD:
             self._error = True
             self.sdo_client.abort(0x05040001)
-            raise SdoCommunicationError("Unexpected response 0x%02X" % res_command)
+            raise SdoCommunicationError(f"Unexpected response 0x{res_command:02X}")
         # Check that the message is for us
         if res_index != index or res_subindex != subindex:
             self._error = True
@@ -581,7 +581,7 @@ class BlockUploadStream(io.RawIOBase):
         if res_command & 0xE0 != RESPONSE_BLOCK_UPLOAD:
             self._error = True
             self.sdo_client.abort(0x05040001)
-            raise SdoCommunicationError("Unexpected response 0x%02X" % res_command)
+            raise SdoCommunicationError(f"Unexpected response 0x{res_command:02X}")
         if res_command & 0x3 != END_BLOCK_TRANSFER:
             self._error = True
             self.sdo_client.abort(0x05040001)
@@ -656,7 +656,7 @@ class BlockDownloadStream(io.RawIOBase):
         if res_command & 0xE0 != RESPONSE_BLOCK_DOWNLOAD:
             self.sdo_client.abort(0x05040001)
             raise SdoCommunicationError(
-                "Unexpected response 0x%02X" % res_command)
+                f"Unexpected response 0x{res_command:02X}")
         # Check that the message is for us
         if res_index != index or res_subindex != subindex:
             self.sdo_client.abort()
@@ -739,7 +739,7 @@ class BlockDownloadStream(io.RawIOBase):
         if res_command & 0xE0 != RESPONSE_BLOCK_DOWNLOAD:
             self.sdo_client.abort(0x05040001)
             raise SdoCommunicationError(
-                "Unexpected response 0x%02X" % res_command)
+                f"Unexpected response 0x{res_command:02X}")
         if res_command & 0x3 != BLOCK_TRANSFER_RESPONSE:
             self.sdo_client.abort(0x05040001)
             raise SdoCommunicationError("Server did not respond with a "

@@ -76,11 +76,9 @@ class Variable:
         written as :class:`bytes`.
         """
         value = self.od.decode_raw(self.data)
-        text = "Value of %s (0x%X:%d) is %r" % (
-            self.name, self.index,
-            self.subindex, value)
+        text = f"Value of {self.name} (0x{self.index:X}:{self.subindex:X}) is {value!r}"
         if value in self.od.value_descriptions:
-            text += " (%s)" % self.od.value_descriptions[value]
+            text += f" ({self.od.value_descriptions[value]})"
         logger.debug(text)
         return value
 

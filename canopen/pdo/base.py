@@ -272,7 +272,7 @@ class PdoMap:
         if direction == "Rx":
             map_id -= 1
         node_id = self.cob_id & 0x7F
-        return "%sPDO%d_node%d" % (direction, map_id, node_id)
+        return f"{direction}PDO{map_id}_node{node_id}"
 
     @property
     def is_periodic(self) -> bool:
