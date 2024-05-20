@@ -97,7 +97,7 @@ class SdoClient(SdoBase):
         # TODO: Is it necessary to include index and subindex?
         struct.pack_into("<L", request, 4, abort_code)
         self.send_request(request)
-        logger.error("Transfer aborted by client with code 0x{:08X}".format(abort_code))
+        logger.error("Transfer aborted by client with code 0x%08X", abort_code)
 
     def upload(self, index: int, subindex: int) -> bytes:
         """May be called to make a read operation without an Object Dictionary.
@@ -758,8 +758,8 @@ class BlockDownloadStream(io.RawIOBase):
         
     def _retransmit(self, ackseq, blksize):
         """Retransmit the failed block"""
-        logger.info(("%d of %d sequences were received. "
-                 "Will start retransmission") % (ackseq, self._blksize))
+        logger.info("%d of %d sequences were received. "
+                    "Will start retransmission", ackseq, self._blksize)
         # Sub blocks betwen ackseq and end of corrupted block need to be resent
         # Get the part of the block to resend
         block = self._current_block[ackseq:]
