@@ -427,7 +427,7 @@ class BaseNode402(RemoteNode):
         except SdoCommunicationError as e:
             logger.warning('[SDO communication error] Cause: {0}'.format(str(e)))
         except (RuntimeError, ValueError) as e:
-            logger.warning('{0}'.format(str(e)))
+            logger.warning("%s", e)
 
     def _clear_target_values(self):
         # [target velocity, target position, target torque]
