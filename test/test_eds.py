@@ -157,7 +157,7 @@ class TestEDS(unittest.TestCase):
     def test_dummy_variable_undefined(self):
         with self.assertRaises(KeyError):
             var_undef = self.od['Dummy0001']
-    
+
     def test_reading_factor(self):
         var = self.od['EDS file extensions']['FactorAndDescription']
         self.assertEqual(var.factor, 0.1)
@@ -167,7 +167,7 @@ class TestEDS(unittest.TestCase):
         self.assertEqual(var2.description, '')
         self.assertEqual(var2.factor, 1)
         self.assertEqual(var2.unit, '')
-        
+
 
 
     def test_comments(self):

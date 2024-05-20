@@ -298,7 +298,7 @@ class PeriodicMessageTask:
         bus,
         remote: bool = False,
     ):
-        """ 
+        """
         :param can_id:
             CAN-ID of the message
         :param data:
