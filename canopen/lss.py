@@ -369,8 +369,7 @@ class LssMaster:
         """
 
         message_str = " ".join(["{:02x}".format(x) for x in message])
-        logger.info(
-            "Sending LSS message {}".format(message_str))
+        logger.info("Sending LSS message %s", message_str)
 
         response = None
         if not self.responses.empty():

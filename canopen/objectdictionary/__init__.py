@@ -417,8 +417,7 @@ class ODVariable:
                 if self.max is not None and value > self.max:
                     logger.warning(
                         "Value %d is greater than max value %d",
-                        value,
-                        self.max)
+                        value, self.max)
             try:
                 return self.STRUCT_TYPES[self.data_type].pack(value)
             except struct.error:

@@ -179,7 +179,7 @@ class SdoServer(SdoBase):
         data = struct.pack("<BHBL", RESPONSE_ABORTED,
                            self._index, self._subindex, abort_code)
         self.send_response(data)
-        # logger.error("Transfer aborted with code 0x{:08X}".format(abort_code))
+        # logger.error("Transfer aborted with code 0x%08X", abort_code)
 
     def upload(self, index: int, subindex: int) -> bytes:
         """May be called to make a read operation without an Object Dictionary.

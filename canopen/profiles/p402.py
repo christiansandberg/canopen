@@ -249,7 +249,7 @@ class BaseNode402(RemoteNode):
             if tpdo.enabled:
                 tpdo.add_callback(self.on_TPDOs_update_callback)
                 for obj in tpdo:
-                    logger.debug('Configured TPDO: {0}'.format(obj.index))
+                    logger.debug('Configured TPDO: %s', obj.index)
                     if obj.index not in self.tpdo_values:
                         self.tpdo_values[obj.index] = 0
                         self.tpdo_pointers[obj.index] = obj
@@ -260,31 +260,31 @@ class BaseNode402(RemoteNode):
         for rpdo in self.rpdo.values():
             if rpdo.enabled:
                 for obj in rpdo:
-                    logger.debug('Configured RPDO: {0}'.format(obj.index))
+                    logger.debug('Configured RPDO: %s', obj.index)
                     if obj.index not in self.rpdo_pointers:
                         self.rpdo_pointers[obj.index] = obj
 
     def _check_controlword_configured(self):
         if 0x6040 not in self.rpdo_pointers:  # Controlword
             logger.warning(
-                "Controlword not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
-                    self.id))
+                "Controlword not configured in node %s's PDOs. Using SDOs can cause slow performance.",
+                self.id)
 
     def _check_statusword_configured(self):
         if 0x6041 not in self.tpdo_values:  # Statusword
             logger.warning(
-                "Statusword not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
-                    self.id))
+                "Statusword not configured in node %s's PDOs. Using SDOs can cause slow performance.",
+                self.id)
 
     def _check_op_mode_configured(self):
         if 0x6060 not in self.rpdo_pointers:  # Operation Mode
             logger.warning(
-                "Operation Mode not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
-                    self.id))
+                "Operation Mode not configured in node %s's PDOs. Using SDOs can cause slow performance.",
+                self.id)
         if 0x6061 not in self.tpdo_values:  # Operation Mode Display
             logger.warning(
-                "Operation Mode Display not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
-                    self.id))
+                "Operation Mode Display not configured in node %s's PDOs. Using SDOs can cause slow performance.",
+                self.id)
 
     def reset_from_fault(self):
         """Reset node from fault and set it to Operation Enable state."""
@@ -423,11 +423,11 @@ class BaseNode402(RemoteNode):
                 if time.monotonic() > timeout:
                     raise RuntimeError(
                         f"Timeout setting node {self.id}'s new mode of operation to {mode}.")
-            logger.info('Set node {n} operation mode to {m}.'.format(n=self.id, m=mode))
+            logger.info('Set node %s operation mode to %s.', self.id, mode)
         except SdoCommunicationError as e:
-            logger.warning('[SDO communication error] Cause: {0}'.format(str(e)))
+            logger.warning('[SDO communication error] Cause: %s', e)
         except (RuntimeError, ValueError) as e:
-            logger.warning("%s", e)
+            logger.warning(str(e))
 
     def _clear_target_values(self):
         # [target velocity, target position, target torque]
@@ -448,8 +448,8 @@ class BaseNode402(RemoteNode):
         if not hasattr(self, '_op_mode_support'):
             # Cache value only on first lookup, this object should never change.
             self._op_mode_support = self.sdo[0x6502].raw
-            logger.info('Caching node {n} supported operation modes 0x{m:04X}'.format(
-                n=self.id, m=self._op_mode_support))
+            logger.info('Caching node %s supported operation modes 0x%04X',
+                        self.id, self._op_mode_support)
         bits = OperationMode.SUPPORTED[mode]
         return self._op_mode_support & bits == bits
 
