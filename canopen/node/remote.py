@@ -138,7 +138,7 @@ class RemoteNode(BaseNode):
                 # Abort codes other than "Attempt to write a read-only object"
                 # should still be reported.
                 logger.warning('[ERROR SETTING object %#06x:%#06x]  %s',
-                               index, subindex, str(e))
+                               index, subindex, e)
                 raise
 
     def load_configuration(self):
