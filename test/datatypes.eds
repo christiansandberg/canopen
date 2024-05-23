@@ -1,18 +1,18 @@
 [FileInfo]
-FileName=all.eds
+FileName=datatypes.eds
 FileVersion=1
 FileRevision=1
 EDSVersion=4.0
-Description=OD that implements all available object types
-CreationTime=02:02PM
-CreationDate=05-19-2024
-CreatedBy=CANFestival
-ModificationTime=02:02PM
-ModificationDate=05-19-2024
-ModifiedBy=CANFestival
+Description=OD implementing the CANOpen datatype catalog
+CreationTime=07:31PM
+CreationDate=05-24-2024
+CreatedBy=objdictgen
+ModificationTime=07:31PM
+ModificationDate=05-24-2024
+ModifiedBy=objdictgen
 
 [DeviceInfo]
-VendorName=CANFestival
+VendorName=objdictgen
 VendorNumber=0x00000000
 ProductName=Alltypes
 ProductNumber=0x00000000

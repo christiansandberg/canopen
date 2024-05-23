@@ -7,7 +7,6 @@ from collections.abc import MutableMapping, Mapping
 import logging
 
 from canopen.objectdictionary.datatypes import *
-from canopen.objectdictionary.datatypes_struct import IntegerN, UnsignedN
 
 logger = logging.getLogger(__name__)
 
@@ -392,9 +391,12 @@ class ODVariable:
 
     def decode_raw(self, data: bytes) -> Union[int, float, str, bytes, bytearray]:
         if self.data_type == VISIBLE_STRING:
-            return data.rstrip(b"\x00").decode("ascii", errors="ignore")
+            # Strip any trailing NUL characters from C-based systems
+            return data.decode("ascii", errors="ignore").rstrip("\x00")
         elif self.data_type == UNICODE_STRING:
-            # Is this correct?
+            # The canopen standard does not specify the encoding. This
+            # library assumes utf-16-le, being the most common encoding format.
+            # Strip any trailing NUL characters from C-based systems
             return data.decode("utf_16_le", errors="ignore").rstrip("\x00")
         elif self.data_type in self.STRUCT_TYPES:
             try:
@@ -413,7 +415,6 @@ class ODVariable:
         elif self.data_type == VISIBLE_STRING:
             return value.encode("ascii")
         elif self.data_type == UNICODE_STRING:
-            # Is this correct?
             return value.encode("utf_16_le")
         elif self.data_type in (DOMAIN, OCTET_STRING):
             return bytes(value)

@@ -6,7 +6,7 @@ from canopen.objectdictionary import ODVariable
 import canopen.objectdictionary.datatypes as dt
 
 EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
-DATAEDS_PATH = os.path.join(os.path.dirname(__file__), 'all_datatypes.eds')
+DATAEDS_PATH = os.path.join(os.path.dirname(__file__), 'datatypes.eds')
 
 TX = 1
 RX = 2
@@ -168,7 +168,8 @@ class TestSDO(unittest.TestCase):
 
 
 class TestSDOClientDatatypes(unittest.TestCase):
-    """FIXME"""
+    """Test the SDO client uploads with the different data types in CANopen.
+    """
 
     def _send_message(self, can_id, data, remote=False):
         """Will be used instead of the usual Network.send_message method.
