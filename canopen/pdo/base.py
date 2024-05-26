@@ -569,7 +569,7 @@ class PdoVariable(variable.Variable):
                 data = data | (~((1 << self.length) - 1))
             data = od_struct.pack(data)
         else:
-            data = self.pdo_parent.data[byte_offset:byte_offset + len(self.od) // 8]
+            data = self.pdo_parent.data[byte_offset:byte_offset + self.length // 8]
 
         return data
 
