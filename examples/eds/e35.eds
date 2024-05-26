@@ -5083,7 +5083,7 @@ DefaultValue=0
 PDOMapping=0x0
 
 [2C01subB]
-ParameterName=Accumulator divide register 
+ParameterName=Accumulator divide register
 ObjectType=0x7
 DataType=0x0004
 AccessType=wo
@@ -5099,7 +5099,7 @@ DefaultValue=0
 PDOMapping=0x0
 
 [2C01subD]
-ParameterName=Accumulator multiply register 
+ParameterName=Accumulator multiply register
 ObjectType=0x7
 DataType=0x0004
 AccessType=wo
@@ -5131,7 +5131,7 @@ DefaultValue=0
 PDOMapping=0x0
 
 [2C01sub11]
-ParameterName=Shift left accumulator by register 
+ParameterName=Shift left accumulator by register
 ObjectType=0x7
 DataType=0x0004
 AccessType=wo
@@ -5139,7 +5139,7 @@ DefaultValue=0
 PDOMapping=0x0
 
 [2C01sub12]
-ParameterName=Shift right accumulator by register 
+ParameterName=Shift right accumulator by register
 ObjectType=0x7
 DataType=0x0004
 AccessType=wo
@@ -7835,7 +7835,7 @@ PDOMapping=0x0
 ParameterValue=0x2
 
 [1A02sub1]
-ParameterName=Position Actual Value 
+ParameterName=Position Actual Value
 ObjectType=0x7
 DataType=0x0007
 AccessType=rw

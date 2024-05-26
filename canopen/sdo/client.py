@@ -86,7 +86,7 @@ class SdoClient(SdoBase):
             except SdoCommunicationError as e:
                 retries_left -= 1
                 if not retries_left:
-                    self.abort(0x5040000) 
+                    self.abort(0x5040000)
                     raise
                 logger.warning(str(e))
 
@@ -463,7 +463,7 @@ class BlockUploadStream(io.RawIOBase):
         :param int subindex:
             Object dictionary sub-index to read from.
         :param bool request_crc_support:
-            If crc calculation should be requested when using block transfer            
+            If crc calculation should be requested when using block transfer
         """
         self._done = False
         self.sdo_client = sdo_client
@@ -628,7 +628,7 @@ class BlockDownloadStream(io.RawIOBase):
         :param int size:
             Size of data in number of bytes if known in advance.
         :param bool request_crc_support:
-            If crc calculation should be requested when using block transfer            
+            If crc calculation should be requested when using block transfer
         """
         self.sdo_client = sdo_client
         self.size = size
@@ -755,7 +755,7 @@ class BlockDownloadStream(io.RawIOBase):
         logger.debug("Server requested a block size of %d", blksize)
         self._blksize = blksize
         self._seqno = 0
-        
+
     def _retransmit(self, ackseq, blksize):
         """Retransmit the failed block"""
         logger.info(("%d of %d sequences were received. "
