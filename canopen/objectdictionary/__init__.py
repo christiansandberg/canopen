@@ -8,6 +8,7 @@ import logging
 
 from canopen.objectdictionary.datatypes import *
 from canopen.objectdictionary.datatypes_24bit import Integer24, Unsigned24
+from canopen.utils import pretty_index
 
 logger = logging.getLogger(__name__)
 
@@ -108,8 +109,7 @@ class ObjectDictionary(MutableMapping):
             if isinstance(index, str) and '.' in index:
                 idx, sub = index.split('.', maxsplit=1)
                 return self[idx][sub]
-            name = f"0x{index:04X}" if isinstance(index, int) else f"{index!r}"
-            raise KeyError(f"{name} was not found in Object Dictionary")
+            raise KeyError(f"{pretty_index(index)} was not found in Object Dictionary")
         return item
 
     def __setitem__(
@@ -180,12 +180,12 @@ class ODRecord(MutableMapping):
         self.names = {}
 
     def __repr__(self) -> str:
-        return f"<{type(self).__qualname__} {self.name!r} at 0x{self.index:04X}>"
+        return f"<{type(self).__qualname__} {self.name!r} at {pretty_index(self.index)}>"
 
     def __getitem__(self, subindex: Union[int, str]) -> "ODVariable":
         item = self.names.get(subindex) or self.subindices.get(subindex)
         if item is None:
-            raise KeyError(f"Subindex {subindex!r} was not found")
+            raise KeyError(f"Subindex {pretty_index(None, subindex)} was not found")
         return item
 
     def __setitem__(self, subindex: Union[int, str], var: "ODVariable"):
@@ -239,7 +239,7 @@ class ODArray(Mapping):
         self.names = {}
 
     def __repr__(self) -> str:
-        return f"<{type(self).__qualname__} {self.name!r} at 0x{self.index:04X}>"
+        return f"<{type(self).__qualname__} {self.name!r} at {pretty_index(self.index)}>"
 
     def __getitem__(self, subindex: Union[int, str]) -> "ODVariable":
         var = self.names.get(subindex) or self.subindices.get(subindex)
@@ -258,7 +258,7 @@ class ODArray(Mapping):
                 if attr in template.__dict__:
                     var.__dict__[attr] = template.__dict__[attr]
         else:
-            raise KeyError(f"Could not find subindex {subindex!r}")
+            raise KeyError(f"Could not find subindex {pretty_index(None, subindex)}")
         return var
 
     def __len__(self) -> int:
@@ -337,8 +337,8 @@ class ODVariable:
         self.pdo_mappable = False
 
     def __repr__(self) -> str:
-        suffix = f":{self.subindex:02X}" if isinstance(self.parent, (ODRecord, ODArray)) else ""
-        return f"<{type(self).__qualname__} {self.qualname!r} at 0x{self.index:04X}{suffix}>"
+        subindex = self.subindex if isinstance(self.parent, (ODRecord, ODArray)) else None
+        return f"<{type(self).__qualname__} {self.qualname!r} at {pretty_index(self.index, subindex)}>"
 
     @property
     def qualname(self) -> str:
@@ -426,7 +426,7 @@ class ODVariable:
             raise ObjectDictionaryError("Data type has not been specified")
         else:
             raise TypeError(
-                f"Do not know how to encode {value!r} to data type {self.data_type:X}h")
+                f"Do not know how to encode {value!r} to data type 0x{self.data_type:X}")
 
     def decode_phys(self, value: int) -> Union[int, bool, float, str, bytes]:
         if self.data_type in INTEGER_TYPES:

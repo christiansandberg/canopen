@@ -201,8 +201,8 @@ class PdoMap:
                 valid_values.append(var.index)
                 if var.index == value:
                     return var
-        raise KeyError(f'{value} not found in map. Valid entries are ' +
-            ", ".join(str(v) for v in valid_values))
+        raise KeyError(f"{value} not found in map. Valid entries are "
+                       f"{', '.join(str(v) for v in valid_values)}")
 
     def __getitem_by_name(self, value):
         valid_values = []
@@ -211,8 +211,8 @@ class PdoMap:
                 valid_values.append(var.name)
                 if var.name == value:
                     return var
-        raise KeyError(f'{value} not found in map. Valid entries are ' +
-            ', '.join(valid_values))
+        raise KeyError(f"{value} not found in map. Valid entries are "
+                       f"{', '.join(valid_values)}")
 
     def __getitem__(self, key: Union[int, str]) -> "PdoVariable":
         var = None

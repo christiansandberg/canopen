@@ -7,6 +7,7 @@ import queue
 from canopen.network import CanError
 from canopen import objectdictionary
 from canopen.sdo.base import SdoBase
+from canopen.utils import pretty_index
 from canopen.sdo.constants import *
 from canopen.sdo.exceptions import *
 
@@ -258,7 +259,7 @@ class ReadableStream(io.RawIOBase):
         # Check that the message is for us
         if res_index != index or res_subindex != subindex:
             raise SdoCommunicationError(
-                f"Node returned a value for 0x{res_index:04X}:{res_subindex:02X} instead, "
+                f"Node returned a value for {pretty_index(res_index, res_subindex)} instead, "
                 "maybe there is another SDO client communicating "
                 "on the same SDO channel?")
 
@@ -492,7 +493,7 @@ class BlockUploadStream(io.RawIOBase):
         if res_index != index or res_subindex != subindex:
             self._error = True
             raise SdoCommunicationError(
-                f"Node returned a value for 0x{res_index:04X}:{res_subindex:02X} instead, "
+                f"Node returned a value for {pretty_index(res_index, res_subindex)} instead, "
                 "maybe there is another SDO client communicating "
                 "on the same SDO channel?")
         if res_command & BLOCK_SIZE_SPECIFIED:
@@ -661,7 +662,7 @@ class BlockDownloadStream(io.RawIOBase):
         if res_index != index or res_subindex != subindex:
             self.sdo_client.abort()
             raise SdoCommunicationError(
-                f"Node returned a value for 0x{res_index:04X}:{res_subindex:02X} instead, "
+                f"Node returned a value for {pretty_index(res_index, res_subindex)} instead, "
                 "maybe there is another SDO client communicating "
                 "on the same SDO channel?")
         self._blksize, = struct.unpack_from("B", response, 4)

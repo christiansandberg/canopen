@@ -3,6 +3,7 @@ from typing import Union
 from collections.abc import Mapping
 
 from canopen import objectdictionary
+from canopen.utils import pretty_index
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +24,10 @@ class Variable:
         self.subindex = od.subindex
 
     def __repr__(self) -> str:
-        suffix = f":{self.subindex:02X}" if isinstance(self.od.parent,
+        subindex = self.subindex if isinstance(self.od.parent,
             (objectdictionary.ODRecord, objectdictionary.ODArray)
-        ) else ""
-        return f"<{type(self).__qualname__} {self.name!r} at 0x{self.index:04X}{suffix}>"
+        ) else None
+        return f"<{type(self).__qualname__} {self.name!r} at {pretty_index(self.index, subindex)}>"
 
     def get_data(self) -> bytes:
         raise NotImplementedError("Variable is not readable")
@@ -76,7 +77,7 @@ class Variable:
         written as :class:`bytes`.
         """
         value = self.od.decode_raw(self.data)
-        text = f"Value of {self.name!r} (0x{self.index:04X}:{self.subindex:02X}) is {value!r}"
+        text = f"Value of {self.name!r} ({pretty_index(self.index, self.subindex)}) is {value!r}"
         if value in self.od.value_descriptions:
             text += f" ({self.od.value_descriptions[value]})"
         logger.debug(text)
