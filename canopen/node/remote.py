@@ -127,7 +127,7 @@ class RemoteNode(BaseNode):
                 self.sdo[index][subindex].raw = value
             else:
                 self.sdo[index].raw = value
-                logger.info('SDO [%#06x]: %s: %#06x',
+                logger.info('SDO [0x%04X]: %s: %#06x',
                             index, name, value)
         except SdoCommunicationError as e:
             logger.warning(str(e))
@@ -137,7 +137,7 @@ class RemoteNode(BaseNode):
             if e.code != 0x06010002:
                 # Abort codes other than "Attempt to write a read-only object"
                 # should still be reported.
-                logger.warning('[ERROR SETTING object 0x%04X:%02X]  %s',
+                logger.warning('[ERROR SETTING object 0x%04X:%02X] %s',
                                index, subindex, e)
                 raise
 

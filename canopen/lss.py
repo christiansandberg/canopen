@@ -368,8 +368,7 @@ class LssMaster:
         :rtype: bytes
         """
 
-        message_str = " ".join([f"{x:02X}" for x in message])
-        logger.info("Sending LSS message %s", message_str)
+        logger.info("Sending LSS message %s", message.hex(" ").upper())
 
         response = None
         if not self.responses.empty():
