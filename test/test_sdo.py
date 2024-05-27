@@ -196,7 +196,7 @@ class TestSDOClientDatatypes(unittest.TestCase):
     def test_boolean(self):
         self.data = [
             (TX, b'\x40\x01\x20\x00\x00\x00\x00\x00'),
-            (RX, b'\x43\x01\x20\x00\xfe\xfd\xfc\xfb')
+            (RX, b'\x4f\x01\x20\x00\xfe\xfd\xfc\xfb')
         ]
         data = self.network[2].sdo.upload(0x2000 + dt.BOOLEAN, 0)
         self.assertEqual(data, b'\xfe')
@@ -204,7 +204,7 @@ class TestSDOClientDatatypes(unittest.TestCase):
     def test_unsigned8(self):
         self.data = [
             (TX, b'\x40\x05\x20\x00\x00\x00\x00\x00'),
-            (RX, b'\x43\x05\x20\x00\xfe\xfd\xfc\xfb')
+            (RX, b'\x4f\x05\x20\x00\xfe\xfd\xfc\xfb')
         ]
         data = self.network[2].sdo.upload(0x2000 + dt.UNSIGNED8, 0)
         self.assertEqual(data, b'\xfe')
@@ -212,7 +212,7 @@ class TestSDOClientDatatypes(unittest.TestCase):
     def test_unsigned16(self):
         self.data = [
             (TX, b'\x40\x06\x20\x00\x00\x00\x00\x00'),
-            (RX, b'\x43\x06\x20\x00\xfe\xfd\xfc\xfb')
+            (RX, b'\x4b\x06\x20\x00\xfe\xfd\xfc\xfb')
         ]
         data = self.network[2].sdo.upload(0x2000 + dt.UNSIGNED16, 0)
         self.assertEqual(data, b'\xfe\xfd')
@@ -220,7 +220,7 @@ class TestSDOClientDatatypes(unittest.TestCase):
     def test_unsigned24(self):
         self.data = [
             (TX, b'\x40\x16\x20\x00\x00\x00\x00\x00'),
-            (RX, b'\x43\x16\x20\x00\xfe\xfd\xfc\xfb')
+            (RX, b'\x47\x16\x20\x00\xfe\xfd\xfc\xfb')
         ]
         data = self.network[2].sdo.upload(0x2000 + dt.UNSIGNED24, 0)
         self.assertEqual(data, b'\xfe\xfd\xfc')
@@ -238,9 +238,7 @@ class TestSDOClientDatatypes(unittest.TestCase):
             (TX, b'\x40\x18\x20\x00\x00\x00\x00\x00'),
             (RX, b'\x41\x18\x20\x00\xfe\xfd\xfc\xfb'),
             (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
-            (RX, b'\x00\xb2\x01\x20\x02\x91\x12\x03'),
-            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
-            (RX, b'\x1d\x19\x21\x70\xfe\xfd\xfc\xfb'),
+            (RX, b'\x05\xb2\x01\x20\x02\x91\x12\x03'),
         ]
         data = self.network[2].sdo.upload(0x2000 + dt.UNSIGNED40, 0)
         self.assertEqual(data, b'\xb2\x01\x20\x02\x91')
@@ -250,9 +248,7 @@ class TestSDOClientDatatypes(unittest.TestCase):
             (TX, b'\x40\x19\x20\x00\x00\x00\x00\x00'),
             (RX, b'\x41\x19\x20\x00\xfe\xfd\xfc\xfb'),
             (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
-            (RX, b'\x00\xb2\x01\x20\x02\x91\x12\x03'),
-            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
-            (RX, b'\x1d\x19\x21\x70\xfe\xfd\xfc\xfb'),
+            (RX, b'\x03\xb2\x01\x20\x02\x91\x12\x03'),
         ]
         data = self.network[2].sdo.upload(0x2000 + dt.UNSIGNED48, 0)
         self.assertEqual(data, b'\xb2\x01\x20\x02\x91\x12')
@@ -262,9 +258,7 @@ class TestSDOClientDatatypes(unittest.TestCase):
             (TX, b'\x40\x1a\x20\x00\x00\x00\x00\x00'),
             (RX, b'\x41\x1a\x20\x00\xfe\xfd\xfc\xfb'),
             (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
-            (RX, b'\x00\xb2\x01\x20\x02\x91\x12\x03'),
-            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
-            (RX, b'\x1d\x19\x21\x70\xfe\xfd\xfc\xfb'),
+            (RX, b'\x01\xb2\x01\x20\x02\x91\x12\x03'),
         ]
         data = self.network[2].sdo.upload(0x2000 + dt.UNSIGNED56, 0)
         self.assertEqual(data, b'\xb2\x01\x20\x02\x91\x12\x03')
@@ -284,7 +278,7 @@ class TestSDOClientDatatypes(unittest.TestCase):
     def test_integer8(self):
         self.data = [
             (TX, b'\x40\x02\x20\x00\x00\x00\x00\x00'),
-            (RX, b'\x43\x02\x20\x00\xfe\xfd\xfc\xfb')
+            (RX, b'\x4f\x02\x20\x00\xfe\xfd\xfc\xfb')
         ]
         data = self.network[2].sdo.upload(0x2000 + dt.INTEGER8, 0)
         self.assertEqual(data, b'\xfe')
@@ -292,7 +286,7 @@ class TestSDOClientDatatypes(unittest.TestCase):
     def test_integer16(self):
         self.data = [
             (TX, b'\x40\x03\x20\x00\x00\x00\x00\x00'),
-            (RX, b'\x43\x03\x20\x00\xfe\xfd\xfc\xfb')
+            (RX, b'\x4b\x03\x20\x00\xfe\xfd\xfc\xfb')
         ]
         data = self.network[2].sdo.upload(0x2000 + dt.INTEGER16, 0)
         self.assertEqual(data, b'\xfe\xfd')
@@ -300,7 +294,7 @@ class TestSDOClientDatatypes(unittest.TestCase):
     def test_integer24(self):
         self.data = [
             (TX, b'\x40\x10\x20\x00\x00\x00\x00\x00'),
-            (RX, b'\x43\x10\x20\x00\xfe\xfd\xfc\xfb')
+            (RX, b'\x47\x10\x20\x00\xfe\xfd\xfc\xfb')
         ]
         data = self.network[2].sdo.upload(0x2000 + dt.INTEGER24, 0)
         self.assertEqual(data, b'\xfe\xfd\xfc')
@@ -318,9 +312,7 @@ class TestSDOClientDatatypes(unittest.TestCase):
             (TX, b'\x40\x12\x20\x00\x00\x00\x00\x00'),
             (RX, b'\x41\x12\x20\x00\xfe\xfd\xfc\xfb'),
             (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
-            (RX, b'\x00\xb2\x01\x20\x02\x91\x12\x03'),
-            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
-            (RX, b'\x1d\x19\x21\x70\xfe\xfd\xfc\xfb'),
+            (RX, b'\x05\xb2\x01\x20\x02\x91\x12\x03'),
         ]
         data = self.network[2].sdo.upload(0x2000 + dt.INTEGER40, 0)
         self.assertEqual(data, b'\xb2\x01\x20\x02\x91')
@@ -330,9 +322,7 @@ class TestSDOClientDatatypes(unittest.TestCase):
             (TX, b'\x40\x13\x20\x00\x00\x00\x00\x00'),
             (RX, b'\x41\x13\x20\x00\xfe\xfd\xfc\xfb'),
             (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
-            (RX, b'\x00\xb2\x01\x20\x02\x91\x12\x03'),
-            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
-            (RX, b'\x1d\x19\x21\x70\xfe\xfd\xfc\xfb'),
+            (RX, b'\x03\xb2\x01\x20\x02\x91\x12\x03'),
         ]
         data = self.network[2].sdo.upload(0x2000 + dt.INTEGER48, 0)
         self.assertEqual(data, b'\xb2\x01\x20\x02\x91\x12')
@@ -342,9 +332,7 @@ class TestSDOClientDatatypes(unittest.TestCase):
             (TX, b'\x40\x14\x20\x00\x00\x00\x00\x00'),
             (RX, b'\x41\x14\x20\x00\xfe\xfd\xfc\xfb'),
             (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
-            (RX, b'\x00\xb2\x01\x20\x02\x91\x12\x03'),
-            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
-            (RX, b'\x1d\x19\x21\x70\xfe\xfd\xfc\xfb'),
+            (RX, b'\x01\xb2\x01\x20\x02\x91\x12\x03'),
         ]
         data = self.network[2].sdo.upload(0x2000 + dt.INTEGER56, 0)
         self.assertEqual(data, b'\xb2\x01\x20\x02\x91\x12\x03')
