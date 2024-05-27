@@ -25,9 +25,10 @@ UNSIGNED40 = 0x18
 UNSIGNED48 = 0x19
 UNSIGNED56 = 0x1A
 UNSIGNED64 = 0x1B
-PDO_COMMUNICATION_PARAMETER = 0x1C
-PDO_MAPPING = 0x1D
-SDO_PARAMETER = 0x1E
+PDO_COMMUNICATION_PARAMETER = 0x20
+PDO_MAPPING = 0x21
+SDO_PARAMETER = 0x22
+IDENTITY = 0x23
 
 SIGNED_TYPES = (INTEGER8, INTEGER16, INTEGER24, INTEGER32, INTEGER40, INTEGER48, INTEGER56, INTEGER64)
 UNSIGNED_TYPES = (UNSIGNED8, UNSIGNED16, UNSIGNED24, UNSIGNED32, UNSIGNED40, UNSIGNED48, UNSIGNED56, UNSIGNED64)
@@ -38,7 +39,8 @@ DATA_TYPES = (VISIBLE_STRING, OCTET_STRING, UNICODE_STRING, DOMAIN)
 
 
 class UnsignedN:
-    """ struct-like class for packing and unpacking unsigned integers of arbitrary width.
+    """Packing and unpacking unsigned integers of arbitrary width, like struct.Struct.
+
     The width must be a multiple of 8 and must be between 8 and 64.
     """
     def __init__(self, width: int):
@@ -68,7 +70,8 @@ class UnsignedN:
 
 
 class IntegerN:
-    """ struct-like class for packing and unpacking integers of arbitrary width.
+    """Packing and unpacking integers of arbitrary width, like struct.Struct.
+
     The width must be a multiple of 8 and must be between 8 and 64.
     """
     def __init__(self, width: int):

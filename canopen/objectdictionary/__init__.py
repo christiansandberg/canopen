@@ -394,8 +394,8 @@ class ODVariable:
             # Strip any trailing NUL characters from C-based systems
             return data.decode("ascii", errors="ignore").rstrip("\x00")
         elif self.data_type == UNICODE_STRING:
-            # The canopen standard does not specify the encoding. This
-            # library assumes utf-16-le, being the most common encoding format.
+            # The CANopen standard does not specify the encoding. This
+            # library assumes UTF-16, being the most common two-byte encoding format.
             # Strip any trailing NUL characters from C-based systems
             return data.decode("utf_16_le", errors="ignore").rstrip("\x00")
         elif self.data_type in self.STRUCT_TYPES:

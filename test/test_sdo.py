@@ -168,8 +168,7 @@ class TestSDO(unittest.TestCase):
 
 
 class TestSDOClientDatatypes(unittest.TestCase):
-    """Test the SDO client uploads with the different data types in CANopen.
-    """
+    """Test the SDO client uploads with the different data types in CANopen."""
 
     def _send_message(self, can_id, data, remote=False):
         """Will be used instead of the usual Network.send_message method.
