@@ -1,5 +1,6 @@
+from __future__ import annotations
 import logging
-from typing import Dict, Union
+from typing import Dict, Union, TYPE_CHECKING
 
 from canopen.node.base import BaseNode
 from canopen.sdo import SdoServer, SdoAbortedError
@@ -8,6 +9,9 @@ from canopen.nmt import NmtSlave
 from canopen.emcy import EmcyProducer
 from canopen.objectdictionary import ObjectDictionary
 from canopen import objectdictionary
+
+if TYPE_CHECKING:
+    from canopen.network import Network
 
 logger = logging.getLogger(__name__)
 
@@ -34,19 +38,28 @@ class LocalNode(BaseNode):
         self.add_write_callback(self.nmt.on_write)
         self.emcy = EmcyProducer(0x80 + self.id)
 
-    def associate_network(self, network):
+    def associate_network(self, network: Network):
         self.network = network
         self.sdo.network = network
         self.tpdo.network = network
         self.rpdo.network = network
         self.nmt.network = network
         self.emcy.network = network
-        network.subscribe(self.sdo.rx_cobid, self.sdo.on_request)
-        network.subscribe(0, self.nmt.on_command)
+        if network.is_async():
+            network.subscribe(self.sdo.rx_cobid, self.sdo.aon_request)
+            network.subscribe(0, self.nmt.aon_command)
+        else:
+            network.subscribe(self.sdo.rx_cobid, self.sdo.on_request)
+            network.subscribe(0, self.nmt.on_command)
 
     def remove_network(self):
-        self.network.unsubscribe(self.sdo.rx_cobid, self.sdo.on_request)
-        self.network.unsubscribe(0, self.nmt.on_command)
+        network = self.network
+        if network.is_async():
+            network.unsubscribe(self.sdo.rx_cobid, self.sdo.aon_request)
+            network.unsubscribe(0, self.nmt.aon_command)
+        else:
+            network.unsubscribe(self.sdo.rx_cobid, self.sdo.on_request)
+            network.unsubscribe(0, self.nmt.on_command)
         self.network = None
         self.sdo.network = None
         self.tpdo.network = None

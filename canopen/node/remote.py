@@ -1,5 +1,6 @@
+from __future__ import annotations
 import logging
-from typing import Union, TextIO
+from typing import Union, TextIO, List, TYPE_CHECKING
 
 from canopen.sdo import SdoClient, SdoCommunicationError, SdoAbortedError
 from canopen.nmt import NmtMaster
@@ -7,6 +8,9 @@ from canopen.emcy import EmcyConsumer
 from canopen.pdo import TPDO, RPDO, PDO
 from canopen.objectdictionary import ODRecord, ODArray, ODVariable, ObjectDictionary
 from canopen.node.base import BaseNode
+
+if TYPE_CHECKING:
+    from canopen.network import Network
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +39,7 @@ class RemoteNode(BaseNode):
         #: Enable WORKAROUND for reversed PDO mapping entries
         self.curtis_hack = False
 
-        self.sdo_channels = []
+        self.sdo_channels: List[SdoClient] = []
         self.sdo = self.add_sdo(0x600 + self.id, 0x580 + self.id)
         self.tpdo = TPDO(self)
         self.rpdo = RPDO(self)
@@ -46,7 +50,7 @@ class RemoteNode(BaseNode):
         if load_od:
             self.load_configuration()
 
-    def associate_network(self, network):
+    def associate_network(self, network: Network):
         self.network = network
         self.sdo.network = network
         self.pdo.network = network
@@ -55,16 +59,25 @@ class RemoteNode(BaseNode):
         self.nmt.network = network
         for sdo in self.sdo_channels:
             network.subscribe(sdo.tx_cobid, sdo.on_response)
-        network.subscribe(0x700 + self.id, self.nmt.on_heartbeat)
-        network.subscribe(0x80 + self.id, self.emcy.on_emcy)
+        if network.is_async():
+            network.subscribe(0x700 + self.id, self.nmt.aon_heartbeat)
+            network.subscribe(0x80 + self.id, self.emcy.aon_emcy)
+        else:
+            network.subscribe(0x700 + self.id, self.nmt.on_heartbeat)
+            network.subscribe(0x80 + self.id, self.emcy.on_emcy)
         network.subscribe(0, self.nmt.on_command)
 
     def remove_network(self):
+        network = self.network
         for sdo in self.sdo_channels:
-            self.network.unsubscribe(sdo.tx_cobid, sdo.on_response)
-        self.network.unsubscribe(0x700 + self.id, self.nmt.on_heartbeat)
-        self.network.unsubscribe(0x80 + self.id, self.emcy.on_emcy)
-        self.network.unsubscribe(0, self.nmt.on_command)
+            network.unsubscribe(sdo.tx_cobid, sdo.on_response)
+        if network.is_async():
+            network.unsubscribe(0x700 + self.id, self.nmt.aon_heartbeat)
+            network.unsubscribe(0x80 + self.id, self.emcy.aon_emcy)
+        else:
+            network.unsubscribe(0x700 + self.id, self.nmt.on_heartbeat)
+            network.unsubscribe(0x80 + self.id, self.emcy.on_emcy)
+        network.unsubscribe(0, self.nmt.on_command)
         self.network = None
         self.sdo.network = None
         self.pdo.network = None
@@ -127,8 +140,10 @@ class RemoteNode(BaseNode):
                     subindex=subindex,
                     name=name,
                     value=value)))
+                # NOTE: Blocking call - OK. Protected in SdoClient
                 self.sdo[index][subindex].raw = value
             else:
+                # NOTE: Blocking call - OK. Protected in SdoClient
                 self.sdo[index].raw = value
                 logger.info(str('SDO [{index:#06x}]: {name}: {value:#06x}'.format(
                     index=index,

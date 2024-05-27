@@ -6,6 +6,7 @@ from configparser import RawConfigParser, NoOptionError, NoSectionError
 from canopen import objectdictionary
 from canopen.objectdictionary import ObjectDictionary, datatypes
 from canopen.sdo import SdoClient
+from canopen.async_guard import ensure_not_async
 
 logger = logging.getLogger(__name__)
 
@@ -167,6 +168,8 @@ def import_eds(source, node_id):
     return od
 
 
+# FIXME: Make async variant "aimport_from_node"
+@ensure_not_async  # NOTE: Safeguard for accidental async use
 def import_from_node(node_id, network):
     """ Download the configuration from the remote node
     :param int node_id: Identifier of the node
