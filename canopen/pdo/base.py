@@ -540,7 +540,7 @@ class PdoVariable(variable.Variable):
 
     def __init__(self, od: objectdictionary.ODVariable):
         #: PDO object that is associated with this ODVariable Object
-        self.pdo_parent = None
+        self.pdo_parent: Optional[PdoMap] = None
         #: Location of variable in the message in bits
         self.offset = None
         self.length = len(od)
