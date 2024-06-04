@@ -1,6 +1,6 @@
 import threading
 import math
-from typing import Callable, Dict, Iterable, List, Optional, Union
+from typing import Callable, Dict, Iterator, List, Optional, Union
 from collections.abc import Mapping
 import logging
 import binascii
@@ -146,7 +146,7 @@ class PdoMaps(Mapping):
     def __getitem__(self, key: int) -> "PdoMap":
         return self.maps[key]
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(self.maps)
 
     def __len__(self) -> int:
@@ -229,7 +229,7 @@ class PdoMap:
                 var = self.__getitem_by_name(key)
         return var
 
-    def __iter__(self) -> Iterable["PdoVariable"]:
+    def __iter__(self) -> Iterator["PdoVariable"]:
         return iter(self.map)
 
     def __len__(self) -> int:
