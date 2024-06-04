@@ -38,7 +38,7 @@ NUMBER_TYPES = INTEGER_TYPES + FLOAT_TYPES
 DATA_TYPES = (VISIBLE_STRING, OCTET_STRING, UNICODE_STRING, DOMAIN)
 
 
-class UnsignedN:
+class UnsignedN(struct.Struct):
     """Packing and unpacking unsigned integers of arbitrary width, like struct.Struct.
 
     The width must be a multiple of 8 and must be between 8 and 64.
@@ -50,26 +50,27 @@ class UnsignedN:
         if width <= 0 or width > 64:
             raise ValueError("Invalid width for UnsignedN")
         elif width <= 8:
-            self.struct = struct.Struct("B")
+            fmt = "B"
         elif width <= 16:
-            self.struct = struct.Struct("<H")
+            fmt = "<H"
         elif width <= 32:
-            self.struct = struct.Struct("<L")
+            fmt = "<L"
         else:
-            self.struct = struct.Struct("<Q")
+            fmt = "<Q"
+        super().__init__(fmt)
 
     def unpack(self, buffer):
-        return self.struct.unpack(buffer + b'\x00' * (self.struct.size - self.size))
+        return super().unpack(buffer + b'\x00' * (super().size - self.size))
 
     def pack(self, *v):
-        return self.struct.pack(*v)[:self.size]
+        return super().pack(*v)[:self.size]
 
     @property
-    def size(self):
+    def size(self) -> int:
         return self.width // 8
 
 
-class IntegerN:
+class IntegerN(struct.Struct):
     """Packing and unpacking integers of arbitrary width, like struct.Struct.
 
     The width must be a multiple of 8 and must be between 8 and 64.
@@ -81,22 +82,23 @@ class IntegerN:
         if width <= 0 or width > 64:
             raise ValueError("Invalid width for IntegerN")
         elif width <= 8:
-            self.struct = struct.Struct("b")
+            fmt = "b"
         elif width <= 16:
-            self.struct = struct.Struct("<h")
+            fmt = "<h"
         elif width <= 32:
-            self.struct = struct.Struct("<l")
+            fmt = "<l"
         else:
-            self.struct = struct.Struct("<q")
+            fmt = "<q"
+        super().__init__(fmt)
 
     def unpack(self, buffer):
         mask = 0x80
         neg = (buffer[self.size - 1] & mask) > 0
-        return self.struct.unpack(buffer + (b'\xff' if neg else b'\x00') * (self.struct.size - self.size))
+        return super().unpack(buffer + (b'\xff' if neg else b'\x00') * (super().size - self.size))
 
     def pack(self, *v):
-        return self.struct.pack(*v)[:self.size]
+        return super().pack(*v)[:self.size]
 
     @property
-    def size(self):
+    def size(self) -> int:
         return self.width // 8
