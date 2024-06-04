@@ -552,6 +552,7 @@ class PdoVariable(variable.Variable):
         """
         byte_offset, bit_offset = divmod(self.offset, 8)
 
+        byte_last = -(-(self.offset + self.length) // 8)  # rounds up
         if bit_offset or self.length % 8:
             # Need information of the current variable type (unsigned vs signed)
             data_type = self.od.data_type
@@ -559,16 +560,21 @@ class PdoVariable(variable.Variable):
                 # A boolean type needs to be treated as an U08
                 data_type = objectdictionary.UNSIGNED8
             od_struct = self.od.STRUCT_TYPES[data_type]
-            data = od_struct.unpack_from(self.pdo_parent.data, byte_offset)[0]
+            # Mask of relevant bits for this mapping, starting at bit 0
+            mask = (1 << self.length) - 1
+            # Extract all needed bytes and convert to a number for bit operations
+            cur_msg_data = self.pdo_parent.data[byte_offset:byte_last]
+            cur_msg_bits = int.from_bytes(cur_msg_data, byteorder="little")
             # Shift and mask to get the correct values
-            data = (data >> bit_offset) & ((1 << self.length) - 1)
+            data_bits = (cur_msg_bits >> bit_offset) & mask
+
             # Check if the variable is signed and if the data is negative prepend signedness
-            if od_struct.format.islower() and (1 << (self.length - 1)) < data:
+            if od_struct.format.islower() and (1 << (self.length - 1)) < data_bits:
                 # fill up the rest of the bits to get the correct signedness
-                data = data | (~((1 << self.length) - 1))
-            data = od_struct.pack(data)
+                data_bits |= ~mask
+            data = od_struct.pack(data_bits)
         else:
-            data = self.pdo_parent.data[byte_offset:byte_offset + self.length // 8]
+            data = self.pdo_parent.data[byte_offset:byte_last]
 
         return data
 
