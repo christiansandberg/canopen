@@ -587,27 +587,24 @@ class PdoVariable(variable.Variable):
         logger.debug("Updating %s to %s in %s",
                      self.name, binascii.hexlify(data), self.pdo_parent.name)
 
+        byte_last = -(-(self.offset + self.length) // 8)  # rounds up
         if bit_offset or self.length % 8:
-            cur_msg_data = self.pdo_parent.data[byte_offset:byte_offset + len(self.od) // 8]
-            # Need information of the current variable type (unsigned vs signed)
-            data_type = self.od.data_type
-            if data_type == objectdictionary.BOOLEAN:
-                # A boolean type needs to be treated as an U08
-                data_type = objectdictionary.UNSIGNED8
-            od_struct = self.od.STRUCT_TYPES[data_type]
-            cur_msg_data = od_struct.unpack(cur_msg_data)[0]
-            # data has to have the same size as old_data
-            data = od_struct.unpack(data)[0]
+            # Mask of relevant bits for this mapping, starting at bit 0
+            mask = (1 << self.length) - 1
+            # Extract all needed bytes and convert to a number for bit operations
+            cur_msg_data = self.pdo_parent.data[byte_offset:byte_last]
+            cur_msg_bits = int.from_bytes(cur_msg_data, byteorder="little")
             # Mask out the old data value
-            # At the end we need to mask for correct variable length (bitwise operation failure)
-            shifted = (((1 << self.length) - 1) << bit_offset) & ((1 << len(self.od)) - 1)
-            bitwise_not = (~shifted) & ((1 << len(self.od)) - 1)
-            cur_msg_data = cur_msg_data & bitwise_not
+            cur_msg_bits &= ~(mask << bit_offset)
+            # Convert new value to a number for generic bit operations
+            data_bits = int.from_bytes(data, byteorder="little") & mask
             # Set the new data on the correct position
-            data = (data << bit_offset) | cur_msg_data
-            data = od_struct.pack_into(self.pdo_parent.data, byte_offset, data)
+            data_bits = (data_bits << bit_offset) | cur_msg_bits
+
+            merged_data = data_bits.to_bytes(byte_last - byte_offset, byteorder="little")
+            self.pdo_parent.data[byte_offset:byte_last] = merged_data
         else:
-            self.pdo_parent.data[byte_offset:byte_offset + len(data)] = data
+            self.pdo_parent.data[byte_offset:byte_last] = data[0:byte_last]
 
         self.pdo_parent.update()
 
