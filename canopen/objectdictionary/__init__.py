@@ -1,6 +1,8 @@
 """
 Object Dictionary module
 """
+from __future__ import annotations
+
 import struct
 from typing import Dict, Iterator, List, Optional, TextIO, Union
 from collections.abc import MutableMapping, Mapping
@@ -12,7 +14,7 @@ from canopen.objectdictionary.datatypes_24bit import Integer24, Unsigned24
 logger = logging.getLogger(__name__)
 
 
-def export_od(od, dest:Union[str,TextIO,None]=None, doc_type:Optional[str]=None):
+def export_od(od, dest: Union[str, TextIO, None] = None, doc_type: Optional[str] = None):
     """ Export :class: ObjectDictionary to a file.
 
     :param od:
@@ -54,7 +56,7 @@ def export_od(od, dest:Union[str,TextIO,None]=None, doc_type:Optional[str]=None)
 def import_od(
     source: Union[str, TextIO, None],
     node_id: Optional[int] = None,
-) -> "ObjectDictionary":
+) -> ObjectDictionary:
     """Parse an EDS, DCF, or EPF file.
 
     :param source:
@@ -101,7 +103,7 @@ class ObjectDictionary(MutableMapping):
 
     def __getitem__(
         self, index: Union[int, str]
-    ) -> Union["ODArray", "ODRecord", "ODVariable"]:
+    ) -> Union[ODArray, ODRecord, ODVariable]:
         """Get object from object dictionary by name or index."""
         item = self.names.get(index) or self.indices.get(index)
         if item is None:
@@ -113,7 +115,7 @@ class ObjectDictionary(MutableMapping):
         return item
 
     def __setitem__(
-        self, index: Union[int, str], obj: Union["ODArray", "ODRecord", "ODVariable"]
+        self, index: Union[int, str], obj: Union[ODArray, ODRecord, ODVariable]
     ):
         assert index == obj.index or index == obj.name
         self.add_object(obj)
@@ -132,7 +134,7 @@ class ObjectDictionary(MutableMapping):
     def __contains__(self, index: Union[int, str]):
         return index in self.names or index in self.indices
 
-    def add_object(self, obj: Union["ODArray", "ODRecord", "ODVariable"]) -> None:
+    def add_object(self, obj: Union[ODArray, ODRecord, ODVariable]) -> None:
         """Add object to the object dictionary.
 
         :param obj:
@@ -147,7 +149,7 @@ class ObjectDictionary(MutableMapping):
 
     def get_variable(
         self, index: Union[int, str], subindex: int = 0
-    ) -> Optional["ODVariable"]:
+    ) -> Optional[ODVariable]:
         """Get the variable object at specified index (and subindex if applicable).
 
         :return: ODVariable if found, else `None`
@@ -182,13 +184,13 @@ class ODRecord(MutableMapping):
     def __repr__(self) -> str:
         return f"<{type(self).__qualname__} {self.name!r} at 0x{self.index:04X}>"
 
-    def __getitem__(self, subindex: Union[int, str]) -> "ODVariable":
+    def __getitem__(self, subindex: Union[int, str]) -> ODVariable:
         item = self.names.get(subindex) or self.subindices.get(subindex)
         if item is None:
             raise KeyError("Subindex %s was not found" % subindex)
         return item
 
-    def __setitem__(self, subindex: Union[int, str], var: "ODVariable"):
+    def __setitem__(self, subindex: Union[int, str], var: ODVariable):
         assert subindex == var.subindex
         self.add_member(var)
 
@@ -206,10 +208,10 @@ class ODRecord(MutableMapping):
     def __contains__(self, subindex: Union[int, str]) -> bool:
         return subindex in self.names or subindex in self.subindices
 
-    def __eq__(self, other: "ODRecord") -> bool:
+    def __eq__(self, other: ODRecord) -> bool:
         return self.index == other.index
 
-    def add_member(self, variable: "ODVariable") -> None:
+    def add_member(self, variable: ODVariable) -> None:
         """Adds a :class:`~canopen.objectdictionary.ODVariable` to the record."""
         variable.parent = self
         self.subindices[variable.subindex] = variable
@@ -241,7 +243,7 @@ class ODArray(Mapping):
     def __repr__(self) -> str:
         return f"<{type(self).__qualname__} {self.name!r} at 0x{self.index:04X}>"
 
-    def __getitem__(self, subindex: Union[int, str]) -> "ODVariable":
+    def __getitem__(self, subindex: Union[int, str]) -> ODVariable:
         var = self.names.get(subindex) or self.subindices.get(subindex)
         if var is not None:
             # This subindex is defined
@@ -267,10 +269,10 @@ class ODArray(Mapping):
     def __iter__(self) -> Iterator[int]:
         return iter(sorted(self.subindices))
 
-    def __eq__(self, other: "ODArray") -> bool:
+    def __eq__(self, other: ODArray) -> bool:
         return self.index == other.index
 
-    def add_member(self, variable: "ODVariable") -> None:
+    def add_member(self, variable: ODVariable) -> None:
         """Adds a :class:`~canopen.objectdictionary.ODVariable` to the record."""
         variable.parent = self
         self.subindices[variable.subindex] = variable
@@ -348,7 +350,7 @@ class ODVariable:
             return f"{self.parent.name}.{self.name}"
         return self.name
 
-    def __eq__(self, other: "ODVariable") -> bool:
+    def __eq__(self, other: ODVariable) -> bool:
         return (self.index == other.index and
                 self.subindex == other.subindex)
 

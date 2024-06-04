@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import MutableMapping
 import logging
 import threading
@@ -82,7 +84,7 @@ class Network(MutableMapping):
         else:
             self.subscribers[can_id].remove(callback)
 
-    def connect(self, *args, **kwargs) -> "Network":
+    def connect(self, *args, **kwargs) -> Network:
         """Connect to CAN bus using python-can.
 
         Arguments are passed directly to :class:`can.BusABC`. Typically these
@@ -214,7 +216,7 @@ class Network(MutableMapping):
 
     def send_periodic(
         self, can_id: int, data: bytes, period: float, remote: bool = False
-    ) -> "PeriodicMessageTask":
+    ) -> PeriodicMessageTask:
         """Start sending a message periodically.
 
         :param can_id:
