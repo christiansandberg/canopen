@@ -215,7 +215,6 @@ class PdoMap:
             value, ', '.join(valid_values)))
 
     def __getitem__(self, key: Union[int, str]) -> "PdoVariable":
-        var = None
         if isinstance(key, int):
             # there is a maximum available of 8 slots per PDO map
             if key in range(0, 8):
