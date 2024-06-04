@@ -281,7 +281,7 @@ class ODArray(Mapping):
 class ODVariable:
     """Simple variable."""
 
-    STRUCT_TYPES = {
+    STRUCT_TYPES: dict[int, struct.Struct] = {
         # Use struct module to pack/unpack data where possible and use the
         # custom IntegerN and UnsignedN classes for the special data types.
         BOOLEAN: struct.Struct("?"),
