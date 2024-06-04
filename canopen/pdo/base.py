@@ -359,7 +359,8 @@ class PdoMap:
             subindex = (value >> 8) & 0xFF
             # Ignore the highest bit, it is never valid for <= 64 PDO length
             size = value & 0x7F
-            if getattr(self.pdo_node.node, "curtis_hack", False):  # Curtis HACK: mixed up field order
+            if getattr(self.pdo_node.node, "curtis_hack", False):
+                # Curtis HACK: mixed up field order
                 index = value & 0xFFFF
                 subindex = (value >> 16) & 0xFF
                 size = (value >> 24) & 0x7F
@@ -371,7 +372,7 @@ class PdoMap:
     def save(self) -> None:
         """Save PDO configuration for this map using SDO."""
         if self.cob_id is None:
-            logger.debug("Skipping %s: no cob-id set", self.com_record.od.name)
+            logger.info("Skip saving %s: COB-ID was never set", self.com_record.od.name)
             return
         logger.info("Setting COB-ID 0x%X and temporarily disabling PDO", self.cob_id)
         self.com_record[1].raw = self.cob_id | PDO_NOT_VALID | (RTR_NOT_ALLOWED if not self.rtr_allowed else 0x0)
@@ -422,7 +423,9 @@ class PdoMap:
         self._update_data_size()
 
         if self.enabled:
-            self.com_record[1].raw = self.cob_id | (RTR_NOT_ALLOWED if not self.rtr_allowed else 0x0)
+            cob_id = self.cob_id | (RTR_NOT_ALLOWED if not self.rtr_allowed else 0x0)
+            logger.info("Setting COB-ID 0x%X and re-enabling PDO", cob_id)
+            self.com_record[1].raw = cob_id
             self.subscribe()
 
     def subscribe(self) -> None:
