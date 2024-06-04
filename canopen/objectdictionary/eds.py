@@ -87,6 +87,7 @@ def import_eds(source, node_id):
     if eds.has_section("DeviceComissioning"):
         od.bitrate = int(eds.get("DeviceComissioning", "Baudrate")) * 1000
         od.node_id = int(eds.get("DeviceComissioning", "NodeID"), 0)
+        node_id = node_id or od.node_id
 
     for section in eds.sections():
         # Match dummy definitions
