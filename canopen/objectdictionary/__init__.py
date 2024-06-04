@@ -2,7 +2,7 @@
 Object Dictionary module
 """
 import struct
-from typing import Dict, Iterable, List, Optional, TextIO, Union
+from typing import Dict, Iterator, List, Optional, TextIO, Union
 from collections.abc import MutableMapping, Mapping
 import logging
 
@@ -123,7 +123,7 @@ class ObjectDictionary(MutableMapping):
         del self.indices[obj.index]
         del self.names[obj.name]
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(sorted(self.indices))
 
     def __len__(self) -> int:
@@ -200,7 +200,7 @@ class ODRecord(MutableMapping):
     def __len__(self) -> int:
         return len(self.subindices)
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(sorted(self.subindices))
 
     def __contains__(self, subindex: Union[int, str]) -> bool:
@@ -264,7 +264,7 @@ class ODArray(Mapping):
     def __len__(self) -> int:
         return len(self.subindices)
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(sorted(self.subindices))
 
     def __eq__(self, other: "ODArray") -> bool:

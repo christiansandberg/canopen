@@ -1,7 +1,7 @@
 from collections.abc import MutableMapping
 import logging
 import threading
-from typing import Callable, Dict, Iterable, List, Optional, Union
+from typing import Callable, Dict, Iterator, List, Optional, Union
 
 try:
     import can
@@ -277,7 +277,7 @@ class Network(MutableMapping):
         self.nodes[node_id].remove_network()
         del self.nodes[node_id]
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(self.nodes)
 
     def __len__(self) -> int:
