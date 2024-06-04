@@ -1,5 +1,4 @@
 import threading
-import math
 from typing import Callable, Dict, Iterable, List, Optional, Union
 from collections.abc import Mapping
 import logging
@@ -254,7 +253,7 @@ class PdoMap:
             self.map.append(var)
 
     def _update_data_size(self):
-        self.data = bytearray(int(math.ceil(self.length / 8.0)))
+        self.data = bytearray(-(-self.length // 8))  # rounds up
 
     @property
     def name(self) -> str:
