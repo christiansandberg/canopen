@@ -249,7 +249,7 @@ class BaseNode402(RemoteNode):
             if tpdo.enabled:
                 tpdo.add_callback(self.on_TPDOs_update_callback)
                 for obj in tpdo:
-                    logger.debug('Configured TPDO: %s', obj.index)
+                    logger.debug('Configured TPDO: 0x%04X', obj.index)
                     if obj.index not in self.tpdo_values:
                         self.tpdo_values[obj.index] = 0
                         self.tpdo_pointers[obj.index] = obj
@@ -260,7 +260,7 @@ class BaseNode402(RemoteNode):
         for rpdo in self.rpdo.values():
             if rpdo.enabled:
                 for obj in rpdo:
-                    logger.debug('Configured RPDO: %s', obj.index)
+                    logger.debug('Configured RPDO: 0x%04X', obj.index)
                     if obj.index not in self.rpdo_pointers:
                         self.rpdo_pointers[obj.index] = obj
 
