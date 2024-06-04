@@ -85,7 +85,7 @@ def import_eds(source, node_id):
                 pass
 
     if eds.has_section("DeviceComissioning"):
-        od.bitrate = int(eds.get("DeviceComissioning", "BaudRate")) * 1000
+        od.bitrate = int(eds.get("DeviceComissioning", "Baudrate")) * 1000
         od.node_id = int(eds.get("DeviceComissioning", "NodeID"), 0)
 
     for section in eds.sections():
@@ -467,7 +467,7 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
     if device_commisioning and (od.bitrate or od.node_id):
         eds.add_section("DeviceComissioning")
         if od.bitrate:
-            eds.set("DeviceComissioning", "BaudRate", int(od.bitrate / 1000))
+            eds.set("DeviceComissioning", "Baudrate", int(od.bitrate / 1000))
         if od.node_id:
             eds.set("DeviceComissioning", "NodeID", int(od.node_id))
 
