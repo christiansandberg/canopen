@@ -8,6 +8,7 @@ import logging
 
 from canopen.objectdictionary.datatypes import *
 from canopen.objectdictionary.datatypes_24bit import Integer24, Unsigned24
+from canopen.utils import pretty_index
 
 logger = logging.getLogger(__name__)
 
@@ -108,8 +109,7 @@ class ObjectDictionary(MutableMapping):
             if isinstance(index, str) and '.' in index:
                 idx, sub = index.split('.', maxsplit=1)
                 return self[idx][sub]
-            name = "0x%X" % index if isinstance(index, int) else index
-            raise KeyError("%s was not found in Object Dictionary" % name)
+            raise KeyError(f"{pretty_index(index)} was not found in Object Dictionary")
         return item
 
     def __setitem__(
@@ -180,12 +180,12 @@ class ODRecord(MutableMapping):
         self.names = {}
 
     def __repr__(self) -> str:
-        return f"<{type(self).__qualname__} {self.name!r} at 0x{self.index:04X}>"
+        return f"<{type(self).__qualname__} {self.name!r} at {pretty_index(self.index)}>"
 
     def __getitem__(self, subindex: Union[int, str]) -> "ODVariable":
         item = self.names.get(subindex) or self.subindices.get(subindex)
         if item is None:
-            raise KeyError("Subindex %s was not found" % subindex)
+            raise KeyError(f"Subindex {pretty_index(None, subindex)} was not found")
         return item
 
     def __setitem__(self, subindex: Union[int, str], var: "ODVariable"):
@@ -239,7 +239,7 @@ class ODArray(Mapping):
         self.names = {}
 
     def __repr__(self) -> str:
-        return f"<{type(self).__qualname__} {self.name!r} at 0x{self.index:04X}>"
+        return f"<{type(self).__qualname__} {self.name!r} at {pretty_index(self.index)}>"
 
     def __getitem__(self, subindex: Union[int, str]) -> "ODVariable":
         var = self.names.get(subindex) or self.subindices.get(subindex)
@@ -249,7 +249,7 @@ class ODArray(Mapping):
         elif isinstance(subindex, int) and 0 < subindex < 256:
             # Create a new variable based on first array item
             template = self.subindices[1]
-            name = "%s_%x" % (template.name, subindex)
+            name = f"{template.name}_{subindex:x}"
             var = ODVariable(name, self.index, subindex)
             var.parent = self
             for attr in ("data_type", "unit", "factor", "min", "max", "default",
@@ -258,7 +258,7 @@ class ODArray(Mapping):
                 if attr in template.__dict__:
                     var.__dict__[attr] = template.__dict__[attr]
         else:
-            raise KeyError("Could not find subindex %r" % subindex)
+            raise KeyError(f"Could not find subindex {pretty_index(None, subindex)}")
         return var
 
     def __len__(self) -> int:
@@ -337,8 +337,8 @@ class ODVariable:
         self.pdo_mappable = False
 
     def __repr__(self) -> str:
-        suffix = f":{self.subindex:02X}" if isinstance(self.parent, (ODRecord, ODArray)) else ""
-        return f"<{type(self).__qualname__} {self.qualname!r} at 0x{self.index:04X}{suffix}>"
+        subindex = self.subindex if isinstance(self.parent, (ODRecord, ODArray)) else None
+        return f"<{type(self).__qualname__} {self.qualname!r} at {pretty_index(self.index, subindex)}>"
 
     @property
     def qualname(self) -> str:
@@ -417,8 +417,7 @@ class ODVariable:
                 if self.max is not None and value > self.max:
                     logger.warning(
                         "Value %d is greater than max value %d",
-                        value,
-                        self.max)
+                        value, self.max)
             try:
                 return self.STRUCT_TYPES[self.data_type].pack(value)
             except struct.error:
@@ -427,8 +426,7 @@ class ODVariable:
             raise ObjectDictionaryError("Data type has not been specified")
         else:
             raise TypeError(
-                "Do not know how to encode %r to data type %Xh" % (
-                    value, self.data_type))
+                f"Do not know how to encode {value!r} to data type 0x{self.data_type:X}")
 
     def decode_phys(self, value: int) -> Union[int, bool, float, str, bytes]:
         if self.data_type in INTEGER_TYPES:
@@ -446,7 +444,7 @@ class ODVariable:
             raise ObjectDictionaryError("No value descriptions exist")
         elif value not in self.value_descriptions:
             raise ObjectDictionaryError(
-                "No value description exists for %d" % value)
+                f"No value description exists for {value}")
         else:
             return self.value_descriptions[value]
 
@@ -458,8 +456,8 @@ class ODVariable:
                 if description == desc:
                     return value
         valid_values = ", ".join(self.value_descriptions.values())
-        error_text = "No value corresponds to '%s'. Valid values are: %s"
-        raise ValueError(error_text % (desc, valid_values))
+        raise ValueError(
+            f"No value corresponds to '{desc}'. Valid values are: {valid_values}")
 
     def decode_bits(self, value: int, bits: List[int]) -> int:
         try:
