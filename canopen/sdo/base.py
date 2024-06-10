@@ -6,6 +6,7 @@ from collections.abc import Mapping
 
 from canopen import objectdictionary
 from canopen import variable
+from canopen.utils import pretty_index
 
 
 class CrcXmodem:
@@ -98,7 +99,7 @@ class SdoRecord(Mapping):
         self.od = od
 
     def __repr__(self) -> str:
-        return f"<{type(self).__qualname__} {self.od.name!r} at 0x{self.od.index:04X}>"
+        return f"<{type(self).__qualname__} {self.od.name!r} at {pretty_index(self.od.index)}>"
 
     def __getitem__(self, subindex: Union[int, str]) -> SdoVariable:
         return SdoVariable(self.sdo_node, self.od[subindex])
@@ -120,7 +121,7 @@ class SdoArray(Mapping):
         self.od = od
 
     def __repr__(self) -> str:
-        return f"<{type(self).__qualname__} {self.od.name!r} at 0x{self.od.index:04X}>"
+        return f"<{type(self).__qualname__} {self.od.name!r} at {pretty_index(self.od.index)}>"
 
     def __getitem__(self, subindex: Union[int, str]) -> SdoVariable:
         return SdoVariable(self.sdo_node, self.od[subindex])

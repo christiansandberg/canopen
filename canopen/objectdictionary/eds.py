@@ -43,7 +43,7 @@ def import_eds(source, node_id):
     if eds.has_section("Comments"):
         linecount = int(eds.get("Comments", "Lines"), 0)
         od.comments = '\n'.join([
-            eds.get("Comments", "Line%i" % line)
+            eds.get("Comments", f"Line{line}")
             for line in range(1, linecount+1)
         ])
 
@@ -52,7 +52,7 @@ def import_eds(source, node_id):
     else:
         for rate in [10, 20, 50, 125, 250, 500, 800, 1000]:
             baudPossible = int(
-                eds.get("DeviceInfo", "BaudRate_%i" % rate, fallback='0'), 0)
+                eds.get("DeviceInfo", f"BaudRate_{rate}", fallback='0'), 0)
             if baudPossible != 0:
                 od.device_information.allowed_baudrates.add(rate*1000)
 
@@ -85,15 +85,16 @@ def import_eds(source, node_id):
                 pass
 
     if eds.has_section("DeviceComissioning"):
-        od.bitrate = int(eds.get("DeviceComissioning", "BaudRate")) * 1000
+        od.bitrate = int(eds.get("DeviceComissioning", "Baudrate")) * 1000
         od.node_id = int(eds.get("DeviceComissioning", "NodeID"), 0)
+        node_id = node_id or od.node_id
 
     for section in eds.sections():
         # Match dummy definitions
         match = re.match(r"^[Dd]ummy[Uu]sage$", section)
         if match is not None:
             for i in range(1, 8):
-                key = "Dummy%04d" % i
+                key = f"Dummy{i:04d}"
                 if eds.getint(section, key) == 1:
                     var = objectdictionary.ODVariable(key, i, 0)
                     var.data_type = i
@@ -239,7 +240,7 @@ def _revert_variable(var_type, value):
     elif var_type in datatypes.FLOAT_TYPES:
         return value
     else:
-        return "0x%02X" % value
+        return f"0x{value:02X}"
 
 
 def build_variable(eds, section, node_id, index, subindex=0):
@@ -264,9 +265,9 @@ def build_variable(eds, section, node_id, index, subindex=0):
         # The eds.get function gives us 0x00A0 now convert to String without hex representation and upper case
         # The sub2 part is then the section where the type parameter stands
         try:
-            var.data_type = int(eds.get("%Xsub1" % var.data_type, "DefaultValue"), 0)
+            var.data_type = int(eds.get(f"{var.data_type:X}sub1", "DefaultValue"), 0)
         except NoSectionError:
-            logger.warning("%s has an unknown or unsupported data type (%X)", name, var.data_type)
+            logger.warning("%s has an unknown or unsupported data type (0x%X)", name, var.data_type)
             # Assume DOMAIN to force application to interpret the byte data
             var.data_type = datatypes.DOMAIN
 
@@ -354,15 +355,15 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
     def export_variable(var, eds):
         if isinstance(var.parent, ObjectDictionary):
             # top level variable
-            section = "%04X" % var.index
+            section = f"{var.index:04X}"
         else:
             # nested variable
-            section = "%04Xsub%X" % (var.index, var.subindex)
+            section = f"{var.index:04X}sub{var.subindex:X}"
 
         export_common(var, eds, section)
-        eds.set(section, "ObjectType", "0x%X" % VAR)
+        eds.set(section, "ObjectType", f"0x{VAR:X}")
         if var.data_type:
-            eds.set(section, "DataType", "0x%04X" % var.data_type)
+            eds.set(section, "DataType", f"0x{var.data_type:04X}")
         if var.access_type:
             eds.set(section, "AccessType", var.access_type)
 
@@ -379,7 +380,7 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
                 eds.set(section, "ParameterValue",
                         _revert_variable(var.data_type, var.value))
 
-        eds.set(section, "DataType", "0x%04X" % var.data_type)
+        eds.set(section, "DataType", f"0x{var.data_type:04X}")
         eds.set(section, "PDOMapping", hex(var.pdo_mappable))
 
         if getattr(var, 'min', None) is not None:
@@ -395,11 +396,11 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
             eds.set(section, "Unit", var.unit)
 
     def export_record(var, eds):
-        section = "%04X" % var.index
+        section = f"{var.index:04X}"
         export_common(var, eds, section)
-        eds.set(section, "SubNumber", "0x%X" % len(var.subindices))
+        eds.set(section, "SubNumber", f"0x{len(var.subindices):X}")
         ot = RECORD if isinstance(var, objectdictionary.ODRecord) else ARR
-        eds.set(section, "ObjectType", "0x%X" % ot)
+        eds.set(section, "ObjectType", f"0x{ot:X}")
         for i in var:
             export_variable(var[i], eds)
 
@@ -461,13 +462,13 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
     for rate in od.device_information.allowed_baudrates.union(
             {10e3, 20e3, 50e3, 125e3, 250e3, 500e3, 800e3, 1000e3}):
         eds.set(
-            "DeviceInfo", "BaudRate_%i" % (rate/1000),
+            "DeviceInfo", f"BaudRate_{rate//1000}",
             int(rate in od.device_information.allowed_baudrates))
 
     if device_commisioning and (od.bitrate or od.node_id):
         eds.add_section("DeviceComissioning")
         if od.bitrate:
-            eds.set("DeviceComissioning", "BaudRate", int(od.bitrate / 1000))
+            eds.set("DeviceComissioning", "Baudrate", int(od.bitrate / 1000))
         if od.node_id:
             eds.set("DeviceComissioning", "NodeID", int(od.node_id))
 
@@ -475,12 +476,12 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
     i = 0
     for line in od.comments.splitlines():
         i += 1
-        eds.set("Comments", "Line%i" % i, line)
+        eds.set("Comments", f"Line{i}", line)
     eds.set("Comments", "Lines", i)
 
     eds.add_section("DummyUsage")
     for i in range(1, 8):
-        key = "Dummy%04d" % i
+        key = f"Dummy{i:04d}"
         eds.set("DummyUsage", key, 1 if (key in od) else 0)
 
     def mandatory_indices(x):
@@ -504,7 +505,7 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
         eds.add_section(section)
         eds.set(section, "SupportedObjects", len(list))
         for i in range(0, len(list)):
-            eds.set(section, (i + 1), "0x%04X" % list[i])
+            eds.set(section, (i + 1), f"0x{list[i]:04X}")
         for index in list:
             export_object(od[index], eds)
 

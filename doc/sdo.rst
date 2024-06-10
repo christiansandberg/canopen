@@ -50,7 +50,7 @@ The code below only creates objects, no messages are sent or received yet::
 To actually read or write the variables, use the ``.raw``, ``.phys``, ``.desc``,
 or ``.bits`` attributes::
 
-    print("The device type is 0x%X" % device_type.raw)
+    print(f"The device type is 0x{device_type.raw:X}")
 
     # Using value descriptions instead of integers (if supported by OD)
     control_mode.desc = 'Speed Mode'
@@ -59,11 +59,11 @@ or ``.bits`` attributes::
     command_all.bits[3] = 1
 
     # Read and write physical values scaled by a factor (if supported by OD)
-    print("The actual speed is %f rpm" % actual_speed.phys)
+    print(f"The actual speed is {actual_speed.phys} rpm")
 
     # Iterate over arrays or records
     for error in error_log.values():
-        print("Error 0x%X was found in the log" % error.raw)
+        print(f"Error 0x{error.raw:X} was found in the log")
 
 It is also possible to read and write to variables that are not in the Object
 Dictionary, but only using raw bytes::
