@@ -389,6 +389,13 @@ class ODVariable:
             # Is this correct?
             return data.rstrip(b"\x00").decode("utf_16_le", errors="ignore")
         elif self.data_type in self.STRUCT_TYPES:
+            size = self.STRUCT_TYPES[self.data_type].size
+            if len(data) > size:
+                logger.warning("Excessive data in %s. Data type 0x%X expects %s bytes, got %s",
+                               pretty_index(self.index, self.subindex), self.data_type,
+                               size, len(data))
+                # Truncate the data to the expected size
+                data = data[:size]
             try:
                 value, = self.STRUCT_TYPES[self.data_type].unpack(data)
                 return value
