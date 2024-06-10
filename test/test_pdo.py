@@ -55,6 +55,11 @@ class TestPDO(unittest.TestCase):
         self.assertEqual(node.tpdo[0x2002].raw, 0xf)
         self.assertEqual(node.pdo[0x1600][0x2002].raw, 0xf)
 
+    def test_save_pdo(self):
+        node = canopen.Node(1, EDS_PATH)
+        node.tpdo.save()
+        node.rpdo.save()
+
 
 if __name__ == "__main__":
     unittest.main()
