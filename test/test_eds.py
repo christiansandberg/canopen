@@ -2,6 +2,7 @@ import os
 import unittest
 import canopen
 from canopen.objectdictionary.eds import _signed_int_from_hex
+from canopen.utils import pretty_index
 
 EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
 
@@ -185,7 +186,7 @@ class TestEDS(unittest.TestCase):
             for doctype in {"eds", "dcf"}:
                 tempfile = str(Path(tempdir, "test." + doctype))
                 with open(tempfile, "w+") as tempeds:
-                    print("exporting %s to " % doctype + tempeds.name)
+                    print(f"exporting {doctype} to {tempeds.name}")
                     canopen.export_od(self.od, tempeds, doc_type=doctype)
 
                 exported_od = canopen.import_od(tempfile)
@@ -236,15 +237,15 @@ class TestEDS(unittest.TestCase):
 
                     for evar, avar in zip(expected_vars, actual_vars):
                         self.assertEqual(getattr(avar, "data_type", None), getattr(evar, "data_type", None),
-                                         " mismatch on %04X:%X" % (evar.index, evar.subindex))
+                                         f" mismatch on {pretty_index(evar.index, evar.subindex)}")
                         self.assertEqual(getattr(avar, "default_raw", None), getattr(evar, "default_raw", None),
-                                         " mismatch on %04X:%X" % (evar.index, evar.subindex))
+                                         f" mismatch on {pretty_index(evar.index, evar.subindex)}")
                         self.assertEqual(getattr(avar, "min", None), getattr(evar, "min", None),
-                                         " mismatch on %04X:%X" % (evar.index, evar.subindex))
+                                         f" mismatch on {pretty_index(evar.index, evar.subindex)}")
                         self.assertEqual(getattr(avar, "max", None), getattr(evar, "max", None),
-                                         " mismatch on %04X:%X" % (evar.index, evar.subindex))
+                                         f" mismatch on {pretty_index(evar.index, evar.subindex)}")
                         if doctype == "dcf":
                             self.assertEqual(getattr(avar, "value", None), getattr(evar, "value", None),
-                                             " mismatch on %04X:%X" % (evar.index, evar.subindex))
+                                             f" mismatch on {pretty_index(evar.index, evar.subindex)}")
 
                         self.assertEqual(self.od.comments, exported_od.comments)

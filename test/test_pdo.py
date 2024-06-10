@@ -84,6 +84,11 @@ class TestPDO(unittest.TestCase):
         self.assertEqual(pdo['INTEGER16 value'].raw, -1)
         self.assertEqual(pdo['INTEGER32 value'].raw, -1071)
 
+    def test_save_pdo(self):
+        node = canopen.Node(1, EDS_PATH)
+        node.tpdo.save()
+        node.rpdo.save()
+
 
 if __name__ == "__main__":
     unittest.main()
