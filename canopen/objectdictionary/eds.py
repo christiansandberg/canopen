@@ -2,6 +2,7 @@ import copy
 import logging
 import re
 from configparser import RawConfigParser, NoOptionError, NoSectionError
+from typing import Optional
 
 from canopen import objectdictionary
 from canopen.objectdictionary import ObjectDictionary, datatypes
@@ -16,10 +17,11 @@ ARR = 8
 RECORD = 9
 
 
-def import_eds(source, node_id):
+def import_eds(source, node_id: Optional[int]):
     eds = RawConfigParser(inline_comment_prefixes=(';',))
     eds.optionxform = str
     opened_here = False
+    fp = None
     try:
         if hasattr(source, "read"):
             fp = source
@@ -29,7 +31,7 @@ def import_eds(source, node_id):
         eds.read_file(fp)
     finally:
         # Only close object if opened in this fn
-        if opened_here:
+        if fp and opened_here:
             fp.close()
 
     od = ObjectDictionary()
@@ -48,12 +50,11 @@ def import_eds(source, node_id):
         ])
 
     if not eds.has_section("DeviceInfo"):
-        logger.warn("eds file does not have a DeviceInfo section. This section is mandatory")
+        logger.warning("eds file does not have a DeviceInfo section. This section is mandatory")
     else:
         for rate in [10, 20, 50, 125, 250, 500, 800, 1000]:
-            baudPossible = int(
-                eds.get("DeviceInfo", f"BaudRate_{rate}", fallback='0'), 0)
-            if baudPossible != 0:
+            baud_possible = bool(eds.get("DeviceInfo", f"BaudRate_{rate}", fallback='0'))
+            if baud_possible:
                 od.device_information.allowed_baudrates.add(rate*1000)
 
         for t, eprop, odprop in [
@@ -73,20 +74,18 @@ def import_eds(source, node_id):
             (bool, "LSS_Supported", "LSS_supported"),
         ]:
             try:
-                if t in (int, bool):
-                    setattr(od.device_information, odprop,
-                            t(int(eds.get("DeviceInfo", eprop), 0))
-                            )
+                if t is bool:
+                    setattr(od.device_information, odprop, 1 if eds.get("DeviceInfo", eprop) else 0)
+                if t is int:
+                    setattr(od.device_information, odprop, int(eds.get("DeviceInfo", eprop), 0))
                 elif t is str:
-                    setattr(od.device_information, odprop,
-                            eds.get("DeviceInfo", eprop)
-                            )
+                    setattr(od.device_information, odprop, eds.get("DeviceInfo", eprop))
             except NoOptionError:
                 pass
 
-    if eds.has_section("DeviceComissioning"):
-        od.bitrate = int(eds.get("DeviceComissioning", "Baudrate")) * 1000
-        od.node_id = int(eds.get("DeviceComissioning", "NodeID"), 0)
+    if eds.has_section("DeviceCommissioning"):
+        od.bitrate = int(float(eds.get("DeviceCommissioning", "Baudrate"))) * 1000
+        od.node_id = int(eds.get("DeviceCommissioning", "NodeID"), 0)
         node_id = node_id or od.node_id
 
     for section in eds.sections():
@@ -305,7 +304,8 @@ def build_variable(eds, section, node_id, index, subindex=0):
             var.value = _convert_variable(node_id, var.data_type, eds.get(section, "ParameterValue"))
         except ValueError:
             pass
-    # Factor, Description and Unit are not standard according to the CANopen specifications, but they are implemented in the python canopen package, so we can at least try to use them
+    # Factor, Description and Unit are not standard according to the CANopen specifications,
+    # but they are implemented in the python canopen package, so we can at least try to use them
     if eds.has_option(section, "Factor"):
         try:
             var.factor = float(eds.get(section, "Factor"))
@@ -333,11 +333,14 @@ def copy_variable(eds, section, subindex, src_var):
     return var
 
 
-def export_dcf(od, dest=None, fileInfo={}):
-    return export_eds(od, dest, fileInfo, True)
+def export_dcf(od, dest=None, file_info=None):
+    return export_eds(od, dest, file_info, True)
 
 
-def export_eds(od, dest=None, file_info={}, device_commisioning=False):
+def export_eds(od, dest=None, file_info=None, device_commissioning=False):
+    if file_info is None:
+        file_info = {}
+
     def export_object(obj, eds):
         if isinstance(obj, objectdictionary.ODVariable):
             return export_variable(obj, eds)
@@ -373,7 +376,7 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
             eds.set(section, "DefaultValue", _revert_variable(
                 var.data_type, var.default))
 
-        if device_commisioning:
+        if device_commissioning:
             if getattr(var, 'value_raw', None) is not None:
                 eds.set(section, "ParameterValue", var.value_raw)
             elif getattr(var, 'value', None) is not None:
@@ -401,8 +404,8 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
         eds.set(section, "SubNumber", f"0x{len(var.subindices):X}")
         ot = RECORD if isinstance(var, objectdictionary.ODRecord) else ARR
         eds.set(section, "ObjectType", f"0x{ot:X}")
-        for i in var:
-            export_variable(var[i], eds)
+        for index in var:
+            export_variable(var[index], eds)
 
     export_array = export_record
 
@@ -415,9 +418,9 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
 
     try:
         # only if eds was loaded by us
-        origFileInfo = od.__edsFileInfo
+        orig_file_info = od.__edsFileInfo
     except AttributeError:
-        origFileInfo = {
+        orig_file_info = {
             # just set some defaults
             "CreationDate": defmtime.strftime("%m-%d-%Y"),
             "CreationTime": defmtime.strftime("%I:%m%p"),
@@ -426,7 +429,7 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
 
     file_info.setdefault("ModificationDate", defmtime.strftime("%m-%d-%Y"))
     file_info.setdefault("ModificationTime", defmtime.strftime("%I:%m%p"))
-    for k, v in origFileInfo.items():
+    for k, v in orig_file_info.items():
         file_info.setdefault(k, v)
 
     eds.add_section("FileInfo")
@@ -456,60 +459,60 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
         elif isinstance(val, str):
             eds.set("DeviceInfo", eprop, val)
         elif isinstance(val, (int, bool)):
-            eds.set("DeviceInfo", eprop, int(val))
+            eds.set("DeviceInfo", eprop, str(val))
 
     # we are also adding out of spec baudrates here.
     for rate in od.device_information.allowed_baudrates.union(
             {10e3, 20e3, 50e3, 125e3, 250e3, 500e3, 800e3, 1000e3}):
         eds.set(
             "DeviceInfo", f"BaudRate_{rate//1000}",
-            int(rate in od.device_information.allowed_baudrates))
+            str(rate in od.device_information.allowed_baudrates))
 
-    if device_commisioning and (od.bitrate or od.node_id):
-        eds.add_section("DeviceComissioning")
+    if device_commissioning and (od.bitrate or od.node_id):
+        eds.add_section("DeviceCommissioning")
         if od.bitrate:
-            eds.set("DeviceComissioning", "Baudrate", int(od.bitrate / 1000))
+            eds.set("DeviceCommissioning", "Baudrate", str(od.bitrate / 1000))
         if od.node_id:
-            eds.set("DeviceComissioning", "NodeID", int(od.node_id))
+            eds.set("DeviceCommissioning", "NodeID", str(od.node_id))
 
     eds.add_section("Comments")
     i = 0
     for line in od.comments.splitlines():
         i += 1
         eds.set("Comments", f"Line{i}", line)
-    eds.set("Comments", "Lines", i)
+    eds.set("Comments", "Lines", str(i))
 
     eds.add_section("DummyUsage")
     for i in range(1, 8):
         key = f"Dummy{i:04d}"
-        eds.set("DummyUsage", key, 1 if (key in od) else 0)
+        eds.set("DummyUsage", key, "1" if (key in od) else "0")
 
     def mandatory_indices(x):
         return x in {0x1000, 0x1001, 0x1018}
 
-    def manufacturer_idices(x):
+    def manufacturer_indices(x):
         return x in range(0x2000, 0x6000)
 
     def optional_indices(x):
         return all((
             x > 0x1001,
             not mandatory_indices(x),
-            not manufacturer_idices(x),
+            not manufacturer_indices(x),
         ))
 
-    supported_mantatory_indices = list(filter(mandatory_indices, od))
+    supported_mandatory_indices = list(filter(mandatory_indices, od))
     supported_optional_indices = list(filter(optional_indices, od))
-    supported_manufacturer_indices = list(filter(manufacturer_idices, od))
+    supported_manufacturer_indices = list(filter(manufacturer_indices, od))
 
-    def add_list(section, list):
+    def add_list(section, list_to_add):
         eds.add_section(section)
-        eds.set(section, "SupportedObjects", len(list))
-        for i in range(0, len(list)):
-            eds.set(section, (i + 1), f"0x{list[i]:04X}")
-        for index in list:
+        eds.set(section, "SupportedObjects", str(len(list_to_add)))
+        for item in range(0, len(list_to_add)):
+            eds.set(section, str(item + 1), f"0x{list_to_add[item]:04X}")
+        for index in list_to_add:
             export_object(od[index], eds)
 
-    add_list("MandatoryObjects", supported_mantatory_indices)
+    add_list("MandatoryObjects", supported_mandatory_indices)
     add_list("OptionalObjects", supported_optional_indices)
     add_list("ManufacturerObjects", supported_manufacturer_indices)
 

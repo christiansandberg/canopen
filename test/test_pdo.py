@@ -9,32 +9,32 @@ class TestPDO(unittest.TestCase):
 
     def test_bit_mapping(self):
         node = canopen.Node(1, EDS_PATH)
-        map = node.pdo.tx[1]
-        map.add_variable('INTEGER16 value')  # 0x2001
-        map.add_variable('UNSIGNED8 value', length=4)  # 0x2002
-        map.add_variable('INTEGER8 value', length=4)  # 0x2003
-        map.add_variable('INTEGER32 value')  # 0x2004
-        map.add_variable('BOOLEAN value', length=1)  # 0x2005
-        map.add_variable('BOOLEAN value 2', length=1)  # 0x2006
+        test_map = node.pdo.tx[1]
+        test_map.add_variable('INTEGER16 value')  # 0x2001
+        test_map.add_variable('UNSIGNED8 value', length=4)  # 0x2002
+        test_map.add_variable('INTEGER8 value', length=4)  # 0x2003
+        test_map.add_variable('INTEGER32 value')  # 0x2004
+        test_map.add_variable('BOOLEAN value', length=1)  # 0x2005
+        test_map.add_variable('BOOLEAN value 2', length=1)  # 0x2006
 
         # Write some values
-        map['INTEGER16 value'].raw = -3
-        map['UNSIGNED8 value'].raw = 0xf
-        map['INTEGER8 value'].raw = -2
-        map['INTEGER32 value'].raw = 0x01020304
-        map['BOOLEAN value'].raw = False
-        map['BOOLEAN value 2'].raw = True
+        test_map['INTEGER16 value'].raw = -3
+        test_map['UNSIGNED8 value'].raw = 0xf
+        test_map['INTEGER8 value'].raw = -2
+        test_map['INTEGER32 value'].raw = 0x01020304
+        test_map['BOOLEAN value'].raw = False
+        test_map['BOOLEAN value 2'].raw = True
 
         # Check expected data
-        self.assertEqual(map.data, b'\xfd\xff\xef\x04\x03\x02\x01\x02')
+        self.assertEqual(test_map.data, b'\xfd\xff\xef\x04\x03\x02\x01\x02')
 
         # Read values from data
-        self.assertEqual(map['INTEGER16 value'].raw, -3)
-        self.assertEqual(map['UNSIGNED8 value'].raw, 0xf)
-        self.assertEqual(map['INTEGER8 value'].raw, -2)
-        self.assertEqual(map['INTEGER32 value'].raw, 0x01020304)
-        self.assertEqual(map['BOOLEAN value'].raw, False)
-        self.assertEqual(map['BOOLEAN value 2'].raw, True)
+        self.assertEqual(test_map['INTEGER16 value'].raw, -3)
+        self.assertEqual(test_map['UNSIGNED8 value'].raw, 0xf)
+        self.assertEqual(test_map['INTEGER8 value'].raw, -2)
+        self.assertEqual(test_map['INTEGER32 value'].raw, 0x01020304)
+        self.assertEqual(test_map['BOOLEAN value'].raw, False)
+        self.assertEqual(test_map['BOOLEAN value 2'].raw, True)
 
         self.assertEqual(node.tpdo[1]['INTEGER16 value'].raw, -3)
         self.assertEqual(node.tpdo[1]['UNSIGNED8 value'].raw, 0xf)

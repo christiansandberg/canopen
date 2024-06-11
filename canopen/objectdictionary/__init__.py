@@ -62,6 +62,8 @@ def import_od(
 
     :param source:
         Path to object dictionary file or a file like object or an EPF XML tree.
+    :param node_id:
+        Optional Node-ID to set, if not defined in the source
 
     :return:
         An Object Dictionary instance.
@@ -368,13 +370,13 @@ class ODVariable:
     def readable(self) -> bool:
         return "r" in self.access_type or self.access_type == "const"
 
-    def add_value_description(self, value: int, descr: str) -> None:
+    def add_value_description(self, value: int, desc: str) -> None:
         """Associate a value with a string description.
 
         :param value: Value to describe
         :param desc: Description of value
         """
-        self.value_descriptions[value] = descr
+        self.value_descriptions[value] = desc
 
     def add_bit_definition(self, name: str, bits: List[int]) -> None:
         """Associate bit(s) with a string description.
@@ -461,7 +463,7 @@ class ODVariable:
         raise ValueError(
             f"No value corresponds to '{desc}'. Valid values are: {valid_values}")
 
-    def decode_bits(self, value: int, bits: List[int]) -> int:
+    def decode_bits(self, value: int, bits: Union[str, List[int]]) -> int:
         try:
             bits = self.bit_definitions[bits]
         except (TypeError, KeyError):
@@ -471,7 +473,7 @@ class ODVariable:
             mask |= 1 << bit
         return (value & mask) >> min(bits)
 
-    def encode_bits(self, original_value: int, bits: List[int], bit_value: int):
+    def encode_bits(self, original_value: int, bits: Union[str, List[int]], bit_value: int):
         try:
             bits = self.bit_definitions[bits]
         except (TypeError, KeyError):
@@ -488,20 +490,20 @@ class ODVariable:
 class DeviceInformation:
     def __init__(self):
         self.allowed_baudrates = set()
-        self.vendor_name:Optional[str] = None
-        self.vendor_number:Optional[int] = None
-        self.product_name:Optional[str] = None
-        self.product_number:Optional[int] = None
-        self.revision_number:Optional[int] = None
-        self.order_code:Optional[str] = None
-        self.simple_boot_up_master:Optional[bool] = None
-        self.simple_boot_up_slave:Optional[bool] = None
-        self.granularity:Optional[int] = None
-        self.dynamic_channels_supported:Optional[bool] = None
-        self.group_messaging:Optional[bool] = None
-        self.nr_of_RXPDO:Optional[bool] = None
-        self.nr_of_TXPDO:Optional[bool] = None
-        self.LSS_supported:Optional[bool] = None
+        self.vendor_name: Optional[str] = None
+        self.vendor_number: Optional[int] = None
+        self.product_name: Optional[str] = None
+        self.product_number: Optional[int] = None
+        self.revision_number: Optional[int] = None
+        self.order_code: Optional[str] = None
+        self.simple_boot_up_master: Optional[bool] = None
+        self.simple_boot_up_slave: Optional[bool] = None
+        self.granularity: Optional[int] = None
+        self.dynamic_channels_supported: Optional[bool] = None
+        self.group_messaging: Optional[bool] = None
+        self.nr_of_RXPDO: Optional[bool] = None
+        self.nr_of_TXPDO: Optional[bool] = None
+        self.LSS_supported: Optional[bool] = None
 
 
 class ObjectDictionaryError(Exception):

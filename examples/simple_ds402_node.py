@@ -5,11 +5,11 @@ import traceback
 
 import time
 
+# Start with creating a network representing one CAN bus
+network = canopen.Network()
+
+
 try:
-
-    # Start with creating a network representing one CAN bus
-    network = canopen.Network()
-
     # Connect to the CAN bus
     network.connect(bustype='kvaser', channel=0, bitrate=1000000)
 
@@ -23,7 +23,7 @@ try:
 
     # Reset network
     node.nmt.state = 'RESET COMMUNICATION'
-    #node.nmt.state = 'RESET'
+    # node.nmt.state = 'RESET'
     node.nmt.wait_for_bootup(15)
 
     print(f'node state 1) = {node.nmt.state}')
@@ -77,8 +77,7 @@ try:
     # Save new PDO configuration to node
     node.tpdo.save()
 
-    # publish the a value to the control word (in this case reset the fault at the motors)
-
+    # publish a value to the control word (in this case reset the fault at the motors)
     node.rpdo.read()
     node.rpdo[1]['Controlword'].raw = 0x80
     node.rpdo[1].transmit()
@@ -115,15 +114,12 @@ try:
             raise Exception('Timeout when trying to change state')
         time.sleep(0.001)
 
-    print(f'Node Status {node.powerstate_402.state}')
+    print(f'Node Status {node.state}')
 
     # -----------------------------------------------------------------------------------------
     node.nmt.start_node_guarding(0.01)
     while True:
-        try:
-            network.check()
-        except Exception:
-            break
+        network.check()
 
         # Read a value from TxPDO1
         node.tpdo[1].wait_for_reception()
@@ -141,8 +137,8 @@ except KeyboardInterrupt:
     pass
 except Exception as e:
     exc_type, exc_obj, exc_tb = sys.exc_info()
-    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-    print(exc_type, fname, exc_tb.tb_lineno)
+    file_name = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+    print(exc_type, file_name, exc_tb.tb_lineno)
     traceback.print_exc()
 finally:
     # Disconnect from CAN bus
@@ -155,4 +151,3 @@ finally:
             node.nmt.stop_node_guarding()
         network.sync.stop()
         network.disconnect()
-

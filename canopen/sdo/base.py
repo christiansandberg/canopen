@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import binascii
-from typing import Iterator, Optional, Union
+from typing import Iterator, Optional, Union, cast, TYPE_CHECKING
 from collections.abc import Mapping
 
 from canopen import objectdictionary
 from canopen import variable
 from canopen.utils import pretty_index
+
+if TYPE_CHECKING:
+    from canopen.sdo import SdoClient, SdoServer
 
 
 class CrcXmodem:
@@ -50,12 +53,16 @@ class SdoBase(Mapping):
         self, index: Union[str, int]
     ) -> Union[SdoVariable, SdoArray, SdoRecord]:
         entry = self.od[index]
+        if TYPE_CHECKING:
+            sdo_node = cast(Union[SdoClient, SdoServer], self)
+        else:
+            sdo_node = self
         if isinstance(entry, objectdictionary.ODVariable):
-            return SdoVariable(self, entry)
+            return SdoVariable(sdo_node, entry)
         elif isinstance(entry, objectdictionary.ODArray):
-            return SdoArray(self, entry)
+            return SdoArray(sdo_node, entry)
         elif isinstance(entry, objectdictionary.ODRecord):
-            return SdoRecord(self, entry)
+            return SdoRecord(sdo_node, entry)
 
     def __iter__(self) -> Iterator[int]:
         return iter(self.od)
@@ -94,7 +101,7 @@ class SdoBase(Mapping):
 
 class SdoRecord(Mapping):
 
-    def __init__(self, sdo_node: SdoBase, od: objectdictionary.ODRecord):
+    def __init__(self, sdo_node: Union[SdoClient, SdoServer], od: objectdictionary.ODRecord):
         self.sdo_node = sdo_node
         self.od = od
 
@@ -116,7 +123,7 @@ class SdoRecord(Mapping):
 
 class SdoArray(Mapping):
 
-    def __init__(self, sdo_node: SdoBase, od: objectdictionary.ODArray):
+    def __init__(self, sdo_node: Union[SdoClient, SdoServer], od: objectdictionary.ODArray):
         self.sdo_node = sdo_node
         self.od = od
 
@@ -139,7 +146,7 @@ class SdoArray(Mapping):
 class SdoVariable(variable.Variable):
     """Access object dictionary variable values using SDO protocol."""
 
-    def __init__(self, sdo_node: SdoBase, od: objectdictionary.ODVariable):
+    def __init__(self, sdo_node: Union[SdoServer, SdoClient], od: objectdictionary.ODVariable):
         self.sdo_node = sdo_node
         variable.Variable.__init__(self, od)
 

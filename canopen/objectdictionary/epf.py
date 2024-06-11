@@ -1,5 +1,5 @@
-import xml.etree.ElementTree as etree
 import logging
+from xml.etree import ElementTree
 
 from canopen import objectdictionary
 from canopen.objectdictionary import ObjectDictionary
@@ -32,10 +32,10 @@ def import_epf(epf):
     :rtype: canopen.ObjectDictionary
     """
     od = ObjectDictionary()
-    if etree.iselement(epf):
+    if ElementTree.iselement(epf):
         tree = epf
     else:
-        tree = etree.parse(epf).getroot()
+        tree = ElementTree.parse(epf).getroot()
 
     # Find and set default bitrate
     can_config = tree.find("Configuration/CANopen")

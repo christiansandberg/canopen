@@ -1,8 +1,8 @@
 import os
-import unittest
-import canopen
-import logging
 import time
+import unittest
+
+import canopen
 
 # logging.basicConfig(level=logging.DEBUG)
 
@@ -17,11 +17,11 @@ class TestSDO(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.network1 = canopen.Network()
-        cls.network1.connect("test", bustype="virtual")
+        cls.network1.connect("test", interface="virtual")
         cls.remote_node = cls.network1.add_node(2, EDS_PATH)
 
         cls.network2 = canopen.Network()
-        cls.network2.connect("test", bustype="virtual")
+        cls.network2.connect("test", interface="virtual")
         cls.local_node = cls.network2.create_node(2, EDS_PATH)
 
         cls.remote_node2 = cls.network1.add_node(3, EDS_PATH)
@@ -180,11 +180,11 @@ class TestNMT(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.network1 = canopen.Network()
-        cls.network1.connect("test", bustype="virtual")
+        cls.network1.connect("test", interface="virtual")
         cls.remote_node = cls.network1.add_node(2, EDS_PATH)
 
         cls.network2 = canopen.Network()
-        cls.network2.connect("test", bustype="virtual")
+        cls.network2.connect("test", interface="virtual")
         cls.local_node = cls.network2.create_node(2, EDS_PATH)
 
         cls.remote_node2 = cls.network1.add_node(3, EDS_PATH)
@@ -214,7 +214,7 @@ class TestNMT(unittest.TestCase):
     def test_stop_two_remote_nodes_using_broadcast(self):
         # This is a NMT broadcast "Stop remote node"
         # ie. set the node in STOPPED state
-        self.network1.send_message(0, [2, 0])
+        self.network1.send_message(0, bytes([2, 0]))
 
         # Line below is just so that we are sure the slaves have received the command
         # before we do the check
@@ -234,6 +234,7 @@ class TestNMT(unittest.TestCase):
 
         self.local_node.nmt.stop_heartbeat()
 
+
 class TestPDO(unittest.TestCase):
     """
     Test PDO slave.
@@ -242,11 +243,11 @@ class TestPDO(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.network1 = canopen.Network()
-        cls.network1.connect("test", bustype="virtual")
+        cls.network1.connect("test", interface="virtual")
         cls.remote_node = cls.network1.add_node(2, EDS_PATH)
 
         cls.network2 = canopen.Network()
-        cls.network2.connect("test", bustype="virtual")
+        cls.network2.connect("test", interface="virtual")
         cls.local_node = cls.network2.create_node(2, EDS_PATH)
 
     @classmethod

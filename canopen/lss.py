@@ -1,7 +1,7 @@
 import logging
-import time
-import struct
 import queue
+import struct
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -104,21 +104,20 @@ class LssMaster:
         """obsolete"""
         self.send_switch_state_global(mode)
 
-    def send_switch_state_selective(self,
-                                    vendorId, productCode, revisionNumber, serialNumber):
+    def send_switch_state_selective(self, vendor_id, product_code, revision_number, serial_number):
         """switch mode from WAITING_STATE to CONFIGURATION_STATE
         only if 128bits LSS address matches with the arguments.
         It sends 4 messages for each argument.
         Then wait the response from the slave.
         There will be no response if there is no matching slave
 
-        :param int vendorId:
+        :param int vendor_id:
             object index 0x1018 subindex 1
-        :param int productCode:
+        :param int product_code:
             object index 0x1018 subindex 2
-        :param int revisionNumber:
+        :param int revision_number:
             object index 0x1018 subindex 3
-        :param int serialNumber:
+        :param int serial_number:
             object index 0x1018 subindex 4
 
         :return:
@@ -127,10 +126,10 @@ class LssMaster:
         :rtype: bool
         """
 
-        self.__send_lss_address(CS_SWITCH_STATE_SELECTIVE_VENDOR_ID, vendorId)
-        self.__send_lss_address(CS_SWITCH_STATE_SELECTIVE_PRODUCT_CODE, productCode)
-        self.__send_lss_address(CS_SWITCH_STATE_SELECTIVE_REVISION_NUMBER, revisionNumber)
-        response = self.__send_lss_address(CS_SWITCH_STATE_SELECTIVE_SERIAL_NUMBER, serialNumber)
+        self.__send_lss_address(CS_SWITCH_STATE_SELECTIVE_VENDOR_ID, vendor_id)
+        self.__send_lss_address(CS_SWITCH_STATE_SELECTIVE_PRODUCT_CODE, product_code)
+        self.__send_lss_address(CS_SWITCH_STATE_SELECTIVE_REVISION_NUMBER, revision_number)
+        response = self.__send_lss_address(CS_SWITCH_STATE_SELECTIVE_SERIAL_NUMBER, serial_number)
 
         cs = struct.unpack_from("<B", response)[0]
         if cs == CS_SWITCH_STATE_SELECTIVE_RESPONSE:
@@ -203,19 +202,21 @@ class LssMaster:
         self.__send_configure(CS_STORE_CONFIGURATION)
 
     def send_identify_remote_slave(self,
-                                   vendorId, productCode,
-                                   revisionNumberLow, revisionNumberHigh,
-                                   serialNumberLow, serialNumberHigh):
-
+                                   vendor_id,
+                                   product_code,
+                                   revision_number_low,
+                                   revision_number_high,
+                                   serial_number_low,
+                                   serial_number_high):
         """This command sends the range of LSS address to find the slave nodes
         in the specified range
 
-        :param int vendorId:
-        :param int productCode:
-        :param int revisionNumberLow:
-        :param int revisionNumberHigh:
-        :param int serialNumberLow:
-        :param int serialNumberHigh:
+        :param int vendor_id:
+        :param int product_code:
+        :param int revision_number_low:
+        :param int revision_number_high:
+        :param int serial_number_low:
+        :param int serial_number_high:
 
         :return:
             True if any slave responds.
@@ -225,12 +226,12 @@ class LssMaster:
 
         # TODO it should handle the multiple respones from slaves
 
-        self.__send_lss_address(CS_IDENTIFY_REMOTE_SLAVE_VENDOR_ID, vendorId)
-        self.__send_lss_address(CS_IDENTIFY_REMOTE_SLAVE_PRODUCT_CODE, productCode)
-        self.__send_lss_address(CS_IDENTIFY_REMOTE_SLAVE_REVISION_NUMBER_LOW, revisionNumberLow)
-        self.__send_lss_address(CS_IDENTIFY_REMOTE_SLAVE_REVISION_NUMBER_HIGH, revisionNumberHigh)
-        self.__send_lss_address(CS_IDENTIFY_REMOTE_SLAVE_SERIAL_NUMBER_LOW, serialNumberLow)
-        self.__send_lss_address(CS_IDENTIFY_REMOTE_SLAVE_SERIAL_NUMBER_HIGH, serialNumberHigh)
+        self.__send_lss_address(CS_IDENTIFY_REMOTE_SLAVE_VENDOR_ID, vendor_id)
+        self.__send_lss_address(CS_IDENTIFY_REMOTE_SLAVE_PRODUCT_CODE, product_code)
+        self.__send_lss_address(CS_IDENTIFY_REMOTE_SLAVE_REVISION_NUMBER_LOW, revision_number_low)
+        self.__send_lss_address(CS_IDENTIFY_REMOTE_SLAVE_REVISION_NUMBER_HIGH, revision_number_high)
+        self.__send_lss_address(CS_IDENTIFY_REMOTE_SLAVE_SERIAL_NUMBER_LOW, serial_number_low)
+        self.__send_lss_address(CS_IDENTIFY_REMOTE_SLAVE_SERIAL_NUMBER_HIGH, serial_number_high)
 
     def send_identify_non_configured_remote_slave(self):
         # TODO it should handle the multiple respones from slaves
@@ -261,7 +262,7 @@ class LssMaster:
                     lss_bit_check -= 1
 
                     if not self.__send_fast_scan_message(lss_id[lss_sub], lss_bit_check, lss_sub, lss_next):
-                        lss_id[lss_sub] |= 1<<lss_bit_check
+                        lss_id[lss_sub] |= 1 << lss_bit_check
 
                     time.sleep(0.01)
 
@@ -289,7 +290,7 @@ class LssMaster:
 
         cs = struct.unpack_from("<B", recv_msg)[0]
         if cs == CS_IDENTIFY_SLAVE:
-                return True
+            return True
 
         return False
 
@@ -391,6 +392,7 @@ class LssMaster:
         return response
 
     def on_message_received(self, can_id, data, timestamp):
+        _ = can_id, timestamp
         self.responses.put(bytes(data))
 
 

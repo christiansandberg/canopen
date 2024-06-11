@@ -49,15 +49,15 @@ class State402:
 
     # Transition path to reach and state without a direct transition
     NEXTSTATE2ANY = {
-        ('START'):                                                      'NOT READY TO SWITCH ON',
-        ('FAULT', 'NOT READY TO SWITCH ON', 'QUICK STOP ACTIVE'):       'SWITCH ON DISABLED',
-        ('SWITCH ON DISABLED'):                                         'READY TO SWITCH ON',
-        ('READY TO SWITCH ON'):                                         'SWITCHED ON',
-        ('SWITCHED ON'):                                                'OPERATION ENABLED',
-        ('FAULT REACTION ACTIVE'):                                      'FAULT',
+        'START': 'NOT READY TO SWITCH ON',
+        ('FAULT', 'NOT READY TO SWITCH ON', 'QUICK STOP ACTIVE'): 'SWITCH ON DISABLED',
+        'SWITCH ON DISABLED': 'READY TO SWITCH ON',
+        'READY TO SWITCH ON': 'SWITCHED ON',
+        'SWITCHED ON': 'OPERATION ENABLED',
+        'FAULT REACTION ACTIVE': 'FAULT',
     }
 
-    # Tansition table from the DS402 State Machine
+    # Transition table from the DS402 State Machine
     TRANSITIONTABLE = {
         # disable_voltage ---------------------------------------------------------------------
         ('READY TO SWITCH ON', 'SWITCH ON DISABLED'):     CW_DISABLE_VOLTAGE,  # transition 7
@@ -93,7 +93,7 @@ class State402:
         DISABLED first, as there would have been a direct transition if the opposite was
         desired.
 
-        :param str target: Target state.
+        :param _from: current state.
         :return: Next target to change.
         :rtype: str
         """
@@ -214,6 +214,7 @@ class BaseNode402(RemoteNode):
         self.tpdo_values = {}  # { index: value from last received TPDO }
         self.tpdo_pointers = {}  # { index: pdo.PdoMap instance }
         self.rpdo_pointers = {}  # { index: pdo.PdoMap instance }
+        self._op_mode_support = None
 
     def setup_402_state_machine(self, read_pdos=True):
         """Configure the state machine by searching for a TPDO that has the StatusWord mapped.
@@ -247,7 +248,7 @@ class BaseNode402(RemoteNode):
     def _init_tpdo_values(self):
         for tpdo in self.tpdo.values():
             if tpdo.enabled:
-                tpdo.add_callback(self.on_TPDOs_update_callback)
+                tpdo.add_callback(self.on_tpdos_update_callback)
                 for obj in tpdo:
                     logger.debug('Configured TPDO: 0x%04X', obj.index)
                     if obj.index not in self.tpdo_values:
@@ -340,24 +341,25 @@ class BaseNode402(RemoteNode):
         :return: If the homing was complete with success.
         :rtype: bool
         """
-        if timeout is None:
-            timeout = self.TIMEOUT_HOMING_DEFAULT
         if restore_op_mode:
             previous_op_mode = self.op_mode
+        else:
+            previous_op_mode = None
+        if timeout is None:
+            timeout = self.TIMEOUT_HOMING_DEFAULT
         self.op_mode = 'HOMING'
         # The homing process will initialize at operation enabled
         self.state = 'OPERATION ENABLED'
-        homingstatus = 'UNKNOWN'
+        homing_status = 'UNKNOWN'
         self.controlword = State402.CW_OPERATION_ENABLED | Homing.CW_START  # does not block
         # Wait for one extra cycle, to make sure the controlword was received
         self.check_statusword()
         t = time.monotonic() + timeout
         try:
-            while homingstatus not in ('TARGET REACHED', 'ATTAINED'):
-                homingstatus = self._homing_status()
-                if homingstatus in ('INTERRUPTED', 'ERROR VELOCITY IS NOT ZERO',
-                                    'ERROR VELOCITY IS ZERO'):
-                    raise RuntimeError(f'Unable to home. Reason: {homingstatus}')
+            while homing_status not in ('TARGET REACHED', 'ATTAINED'):
+                homing_status = self._homing_status()
+                if homing_status in ('INTERRUPTED', 'ERROR VELOCITY IS NOT ZERO', 'ERROR VELOCITY IS ZERO'):
+                    raise RuntimeError(f'Unable to home. Reason: {homing_status}')
                 if timeout and time.monotonic() > t:
                     raise RuntimeError('Unable to home, timeout reached')
             logger.info('Homing mode carried out successfully.')
@@ -453,7 +455,7 @@ class BaseNode402(RemoteNode):
         bits = OperationMode.SUPPORTED[mode]
         return self._op_mode_support & bits == bits
 
-    def on_TPDOs_update_callback(self, mapobject):
+    def on_tpdos_update_callback(self, mapobject):
         """Cache updated values from a TPDO received from this node.
 
         :param mapobject: The received PDO message.
@@ -500,14 +502,17 @@ class BaseNode402(RemoteNode):
     @property
     def controlword(self):
         """Send a state change command using PDO or SDO.
-
-        :param int value: Controlword value to set.
         :raises RuntimeError: Read access to the controlword is not intended.
         """
         raise RuntimeError('The Controlword is write-only.')
 
     @controlword.setter
     def controlword(self, value):
+        """Send a state change command using PDO or SDO.
+
+        :param int value: Controlword value to set.
+        :raises RuntimeError: Read access to the controlword is not intended.
+        """
         if 0x6040 in self.rpdo_pointers:
             self.rpdo_pointers[0x6040].raw = value
             pdo = self.rpdo_pointers[0x6040].pdo_parent

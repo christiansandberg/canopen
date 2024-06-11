@@ -1,9 +1,10 @@
-import time
 import os
+import time
 import unittest
-import canopen
 
 import can
+
+import canopen
 
 EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
 
@@ -32,11 +33,11 @@ class TestNetwork(unittest.TestCase):
         self.assertListEqual(self.network.scanner.nodes, [2])
 
     def test_send(self):
-        bus = can.interface.Bus(bustype="virtual", channel=1)
-        self.network.connect(bustype="virtual", channel=1)
+        bus = can.interface.Bus(interface="virtual", channel=1)
+        self.network.connect(interface="virtual", channel=1)
 
         # Send standard ID
-        self.network.send_message(0x123, [1, 2, 3, 4, 5, 6, 7, 8])
+        self.network.send_message(0x123, bytes([1, 2, 3, 4, 5, 6, 7, 8]))
         msg = bus.recv(1)
         self.assertIsNotNone(msg)
         self.assertEqual(msg.arbitration_id, 0x123)
@@ -44,7 +45,7 @@ class TestNetwork(unittest.TestCase):
         self.assertSequenceEqual(msg.data, [1, 2, 3, 4, 5, 6, 7, 8])
 
         # Send extended ID
-        self.network.send_message(0x12345, [])
+        self.network.send_message(0x12345, bytes())
         msg = bus.recv(1)
         self.assertIsNotNone(msg)
         self.assertEqual(msg.arbitration_id, 0x12345)
@@ -54,10 +55,10 @@ class TestNetwork(unittest.TestCase):
         self.network.disconnect()
 
     def test_send_perodic(self):
-        bus = can.interface.Bus(bustype="virtual", channel=1)
-        self.network.connect(bustype="virtual", channel=1)
+        bus = can.interface.Bus(interface="virtual", channel=1)
+        self.network.connect(interface="virtual", channel=1)
 
-        task = self.network.send_periodic(0x123, [1, 2, 3], 0.01)
+        task = self.network.send_periodic(0x123, bytes([1, 2, 3]), 0.01)
         time.sleep(0.1)
         # FIXME: This test is a little fragile, as the number of elements
         #        depends on the timing of the machine.
@@ -67,7 +68,7 @@ class TestNetwork(unittest.TestCase):
         self.assertIsNotNone(msg)
         self.assertSequenceEqual(msg.data, [1, 2, 3])
         # Update data
-        task.update([4, 5, 6])
+        task.update(bytes([4, 5, 6]))
         time.sleep(0.02)
         while msg is not None and msg.data == b'\x01\x02\x03':
             msg = bus.recv(0)

@@ -1,8 +1,12 @@
 import logging
+from typing import TYPE_CHECKING
 
 from canopen.sdo.base import SdoBase
 from canopen.sdo.constants import *
 from canopen.sdo.exceptions import *
+
+if TYPE_CHECKING:
+    from canopen import LocalNode
 
 logger = logging.getLogger(__name__)
 
@@ -10,13 +14,13 @@ logger = logging.getLogger(__name__)
 class SdoServer(SdoBase):
     """Creates an SDO server."""
 
-    def __init__(self, rx_cobid, tx_cobid, node):
+    def __init__(self, rx_cobid, tx_cobid, node: 'LocalNode'):
         """
         :param int rx_cobid:
             COB-ID that the server receives on (usually 0x600 + node ID)
         :param int tx_cobid:
             COB-ID that the server responds with (usually 0x580 + node ID)
-        :param canopen.LocalNode od:
+        :param canopen.LocalNode node:
             Node object owning the server
         """
         SdoBase.__init__(self, rx_cobid, tx_cobid, node.object_dictionary)
@@ -28,6 +32,7 @@ class SdoServer(SdoBase):
         self.last_received_error = 0x00000000
 
     def on_request(self, can_id, data, timestamp):
+        _ = can_id, timestamp
         command, = struct.unpack_from("B", data, 0)
         ccs = command & 0xE0
 
@@ -50,7 +55,7 @@ class SdoServer(SdoBase):
                 self.abort(0x05040001)
         except SdoAbortedError as exc:
             self.abort(exc.code)
-        except KeyError as exc:
+        except KeyError:
             self.abort(0x06020000)
         except Exception as exc:
             self.abort()
@@ -118,6 +123,7 @@ class SdoServer(SdoBase):
         logger.info("Received request aborted for 0x%04X:%02X with code 0x%X", index, subindex, code)
 
     def block_download(self, data):
+        _ = data
         # We currently don't support BLOCK DOWNLOAD
         logger.error("Block download is not supported")
         self.abort(0x05040001)
@@ -211,6 +217,8 @@ class SdoServer(SdoBase):
             Sub-index of object to write.
         :param data:
             Data to be written.
+        :param force_segment:
+            Not used in SDOServer
 
         :raises canopen.SdoAbortedError:
             When node responds with an error.

@@ -75,6 +75,7 @@ class PdoBase(Mapping):
         for pdo_map in self.map.values():
             pdo_map.subscribe()
 
+    # noinspection PyUnresolvedReferences,PyPackageRequirements
     def export(self, filename):
         """Export current configuration to a database file.
 
@@ -528,7 +529,7 @@ class PdoMap:
             self._task.update(self.data)
 
     def remote_request(self) -> None:
-        """Send a remote request for the transmit PDO.
+        """Send a remote request to transmit PDO.
         Silently ignore if not allowed.
         """
         if self.enabled and self.rtr_allowed:

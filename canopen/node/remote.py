@@ -142,12 +142,12 @@ class RemoteNode(BaseNode):
                 raise
 
     def load_configuration(self):
-        ''' Load the configuration of the node from the object dictionary.'''
+        """ Load the configuration of the node from the object dictionary."""
         for obj in self.object_dictionary.values():
             if isinstance(obj, ODRecord) or isinstance(obj, ODArray):
-                for subobj in obj.values():
-                    if isinstance(subobj, ODVariable) and subobj.writable and (subobj.value is not None):
-                        self.__load_configuration_helper(subobj.index, subobj.subindex, subobj.name, subobj.value)
+                for subject in obj.values():
+                    if isinstance(subject, ODVariable) and subject.writable and (subject.value is not None):
+                        self.__load_configuration_helper(subject.index, subject.subindex, subject.name, subject.value)
             elif isinstance(obj, ODVariable) and obj.writable and (obj.value is not None):
                 self.__load_configuration_helper(obj.index, None, obj.name, obj.value)
         self.pdo.read()  # reads the new configuration from the driver

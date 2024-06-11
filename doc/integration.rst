@@ -66,3 +66,4 @@ Here is an example::
     # Should be done in a thread but here we notify the network for
     # demonstration purposes only
     network.notify(0x701, bytearray([0x05]), time.time())
+

@@ -29,7 +29,7 @@ NrOfRXPDO=4
 NrOfTXPDO=4
 LSS_Supported=0
 
-[DeviceComissioning]
+[DeviceCommissioning]
 NodeID=2
 NodeName=Some name
 Baudrate=500
