@@ -6,6 +6,8 @@ build-backend = "setuptools.build_meta"
 name = "canopen"
 authors = [
     {name = "Christian Sandberg", email = "christiansandberg@me.com"},
+    {name = "André Colomb", email = "src@andre.colomb.de"},
+    {name = "André Filipe Silva", email = "afsilva.work@gmail.com"},
 ]
 description = "CANopen stack implementation"
 readme = "README.rst"
