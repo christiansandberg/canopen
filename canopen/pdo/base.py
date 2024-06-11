@@ -1,6 +1,7 @@
+from __future__ import annotations
 import threading
 import math
-from typing import Callable, Dict, Iterable, List, Optional, Union
+from typing import Callable, Dict, Iterator, List, Optional, Union, TYPE_CHECKING
 from collections.abc import Mapping
 import logging
 import binascii
@@ -8,6 +9,12 @@ import binascii
 from canopen.sdo import SdoAbortedError
 from canopen import objectdictionary
 from canopen import variable
+
+if TYPE_CHECKING:
+    from canopen.network import Network
+    from canopen import LocalNode, RemoteNode
+    from canopen.pdo import RPDO, TPDO
+    from canopen.sdo import SdoRecord
 
 PDO_NOT_VALID = 1 << 31
 RTR_NOT_ALLOWED = 1 << 30
@@ -22,10 +29,10 @@ class PdoBase(Mapping):
         Parent object associated with this PDO instance
     """
 
-    def __init__(self, node):
-        self.network = None
-        self.map = None  # instance of PdoMaps
-        self.node = node
+    def __init__(self, node: Union[LocalNode, RemoteNode]):
+        self.network: Optional[Network] = None
+        self.map: Optional[PdoMaps] = None
+        self.node: Union[LocalNode, RemoteNode] = node
 
     def __iter__(self):
         return iter(self.map)
@@ -42,7 +49,7 @@ class PdoBase(Mapping):
                 except KeyError:
                     # ignore if one specific PDO does not have the key and try the next one
                     continue
-        raise KeyError("PDO: {0} was not found in any map".format(key))
+        raise KeyError(f"PDO: {key} was not found in any map")
 
     def __len__(self):
         return len(self.map)
@@ -131,7 +138,7 @@ class PdoMaps(Mapping):
         :param pdo_node:
         :param cob_base:
         """
-        self.maps: Dict[int, "PdoMap"] = {}
+        self.maps: Dict[int, PdoMap] = {}
         for map_no in range(512):
             if com_offset + map_no in pdo_node.node.object_dictionary:
                 new_map = PdoMap(
@@ -143,10 +150,10 @@ class PdoMaps(Mapping):
                     new_map.predefined_cob_id = cob_base + map_no * 0x100 + pdo_node.node.id
                 self.maps[map_no + 1] = new_map
 
-    def __getitem__(self, key: int) -> "PdoMap":
+    def __getitem__(self, key: int) -> PdoMap:
         return self.maps[key]
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(self.maps)
 
     def __len__(self) -> int:
@@ -157,9 +164,9 @@ class PdoMap:
     """One message which can have up to 8 bytes of variables mapped."""
 
     def __init__(self, pdo_node, com_record, map_array):
-        self.pdo_node = pdo_node
-        self.com_record = com_record
-        self.map_array = map_array
+        self.pdo_node: Union[TPDO, RPDO] = pdo_node
+        self.com_record: SdoRecord = com_record
+        self.map_array: SdoRecord = map_array
         #: If this map is valid
         self.enabled: bool = False
         #: COB-ID for this PDO
@@ -177,7 +184,7 @@ class PdoMap:
         #: Ignores SYNC objects up to this SYNC counter value (optional)
         self.sync_start_value: Optional[int] = None
         #: List of variables mapped to this PDO
-        self.map: List["PdoVariable"] = []
+        self.map: List[PdoVariable] = []
         self.length: int = 0
         #: Current message data
         self.data = bytearray()
@@ -201,8 +208,8 @@ class PdoMap:
                 valid_values.append(var.index)
                 if var.index == value:
                     return var
-        raise KeyError('{0} not found in map. Valid entries are {1}'.format(
-            value, ', '.join(str(v) for v in valid_values)))
+        raise KeyError(f"{value} not found in map. Valid entries are "
+                       f"{', '.join(str(v) for v in valid_values)}")
 
     def __getitem_by_name(self, value):
         valid_values = []
@@ -211,11 +218,10 @@ class PdoMap:
                 valid_values.append(var.name)
                 if var.name == value:
                     return var
-        raise KeyError('{0} not found in map. Valid entries are {1}'.format(
-            value, ', '.join(valid_values)))
+        raise KeyError(f"{value} not found in map. Valid entries are "
+                       f"{', '.join(valid_values)}")
 
-    def __getitem__(self, key: Union[int, str]) -> "PdoVariable":
-        var = None
+    def __getitem__(self, key: Union[int, str]) -> PdoVariable:
         if isinstance(key, int):
             # there is a maximum available of 8 slots per PDO map
             if key in range(0, 8):
@@ -229,7 +235,7 @@ class PdoMap:
                 var = self.__getitem_by_name(key)
         return var
 
-    def __iter__(self) -> Iterable["PdoVariable"]:
+    def __iter__(self) -> Iterator[PdoVariable]:
         return iter(self.map)
 
     def __len__(self) -> int:
@@ -272,7 +278,7 @@ class PdoMap:
         if direction == "Rx":
             map_id -= 1
         node_id = self.cob_id & 0x7F
-        return "%sPDO%d_node%d" % (direction, map_id, node_id)
+        return f"{direction}PDO{map_id}_node{node_id}"
 
     @property
     def is_periodic(self) -> bool:
@@ -304,7 +310,7 @@ class PdoMap:
                 for callback in self.callbacks:
                     callback(self)
 
-    def add_callback(self, callback: Callable[["PdoMap"], None]) -> None:
+    def add_callback(self, callback: Callable[[PdoMap], None]) -> None:
         """Add a callback which will be called on receive.
 
         :param callback:
@@ -360,7 +366,8 @@ class PdoMap:
             subindex = (value >> 8) & 0xFF
             # Ignore the highest bit, it is never valid for <= 64 PDO length
             size = value & 0x7F
-            if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
+            if getattr(self.pdo_node.node, "curtis_hack", False):
+                # Curtis HACK: mixed up field order
                 index = value & 0xFFFF
                 subindex = (value >> 16) & 0xFF
                 size = (value >> 24) & 0x7F
@@ -371,8 +378,10 @@ class PdoMap:
 
     def save(self) -> None:
         """Save PDO configuration for this map using SDO."""
-        logger.info("Setting COB-ID 0x%X and temporarily disabling PDO",
-                    self.cob_id)
+        if self.cob_id is None:
+            logger.info("Skip saving %s: COB-ID was never set", self.com_record.od.name)
+            return
+        logger.info("Setting COB-ID 0x%X and temporarily disabling PDO", self.cob_id)
         self.com_record[1].raw = self.cob_id | PDO_NOT_VALID | (RTR_NOT_ALLOWED if not self.rtr_allowed else 0x0)
         if self.trans_type is not None:
             logger.info("Setting transmission type to %d", self.trans_type)
@@ -387,42 +396,44 @@ class PdoMap:
             logger.info("Setting SYNC start value to %d", self.sync_start_value)
             self.com_record[6].raw = self.sync_start_value
 
-        if self.map is not None:
-            try:
-                self.map_array[0].raw = 0
-            except SdoAbortedError:
-                # WORKAROUND for broken implementations: If the array has a
-                # fixed number of entries (count not writable), generate dummy
-                # mappings for an invalid object 0x0000:00 to overwrite any
-                # excess entries with all-zeros.
-                self._fill_map(self.map_array[0].raw)
-            subindex = 1
-            for var in self.map:
-                logger.info("Writing %s (0x%X:%d, %d bits) to PDO map",
-                            var.name, var.index, var.subindex, var.length)
-                if hasattr(self.pdo_node.node, "curtis_hack") and self.pdo_node.node.curtis_hack:  # Curtis HACK: mixed up field order
-                    self.map_array[subindex].raw = (var.index |
-                                                    var.subindex << 16 |
-                                                    var.length << 24)
-                else:
-                    self.map_array[subindex].raw = (var.index << 16 |
-                                                    var.subindex << 8 |
-                                                    var.length)
-                subindex += 1
-            try:
-                self.map_array[0].raw = len(self.map)
-            except SdoAbortedError as e:
-                # WORKAROUND for broken implementations: If the array
-                # number-of-entries parameter is not writable, we have already
-                # generated the required number of mappings above.
-                if e.code != 0x06010002:
-                    # Abort codes other than "Attempt to write a read-only
-                    # object" should still be reported.
-                    raise
-            self._update_data_size()
+        try:
+            self.map_array[0].raw = 0
+        except SdoAbortedError:
+            # WORKAROUND for broken implementations: If the array has a
+            # fixed number of entries (count not writable), generate dummy
+            # mappings for an invalid object 0x0000:00 to overwrite any
+            # excess entries with all-zeros.
+            self._fill_map(self.map_array[0].raw)
+        subindex = 1
+        for var in self.map:
+            logger.info("Writing %s (0x%04X:%02X, %d bits) to PDO map",
+                        var.name, var.index, var.subindex, var.length)
+            if getattr(self.pdo_node.node, "curtis_hack", False):
+                # Curtis HACK: mixed up field order
+                self.map_array[subindex].raw = (var.index |
+                                                var.subindex << 16 |
+                                                var.length << 24)
+            else:
+                self.map_array[subindex].raw = (var.index << 16 |
+                                                var.subindex << 8 |
+                                                var.length)
+            subindex += 1
+        try:
+            self.map_array[0].raw = len(self.map)
+        except SdoAbortedError as e:
+            # WORKAROUND for broken implementations: If the array
+            # number-of-entries parameter is not writable, we have already
+            # generated the required number of mappings above.
+            if e.code != 0x06010002:
+                # Abort codes other than "Attempt to write a read-only
+                # object" should still be reported.
+                raise
+        self._update_data_size()
 
         if self.enabled:
-            self.com_record[1].raw = self.cob_id | (RTR_NOT_ALLOWED if not self.rtr_allowed else 0x0)
+            cob_id = self.cob_id | (RTR_NOT_ALLOWED if not self.rtr_allowed else 0x0)
+            logger.info("Setting COB-ID 0x%X and re-enabling PDO", cob_id)
+            self.com_record[1].raw = cob_id
             self.subscribe()
 
     def subscribe(self) -> None:
@@ -447,7 +458,7 @@ class PdoMap:
         index: Union[str, int],
         subindex: Union[str, int] = 0,
         length: Optional[int] = None,
-    ) -> "PdoVariable":
+    ) -> PdoVariable:
         """Add a variable from object dictionary as the next entry.
 
         :param index: Index of variable as name or number
@@ -467,7 +478,7 @@ class PdoMap:
             # We want to see the bit fields within the PDO
             start_bit = var.offset
             end_bit = start_bit + var.length - 1
-            logger.info("Adding %s (0x%X:%d) at bits %d - %d to PDO map",
+            logger.info("Adding %s (0x%04X:%02X) at bits %d - %d to PDO map",
                         var.name, var.index, var.subindex, start_bit, end_bit)
             self.map.append(var)
             self.length += var.length
@@ -521,7 +532,7 @@ class PdoMap:
         Silently ignore if not allowed.
         """
         if self.enabled and self.rtr_allowed:
-            self.pdo_node.network.send_message(self.cob_id, None, remote=True)
+            self.pdo_node.network.send_message(self.cob_id, bytes(), remote=True)
 
     def wait_for_reception(self, timeout: float = 10) -> float:
         """Wait for the next transmit PDO.
@@ -540,7 +551,7 @@ class PdoVariable(variable.Variable):
 
     def __init__(self, od: objectdictionary.ODVariable):
         #: PDO object that is associated with this ODVariable Object
-        self.pdo_parent = None
+        self.pdo_parent: Optional[PdoMap] = None
         #: Location of variable in the message in bits
         self.offset = None
         self.length = len(od)
@@ -600,7 +611,7 @@ class PdoVariable(variable.Variable):
             cur_msg_data = cur_msg_data & bitwise_not
             # Set the new data on the correct position
             data = (data << bit_offset) | cur_msg_data
-            data = od_struct.pack_into(self.pdo_parent.data, byte_offset, data)
+            od_struct.pack_into(self.pdo_parent.data, byte_offset, data)
         else:
             self.pdo_parent.data[byte_offset:byte_offset + len(data)] = data
 

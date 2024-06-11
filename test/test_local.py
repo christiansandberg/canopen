@@ -89,7 +89,7 @@ class TestSDO(unittest.TestCase):
         self.assertEqual(value, b"Another cool device")
 
     def test_slave_send_heartbeat(self):
-        # Setting the heartbeat time should trigger hearbeating
+        # Setting the heartbeat time should trigger heartbeating
         # to start
         self.remote_node.sdo["Producer heartbeat time"].raw = 1000
         state = self.remote_node.nmt.wait_for_heartbeat()

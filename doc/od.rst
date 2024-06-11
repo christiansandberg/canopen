@@ -39,10 +39,10 @@ Here is an example where the entire object dictionary gets printed out::
 
     node = network.add_node(6, 'od.eds')
     for obj in node.object_dictionary.values():
-        print('0x%X: %s' % (obj.index, obj.name))
+        print(f'0x{obj.index:X}: {obj.name}')
         if isinstance(obj, canopen.objectdictionary.ODRecord):
             for subobj in obj.values():
-                print('  %d: %s' % (subobj.subindex, subobj.name))
+                print(f'  {subobj.subindex}: {subobj.name}')
 
 You can access the objects using either index/subindex or names::
 
