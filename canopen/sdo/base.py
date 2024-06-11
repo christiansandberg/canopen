@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 import binascii
-from typing import Iterable, Optional, Union
+from typing import Iterator, Optional, Union
 from collections.abc import Mapping
 
 from canopen import objectdictionary
-from canopen.objectdictionary import ObjectDictionary
 from canopen import variable
 from canopen.utils import pretty_index
 
@@ -30,7 +31,7 @@ class SdoBase(Mapping):
         self,
         rx_cobid: int,
         tx_cobid: int,
-        od: ObjectDictionary,
+        od: objectdictionary.ObjectDictionary,
     ):
         """
         :param rx_cobid:
@@ -47,7 +48,7 @@ class SdoBase(Mapping):
 
     def __getitem__(
         self, index: Union[str, int]
-    ) -> Union["SdoVariable", "SdoArray", "SdoRecord"]:
+    ) -> Union[SdoVariable, SdoArray, SdoRecord]:
         entry = self.od[index]
         if isinstance(entry, objectdictionary.ODVariable):
             return SdoVariable(self, entry)
@@ -56,7 +57,7 @@ class SdoBase(Mapping):
         elif isinstance(entry, objectdictionary.ODRecord):
             return SdoRecord(self, entry)
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(self.od)
 
     def __len__(self) -> int:
@@ -67,7 +68,7 @@ class SdoBase(Mapping):
 
     def get_variable(
         self, index: Union[int, str], subindex: int = 0
-    ) -> Optional["SdoVariable"]:
+    ) -> Optional[SdoVariable]:
         """Get the variable object at specified index (and subindex if applicable).
 
         :return: SdoVariable if found, else `None`
@@ -93,17 +94,17 @@ class SdoBase(Mapping):
 
 class SdoRecord(Mapping):
 
-    def __init__(self, sdo_node: SdoBase, od: ObjectDictionary):
+    def __init__(self, sdo_node: SdoBase, od: objectdictionary.ODRecord):
         self.sdo_node = sdo_node
         self.od = od
 
     def __repr__(self) -> str:
         return f"<{type(self).__qualname__} {self.od.name!r} at {pretty_index(self.od.index)}>"
 
-    def __getitem__(self, subindex: Union[int, str]) -> "SdoVariable":
+    def __getitem__(self, subindex: Union[int, str]) -> SdoVariable:
         return SdoVariable(self.sdo_node, self.od[subindex])
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(self.od)
 
     def __len__(self) -> int:
@@ -115,17 +116,17 @@ class SdoRecord(Mapping):
 
 class SdoArray(Mapping):
 
-    def __init__(self, sdo_node: SdoBase, od: ObjectDictionary):
+    def __init__(self, sdo_node: SdoBase, od: objectdictionary.ODArray):
         self.sdo_node = sdo_node
         self.od = od
 
     def __repr__(self) -> str:
         return f"<{type(self).__qualname__} {self.od.name!r} at {pretty_index(self.od.index)}>"
 
-    def __getitem__(self, subindex: Union[int, str]) -> "SdoVariable":
+    def __getitem__(self, subindex: Union[int, str]) -> SdoVariable:
         return SdoVariable(self.sdo_node, self.od[subindex])
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(range(1, len(self) + 1))
 
     def __len__(self) -> int:
@@ -138,7 +139,7 @@ class SdoArray(Mapping):
 class SdoVariable(variable.Variable):
     """Access object dictionary variable values using SDO protocol."""
 
-    def __init__(self, sdo_node: SdoBase, od: ObjectDictionary):
+    def __init__(self, sdo_node: SdoBase, od: objectdictionary.ODVariable):
         self.sdo_node = sdo_node
         variable.Variable.__init__(self, od)
 

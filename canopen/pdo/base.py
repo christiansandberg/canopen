@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import threading
-from typing import Callable, Dict, Iterable, List, Optional, Union
+from typing import Callable, Dict, Iterator, List, Optional, Union, TYPE_CHECKING
 from collections.abc import Mapping
 import logging
 import binascii
@@ -7,6 +9,12 @@ import binascii
 from canopen.sdo import SdoAbortedError
 from canopen import objectdictionary
 from canopen import variable
+
+if TYPE_CHECKING:
+    from canopen.network import Network
+    from canopen import LocalNode, RemoteNode
+    from canopen.pdo import RPDO, TPDO
+    from canopen.sdo import SdoRecord
 
 PDO_NOT_VALID = 1 << 31
 RTR_NOT_ALLOWED = 1 << 30
@@ -21,10 +29,10 @@ class PdoBase(Mapping):
         Parent object associated with this PDO instance
     """
 
-    def __init__(self, node):
-        self.network = None
-        self.map = None  # instance of PdoMaps
-        self.node = node
+    def __init__(self, node: Union[LocalNode, RemoteNode]):
+        self.network: Optional[Network] = None
+        self.map: Optional[PdoMaps] = None
+        self.node: Union[LocalNode, RemoteNode] = node
 
     def __iter__(self):
         return iter(self.map)
@@ -130,7 +138,7 @@ class PdoMaps(Mapping):
         :param pdo_node:
         :param cob_base:
         """
-        self.maps: Dict[int, "PdoMap"] = {}
+        self.maps: Dict[int, PdoMap] = {}
         for map_no in range(512):
             if com_offset + map_no in pdo_node.node.object_dictionary:
                 new_map = PdoMap(
@@ -142,10 +150,10 @@ class PdoMaps(Mapping):
                     new_map.predefined_cob_id = cob_base + map_no * 0x100 + pdo_node.node.id
                 self.maps[map_no + 1] = new_map
 
-    def __getitem__(self, key: int) -> "PdoMap":
+    def __getitem__(self, key: int) -> PdoMap:
         return self.maps[key]
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(self.maps)
 
     def __len__(self) -> int:
@@ -156,9 +164,9 @@ class PdoMap:
     """One message which can have up to 8 bytes of variables mapped."""
 
     def __init__(self, pdo_node, com_record, map_array):
-        self.pdo_node = pdo_node
-        self.com_record = com_record
-        self.map_array = map_array
+        self.pdo_node: Union[TPDO, RPDO] = pdo_node
+        self.com_record: SdoRecord = com_record
+        self.map_array: SdoRecord = map_array
         #: If this map is valid
         self.enabled: bool = False
         #: COB-ID for this PDO
@@ -176,7 +184,7 @@ class PdoMap:
         #: Ignores SYNC objects up to this SYNC counter value (optional)
         self.sync_start_value: Optional[int] = None
         #: List of variables mapped to this PDO
-        self.map: List["PdoVariable"] = []
+        self.map: List[PdoVariable] = []
         self.length: int = 0
         #: Current message data
         self.data = bytearray()
@@ -213,7 +221,7 @@ class PdoMap:
         raise KeyError(f"{value} not found in map. Valid entries are "
                        f"{', '.join(valid_values)}")
 
-    def __getitem__(self, key: Union[int, str]) -> "PdoVariable":
+    def __getitem__(self, key: Union[int, str]) -> PdoVariable:
         if isinstance(key, int):
             # there is a maximum available of 8 slots per PDO map
             if key in range(0, 8):
@@ -227,7 +235,7 @@ class PdoMap:
                 var = self.__getitem_by_name(key)
         return var
 
-    def __iter__(self) -> Iterable["PdoVariable"]:
+    def __iter__(self) -> Iterator[PdoVariable]:
         return iter(self.map)
 
     def __len__(self) -> int:
@@ -302,7 +310,7 @@ class PdoMap:
                 for callback in self.callbacks:
                     callback(self)
 
-    def add_callback(self, callback: Callable[["PdoMap"], None]) -> None:
+    def add_callback(self, callback: Callable[[PdoMap], None]) -> None:
         """Add a callback which will be called on receive.
 
         :param callback:
@@ -450,7 +458,7 @@ class PdoMap:
         index: Union[str, int],
         subindex: Union[str, int] = 0,
         length: Optional[int] = None,
-    ) -> "PdoVariable":
+    ) -> PdoVariable:
         """Add a variable from object dictionary as the next entry.
 
         :param index: Index of variable as name or number
@@ -543,7 +551,7 @@ class PdoVariable(variable.Variable):
 
     def __init__(self, od: objectdictionary.ODVariable):
         #: PDO object that is associated with this ODVariable Object
-        self.pdo_parent = None
+        self.pdo_parent: Optional[PdoMap] = None
         #: Location of variable in the message in bits
         self.offset = None
         self.length = len(od)
