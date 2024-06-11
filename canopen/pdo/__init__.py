@@ -1,8 +1,10 @@
-from .base import PdoBase, Maps, Map, Variable
-
 import logging
-import itertools
-import canopen
+
+from canopen import node
+from canopen.pdo.base import PdoBase, PdoMaps
+
+# Compatibility
+from canopen.pdo.base import Variable
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +38,8 @@ class RPDO(PdoBase):
 
     def __init__(self, node):
         super(RPDO, self).__init__(node)
-        self.map = Maps(0x1400, 0x1600, self, 0x200)
-        logger.debug('RPDO Map as {0}'.format(len(self.map)))
+        self.map = PdoMaps(0x1400, 0x1600, self, 0x200)
+        logger.debug('RPDO Map as %d', len(self.map))
 
     def stop(self):
         """Stop transmission of all RPDOs.
@@ -45,7 +47,7 @@ class RPDO(PdoBase):
         :raise TypeError: Exception is thrown if the node associated with the PDO does not
         support this function.
         """
-        if isinstance(self.node, canopen.RemoteNode):
+        if isinstance(self.node, node.RemoteNode):
             for pdo in self.map.values():
                 pdo.stop()
         else:
@@ -61,8 +63,8 @@ class TPDO(PdoBase):
 
     def __init__(self, node):
         super(TPDO, self).__init__(node)
-        self.map = Maps(0x1800, 0x1A00, self, 0x180)
-        logger.debug('TPDO Map as {0}'.format(len(self.map)))
+        self.map = PdoMaps(0x1800, 0x1A00, self, 0x180)
+        logger.debug('TPDO Map as %d', len(self.map))
 
     def stop(self):
         """Stop transmission of all TPDOs.
@@ -70,7 +72,7 @@ class TPDO(PdoBase):
         :raise TypeError: Exception is thrown if the node associated with the PDO does not
         support this function.
         """
-        if isinstance(canopen.LocalNode, self.node):
+        if isinstance(self.node, node.LocalNode):
             for pdo in self.map.values():
                 pdo.stop()
         else:

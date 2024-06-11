@@ -1,20 +1,20 @@
 """
 Object Dictionary module
 """
+from __future__ import annotations
+
 import struct
-from typing import Dict, Iterable, List, Optional, TextIO, Union
-try:
-    from collections.abc import MutableMapping, Mapping
-except ImportError:
-    from collections import MutableMapping, Mapping
+from typing import Dict, Iterator, List, Optional, TextIO, Union
+from collections.abc import MutableMapping, Mapping
 import logging
 
-from .datatypes import *
+from canopen.objectdictionary.datatypes import *
+from canopen.utils import pretty_index
 
 logger = logging.getLogger(__name__)
 
 
-def export_od(od, dest:Union[str,TextIO,None]=None, doc_type:Optional[str]=None):
+def export_od(od, dest: Union[str, TextIO, None] = None, doc_type: Optional[str] = None):
     """ Export :class: ObjectDictionary to a file.
 
     :param od:
@@ -42,10 +42,10 @@ def export_od(od, dest:Union[str,TextIO,None]=None, doc_type:Optional[str]=None)
     assert doc_type in doctypes
 
     if doc_type == "eds":
-        from . import eds
+        from canopen.objectdictionary import eds
         return eds.export_eds(od, dest)
     elif doc_type == "dcf":
-        from . import eds
+        from canopen.objectdictionary import eds
         return eds.export_dcf(od, dest)
 
     # If dest is opened in this fn, it should be closed
@@ -56,7 +56,7 @@ def export_od(od, dest:Union[str,TextIO,None]=None, doc_type:Optional[str]=None)
 def import_od(
     source: Union[str, TextIO, None],
     node_id: Optional[int] = None,
-) -> "ObjectDictionary":
+) -> ObjectDictionary:
     """Parse an EDS, DCF, or EPF file.
 
     :param source:
@@ -78,10 +78,10 @@ def import_od(
         filename = source
     suffix = filename[filename.rfind("."):].lower()
     if suffix in (".eds", ".dcf"):
-        from . import eds
+        from canopen.objectdictionary import eds
         return eds.import_eds(source, node_id)
     elif suffix == ".epf":
-        from . import epf
+        from canopen.objectdictionary import epf
         return epf.import_epf(source)
     else:
         raise NotImplementedError("No support for this format")
@@ -103,16 +103,18 @@ class ObjectDictionary(MutableMapping):
 
     def __getitem__(
         self, index: Union[int, str]
-    ) -> Union["Array", "Record", "Variable"]:
+    ) -> Union[ODArray, ODRecord, ODVariable]:
         """Get object from object dictionary by name or index."""
         item = self.names.get(index) or self.indices.get(index)
         if item is None:
-            name = "0x%X" % index if isinstance(index, int) else index
-            raise KeyError("%s was not found in Object Dictionary" % name)
+            if isinstance(index, str) and '.' in index:
+                idx, sub = index.split('.', maxsplit=1)
+                return self[idx][sub]
+            raise KeyError(f"{pretty_index(index)} was not found in Object Dictionary")
         return item
 
     def __setitem__(
-        self, index: Union[int, str], obj: Union["Array", "Record", "Variable"]
+        self, index: Union[int, str], obj: Union[ODArray, ODRecord, ODVariable]
     ):
         assert index == obj.index or index == obj.name
         self.add_object(obj)
@@ -122,7 +124,7 @@ class ObjectDictionary(MutableMapping):
         del self.indices[obj.index]
         del self.names[obj.name]
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(sorted(self.indices))
 
     def __len__(self) -> int:
@@ -131,14 +133,14 @@ class ObjectDictionary(MutableMapping):
     def __contains__(self, index: Union[int, str]):
         return index in self.names or index in self.indices
 
-    def add_object(self, obj: Union["Array", "Record", "Variable"]) -> None:
+    def add_object(self, obj: Union[ODArray, ODRecord, ODVariable]) -> None:
         """Add object to the object dictionary.
 
         :param obj:
             Should be either one of
-            :class:`~canopen.objectdictionary.Variable`,
-            :class:`~canopen.objectdictionary.Record`, or
-            :class:`~canopen.objectdictionary.Array`.
+            :class:`~canopen.objectdictionary.ODVariable`,
+            :class:`~canopen.objectdictionary.ODRecord`, or
+            :class:`~canopen.objectdictionary.ODArray`.
         """
         obj.parent = self
         self.indices[obj.index] = obj
@@ -146,20 +148,20 @@ class ObjectDictionary(MutableMapping):
 
     def get_variable(
         self, index: Union[int, str], subindex: int = 0
-    ) -> Optional["Variable"]:
+    ) -> Optional[ODVariable]:
         """Get the variable object at specified index (and subindex if applicable).
 
-        :return: Variable if found, else `None`
+        :return: ODVariable if found, else `None`
         """
         obj = self.get(index)
-        if isinstance(obj, Variable):
+        if isinstance(obj, ODVariable):
             return obj
-        elif isinstance(obj, (Record, Array)):
+        elif isinstance(obj, (ODRecord, ODArray)):
             return obj.get(subindex)
 
 
-class Record(MutableMapping):
-    """Groups multiple :class:`~canopen.objectdictionary.Variable` objects using
+class ODRecord(MutableMapping):
+    """Groups multiple :class:`~canopen.objectdictionary.ODVariable` objects using
     subindices.
     """
 
@@ -178,13 +180,16 @@ class Record(MutableMapping):
         self.subindices = {}
         self.names = {}
 
-    def __getitem__(self, subindex: Union[int, str]) -> "Variable":
+    def __repr__(self) -> str:
+        return f"<{type(self).__qualname__} {self.name!r} at {pretty_index(self.index)}>"
+
+    def __getitem__(self, subindex: Union[int, str]) -> ODVariable:
         item = self.names.get(subindex) or self.subindices.get(subindex)
         if item is None:
-            raise KeyError("Subindex %s was not found" % subindex)
+            raise KeyError(f"Subindex {pretty_index(None, subindex)} was not found")
         return item
 
-    def __setitem__(self, subindex: Union[int, str], var: "Variable"):
+    def __setitem__(self, subindex: Union[int, str], var: ODVariable):
         assert subindex == var.subindex
         self.add_member(var)
 
@@ -196,24 +201,24 @@ class Record(MutableMapping):
     def __len__(self) -> int:
         return len(self.subindices)
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(sorted(self.subindices))
 
     def __contains__(self, subindex: Union[int, str]) -> bool:
         return subindex in self.names or subindex in self.subindices
 
-    def __eq__(self, other: "Record") -> bool:
+    def __eq__(self, other: ODRecord) -> bool:
         return self.index == other.index
 
-    def add_member(self, variable: "Variable") -> None:
-        """Adds a :class:`~canopen.objectdictionary.Variable` to the record."""
+    def add_member(self, variable: ODVariable) -> None:
+        """Adds a :class:`~canopen.objectdictionary.ODVariable` to the record."""
         variable.parent = self
         self.subindices[variable.subindex] = variable
         self.names[variable.name] = variable
 
 
-class Array(Mapping):
-    """An array of :class:`~canopen.objectdictionary.Variable` objects using
+class ODArray(Mapping):
+    """An array of :class:`~canopen.objectdictionary.ODVariable` objects using
     subindices.
 
     Actual length of array must be read from the node using SDO.
@@ -234,7 +239,10 @@ class Array(Mapping):
         self.subindices = {}
         self.names = {}
 
-    def __getitem__(self, subindex: Union[int, str]) -> "Variable":
+    def __repr__(self) -> str:
+        return f"<{type(self).__qualname__} {self.name!r} at {pretty_index(self.index)}>"
+
+    def __getitem__(self, subindex: Union[int, str]) -> ODVariable:
         var = self.names.get(subindex) or self.subindices.get(subindex)
         if var is not None:
             # This subindex is defined
@@ -242,8 +250,8 @@ class Array(Mapping):
         elif isinstance(subindex, int) and 0 < subindex < 256:
             # Create a new variable based on first array item
             template = self.subindices[1]
-            name = "%s_%x" % (template.name, subindex)
-            var = Variable(name, self.index, subindex)
+            name = f"{template.name}_{subindex:x}"
+            var = ODVariable(name, self.index, subindex)
             var.parent = self
             for attr in ("data_type", "unit", "factor", "min", "max", "default",
                          "access_type", "description", "value_descriptions",
@@ -251,37 +259,47 @@ class Array(Mapping):
                 if attr in template.__dict__:
                     var.__dict__[attr] = template.__dict__[attr]
         else:
-            raise KeyError("Could not find subindex %r" % subindex)
+            raise KeyError(f"Could not find subindex {pretty_index(None, subindex)}")
         return var
 
     def __len__(self) -> int:
         return len(self.subindices)
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(sorted(self.subindices))
 
-    def __eq__(self, other: "Array") -> bool:
+    def __eq__(self, other: ODArray) -> bool:
         return self.index == other.index
 
-    def add_member(self, variable: "Variable") -> None:
-        """Adds a :class:`~canopen.objectdictionary.Variable` to the record."""
+    def add_member(self, variable: ODVariable) -> None:
+        """Adds a :class:`~canopen.objectdictionary.ODVariable` to the record."""
         variable.parent = self
         self.subindices[variable.subindex] = variable
         self.names[variable.name] = variable
 
 
-class Variable:
+class ODVariable:
     """Simple variable."""
 
-    STRUCT_TYPES = {
+    STRUCT_TYPES: dict[int, struct.Struct] = {
+        # Use struct module to pack/unpack data where possible and use the
+        # custom IntegerN and UnsignedN classes for the special data types.
         BOOLEAN: struct.Struct("?"),
         INTEGER8: struct.Struct("b"),
         INTEGER16: struct.Struct("<h"),
+        INTEGER24: IntegerN(24),
         INTEGER32: struct.Struct("<l"),
+        INTEGER40: IntegerN(40),
+        INTEGER48: IntegerN(48),
+        INTEGER56: IntegerN(56),
         INTEGER64: struct.Struct("<q"),
         UNSIGNED8: struct.Struct("B"),
         UNSIGNED16: struct.Struct("<H"),
+        UNSIGNED24: UnsignedN(24),
         UNSIGNED32: struct.Struct("<L"),
+        UNSIGNED40: UnsignedN(40),
+        UNSIGNED48: UnsignedN(48),
+        UNSIGNED56: UnsignedN(56),
         UNSIGNED64: struct.Struct("<Q"),
         REAL32: struct.Struct("<f"),
         REAL64: struct.Struct("<d")
@@ -289,8 +307,8 @@ class Variable:
 
     def __init__(self, name: str, index: int, subindex: int = 0):
         #: The :class:`~canopen.ObjectDictionary`,
-        #: :class:`~canopen.objectdictionary.Record` or
-        #: :class:`~canopen.objectdictionary.Array` owning the variable
+        #: :class:`~canopen.objectdictionary.ODRecord` or
+        #: :class:`~canopen.objectdictionary.ODArray` owning the variable
         self.parent = None
         #: 16-bit address of the object in the dictionary
         self.index = index
@@ -327,8 +345,19 @@ class Variable:
         #: Can this variable be mapped to a PDO
         self.pdo_mappable = False
 
+    def __repr__(self) -> str:
+        subindex = self.subindex if isinstance(self.parent, (ODRecord, ODArray)) else None
+        return f"<{type(self).__qualname__} {self.qualname!r} at {pretty_index(self.index, subindex)}>"
 
-    def __eq__(self, other: "Variable") -> bool:
+    @property
+    def qualname(self) -> str:
+        """Fully qualified name of the variable. If the variable is a subindex
+        of a record or array, the name will be prefixed with the parent's name."""
+        if isinstance(self.parent, (ODRecord, ODArray)):
+            return f"{self.parent.name}.{self.name}"
+        return self.name
+
+    def __eq__(self, other: ODVariable) -> bool:
         return (self.index == other.index and
                 self.subindex == other.subindex)
 
@@ -364,10 +393,13 @@ class Variable:
 
     def decode_raw(self, data: bytes) -> Union[int, float, str, bytes, bytearray]:
         if self.data_type == VISIBLE_STRING:
-            return data.rstrip(b"\x00").decode("ascii", errors="ignore")
+            # Strip any trailing NUL characters from C-based systems
+            return data.decode("ascii", errors="ignore").rstrip("\x00")
         elif self.data_type == UNICODE_STRING:
-            # Is this correct?
-            return data.rstrip(b"\x00").decode("utf_16_le", errors="ignore")
+            # The CANopen standard does not specify the encoding. This
+            # library assumes UTF-16, being the most common two-byte encoding format.
+            # Strip any trailing NUL characters from C-based systems
+            return data.decode("utf_16_le", errors="ignore").rstrip("\x00")
         elif self.data_type in self.STRUCT_TYPES:
             try:
                 value, = self.STRUCT_TYPES[self.data_type].unpack(data)
@@ -385,8 +417,9 @@ class Variable:
         elif self.data_type == VISIBLE_STRING:
             return value.encode("ascii")
         elif self.data_type == UNICODE_STRING:
-            # Is this correct?
             return value.encode("utf_16_le")
+        elif self.data_type in (DOMAIN, OCTET_STRING):
+            return bytes(value)
         elif self.data_type in self.STRUCT_TYPES:
             if self.data_type in INTEGER_TYPES:
                 value = int(value)
@@ -397,8 +430,7 @@ class Variable:
                 if self.max is not None and value > self.max:
                     logger.warning(
                         "Value %d is greater than max value %d",
-                        value,
-                        self.max)
+                        value, self.max)
             try:
                 return self.STRUCT_TYPES[self.data_type].pack(value)
             except struct.error:
@@ -407,8 +439,7 @@ class Variable:
             raise ObjectDictionaryError("Data type has not been specified")
         else:
             raise TypeError(
-                "Do not know how to encode %r to data type %Xh" % (
-                    value, self.data_type))
+                f"Do not know how to encode {value!r} to data type 0x{self.data_type:X}")
 
     def decode_phys(self, value: int) -> Union[int, bool, float, str, bytes]:
         if self.data_type in INTEGER_TYPES:
@@ -426,7 +457,7 @@ class Variable:
             raise ObjectDictionaryError("No value descriptions exist")
         elif value not in self.value_descriptions:
             raise ObjectDictionaryError(
-                "No value description exists for %d" % value)
+                f"No value description exists for {value}")
         else:
             return self.value_descriptions[value]
 
@@ -438,8 +469,8 @@ class Variable:
                 if description == desc:
                     return value
         valid_values = ", ".join(self.value_descriptions.values())
-        error_text = "No value corresponds to '%s'. Valid values are: %s"
-        raise ValueError(error_text % (desc, valid_values))
+        raise ValueError(
+            f"No value corresponds to '{desc}'. Valid values are: {valid_values}")
 
     def decode_bits(self, value: int, bits: List[int]) -> int:
         try:
@@ -486,3 +517,9 @@ class DeviceInformation:
 
 class ObjectDictionaryError(Exception):
     """Unsupported operation with the current Object Dictionary."""
+
+
+# Compatibility for old names
+Record = ODRecord
+Array = ODArray
+Variable = ODVariable

@@ -1,14 +1,10 @@
 import copy
 import logging
 import re
+from configparser import RawConfigParser, NoOptionError, NoSectionError
 
-from canopen.objectdictionary import datatypes
-
-try:
-    from configparser import RawConfigParser, NoOptionError, NoSectionError
-except ImportError:
-    from ConfigParser import RawConfigParser, NoOptionError, NoSectionError
 from canopen import objectdictionary
+from canopen.objectdictionary import ObjectDictionary, datatypes
 from canopen.sdo import SdoClient
 
 logger = logging.getLogger(__name__)
@@ -21,24 +17,22 @@ RECORD = 9
 
 
 def import_eds(source, node_id):
-    eds = RawConfigParser()
+    eds = RawConfigParser(inline_comment_prefixes=(';',))
     eds.optionxform = str
-    if hasattr(source, "read"):
-        fp = source
-    else:
-        fp = open(source)
+    opened_here = False
     try:
-        # Python 3
+        if hasattr(source, "read"):
+            fp = source
+        else:
+            fp = open(source)
+            opened_here = True
         eds.read_file(fp)
-    except AttributeError:
-        # Python 2
-        eds.readfp(fp)
     finally:
         # Only close object if opened in this fn
-        if not hasattr(source, "read"):
+        if opened_here:
             fp.close()
 
-    od = objectdictionary.ObjectDictionary()
+    od = ObjectDictionary()
 
     if eds.has_section("FileInfo"):
         od.__edsFileInfo = {
@@ -49,7 +43,7 @@ def import_eds(source, node_id):
     if eds.has_section("Comments"):
         linecount = int(eds.get("Comments", "Lines"), 0)
         od.comments = '\n'.join([
-            eds.get("Comments", "Line%i" % line)
+            eds.get("Comments", f"Line{line}")
             for line in range(1, linecount+1)
         ])
 
@@ -58,7 +52,7 @@ def import_eds(source, node_id):
     else:
         for rate in [10, 20, 50, 125, 250, 500, 800, 1000]:
             baudPossible = int(
-                eds.get("DeviceInfo", "BaudRate_%i" % rate, fallback='0'), 0)
+                eds.get("DeviceInfo", f"BaudRate_{rate}", fallback='0'), 0)
             if baudPossible != 0:
                 od.device_information.allowed_baudrates.add(rate*1000)
 
@@ -91,17 +85,18 @@ def import_eds(source, node_id):
                 pass
 
     if eds.has_section("DeviceComissioning"):
-        od.bitrate = int(eds.get("DeviceComissioning", "BaudRate")) * 1000
+        od.bitrate = int(eds.get("DeviceComissioning", "Baudrate")) * 1000
         od.node_id = int(eds.get("DeviceComissioning", "NodeID"), 0)
+        node_id = node_id or od.node_id
 
     for section in eds.sections():
         # Match dummy definitions
         match = re.match(r"^[Dd]ummy[Uu]sage$", section)
         if match is not None:
             for i in range(1, 8):
-                key = "Dummy%04d" % i
+                key = f"Dummy{i:04d}"
                 if eds.getint(section, key) == 1:
-                    var = objectdictionary.Variable(key, i, 0)
+                    var = objectdictionary.ODVariable(key, i, 0)
                     var.data_type = i
                     var.access_type = "const"
                     od.add_object(var)
@@ -127,20 +122,20 @@ def import_eds(source, node_id):
                 var = build_variable(eds, section, node_id, index)
                 od.add_object(var)
             elif object_type == ARR and eds.has_option(section, "CompactSubObj"):
-                arr = objectdictionary.Array(name, index)
-                last_subindex = objectdictionary.Variable(
+                arr = objectdictionary.ODArray(name, index)
+                last_subindex = objectdictionary.ODVariable(
                     "Number of entries", index, 0)
-                last_subindex.data_type = objectdictionary.UNSIGNED8
+                last_subindex.data_type = datatypes.UNSIGNED8
                 arr.add_member(last_subindex)
                 arr.add_member(build_variable(eds, section, node_id, index, 1))
                 arr.storage_location = storage_location
                 od.add_object(arr)
             elif object_type == ARR:
-                arr = objectdictionary.Array(name, index)
+                arr = objectdictionary.ODArray(name, index)
                 arr.storage_location = storage_location
                 od.add_object(arr)
             elif object_type == RECORD:
-                record = objectdictionary.Record(name, index)
+                record = objectdictionary.ODRecord(name, index)
                 record.storage_location = storage_location
                 od.add_object(record)
 
@@ -152,8 +147,8 @@ def import_eds(source, node_id):
             index = int(match.group(1), 16)
             subindex = int(match.group(2), 16)
             entry = od[index]
-            if isinstance(entry, (objectdictionary.Record,
-                                  objectdictionary.Array)):
+            if isinstance(entry, (objectdictionary.ODRecord,
+                                  objectdictionary.ODArray)):
                 var = build_variable(eds, section, node_id, index, subindex)
                 entry.add_member(var)
 
@@ -179,7 +174,7 @@ def import_from_node(node_id, network):
     :param network: network object
     """
     # Create temporary SDO client
-    sdo_client = SdoClient(0x600 + node_id, 0x580 + node_id, objectdictionary.ObjectDictionary())
+    sdo_client = SdoClient(0x600 + node_id, 0x580 + node_id, ObjectDictionary())
     sdo_client.network = network
     # Subscribe to SDO responses
     network.subscribe(0x580 + node_id, sdo_client.on_response)
@@ -211,19 +206,20 @@ def _calc_bit_length(data_type):
 
 def _signed_int_from_hex(hex_str, bit_length):
     number = int(hex_str, 0)
-    limit = ((1 << bit_length - 1) - 1)
-    if number > limit:
-        return limit - number
+    max_value = (1 << (bit_length - 1)) - 1
+
+    if number > max_value:
+        return number - (1 << bit_length)
     else:
         return number
 
 
 def _convert_variable(node_id, var_type, value):
-    if var_type in (objectdictionary.OCTET_STRING, objectdictionary.DOMAIN):
+    if var_type in (datatypes.OCTET_STRING, datatypes.DOMAIN):
         return bytes.fromhex(value)
-    elif var_type in (objectdictionary.VISIBLE_STRING, objectdictionary.UNICODE_STRING):
+    elif var_type in (datatypes.VISIBLE_STRING, datatypes.UNICODE_STRING):
         return value
-    elif var_type in objectdictionary.FLOAT_TYPES:
+    elif var_type in datatypes.FLOAT_TYPES:
         return float(value)
     else:
         # COB-ID can contain '$NODEID+' so replace this with node_id before converting
@@ -237,14 +233,14 @@ def _convert_variable(node_id, var_type, value):
 def _revert_variable(var_type, value):
     if value is None:
         return None
-    if var_type in (objectdictionary.OCTET_STRING, objectdictionary.DOMAIN):
+    if var_type in (datatypes.OCTET_STRING, datatypes.DOMAIN):
         return bytes.hex(value)
-    elif var_type in (objectdictionary.VISIBLE_STRING, objectdictionary.UNICODE_STRING):
+    elif var_type in (datatypes.VISIBLE_STRING, datatypes.UNICODE_STRING):
         return value
-    elif var_type in objectdictionary.FLOAT_TYPES:
+    elif var_type in datatypes.FLOAT_TYPES:
         return value
     else:
-        return "0x%02X" % value
+        return f"0x{value:02X}"
 
 
 def build_variable(eds, section, node_id, index, subindex=0):
@@ -256,7 +252,7 @@ def build_variable(eds, section, node_id, index, subindex=0):
     :param subindex: Subindex of the CANOpen object (if presente, else 0)
     """
     name = eds.get(section, "ParameterName")
-    var = objectdictionary.Variable(name, index, subindex)
+    var = objectdictionary.ODVariable(name, index, subindex)
     try:
         var.storage_location = eds.get(section, "StorageLocation")
     except NoOptionError:
@@ -269,18 +265,18 @@ def build_variable(eds, section, node_id, index, subindex=0):
         # The eds.get function gives us 0x00A0 now convert to String without hex representation and upper case
         # The sub2 part is then the section where the type parameter stands
         try:
-            var.data_type = int(eds.get("%Xsub1" % var.data_type, "DefaultValue"), 0)
+            var.data_type = int(eds.get(f"{var.data_type:X}sub1", "DefaultValue"), 0)
         except NoSectionError:
-            logger.warning("%s has an unknown or unsupported data type (%X)", name, var.data_type)
+            logger.warning("%s has an unknown or unsupported data type (0x%X)", name, var.data_type)
             # Assume DOMAIN to force application to interpret the byte data
-            var.data_type = objectdictionary.DOMAIN
+            var.data_type = datatypes.DOMAIN
 
     var.pdo_mappable = bool(int(eds.get(section, "PDOMapping", fallback="0"), 0))
 
     if eds.has_option(section, "LowLimit"):
         try:
             min_string = eds.get(section, "LowLimit")
-            if var.data_type in objectdictionary.SIGNED_TYPES:
+            if var.data_type in datatypes.SIGNED_TYPES:
                 var.min = _signed_int_from_hex(min_string, _calc_bit_length(var.data_type))
             else:
                 var.min = int(min_string, 0)
@@ -289,7 +285,7 @@ def build_variable(eds, section, node_id, index, subindex=0):
     if eds.has_option(section, "HighLimit"):
         try:
             max_string = eds.get(section, "HighLimit")
-            if var.data_type in objectdictionary.SIGNED_TYPES:
+            if var.data_type in datatypes.SIGNED_TYPES:
                 var.max = _signed_int_from_hex(max_string, _calc_bit_length(var.data_type))
             else:
                 var.max = int(max_string, 0)
@@ -307,6 +303,22 @@ def build_variable(eds, section, node_id, index, subindex=0):
         try:
             var.value_raw = eds.get(section, "ParameterValue")
             var.value = _convert_variable(node_id, var.data_type, eds.get(section, "ParameterValue"))
+        except ValueError:
+            pass
+    # Factor, Description and Unit are not standard according to the CANopen specifications, but they are implemented in the python canopen package, so we can at least try to use them
+    if eds.has_option(section, "Factor"):
+        try:
+            var.factor = float(eds.get(section, "Factor"))
+        except ValueError:
+            pass
+    if eds.has_option(section, "Description"):
+        try:
+            var.description = eds.get(section, "Description")
+        except ValueError:
+            pass
+    if eds.has_option(section, "Unit"):
+        try:
+            var.unit = eds.get(section, "Unit")
         except ValueError:
             pass
     return var
@@ -327,11 +339,11 @@ def export_dcf(od, dest=None, fileInfo={}):
 
 def export_eds(od, dest=None, file_info={}, device_commisioning=False):
     def export_object(obj, eds):
-        if isinstance(obj, objectdictionary.Variable):
+        if isinstance(obj, objectdictionary.ODVariable):
             return export_variable(obj, eds)
-        if isinstance(obj, objectdictionary.Record):
+        if isinstance(obj, objectdictionary.ODRecord):
             return export_record(obj, eds)
-        if isinstance(obj, objectdictionary.Array):
+        if isinstance(obj, objectdictionary.ODArray):
             return export_array(obj, eds)
 
     def export_common(var, eds, section):
@@ -341,17 +353,17 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
             eds.set(section, "StorageLocation", var.storage_location)
 
     def export_variable(var, eds):
-        if isinstance(var.parent, objectdictionary.ObjectDictionary):
+        if isinstance(var.parent, ObjectDictionary):
             # top level variable
-            section = "%04X" % var.index
+            section = f"{var.index:04X}"
         else:
             # nested variable
-            section = "%04Xsub%X" % (var.index, var.subindex)
+            section = f"{var.index:04X}sub{var.subindex:X}"
 
         export_common(var, eds, section)
-        eds.set(section, "ObjectType", "0x%X" % VAR)
+        eds.set(section, "ObjectType", f"0x{VAR:X}")
         if var.data_type:
-            eds.set(section, "DataType", "0x%04X" % var.data_type)
+            eds.set(section, "DataType", f"0x{var.data_type:04X}")
         if var.access_type:
             eds.set(section, "AccessType", var.access_type)
 
@@ -366,9 +378,9 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
                 eds.set(section, "ParameterValue", var.value_raw)
             elif getattr(var, 'value', None) is not None:
                 eds.set(section, "ParameterValue",
-                        _revert_variable(var.data_type, var.default))
+                        _revert_variable(var.data_type, var.value))
 
-        eds.set(section, "DataType", "0x%04X" % var.data_type)
+        eds.set(section, "DataType", f"0x{var.data_type:04X}")
         eds.set(section, "PDOMapping", hex(var.pdo_mappable))
 
         if getattr(var, 'min', None) is not None:
@@ -376,12 +388,19 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
         if getattr(var, 'max', None) is not None:
             eds.set(section, "HighLimit", var.max)
 
+        if getattr(var, 'description', '') != '':
+            eds.set(section, "Description", var.description)
+        if getattr(var, 'factor', 1) != 1:
+            eds.set(section, "Factor", var.factor)
+        if getattr(var, 'unit', '') != '':
+            eds.set(section, "Unit", var.unit)
+
     def export_record(var, eds):
-        section = "%04X" % var.index
+        section = f"{var.index:04X}"
         export_common(var, eds, section)
-        eds.set(section, "SubNumber", "0x%X" % len(var.subindices))
-        ot = RECORD if isinstance(var, objectdictionary.Record) else ARR
-        eds.set(section, "ObjectType", "0x%X" % ot)
+        eds.set(section, "SubNumber", f"0x{len(var.subindices):X}")
+        ot = RECORD if isinstance(var, objectdictionary.ODRecord) else ARR
+        eds.set(section, "ObjectType", f"0x{ot:X}")
         for i in var:
             export_variable(var[i], eds)
 
@@ -443,13 +462,13 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
     for rate in od.device_information.allowed_baudrates.union(
             {10e3, 20e3, 50e3, 125e3, 250e3, 500e3, 800e3, 1000e3}):
         eds.set(
-            "DeviceInfo", "BaudRate_%i" % (rate/1000),
+            "DeviceInfo", f"BaudRate_{rate//1000}",
             int(rate in od.device_information.allowed_baudrates))
 
     if device_commisioning and (od.bitrate or od.node_id):
         eds.add_section("DeviceComissioning")
         if od.bitrate:
-            eds.set("DeviceComissioning", "BaudRate", int(od.bitrate / 1000))
+            eds.set("DeviceComissioning", "Baudrate", int(od.bitrate / 1000))
         if od.node_id:
             eds.set("DeviceComissioning", "NodeID", int(od.node_id))
 
@@ -457,12 +476,12 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
     i = 0
     for line in od.comments.splitlines():
         i += 1
-        eds.set("Comments", "Line%i" % i, line)
+        eds.set("Comments", f"Line{i}", line)
     eds.set("Comments", "Lines", i)
 
     eds.add_section("DummyUsage")
     for i in range(1, 8):
-        key = "Dummy%04d" % i
+        key = f"Dummy{i:04d}"
         eds.set("DummyUsage", key, 1 if (key in od) else 0)
 
     def mandatory_indices(x):
@@ -486,7 +505,7 @@ def export_eds(od, dest=None, file_info={}, device_commisioning=False):
         eds.add_section(section)
         eds.set(section, "SupportedObjects", len(list))
         for i in range(0, len(list)):
-            eds.set(section, (i + 1), "0x%04X" % list[i])
+            eds.set(section, (i + 1), f"0x{list[i]:04X}")
         for index in list:
             export_object(od[index], eds)
 

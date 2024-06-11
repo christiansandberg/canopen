@@ -49,10 +49,14 @@ class SdoAbortedError(SdoError):
         self.code = code
 
     def __str__(self):
-        text = "Code 0x{:08X}".format(self.code)
+        text = f"Code 0x{self.code:08X}"
         if self.code in self.CODES:
             text = text + ", " + self.CODES[self.code]
         return text
+
+    def __eq__(self, other):
+        """Compare two exception objects based on SDO abort code."""
+        return self.code == other.code
 
 
 class SdoCommunicationError(SdoError):

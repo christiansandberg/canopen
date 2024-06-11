@@ -1,10 +1,9 @@
-try:
-    from collections.abc import MutableMapping
-except ImportError:
-    from collections import MutableMapping
+from __future__ import annotations
+
+from collections.abc import MutableMapping
 import logging
 import threading
-from typing import Callable, Dict, Iterable, List, Optional, Union
+from typing import Callable, Dict, Iterator, List, Optional, Union
 
 try:
     import can
@@ -17,13 +16,13 @@ except ImportError:
     class Listener:
         """ Dummy listener """
 
-from .node import RemoteNode, LocalNode
-from .sync import SyncProducer
-from .timestamp import TimeProducer
-from .nmt import NmtMaster
-from .lss import LssMaster
-from .objectdictionary.eds import import_from_node
-from .objectdictionary import ObjectDictionary
+from canopen.node import RemoteNode, LocalNode
+from canopen.sync import SyncProducer
+from canopen.timestamp import TimeProducer
+from canopen.nmt import NmtMaster
+from canopen.lss import LssMaster
+from canopen.objectdictionary.eds import import_from_node
+from canopen.objectdictionary import ObjectDictionary
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +32,7 @@ Callback = Callable[[int, bytearray, float], None]
 class Network(MutableMapping):
     """Representation of one CAN bus containing one or more nodes."""
 
-    def __init__(self, bus=None):
+    def __init__(self, bus: Optional[can.BusABC] = None):
         """
         :param can.BusABC bus:
             A python-can bus instance to re-use.
@@ -85,7 +84,7 @@ class Network(MutableMapping):
         else:
             self.subscribers[can_id].remove(callback)
 
-    def connect(self, *args, **kwargs) -> "Network":
+    def connect(self, *args, **kwargs) -> Network:
         """Connect to CAN bus using python-can.
 
         Arguments are passed directly to :class:`can.BusABC`. Typically these
@@ -110,7 +109,8 @@ class Network(MutableMapping):
                 if node.object_dictionary.bitrate:
                     kwargs["bitrate"] = node.object_dictionary.bitrate
                     break
-        self.bus = can.interface.Bus(*args, **kwargs)
+        if self.bus is None:
+            self.bus = can.Bus(*args, **kwargs)
         logger.info("Connected to '%s'", self.bus.channel_info)
         self.notifier = can.Notifier(self.bus, self.listeners, 1)
         return self
@@ -216,7 +216,7 @@ class Network(MutableMapping):
 
     def send_periodic(
         self, can_id: int, data: bytes, period: float, remote: bool = False
-    ) -> "PeriodicMessageTask":
+    ) -> PeriodicMessageTask:
         """Start sending a message periodically.
 
         :param can_id:
@@ -269,6 +269,9 @@ class Network(MutableMapping):
 
     def __setitem__(self, node_id: int, node: Union[RemoteNode, LocalNode]):
         assert node_id == node.id
+        if node_id in self.nodes:
+            # Remove old callbacks
+            self.nodes[node_id].remove_network()
         self.nodes[node_id] = node
         node.associate_network(self)
 
@@ -276,7 +279,7 @@ class Network(MutableMapping):
         self.nodes[node_id].remove_network()
         del self.nodes[node_id]
 
-    def __iter__(self) -> Iterable[int]:
+    def __iter__(self) -> Iterator[int]:
         return iter(self.nodes)
 
     def __len__(self) -> int:
@@ -297,7 +300,7 @@ class PeriodicMessageTask:
         bus,
         remote: bool = False,
     ):
-        """ 
+        """
         :param can_id:
             CAN-ID of the message
         :param data:
@@ -358,6 +361,9 @@ class MessageListener(Listener):
         except Exception as e:
             # Exceptions in any callbaks should not affect CAN processing
             logger.error(str(e))
+
+    def stop(self) -> None:
+        """Override abstract base method to release any resources."""
 
 
 class NodeScanner:

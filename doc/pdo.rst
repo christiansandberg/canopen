@@ -65,14 +65,14 @@ starts at 1, not 0)::
         for i in range(50):
             node.tpdo[4].wait_for_reception()
             speed = node.tpdo['Application Status.Actual Speed'].phys
-            f.write('%s\n' % speed)
+            f.write(f'{speed}\n')
 
     # Using a callback to asynchronously receive values
     # Do not do any blocking operations here!
     def print_speed(message):
-        print('%s received' % message.name)
+        print(f'{message.name} received')
         for var in message:
-            print('%s = %d' % (var.name, var.raw))
+            print(f'{var.name} = {var.raw}')
 
     node.tpdo[4].add_callback(print_speed)
     time.sleep(5)
@@ -89,7 +89,7 @@ API
 
    .. describe:: pdo[no]
 
-      Return the :class:`canopen.pdo.Map` for the specified map number.
+      Return the :class:`canopen.pdo.PdoMap` for the specified map number.
       First map starts at 1.
 
    .. describe:: iter(pdo)
@@ -101,27 +101,27 @@ API
       Return the number of supported maps.
 
 
-.. autoclass:: canopen.pdo.Map
+.. autoclass:: canopen.pdo.PdoMap
    :members:
 
    .. describe:: map[name]
 
-      Return the :class:`canopen.pdo.Variable` for the variable specified as
+      Return the :class:`canopen.pdo.PdoVariable` for the variable specified as
       ``"Group.Variable"`` or ``"Variable"`` or as a position starting at 0.
 
    .. describe:: iter(map)
 
-      Return an iterator of the :class:`canopen.pdo.Variable` entries in the map.
+      Return an iterator of the :class:`canopen.pdo.PdoVariable` entries in the map.
 
    .. describe:: len(map)
 
       Return the number of variables in the map.
 
 
-.. autoclass:: canopen.pdo.Variable
+.. autoclass:: canopen.pdo.PdoVariable
    :members:
    :inherited-members:
 
    .. py:attribute:: od
 
-      The :class:`canopen.objectdictionary.Variable` associated with this object.
+      The :class:`canopen.objectdictionary.ODVariable` associated with this object.
