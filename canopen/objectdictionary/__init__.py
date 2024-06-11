@@ -9,7 +9,6 @@ from collections.abc import MutableMapping, Mapping
 import logging
 
 from canopen.objectdictionary.datatypes import *
-from canopen.objectdictionary.datatypes_24bit import Integer24, Unsigned24
 from canopen.utils import pretty_index
 
 logger = logging.getLogger(__name__)
@@ -282,17 +281,25 @@ class ODArray(Mapping):
 class ODVariable:
     """Simple variable."""
 
-    STRUCT_TYPES = {
+    STRUCT_TYPES: dict[int, struct.Struct] = {
+        # Use struct module to pack/unpack data where possible and use the
+        # custom IntegerN and UnsignedN classes for the special data types.
         BOOLEAN: struct.Struct("?"),
         INTEGER8: struct.Struct("b"),
         INTEGER16: struct.Struct("<h"),
-        INTEGER24: Integer24(),
+        INTEGER24: IntegerN(24),
         INTEGER32: struct.Struct("<l"),
+        INTEGER40: IntegerN(40),
+        INTEGER48: IntegerN(48),
+        INTEGER56: IntegerN(56),
         INTEGER64: struct.Struct("<q"),
         UNSIGNED8: struct.Struct("B"),
         UNSIGNED16: struct.Struct("<H"),
-        UNSIGNED24: Unsigned24(),
+        UNSIGNED24: UnsignedN(24),
         UNSIGNED32: struct.Struct("<L"),
+        UNSIGNED40: UnsignedN(40),
+        UNSIGNED48: UnsignedN(48),
+        UNSIGNED56: UnsignedN(56),
         UNSIGNED64: struct.Struct("<Q"),
         REAL32: struct.Struct("<f"),
         REAL64: struct.Struct("<d")
@@ -386,10 +393,13 @@ class ODVariable:
 
     def decode_raw(self, data: bytes) -> Union[int, float, str, bytes, bytearray]:
         if self.data_type == VISIBLE_STRING:
-            return data.rstrip(b"\x00").decode("ascii", errors="ignore")
+            # Strip any trailing NUL characters from C-based systems
+            return data.decode("ascii", errors="ignore").rstrip("\x00")
         elif self.data_type == UNICODE_STRING:
-            # Is this correct?
-            return data.rstrip(b"\x00").decode("utf_16_le", errors="ignore")
+            # The CANopen standard does not specify the encoding. This
+            # library assumes UTF-16, being the most common two-byte encoding format.
+            # Strip any trailing NUL characters from C-based systems
+            return data.decode("utf_16_le", errors="ignore").rstrip("\x00")
         elif self.data_type in self.STRUCT_TYPES:
             try:
                 value, = self.STRUCT_TYPES[self.data_type].unpack(data)
@@ -407,8 +417,9 @@ class ODVariable:
         elif self.data_type == VISIBLE_STRING:
             return value.encode("ascii")
         elif self.data_type == UNICODE_STRING:
-            # Is this correct?
             return value.encode("utf_16_le")
+        elif self.data_type in (DOMAIN, OCTET_STRING):
+            return bytes(value)
         elif self.data_type in self.STRUCT_TYPES:
             if self.data_type in INTEGER_TYPES:
                 value = int(value)
