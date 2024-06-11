@@ -30,8 +30,26 @@ PDO_MAPPING = 0x21
 SDO_PARAMETER = 0x22
 IDENTITY = 0x23
 
-SIGNED_TYPES = (INTEGER8, INTEGER16, INTEGER24, INTEGER32, INTEGER40, INTEGER48, INTEGER56, INTEGER64)
-UNSIGNED_TYPES = (UNSIGNED8, UNSIGNED16, UNSIGNED24, UNSIGNED32, UNSIGNED40, UNSIGNED48, UNSIGNED56, UNSIGNED64)
+SIGNED_TYPES = (
+    INTEGER8,
+    INTEGER16,
+    INTEGER24,
+    INTEGER32,
+    INTEGER40,
+    INTEGER48,
+    INTEGER56,
+    INTEGER64,
+)
+UNSIGNED_TYPES = (
+    UNSIGNED8,
+    UNSIGNED16,
+    UNSIGNED24,
+    UNSIGNED32,
+    UNSIGNED40,
+    UNSIGNED48,
+    UNSIGNED56,
+    UNSIGNED64,
+)
 INTEGER_TYPES = SIGNED_TYPES + UNSIGNED_TYPES
 FLOAT_TYPES = (REAL32, REAL64)
 NUMBER_TYPES = INTEGER_TYPES + FLOAT_TYPES
@@ -43,6 +61,7 @@ class UnsignedN(struct.Struct):
 
     The width must be a multiple of 8 and must be between 8 and 64.
     """
+
     def __init__(self, width: int):
         self.width = width
         if width % 8 != 0:
@@ -75,6 +94,7 @@ class IntegerN(struct.Struct):
 
     The width must be a multiple of 8 and must be between 8 and 64.
     """
+
     def __init__(self, width: int):
         self.width = width
         if width % 8 != 0:
@@ -94,7 +114,9 @@ class IntegerN(struct.Struct):
     def unpack(self, buffer):
         mask = 0x80
         neg = (buffer[self.size - 1] & mask) > 0
-        return super().unpack(buffer + (b'\xff' if neg else b'\x00') * (super().size - self.size))
+        return super().unpack(
+            buffer + (b'\xff' if neg else b'\x00') * (super().size - self.size)
+        )
 
     def pack(self, *v):
         return super().pack(*v)[:self.size]
