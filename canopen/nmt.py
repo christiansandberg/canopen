@@ -225,13 +225,16 @@ class NmtMaster(NmtBase):
         except asyncio.TimeoutError:
             raise NmtError("Timeout waiting for boot-up message")
 
-    def add_hearbeat_callback(self, callback: Callable[[int], None]):
+    def add_heartbeat_callback(self, callback: Callable[[int], None]):
         """Add function to be called on heartbeat reception.
 
         :param callback:
             Function that should accept an NMT state as only argument.
         """
         self._callbacks.append(callback)
+
+    # Compatibility with previous typo
+    add_hearbeat_callback = add_heartbeat_callback
 
     def start_node_guarding(self, period: float):
         """Starts the node guarding mechanism.
@@ -289,16 +292,16 @@ class NmtSlave(NmtBase):
 
     def on_write(self, index, data, **kwargs):
         if index == 0x1017:
-            hearbeat_time, = struct.unpack_from("<H", data)
-            if hearbeat_time == 0:
+            heartbeat_time, = struct.unpack_from("<H", data)
+            if heartbeat_time == 0:
                 self.stop_heartbeat()
             else:
-                self.start_heartbeat(hearbeat_time)
+                self.start_heartbeat(heartbeat_time)
 
     def start_heartbeat(self, heartbeat_time_ms: int):
-        """Start the hearbeat service.
+        """Start the heartbeat service.
 
-        :param hearbeat_time
+        :param heartbeat_time_ms
             The heartbeat time in ms. If the heartbeat time is 0
             the heartbeating will not start.
         """
@@ -306,12 +309,12 @@ class NmtSlave(NmtBase):
 
         self.stop_heartbeat()
         if heartbeat_time_ms > 0:
-            logger.info("Start the hearbeat timer, interval is %d ms", self._heartbeat_time_ms)
+            logger.info("Start the heartbeat timer, interval is %d ms", self._heartbeat_time_ms)
             self._send_task = self.network.send_periodic(
                 0x700 + self.id, [self._state], heartbeat_time_ms / 1000.0)
 
     def stop_heartbeat(self):
-        """Stop the hearbeat service."""
+        """Stop the heartbeat service."""
         if self._send_task is not None:
             logger.info("Stop the heartbeat timer")
             self._send_task.stop()

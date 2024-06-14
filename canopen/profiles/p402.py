@@ -251,7 +251,7 @@ class BaseNode402(RemoteNode):
                 # NOTE: Adding blocking callback
                 tpdo.add_callback(self.on_TPDOs_update_callback)
                 for obj in tpdo:
-                    logger.debug('Configured TPDO: {0}'.format(obj.index))
+                    logger.debug('Configured TPDO: 0x%04X', obj.index)
                     if obj.index not in self.tpdo_values:
                         self.tpdo_values[obj.index] = 0
                         self.tpdo_pointers[obj.index] = obj
@@ -262,31 +262,31 @@ class BaseNode402(RemoteNode):
         for rpdo in self.rpdo.values():
             if rpdo.enabled:
                 for obj in rpdo:
-                    logger.debug('Configured RPDO: {0}'.format(obj.index))
+                    logger.debug('Configured RPDO: 0x%04X', obj.index)
                     if obj.index not in self.rpdo_pointers:
                         self.rpdo_pointers[obj.index] = obj
 
     def _check_controlword_configured(self):
         if 0x6040 not in self.rpdo_pointers:  # Controlword
             logger.warning(
-                "Controlword not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
-                    self.id))
+                "Controlword not configured in node %s's PDOs. Using SDOs can cause slow performance.",
+                self.id)
 
     def _check_statusword_configured(self):
         if 0x6041 not in self.tpdo_values:  # Statusword
             logger.warning(
-                "Statusword not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
-                    self.id))
+                "Statusword not configured in node %s's PDOs. Using SDOs can cause slow performance.",
+                self.id)
 
     def _check_op_mode_configured(self):
         if 0x6060 not in self.rpdo_pointers:  # Operation Mode
             logger.warning(
-                "Operation Mode not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
-                    self.id))
+                "Operation Mode not configured in node %s's PDOs. Using SDOs can cause slow performance.",
+                self.id)
         if 0x6061 not in self.tpdo_values:  # Operation Mode Display
             logger.warning(
-                "Operation Mode Display not configured in node {0}'s PDOs. Using SDOs can cause slow performance.".format(
-                    self.id))
+                "Operation Mode Display not configured in node %s's PDOs. Using SDOs can cause slow performance.",
+                self.id)
 
     # NOTE: Blocking
     def reset_from_fault(self):
@@ -382,7 +382,7 @@ class BaseNode402(RemoteNode):
                 homingstatus = self._homing_status()
                 if homingstatus in ('INTERRUPTED', 'ERROR VELOCITY IS NOT ZERO',
                                     'ERROR VELOCITY IS ZERO'):
-                    raise RuntimeError('Unable to home. Reason: {0}'.format(homingstatus))
+                    raise RuntimeError(f'Unable to home. Reason: {homingstatus}')
                 if timeout and time.monotonic() > t:
                     raise RuntimeError('Unable to home, timeout reached')
             logger.info('Homing mode carried out successfully.')
@@ -425,8 +425,7 @@ class BaseNode402(RemoteNode):
                 # NOTE: Call to blocking method
                 timestamp = pdo.wait_for_reception(timeout=self.TIMEOUT_CHECK_TPDO)
                 if timestamp is None:
-                    raise RuntimeError("Timeout getting node {0}'s mode of operation.".format(
-                        self.id))
+                    raise RuntimeError(f"Timeout getting node {self.id}'s mode of operation.")
             code = self.tpdo_values[0x6061]
         except KeyError:
             logger.warning('The object 0x6061 is not a configured TPDO, fallback to SDO')
@@ -440,7 +439,7 @@ class BaseNode402(RemoteNode):
         try:
             if not self.is_op_mode_supported(mode):
                 raise TypeError(
-                    'Operation mode {m} not suppported on node {n}.'.format(n=self.id, m=mode))
+                    f'Operation mode {mode} not suppported on node {self.id}.')
             # Update operation mode in RPDO if possible, fall back to SDO
             if 0x6060 in self.rpdo_pointers:
                 # NOTE: Blocking - OK. Protected in SdoClient
@@ -456,13 +455,12 @@ class BaseNode402(RemoteNode):
             while self.op_mode != mode:
                 if time.monotonic() > timeout:
                     raise RuntimeError(
-                        "Timeout setting node {0}'s new mode of operation to {1}.".format(
-                            self.id, mode))
-            logger.info('Set node {n} operation mode to {m}.'.format(n=self.id, m=mode))
+                        f"Timeout setting node {self.id}'s new mode of operation to {mode}.")
+            logger.info('Set node %s operation mode to %s.', self.id, mode)
         except SdoCommunicationError as e:
-            logger.warning('[SDO communication error] Cause: {0}'.format(str(e)))
+            logger.warning('[SDO communication error] Cause: %s', e)
         except (RuntimeError, ValueError) as e:
-            logger.warning('{0}'.format(str(e)))
+            logger.warning(str(e))
 
     # NOTE: Blocking
     def _clear_target_values(self):
@@ -487,8 +485,8 @@ class BaseNode402(RemoteNode):
             # Cache value only on first lookup, this object should never change.
             # NOTE: Blocking - OK. Protected in SdoClient
             self._op_mode_support = self.sdo[0x6502].raw
-            logger.info('Caching node {n} supported operation modes 0x{m:04X}'.format(
-                n=self.id, m=self._op_mode_support))
+            logger.info('Caching node %s supported operation modes 0x%04X',
+                        self.id, self._op_mode_support)
         bits = OperationMode.SUPPORTED[mode]
         return self._op_mode_support & bits == bits
 
@@ -618,7 +616,7 @@ class BaseNode402(RemoteNode):
                             'FAULT REACTION ACTIVE',
                             'FAULT'):
             raise ValueError(
-                'Target state {} cannot be entered programmatically'.format(target_state))
+                f'Target state {target_state} cannot be entered programmatically')
         # NOTE: Blocking getter on errors
         from_state = self.state
         if (from_state, target_state) in State402.TRANSITIONTABLE:
@@ -634,7 +632,7 @@ class BaseNode402(RemoteNode):
         except KeyError:
             # NOTE: Blocking getter on errors
             raise ValueError(
-                'Illegal state transition from {f} to {t}'.format(f=self.state, t=target_state))
+                f'Illegal state transition from {self.state} to {target_state}')
         timeout = time.monotonic() + self.TIMEOUT_SWITCH_STATE_SINGLE
         # NOTE: Blocking getter on errors
         while self.state != target_state:

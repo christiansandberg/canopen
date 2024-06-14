@@ -135,20 +135,15 @@ class RemoteNode(BaseNode):
         """
         try:
             if subindex is not None:
-                logger.info(str('SDO [{index:#06x}][{subindex:#06x}]: {name}: {value:#06x}'.format(
-                    index=index,
-                    subindex=subindex,
-                    name=name,
-                    value=value)))
+                logger.info('SDO [0x%04X][0x%02X]: %s: %#06x',
+                            index, subindex, name, value)
                 # NOTE: Blocking call - OK. Protected in SdoClient
                 self.sdo[index][subindex].raw = value
             else:
                 # NOTE: Blocking call - OK. Protected in SdoClient
                 self.sdo[index].raw = value
-                logger.info(str('SDO [{index:#06x}]: {name}: {value:#06x}'.format(
-                    index=index,
-                    name=name,
-                    value=value)))
+                logger.info('SDO [0x%04X]: %s: %#06x',
+                            index, name, value)
         except SdoCommunicationError as e:
             logger.warning(str(e))
         except SdoAbortedError as e:
@@ -157,7 +152,8 @@ class RemoteNode(BaseNode):
             if e.code != 0x06010002:
                 # Abort codes other than "Attempt to write a read-only object"
                 # should still be reported.
-                logger.warning('[ERROR SETTING object {0:#06x}:{1:#06x}]  {2}'.format(index, subindex, str(e)))
+                logger.warning('[ERROR SETTING object 0x%04X:%02X] %s',
+                               index, subindex, e)
                 raise
 
     def load_configuration(self):

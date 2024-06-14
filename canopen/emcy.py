@@ -165,7 +165,7 @@ class EmcyError(Exception):
         return ""
 
     def __str__(self):
-        text = "Code 0x{:04X}".format(self.code)
+        text = f"Code 0x{self.code:04X}"
         description = self.get_desc()
         if description:
             text = text + ", " + description

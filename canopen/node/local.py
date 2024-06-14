@@ -99,7 +99,7 @@ class LocalNode(BaseNode):
                 return obj.encode_raw(obj.default)
 
         # Resource not available
-        logger.info("Resource unavailable for 0x%X:%d", index, subindex)
+        logger.info("Resource unavailable for 0x%04X:%02X", index, subindex)
         raise SdoAbortedError(0x060A0023)
 
     def set_data(

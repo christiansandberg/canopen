@@ -2,8 +2,11 @@ import os
 import unittest
 # import binascii
 import canopen
+from canopen.objectdictionary import ODVariable
+import canopen.objectdictionary.datatypes as dt
 
 EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
+DATAEDS_PATH = os.path.join(os.path.dirname(__file__), 'datatypes.eds')
 
 TX = 1
 RX = 2
@@ -23,11 +26,11 @@ class TestSDO(unittest.TestCase):
         """
         next_data = self.data.pop(0)
         self.assertEqual(next_data[0], TX, "No transmission was expected")
-        # print("> %s (%s)" % (binascii.hexlify(data), binascii.hexlify(next_data[1])))
+        # print(f"> {binascii.hexlify(data)} ({binascii.hexlify(next_data[1])})")
         self.assertSequenceEqual(data, next_data[1])
         self.assertEqual(can_id, 0x602)
         while self.data and self.data[0][0] == RX:
-            # print("< %s" % binascii.hexlify(self.data[0][1]))
+            # print(f"< {binascii.hexlify(self.data[0][1])}")
             self.network.notify(0x582, self.data.pop(0)[1], 0.0)
 
     def setUp(self):
@@ -163,6 +166,328 @@ class TestSDO(unittest.TestCase):
         client = self.network[2].add_sdo(0x123456, 0x234567)
         self.assertIn(client, self.network[2].sdo_channels)
 
+
+class TestSDOClientDatatypes(unittest.TestCase):
+    """Test the SDO client uploads with the different data types in CANopen."""
+
+    def _send_message(self, can_id, data, remote=False):
+        """Will be used instead of the usual Network.send_message method.
+
+        Checks that the message data is according to expected and answers
+        with the provided data.
+        """
+        next_data = self.data.pop(0)
+        self.assertEqual(next_data[0], TX, "No transmission was expected")
+        # print("> %s (%s)" % (binascii.hexlify(data), binascii.hexlify(next_data[1])))
+        self.assertSequenceEqual(data, next_data[1])
+        self.assertEqual(can_id, 0x602)
+        while self.data and self.data[0][0] == RX:
+            # print("< %s" % binascii.hexlify(self.data[0][1]))
+            self.network.notify(0x582, self.data.pop(0)[1], 0.0)
+
+    def setUp(self):
+        network = canopen.Network()
+        network.send_message = self._send_message
+        node = network.add_node(2, DATAEDS_PATH)
+        node.sdo.RESPONSE_TIMEOUT = 0.01
+        self.node = node
+        self.network = network
+
+    def test_boolean(self):
+        self.data = [
+            (TX, b'\x40\x01\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x4f\x01\x20\x00\xfe\xfd\xfc\xfb')
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.BOOLEAN, 0)
+        self.assertEqual(data, b'\xfe')
+
+    def test_unsigned8(self):
+        self.data = [
+            (TX, b'\x40\x05\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x4f\x05\x20\x00\xfe\xfd\xfc\xfb')
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.UNSIGNED8, 0)
+        self.assertEqual(data, b'\xfe')
+
+    def test_unsigned16(self):
+        self.data = [
+            (TX, b'\x40\x06\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x4b\x06\x20\x00\xfe\xfd\xfc\xfb')
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.UNSIGNED16, 0)
+        self.assertEqual(data, b'\xfe\xfd')
+
+    def test_unsigned24(self):
+        self.data = [
+            (TX, b'\x40\x16\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x47\x16\x20\x00\xfe\xfd\xfc\xfb')
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.UNSIGNED24, 0)
+        self.assertEqual(data, b'\xfe\xfd\xfc')
+
+    def test_unsigned32(self):
+        self.data = [
+            (TX, b'\x40\x07\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x43\x07\x20\x00\xfe\xfd\xfc\xfb')
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.UNSIGNED32, 0)
+        self.assertEqual(data, b'\xfe\xfd\xfc\xfb')
+
+    def test_unsigned40(self):
+        self.data = [
+            (TX, b'\x40\x18\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x41\x18\x20\x00\xfe\xfd\xfc\xfb'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x05\xb2\x01\x20\x02\x91\x12\x03'),
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.UNSIGNED40, 0)
+        self.assertEqual(data, b'\xb2\x01\x20\x02\x91')
+
+    def test_unsigned48(self):
+        self.data = [
+            (TX, b'\x40\x19\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x41\x19\x20\x00\xfe\xfd\xfc\xfb'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x03\xb2\x01\x20\x02\x91\x12\x03'),
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.UNSIGNED48, 0)
+        self.assertEqual(data, b'\xb2\x01\x20\x02\x91\x12')
+
+    def test_unsigned56(self):
+        self.data = [
+            (TX, b'\x40\x1a\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x41\x1a\x20\x00\xfe\xfd\xfc\xfb'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x01\xb2\x01\x20\x02\x91\x12\x03'),
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.UNSIGNED56, 0)
+        self.assertEqual(data, b'\xb2\x01\x20\x02\x91\x12\x03')
+
+    def test_unsigned64(self):
+        self.data = [
+            (TX, b'\x40\x1b\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x41\x1b\x20\x00\xfe\xfd\xfc\xfb'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x00\xb2\x01\x20\x02\x91\x12\x03'),
+            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x1d\x19\x21\x70\xfe\xfd\xfc\xfb'),
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.UNSIGNED64, 0)
+        self.assertEqual(data, b'\xb2\x01\x20\x02\x91\x12\x03\x19')
+
+    def test_integer8(self):
+        self.data = [
+            (TX, b'\x40\x02\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x4f\x02\x20\x00\xfe\xfd\xfc\xfb')
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.INTEGER8, 0)
+        self.assertEqual(data, b'\xfe')
+
+    def test_integer16(self):
+        self.data = [
+            (TX, b'\x40\x03\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x4b\x03\x20\x00\xfe\xfd\xfc\xfb')
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.INTEGER16, 0)
+        self.assertEqual(data, b'\xfe\xfd')
+
+    def test_integer24(self):
+        self.data = [
+            (TX, b'\x40\x10\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x47\x10\x20\x00\xfe\xfd\xfc\xfb')
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.INTEGER24, 0)
+        self.assertEqual(data, b'\xfe\xfd\xfc')
+
+    def test_integer32(self):
+        self.data = [
+            (TX, b'\x40\x04\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x43\x04\x20\x00\xfe\xfd\xfc\xfb')
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.INTEGER32, 0)
+        self.assertEqual(data, b'\xfe\xfd\xfc\xfb')
+
+    def test_integer40(self):
+        self.data = [
+            (TX, b'\x40\x12\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x41\x12\x20\x00\xfe\xfd\xfc\xfb'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x05\xb2\x01\x20\x02\x91\x12\x03'),
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.INTEGER40, 0)
+        self.assertEqual(data, b'\xb2\x01\x20\x02\x91')
+
+    def test_integer48(self):
+        self.data = [
+            (TX, b'\x40\x13\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x41\x13\x20\x00\xfe\xfd\xfc\xfb'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x03\xb2\x01\x20\x02\x91\x12\x03'),
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.INTEGER48, 0)
+        self.assertEqual(data, b'\xb2\x01\x20\x02\x91\x12')
+
+    def test_integer56(self):
+        self.data = [
+            (TX, b'\x40\x14\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x41\x14\x20\x00\xfe\xfd\xfc\xfb'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x01\xb2\x01\x20\x02\x91\x12\x03'),
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.INTEGER56, 0)
+        self.assertEqual(data, b'\xb2\x01\x20\x02\x91\x12\x03')
+
+    def test_integer64(self):
+        self.data = [
+            (TX, b'\x40\x15\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x41\x15\x20\x00\xfe\xfd\xfc\xfb'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x00\xb2\x01\x20\x02\x91\x12\x03'),
+            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x1d\x19\x21\x70\xfe\xfd\xfc\xfb'),
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.INTEGER64, 0)
+        self.assertEqual(data, b'\xb2\x01\x20\x02\x91\x12\x03\x19')
+
+    def test_real32(self):
+        self.data = [
+            (TX, b'\x40\x08\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x43\x08\x20\x00\xfe\xfd\xfc\xfb')
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.REAL32, 0)
+        self.assertEqual(data, b'\xfe\xfd\xfc\xfb')
+
+    def test_real64(self):
+        self.data = [
+            (TX, b'\x40\x11\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x41\x11\x20\x00\xfe\xfd\xfc\xfb'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x00\xb2\x01\x20\x02\x91\x12\x03'),
+            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x1d\x19\x21\x70\xfe\xfd\xfc\xfb'),
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.REAL64, 0)
+        self.assertEqual(data, b'\xb2\x01\x20\x02\x91\x12\x03\x19')
+
+    def test_visible_string(self):
+        self.data = [
+            (TX, b'\x40\x09\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x41\x09\x20\x00\x1A\x00\x00\x00'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x00\x54\x69\x6E\x79\x20\x4E\x6F'),
+            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x10\x64\x65\x20\x2D\x20\x4D\x65'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x00\x67\x61\x20\x44\x6F\x6D\x61'),
+            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x15\x69\x6E\x73\x20\x21\x00\x00')
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.VISIBLE_STRING, 0)
+        self.assertEqual(data, b'Tiny Node - Mega Domains !')
+
+    def test_unicode_string(self):
+        self.data = [
+            (TX, b'\x40\x0b\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x41\x0b\x20\x00\x1A\x00\x00\x00'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x00\x54\x69\x6E\x79\x20\x4E\x6F'),
+            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x10\x64\x65\x20\x2D\x20\x4D\x65'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x00\x67\x61\x20\x44\x6F\x6D\x61'),
+            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x15\x69\x6E\x73\x20\x21\x00\x00')
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.UNICODE_STRING, 0)
+        self.assertEqual(data, b'Tiny Node - Mega Domains !')
+
+    def test_octet_string(self):
+        self.data = [
+            (TX, b'\x40\x0a\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x41\x0a\x20\x00\x1A\x00\x00\x00'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x00\x54\x69\x6E\x79\x20\x4E\x6F'),
+            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x10\x64\x65\x20\x2D\x20\x4D\x65'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x00\x67\x61\x20\x44\x6F\x6D\x61'),
+            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x15\x69\x6E\x73\x20\x21\x00\x00')
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.OCTET_STRING, 0)
+        self.assertEqual(data, b'Tiny Node - Mega Domains !')
+
+    def test_domain(self):
+        self.data = [
+            (TX, b'\x40\x0f\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x41\x0f\x20\x00\x1A\x00\x00\x00'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x00\x54\x69\x6E\x79\x20\x4E\x6F'),
+            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x10\x64\x65\x20\x2D\x20\x4D\x65'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x00\x67\x61\x20\x44\x6F\x6D\x61'),
+            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x15\x69\x6E\x73\x20\x21\x00\x00')
+        ]
+        data = self.network[2].sdo.upload(0x2000 + dt.DOMAIN, 0)
+        self.assertEqual(data, b'Tiny Node - Mega Domains !')
+
+    def test_unknown_od_32(self):
+        """Test an unknown OD entry of 32 bits (4 bytes)."""
+        self.data = [
+            (TX, b'\x40\xFF\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x43\xFF\x20\x00\xfe\xfd\xfc\xfb')
+        ]
+        data = self.network[2].sdo.upload(0x20FF, 0)
+        self.assertEqual(data, b'\xfe\xfd\xfc\xfb')
+
+    def test_unknown_od_112(self):
+        """Test an unknown OD entry of 112 bits (14 bytes)."""
+        self.data = [
+            (TX, b'\x40\xFF\x20\x00\x00\x00\x00\x00'),
+            (RX, b'\x41\xFF\x20\x00\xfe\xfd\xfc\xfb'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x00\xb2\x01\x20\x02\x91\x12\x03'),
+            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x11\x19\x21\x70\xfe\xfd\xfc\xfb'),
+        ]
+        data = self.network[2].sdo.upload(0x20FF, 0)
+        self.assertEqual(data, b'\xb2\x01\x20\x02\x91\x12\x03\x19\x21\x70\xfe\xfd\xfc\xfb')
+
+    def test_unknown_datatype32(self):
+        """Test an unknown datatype, but known OD, of 32 bits (4 bytes)."""
+        return  # FIXME: Disabled temporarily until datatype conditionals are fixed, see #436
+        # Add fake entry 0x2100 to OD, using fake datatype 0xFF
+        if 0x2100 not in self.node.object_dictionary:
+            fake_var = ODVariable("Fake", 0x2100)
+            fake_var.data_type = 0xFF
+            self.node.object_dictionary.add_object(fake_var)
+        self.data = [
+            (TX, b'\x40\x00\x21\x00\x00\x00\x00\x00'),
+            (RX, b'\x43\x00\x21\x00\xfe\xfd\xfc\xfb')
+        ]
+        data = self.network[2].sdo.upload(0x2100, 0)
+        self.assertEqual(data, b'\xfe\xfd\xfc\xfb')
+
+    def test_unknown_datatype112(self):
+        """Test an unknown datatype, but known OD, of 112 bits (14 bytes)."""
+        return  # FIXME: Disabled temporarily until datatype conditionals are fixed, see #436
+        # Add fake entry 0x2100 to OD, using fake datatype 0xFF
+        if 0x2100 not in self.node.object_dictionary:
+            fake_var = ODVariable("Fake", 0x2100)
+            fake_var.data_type = 0xFF
+            self.node.object_dictionary.add_object(fake_var)
+        self.data = [
+            (TX, b'\x40\x00\x21\x00\x00\x00\x00\x00'),
+            (RX, b'\x41\x00\x21\x00\xfe\xfd\xfc\xfb'),
+            (TX, b'\x60\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x00\xb2\x01\x20\x02\x91\x12\x03'),
+            (TX, b'\x70\x00\x00\x00\x00\x00\x00\x00'),
+            (RX, b'\x11\x19\x21\x70\xfe\xfd\xfc\xfb'),
+        ]
+        data = self.network[2].sdo.upload(0x2100, 0)
+        self.assertEqual(data, b'\xb2\x01\x20\x02\x91\x12\x03\x19\x21\x70\xfe\xfd\xfc\xfb')
 
 if __name__ == "__main__":
     unittest.main()
