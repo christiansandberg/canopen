@@ -38,7 +38,7 @@ templates_path = ['_templates']
 master_doc = 'index'
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-language = None
+language = 'en'
 
 # Include documentation from both the class level and __init__
 autoclass_content = 'both'
