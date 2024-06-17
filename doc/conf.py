@@ -18,7 +18,7 @@
 #
 import os
 import sys
-from pkg_resources import get_distribution
+from importlib import metadata
 sys.path.insert(0, os.path.abspath('..'))
 
 # -- General configuration ------------------------------------------------
@@ -63,7 +63,7 @@ author = u'Christian Sandberg'
 # built documents.
 #
 # The full version, including alpha/beta/rc tags.
-release = get_distribution('canopen').version
+release = metadata.version('canopen')
 # The short X.Y version.
 version = '.'.join(release.split('.')[:2])
 
