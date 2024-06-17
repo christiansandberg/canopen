@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 # canopen documentation build configuration file, created by
 # sphinx-quickstart on Mon Sep 19 22:15:46 2016.
 #
@@ -54,9 +52,9 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'canopen'
-copyright = u'2016, Christian Sandberg'
-author = u'Christian Sandberg'
+project = 'canopen'
+copyright = '2016, Christian Sandberg'
+author = 'Christian Sandberg'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -111,7 +109,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 pygments_style = 'sphinx'
 
 # Include documentation from both the class level and __init__
-autoclass_content = "both"
+autoclass_content = 'both'
 
 # A list of ignored prefixes for module index sorting.
 # modindex_common_prefix = []
@@ -267,8 +265,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'canopen.tex', u'canopen Documentation',
-     u'Christian Sandberg', 'manual'),
+    (master_doc, 'canopen.tex', 'canopen Documentation',
+     'Christian Sandberg', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -308,7 +306,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'canopen', u'canopen Documentation',
+    (master_doc, 'canopen', 'canopen Documentation',
      [author], 1)
 ]
 
@@ -322,7 +320,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'canopen', u'canopen Documentation',
+    (master_doc, 'canopen', 'canopen Documentation',
      author, 'canopen', 'One line description of project.',
      'Miscellaneous'),
 ]
