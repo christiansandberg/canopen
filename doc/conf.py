@@ -30,8 +30,8 @@ version = '.'.join(release.split('.')[:2])
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
-    'sphinx_autodoc_typehints',
     'sphinx.ext.viewcode',
+    'sphinx_autodoc_typehints',
 ]
 
 templates_path = ['_templates']
