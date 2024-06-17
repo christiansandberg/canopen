@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.abspath('..'))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'canopen'
-copyright = '2016, Christian Sandberg'
+project_copyright = '2016, Christian Sandberg'
 author = 'Christian Sandberg'
 # The full version, including alpha/beta/rc tags.
 release = metadata.version('canopen')
@@ -35,7 +35,7 @@ extensions = [
 ]
 
 templates_path = ['_templates']
-master_doc = 'index'
+root_doc = 'index'
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 language = 'en'
@@ -54,14 +54,14 @@ htmlhelp_basename = 'canopendoc'
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_documents = [
-    (master_doc, 'canopen.tex', 'canopen Documentation',
+    (root_doc, 'canopen.tex', 'canopen Documentation',
      'Christian Sandberg', 'manual'),
 ]
 
 # -- Options for manual page output ---------------------------------------
 
 man_pages = [
-    (master_doc, 'canopen', 'canopen Documentation',
+    (root_doc, 'canopen', 'canopen Documentation',
      [author], 1)
 ]
 
@@ -71,7 +71,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'canopen', 'canopen Documentation',
+    (root_doc, 'canopen', 'canopen Documentation',
      author, 'canopen', 'One line description of project.',
      'Miscellaneous'),
 ]
