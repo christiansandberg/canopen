@@ -24,9 +24,10 @@ class Variable:
         self.subindex = od.subindex
 
     def __repr__(self) -> str:
-        subindex = self.subindex if isinstance(self.od.parent,
-            (objectdictionary.ODRecord, objectdictionary.ODArray)
-        ) else None
+        if isinstance(self.od.parent, (objectdictionary.ODRecord, objectdictionary.ODArray)):
+            subindex = self.subindex
+        else:
+            subindex = None
         return f"<{type(self).__qualname__} {self.name!r} at {pretty_index(self.index, subindex)}>"
 
     def get_data(self) -> bytes:
@@ -148,8 +149,9 @@ class Variable:
         """Alternative way of writing using a function instead of attributes.
 
         May be useful for asynchronous writing.
-
-        :param str fmt:
+        :param value:
+            The value to write
+        :param fmt:
             How to write the value
              - 'raw'
              - 'phys'
@@ -168,6 +170,7 @@ class Bits(Mapping):
     def __init__(self, variable: Variable):
         self.variable = variable
         self.read()
+        self.raw = None
 
     @staticmethod
     def _get_bits(key):

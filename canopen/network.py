@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import MutableMapping
 import logging
 import threading
+from collections.abc import MutableMapping
 from typing import Callable, Dict, Iterator, List, Optional, Union
 
 try:
@@ -13,6 +13,7 @@ except ImportError:
     # Do not fail if python-can is not installed
     can = None
     CanError = Exception
+
     class Listener:
         """ Dummy listener """
 
@@ -26,7 +27,7 @@ from canopen.objectdictionary import ObjectDictionary
 
 logger = logging.getLogger(__name__)
 
-Callback = Callable[[int, bytearray, float], None]
+Callback = Callable[[int, bytes, float], None]
 
 
 class Network(MutableMapping):
@@ -84,20 +85,20 @@ class Network(MutableMapping):
         else:
             self.subscribers[can_id].remove(callback)
 
-    def connect(self, *args, **kwargs) -> Network:
+    def connect(self, channel=None, interface=None, **kwargs) -> Network:
         """Connect to CAN bus using python-can.
 
-        Arguments are passed directly to :class:`can.BusABC`. Typically these
-        may include:
+        All arguments are passed directly to :class:`can.BusABC`.
 
         :param channel:
             Backend specific channel for the CAN interface.
-        :param str bustype:
+        :param interface:
             Name of the interface. See
             `python-can manual <https://python-can.readthedocs.io/en/stable/configuration.html#interface-names>`__
             for full list of supported interfaces.
-        :param int bitrate:
-            Bitrate in bit/s.
+        :param kwargs:
+            ``interface`` specific keyword arguments. For example:
+                bitrate: Bitrate in bit/s.
 
         :raises can.CanError:
             When connection fails.
@@ -110,7 +111,7 @@ class Network(MutableMapping):
                     kwargs["bitrate"] = node.object_dictionary.bitrate
                     break
         if self.bus is None:
-            self.bus = can.Bus(*args, **kwargs)
+            self.bus = can.Bus(channel=channel, interface=interface, **kwargs)
         logger.info("Connected to '%s'", self.bus.channel_info)
         self.notifier = can.Notifier(self.bus, self.listeners, 1)
         return self
@@ -233,7 +234,7 @@ class Network(MutableMapping):
         """
         return PeriodicMessageTask(can_id, data, period, self.bus, remote)
 
-    def notify(self, can_id: int, data: bytearray, timestamp: float) -> None:
+    def notify(self, can_id: int, data: bytes, timestamp: float) -> None:
         """Feed incoming message to this library.
 
         If a custom interface is used, this function must be called for each
@@ -350,6 +351,7 @@ class MessageListener(Listener):
     """
 
     def __init__(self, network: Network):
+        super().__init__()
         self.network = network
 
     def on_message_received(self, msg):
@@ -359,7 +361,7 @@ class MessageListener(Listener):
         try:
             self.network.notify(msg.arbitration_id, msg.data, msg.timestamp)
         except Exception as e:
-            # Exceptions in any callbaks should not affect CAN processing
+            # Exceptions in any callbacks should not affect CAN processing
             logger.error(str(e))
 
     def stop(self) -> None:

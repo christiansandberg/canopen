@@ -1,15 +1,14 @@
-import struct
-import logging
 import io
-import time
+import logging
 import queue
+import time
 
-from canopen.network import CanError
 from canopen import objectdictionary
+from canopen.network import CanError
 from canopen.sdo.base import SdoBase
-from canopen.utils import pretty_index
 from canopen.sdo.constants import *
 from canopen.sdo.exceptions import *
+from canopen.utils import pretty_index
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +41,7 @@ class SdoClient(SdoBase):
         self.responses = queue.Queue()
 
     def on_response(self, can_id, data, timestamp):
+        _ = can_id, timestamp
         self.responses.put(bytes(data))
 
     def send_request(self, request):
@@ -198,6 +198,7 @@ class SdoClient(SdoBase):
         :returns:
             A file like object.
         """
+        buffered_stream = None
         buffer_size = buffering if buffering > 1 else io.DEFAULT_BUFFER_SIZE
         if "r" in mode:
             if block_transfer:

@@ -48,6 +48,7 @@ class MockNetwork(object):
     data = None
 
     def send_message(self, can_id, data):
+        _ = can_id
         self.data = data
 
 

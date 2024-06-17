@@ -1,6 +1,6 @@
-import threading
 import logging
 import struct
+import threading
 import time
 from typing import Callable, Optional
 
@@ -86,10 +86,7 @@ class NmtBase:
         - 'RESET'
         - 'RESET COMMUNICATION'
         """
-        if self._state in NMT_STATES:
-            return NMT_STATES[self._state]
-        else:
-            return self._state
+        return NMT_STATES.get(self._state, "")
 
     @state.setter
     def state(self, new_state: str):
@@ -180,7 +177,8 @@ class NmtMaster(NmtBase):
         :param period:
             Period (in seconds) at which the node guarding should be advertised to the slave node.
         """
-        if self._node_guarding_producer : self.stop_node_guarding()
+        if self._node_guarding_producer:
+            self.stop_node_guarding()
         self._node_guarding_producer = self.network.send_periodic(0x700 + self.id, None, period, True)
 
     def stop_node_guarding(self):
@@ -227,6 +225,7 @@ class NmtSlave(NmtBase):
             self.update_heartbeat()
 
     def on_write(self, index, data, **kwargs):
+        _ = kwargs
         if index == 0x1017:
             heartbeat_time, = struct.unpack_from("<H", data)
             if heartbeat_time == 0:
