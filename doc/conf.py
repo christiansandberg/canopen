@@ -40,41 +40,45 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 language = 'en'
 
-# Include documentation from both the class level and __init__
-autoclass_content = 'both'
-
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_static_path = ['_static']
 
-# Output file base name for HTML help builder.
+# -- Options for HTML help output --------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-help-output
+
 htmlhelp_basename = 'canopendoc'
 
-# -- Options for LaTeX output ---------------------------------------------
+# -- Options for LaTeX output ------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-latex-output
 
 latex_documents = [
     (root_doc, 'canopen.tex', 'canopen Documentation',
      'Christian Sandberg', 'manual'),
 ]
 
-# -- Options for manual page output ---------------------------------------
+# -- Options for manual page output ------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-manual-page-output
 
 man_pages = [
     (root_doc, 'canopen', 'canopen Documentation',
      [author], 1)
 ]
 
-# -- Options for Texinfo output -------------------------------------------
+# -- Options for Texinfo output ----------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-texinfo-output
 
-# Grouping the document tree into Texinfo files. List of tuples
-# (source start file, target name, title, author,
-#  dir menu entry, description, category)
 texinfo_documents = [
     (root_doc, 'canopen', 'canopen Documentation',
      author, 'canopen', 'One line description of project.',
      'Miscellaneous'),
 ]
+
+# -- Options for autodoc extension -------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html#configuration
+
+autoclass_content = 'both'
 
 # -- Options for intersphinx extension ---------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/extensions/intersphinx.html#configuration
