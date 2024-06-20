@@ -73,6 +73,3 @@ target/
 
 *.kdev4
 *.kate-swp
-
-# Virtual environments
-venv*/
