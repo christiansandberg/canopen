@@ -43,7 +43,6 @@ def export_od(od, dest: Union[str, TextIO, None] = None, doc_type: Optional[str]
                 doc_type = "eds"
             dest = open(dest, 'w')
             opened_here = True
-        assert doc_type in doctypes
 
         if doc_type == "eds":
             from canopen.objectdictionary import eds
@@ -51,6 +50,8 @@ def export_od(od, dest: Union[str, TextIO, None] = None, doc_type: Optional[str]
         elif doc_type == "dcf":
             from canopen.objectdictionary import eds
             return eds.export_dcf(od, dest)
+        else:
+            raise NotImplementedError(f"No support for the {doc_type!r} format")
     finally:
         # If dest is opened in this fn, it should be closed
         if opened_here:
