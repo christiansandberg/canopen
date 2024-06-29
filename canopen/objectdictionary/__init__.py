@@ -15,17 +15,22 @@ from canopen.utils import pretty_index
 logger = logging.getLogger(__name__)
 
 
-def export_od(od, dest: Union[str, TextIO, None] = None, doc_type: Optional[str] = None):
-    """ Export :class: ObjectDictionary to a file.
+def export_od(
+    od: ObjectDictionary,
+    dest: Union[str, TextIO, None] = None,
+    doc_type: Optional[str] = None
+) -> Union[str, None]:
+    """ Export an object dictionary.
 
     :param od:
-        :class: ObjectDictionary object to be exported
+        The :class:`!ObjectDictionary` object to be exported.
     :param dest:
-        export destination. filename, or file-like object or None.
-        if None, the document is returned as string
-    :param doc_type: type of document to export.
-       If a filename is given for dest, this default to the file extension.
-       Otherwise, this defaults to "eds"
+        The export destination as a filename, a file-like object, or None.
+        If ``None``, the document is returned as string.
+    :param doc_type:
+       The type of document to export.
+       If *dest* is a filename, *doc_type* defaults to its extension.
+       Otherwise, the document type defaults to ``"eds"``.
     :rtype: str or None
     """
 
@@ -61,10 +66,10 @@ def import_od(
     """Parse an EDS, DCF, or EPF file.
 
     :param source:
-        Path to object dictionary file or a file like object or an EPF XML tree.
-
-    :return:
-        An Object Dictionary instance.
+        Path to object dictionary file, a file like object, or an EPF XML tree.
+    :param node_id:
+        For EDS and DCF files, the node ID to use.
+        For other formats, this parameter is ignored.
     """
     if source is None:
         return ObjectDictionary()
