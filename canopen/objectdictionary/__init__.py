@@ -20,7 +20,7 @@ def export_od(
     dest: Union[str, TextIO, None] = None,
     doc_type: Optional[str] = None
 ) -> Union[str, None]:
-    """ Export an object dictionary.
+    """Export an object dictionary.
 
     :param od:
         The :class:`!ObjectDictionary` object to be exported.
