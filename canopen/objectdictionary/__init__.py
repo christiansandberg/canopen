@@ -66,7 +66,7 @@ def import_od(
     """Parse an EDS, DCF, or EPF file.
 
     :param source:
-        Path to object dictionary file, a file like object, or an EPF XML tree.
+        The path to object dictionary file, a file like object, or an EPF XML tree.
     :param node_id:
         For EDS and DCF files, the node ID to use.
         For other formats, this parameter is ignored.
