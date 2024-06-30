@@ -38,9 +38,8 @@ def export_od(od, dest: Union[str, TextIO, None] = None, doc_type: Optional[str]
                     if dest.endswith(f".{t}"):
                         doc_type = t
                         break
-
-            if doc_type is None:
-                doc_type = "eds"
+                else:
+                    doc_type = "eds"
             dest = open(dest, 'w')
             opened_here = True
 
