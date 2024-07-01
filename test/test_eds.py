@@ -215,8 +215,14 @@ class TestEDS(unittest.TestCase):
                         self.verify_od(buf, "eds")
 
     def test_export_eds_unknown_doctype(self):
+        import io
         with self.assertRaises(NotImplementedError):
             canopen.export_od(self.od, "unused", doc_type="unknown")
+        with self.assertRaises(NotImplementedError):
+            canopen.export_od(self.od, None, doc_type="unknown")
+        with io.StringIO() as dest:
+            with self.assertRaises(NotImplementedError):
+                canopen.export_od(self.od, dest, doc_type="unknown")
 
     def test_export_eds_to_filelike_object(self):
         import io
