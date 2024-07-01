@@ -179,36 +179,61 @@ class TestEDS(unittest.TestCase):
 |-------------|
 """.strip())
 
-    def test_export_eds(self):
-        import contextlib
+    def test_export_eds_to_file(self):
+        import tempfile
+        for suffix in "eds", "dcf":
+            for implicit in True, False:
+                with tempfile.NamedTemporaryFile() as fn:
+                    dest = f"{fn.name}.{suffix}"
+                    doctype = None if implicit else suffix
+                    with self.subTest(dest=dest, doctype=doctype):
+                        canopen.export_od(self.od, dest, doctype)
+                        self.verify_od(dest, doctype)
+
+    def test_export_eds_to_file_unknown_extension(self):
         import io
         import tempfile
-        from pathlib import Path
-        with tempfile.TemporaryDirectory() as tempdir:
-            for doctype in {"eds", "dcf"}:
-                with self.subTest(doctype=doctype):
-                    # Test export_od with file object.
-                    path = str(Path(tempdir, "test." + doctype))
-                    with open(path, "w+") as dest:
-                        canopen.export_od(self.od, dest, doc_type=doctype)
-                    self.verify_od(path, doctype)
+        for suffix in ".txt", "":
+            with tempfile.NamedTemporaryFile() as fn:
+                dest = f"{fn.name}{suffix}"
+                with self.subTest(dest=dest, doctype=None):
+                    canopen.export_od(self.od, dest)
 
-                    # Test export_od handling opening and closing the file.
-                    dest = str(Path(tempdir, "test2." + doctype))
-                    canopen.export_od(self.od, dest, doc_type=doctype)
+                    # The import_od() API has some shortcomings compared to the
+                    # export_od() API, namely that it does not take a doctype
+                    # parameter. This means it has to be able to deduce the
+                    # doctype from its 'source' parameter. In this case, this
+                    # is not possible, since we're using an unknown extension,
+                    # so we have to do a couple of tricks in order to make this
+                    # work.
+                    with open(dest, "r") as source:
+                        data = source.read()
+                    with io.StringIO() as buf:
+                        buf.write(data)
+                        buf.seek(io.SEEK_SET)
+                        buf.name = "mock.eds"
+                        self.verify_od(buf, "eds")
+
+    def test_export_eds_unknown_doctype(self):
+        with self.assertRaises(NotImplementedError):
+            canopen.export_od(self.od, "unused", doc_type="unknown")
+
+    def test_export_eds_to_filelike_object(self):
+        import io
+        for doctype in "eds", "dcf":
+            with io.StringIO() as dest:
+                with self.subTest(dest=dest, doctype=doctype):
+                    canopen.export_od(self.od, dest, doctype)
+
+                    # The import_od() API assumes the file-like object has a
+                    # well-behaved 'name' member.
+                    dest.name = f"mock.{doctype}"
+                    dest.seek(io.SEEK_SET)
                     self.verify_od(dest, doctype)
 
-            # Test for unknown doctype
-            with self.assertRaises(NotImplementedError):
-                dest = str(Path(tempdir, "test.unknown"))
-                canopen.export_od(self.od, dest, doc_type="unknown")
-
-            # Omit doctype
-            dest = str(Path(tempdir, "test.eds"))
-            canopen.export_od(self.od, dest)
-            self.verify_od(dest, "eds")
-
-        # Test export to stdout.
+    def test_export_eds_to_stdout(self):
+        import contextlib
+        import io
         with contextlib.redirect_stdout(io.StringIO()) as f:
             ret = canopen.export_od(self.od, None, "eds")
         self.assertIsNone(ret)
