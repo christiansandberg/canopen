@@ -25,12 +25,15 @@ def export_od(
     :param od:
         The object dictionary to be exported.
     :param dest:
-        The export destination as a filename, a file-like object, or None.
+        The export destination as a filename, a file-like object, or ``None``.
         If ``None``, the document is written to :data:`sys.stdout`.
     :param doc_type:
        The type of document to export.
-       If *dest* is a filename, *doc_type* defaults to its extension.
-       Otherwise, the document type defaults to ``"eds"``.
+       If *dest* is a file-like object or ``None``,
+       *doc_type* must be explicitly provided.
+       If *dest* is a filename and its extension is ``".eds"`` or ``".dcf"``,
+       *doc_type* defaults to that extension (the preceeding dot excluded);
+       else, it defaults to ``"eds"``.
     """
 
     opened_here = False
