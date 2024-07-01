@@ -180,36 +180,50 @@ class TestEDS(unittest.TestCase):
 """.strip())
 
     def test_export_eds(self):
+        import contextlib
+        import io
         import tempfile
         from pathlib import Path
         with tempfile.TemporaryDirectory() as tempdir:
             for doctype in {"eds", "dcf"}:
+                with self.subTest(doctype=doctype):
+                    # Test export_od with file object.
+                    path = str(Path(tempdir, "test." + doctype))
+                    with open(path, "w+") as dest:
+                        canopen.export_od(self.od, dest, doc_type=doctype)
+                    self.verify_od(path, doctype)
 
-                # Test export_od with file object
-                tempfile = str(Path(tempdir, "test." + doctype))
-                with open(tempfile, "w+") as tempeds:
-                    print(f"exporting {doctype} to {tempeds.name}")
-                    canopen.export_od(self.od, tempeds, doc_type=doctype)
-                self.verify_od(tempfile, doctype)
-
-                # Test export_od handling opening and closing the file
-                tempfile = str(Path(tempdir, "test2." + doctype))
-                canopen.export_od(self.od, tempfile, doc_type=doctype)
-                self.verify_od(tempfile, doctype)
+                    # Test export_od handling opening and closing the file.
+                    dest = str(Path(tempdir, "test2." + doctype))
+                    canopen.export_od(self.od, dest, doc_type=doctype)
+                    self.verify_od(dest, doctype)
 
             # Test for unknown doctype
             with self.assertRaises(NotImplementedError):
-                tempfile = str(Path(tempdir, "test.unknown"))
-                canopen.export_od(self.od, tempfile, doc_type="unknown")
+                dest = str(Path(tempdir, "test.unknown"))
+                canopen.export_od(self.od, dest, doc_type="unknown")
 
             # Omit doctype
-            tempfile = str(Path(tempdir, "test.eds"))
-            canopen.export_od(self.od, tempfile)
-            self.verify_od(tempfile, "eds")
+            dest = str(Path(tempdir, "test.eds"))
+            canopen.export_od(self.od, dest)
+            self.verify_od(dest, "eds")
+
+        # Test export to stdout.
+        with contextlib.redirect_stdout(io.StringIO()) as f:
+            ret = canopen.export_od(self.od, None, "eds")
+        self.assertIsNone(ret)
+
+        dump = f.getvalue()
+        buf = io.StringIO(dump)
+        self.addCleanup(buf.close)
+        # The import_od() API assumes the TextIO object has a well-behaved
+        # 'name' member.
+        buf.name = "mock.eds"
+        self.verify_od(buf, "eds")
 
 
-    def verify_od(self, tempfile, doctype):
-        exported_od = canopen.import_od(tempfile)
+    def verify_od(self, source, doctype):
+        exported_od = canopen.import_od(source)
 
         for index in exported_od:
             self.assertIn(exported_od[index].name, self.od)
