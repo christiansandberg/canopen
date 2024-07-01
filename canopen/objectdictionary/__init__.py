@@ -23,7 +23,7 @@ def export_od(
     """Export an object dictionary.
 
     :param od:
-        The :class:`!ObjectDictionary` object to be exported.
+        The object dictionary to be exported.
     :param dest:
         The export destination as a filename, a file-like object, or None.
         If ``None``, the document is written to :data:`sys.stdout`.
