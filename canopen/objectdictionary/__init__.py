@@ -34,29 +34,32 @@ def export_od(
     :rtype: str or None
     """
 
-    doctypes = {"eds", "dcf"}
-    if isinstance(dest, str):
-        if doc_type is None:
-            for t in doctypes:
-                if dest.endswith(f".{t}"):
-                    doc_type = t
-                    break
+    opened_here = False
+    try:
+        doctypes = {"eds", "dcf"}
+        if isinstance(dest, str):
+            if doc_type is None:
+                for t in doctypes:
+                    if dest.endswith(f".{t}"):
+                        doc_type = t
+                        break
+                else:
+                    doc_type = "eds"
+            dest = open(dest, 'w')
+            opened_here = True
 
-        if doc_type is None:
-            doc_type = "eds"
-        dest = open(dest, 'w')
-    assert doc_type in doctypes
-
-    if doc_type == "eds":
-        from canopen.objectdictionary import eds
-        return eds.export_eds(od, dest)
-    elif doc_type == "dcf":
-        from canopen.objectdictionary import eds
-        return eds.export_dcf(od, dest)
-
-    # If dest is opened in this fn, it should be closed
-    if type(dest) is str:
-        dest.close()
+        if doc_type == "eds":
+            from canopen.objectdictionary import eds
+            return eds.export_eds(od, dest)
+        elif doc_type == "dcf":
+            from canopen.objectdictionary import eds
+            return eds.export_dcf(od, dest)
+        else:
+            raise NotImplementedError(f"No support for the {doc_type!r} format")
+    finally:
+        # If dest is opened in this fn, it should be closed
+        if opened_here:
+            dest.close()
 
 
 def import_od(
