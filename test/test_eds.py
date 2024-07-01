@@ -214,12 +214,11 @@ class TestEDS(unittest.TestCase):
         self.assertIsNone(ret)
 
         dump = f.getvalue()
-        buf = io.StringIO(dump)
-        self.addCleanup(buf.close)
-        # The import_od() API assumes the TextIO object has a well-behaved
-        # 'name' member.
-        buf.name = "mock.eds"
-        self.verify_od(buf, "eds")
+        with io.StringIO(dump) as buf:
+            # The import_od() API assumes the TextIO object has a well-behaved
+            # 'name' member.
+            buf.name = "mock.eds"
+            self.verify_od(buf, "eds")
 
 
     def verify_od(self, source, doctype):
