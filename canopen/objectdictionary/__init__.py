@@ -19,19 +19,18 @@ def export_od(
     od: ObjectDictionary,
     dest: Union[str, TextIO, None] = None,
     doc_type: Optional[str] = None
-) -> Union[str, None]:
+) -> None:
     """Export an object dictionary.
 
     :param od:
         The :class:`!ObjectDictionary` object to be exported.
     :param dest:
         The export destination as a filename, a file-like object, or None.
-        If ``None``, the document is returned as string.
+        If ``None``, the document is written to :data:`sys.stdout`.
     :param doc_type:
        The type of document to export.
        If *dest* is a filename, *doc_type* defaults to its extension.
        Otherwise, the document type defaults to ``"eds"``.
-    :rtype: str or None
     """
 
     opened_here = False
