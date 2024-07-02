@@ -33,7 +33,7 @@ def export_od(
        *doc_type* must be explicitly provided.
        If *dest* is a filename and its extension is ``.eds`` or ``.dcf``,
        *doc_type* defaults to that extension (the preceeding dot excluded);
-       else, it defaults to ``"eds"``.
+       else, it defaults to ``eds``.
     :raises ValueError:
         When exporting to an unknown format.
     """
