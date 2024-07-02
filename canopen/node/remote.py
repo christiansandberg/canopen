@@ -141,8 +141,16 @@ class RemoteNode(BaseNode):
                                index, subindex, e)
                 raise
 
-    def load_configuration(self):
-        ''' Load the configuration of the node from the object dictionary.'''
+    def load_configuration(self) -> None:
+        """Load the configuration of the node from the Object Dictionary.
+
+        Iterate through all objects in the Object Dictionary and download the
+        values to the remote node via SDO.
+        Then, to avoid PDO mapping conflicts, read back (upload) the PDO
+        configuration via SDO.
+
+        :see-also: :meth:`canopen.pdo.PdoBase.read`
+        """
         for obj in self.object_dictionary.values():
             if isinstance(obj, ODRecord) or isinstance(obj, ODArray):
                 for subobj in obj.values():
