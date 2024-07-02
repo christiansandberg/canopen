@@ -31,7 +31,7 @@ def export_od(
        The type of document to export.
        If *dest* is a file-like object or ``None``,
        *doc_type* must be explicitly provided.
-       If *dest* is a filename and its extension is ``".eds"`` or ``".dcf"``,
+       If *dest* is a filename and its extension is ``.eds`` or ``.dcf``,
        *doc_type* defaults to that extension (the preceeding dot excluded);
        else, it defaults to ``"eds"``.
     :raises ValueError:
