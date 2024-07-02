@@ -15,18 +15,27 @@ from canopen.utils import pretty_index
 logger = logging.getLogger(__name__)
 
 
-def export_od(od, dest: Union[str, TextIO, None] = None, doc_type: Optional[str] = None):
-    """ Export :class: ObjectDictionary to a file.
+def export_od(
+    od: ObjectDictionary,
+    dest: Union[str, TextIO, None] = None,
+    doc_type: Optional[str] = None
+) -> None:
+    """Export an object dictionary.
 
     :param od:
-        :class: ObjectDictionary object to be exported
+        The object dictionary to be exported.
     :param dest:
-        export destination. filename, or file-like object or None.
-        if None, the document is returned as string
-    :param doc_type: type of document to export.
-       If a filename is given for dest, this default to the file extension.
-       Otherwise, this defaults to "eds"
-    :rtype: str or None
+        The export destination as a filename, a file-like object, or ``None``.
+        If ``None``, the document is written to :data:`sys.stdout`.
+    :param doc_type:
+       The type of document to export.
+       If *dest* is a file-like object or ``None``,
+       *doc_type* must be explicitly provided.
+       If *dest* is a filename and its extension is ``.eds`` or ``.dcf``,
+       *doc_type* defaults to that extension (the preceeding dot excluded);
+       else, it defaults to ``eds``.
+    :raises ValueError:
+        When exporting to an unknown format.
     """
 
     opened_here = False
@@ -68,10 +77,14 @@ def import_od(
     """Parse an EDS, DCF, or EPF file.
 
     :param source:
-        Path to object dictionary file or a file like object or an EPF XML tree.
-
-    :return:
-        An Object Dictionary instance.
+        The path to object dictionary file, a file like object, or an EPF XML tree.
+    :param node_id:
+        For EDS and DCF files, the node ID to use.
+        For other formats, this parameter is ignored.
+    :raises ObjectDictionaryError:
+        For object dictionary errors and inconsistencies.
+    :raises ValueError:
+        When passed a file of an unknown format.
     """
     if source is None:
         return ObjectDictionary()
