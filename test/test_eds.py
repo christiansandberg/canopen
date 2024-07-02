@@ -63,6 +63,15 @@ class TestEDS(unittest.TestCase):
             od = canopen.import_od(fp)
         self.assertTrue(len(od) > 0)
 
+    def test_load_implicit_nodeid(self):
+        # sample.eds has a DeviceComissioning section with NodeID set to 0x10.
+        od = canopen.import_od(EDS_PATH)
+        self.assertEqual(od.node_id, 16)
+
+    def test_load_explicit_nodeid(self):
+        od = canopen.import_od(EDS_PATH, node_id=3)
+        self.assertEqual(od.node_id, 3)
+
     def test_variable(self):
         var = self.od['Producer heartbeat time']
         self.assertIsInstance(var, canopen.objectdictionary.ODVariable)

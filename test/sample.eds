@@ -30,7 +30,7 @@ NrOfTXPDO=4
 LSS_Supported=0
 
 [DeviceComissioning]
-NodeID=2
+NodeID=0x10
 NodeName=Some name
 Baudrate=500
 NetNumber=0
