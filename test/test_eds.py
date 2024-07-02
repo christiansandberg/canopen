@@ -223,8 +223,9 @@ class TestEDS(unittest.TestCase):
         filelike_object = io.StringIO()
         self.addCleanup(filelike_object.close)
         for dest in "filename", None, filelike_object:
-            with self.assertRaisesRegex(ValueError, "'unknown'"):
-                canopen.export_od(self.od, dest, doc_type="unknown")
+            with self.subTest(dest=dest):
+                with self.assertRaisesRegex(ValueError, "'unknown'"):
+                    canopen.export_od(self.od, dest, doc_type="unknown")
 
     def test_export_eds_to_filelike_object(self):
         import io
