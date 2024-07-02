@@ -86,8 +86,10 @@ def import_eds(source, node_id):
 
     if eds.has_section("DeviceComissioning"):
         od.bitrate = int(eds.get("DeviceComissioning", "Baudrate")) * 1000
-        od.node_id = int(eds.get("DeviceComissioning", "NodeID"), 0)
-        node_id = node_id or od.node_id
+
+        default = None if node_id is None else {"NodeID": node_id}
+        id_ = eds.get("DeviceComissioning", "NodeID", vars=default)
+        od.node_id = int(id_, base=0)
 
     for section in eds.sections():
         # Match dummy definitions
@@ -119,7 +121,7 @@ def import_eds(source, node_id):
                 storage_location = None
 
             if object_type in (VAR, DOMAIN):
-                var = build_variable(eds, section, node_id, index)
+                var = build_variable(eds, section, od.node_id, index)
                 od.add_object(var)
             elif object_type == ARR and eds.has_option(section, "CompactSubObj"):
                 arr = objectdictionary.ODArray(name, index)
@@ -127,7 +129,7 @@ def import_eds(source, node_id):
                     "Number of entries", index, 0)
                 last_subindex.data_type = datatypes.UNSIGNED8
                 arr.add_member(last_subindex)
-                arr.add_member(build_variable(eds, section, node_id, index, 1))
+                arr.add_member(build_variable(eds, section, od.node_id, index, 1))
                 arr.storage_location = storage_location
                 od.add_object(arr)
             elif object_type == ARR:
@@ -149,7 +151,7 @@ def import_eds(source, node_id):
             entry = od[index]
             if isinstance(entry, (objectdictionary.ODRecord,
                                   objectdictionary.ODArray)):
-                var = build_variable(eds, section, node_id, index, subindex)
+                var = build_variable(eds, section, od.node_id, index, subindex)
                 entry.add_member(var)
 
         # Match [index]Name
