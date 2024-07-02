@@ -188,8 +188,8 @@ class TestEDS(unittest.TestCase):
         for suffix in ".eds", ".dcf":
             for implicit in True, False:
                 with tempfile.NamedTemporaryFile(suffix=suffix) as tmp:
-                    doctype = None if implicit else suffix[1:]
                     dest = tmp.name
+                    doctype = None if implicit else suffix[1:]
                     with self.subTest(dest=dest, doctype=doctype):
                         canopen.export_od(self.od, dest, doctype)
                         self.verify_od(dest, doctype)
