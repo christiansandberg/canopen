@@ -50,7 +50,11 @@ def export_od(od, dest: Union[str, TextIO, None] = None, doc_type: Optional[str]
             from canopen.objectdictionary import eds
             return eds.export_dcf(od, dest)
         else:
-            raise ValueError(f"No support for the {doc_type!r} format")
+            allowed = ", ".join(doctypes)
+            raise ValueError(
+                f"Cannot export to the {doc_type!r} format; "
+                f"supported formats: {allowed}"
+            )
     finally:
         # If dest is opened in this fn, it should be closed
         if opened_here:
@@ -89,7 +93,11 @@ def import_od(
         return epf.import_epf(source)
     else:
         doc_type = suffix[1:]
-        raise ValueError(f"No support for the {doc_type!r} format")
+        allowed = ", ".join(["eds", "dcf", "epf"])
+        raise ValueError(
+            f"Cannot import from the {doc_type!r} format; "
+            f"supported formats: {allowed}"
+        )
 
 
 class ObjectDictionary(MutableMapping):
