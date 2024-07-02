@@ -1,7 +1,6 @@
 import os
 import unittest
 import canopen
-from canopen.objectdictionary import ObjectDictionaryError
 from canopen.objectdictionary.eds import _signed_int_from_hex
 from canopen.utils import pretty_index
 
