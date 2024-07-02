@@ -185,11 +185,11 @@ class TestEDS(unittest.TestCase):
 
     def test_export_eds_to_file(self):
         import tempfile
-        for suffix in "eds", "dcf":
+        for suffix in ".eds", ".dcf":
             for implicit in True, False:
-                with tempfile.NamedTemporaryFile() as fn:
-                    dest = f"{fn.name}.{suffix}"
-                    doctype = None if implicit else suffix
+                with tempfile.NamedTemporaryFile(suffix=suffix) as tmp:
+                    dest = tmp.name
+                    doctype = None if implicit else suffix[1:]
                     with self.subTest(dest=dest, doctype=doctype):
                         canopen.export_od(self.od, dest, doctype)
                         self.verify_od(dest, doctype)
@@ -198,8 +198,8 @@ class TestEDS(unittest.TestCase):
         import io
         import tempfile
         for suffix in ".txt", "":
-            with tempfile.NamedTemporaryFile() as fn:
-                dest = f"{fn.name}{suffix}"
+            with tempfile.NamedTemporaryFile(suffix=suffix) as tmp:
+                dest = tmp.name
                 with self.subTest(dest=dest, doctype=None):
                     canopen.export_od(self.od, dest)
 
@@ -222,6 +222,7 @@ class TestEDS(unittest.TestCase):
         import io
         filelike_object = io.StringIO()
         self.addCleanup(filelike_object.close)
+        self.addCleanup(os.unlink, "filename")
         for dest in "filename", None, filelike_object:
             with self.subTest(dest=dest):
                 with self.assertRaisesRegex(ValueError, "'unknown'"):
