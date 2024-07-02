@@ -37,13 +37,19 @@ def export_od(
     :raises ValueError:
         When exporting to an unknown format.
     """
+    supported_doctypes = {"eds", "dcf"}
+    if doc_type and doc_type not in supported_doctypes:
+        supported = ", ".join(supported_doctypes)
+        raise ValueError(
+            f"Cannot export to the {doc_type!r} format; "
+            f"supported formats: {supported}"
+        )
 
     opened_here = False
     try:
-        doctypes = {"eds", "dcf"}
         if isinstance(dest, str):
             if doc_type is None:
-                for t in doctypes:
+                for t in supported_doctypes:
                     if dest.endswith(f".{t}"):
                         doc_type = t
                         break
@@ -58,12 +64,6 @@ def export_od(
         elif doc_type == "dcf":
             from canopen.objectdictionary import eds
             return eds.export_dcf(od, dest)
-        else:
-            allowed = ", ".join(doctypes)
-            raise ValueError(
-                f"Cannot export to the {doc_type!r} format; "
-                f"supported formats: {allowed}"
-            )
     finally:
         # If dest is opened in this fn, it should be closed
         if opened_here:
