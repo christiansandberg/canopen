@@ -56,7 +56,7 @@ class TestEDS(unittest.TestCase):
             canopen.import_od('/path/to/wrong_file.eds')
 
     def test_load_unsupported_format(self):
-        with self.assertRaises(ObjectDictionaryError):
+        with self.assertRaisesRegex(ObjectDictionaryError, "'py'"):
             canopen.import_od(__file__)
 
     def test_load_file_object(self):
@@ -203,7 +203,7 @@ class TestEDS(unittest.TestCase):
                 self.verify_od(tempfile, doctype)
 
             # Test for unknown doctype
-            with self.assertRaises(ObjectDictionaryError):
+            with self.assertRaisesRegex(ObjectDictionaryError, "'unknown'"):
                 tempfile = str(Path(tempdir, "test.unknown"))
                 canopen.export_od(self.od, tempfile, doc_type="unknown")
 
