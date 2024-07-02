@@ -34,6 +34,8 @@ def export_od(
        If *dest* is a filename and its extension is ``".eds"`` or ``".dcf"``,
        *doc_type* defaults to that extension (the preceeding dot excluded);
        else, it defaults to ``"eds"``.
+    :raises ValueError:
+        When exporting to an unknown format.
     """
 
     opened_here = False
@@ -79,6 +81,10 @@ def import_od(
     :param node_id:
         For EDS and DCF files, the node ID to use.
         For other formats, this parameter is ignored.
+    :raises ObjectDictionaryError:
+        For object dictionary errors and inconsistencies.
+    :raises ValueError:
+        When passed a file of an unknown format.
     """
     if source is None:
         return ObjectDictionary()
