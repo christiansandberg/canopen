@@ -1,6 +1,7 @@
 import os
 import unittest
 import canopen
+from canopen.objectdictionary import ObjectDictionaryError
 from canopen.objectdictionary.eds import _signed_int_from_hex
 from canopen.utils import pretty_index
 
@@ -53,6 +54,10 @@ class TestEDS(unittest.TestCase):
     def test_load_nonexisting_file(self):
         with self.assertRaises(IOError):
             canopen.import_od('/path/to/wrong_file.eds')
+
+    def test_load_unsupported_format(self):
+        with self.assertRaises(ObjectDictionaryError):
+            canopen.import_od(__file__)
 
     def test_load_file_object(self):
         with open(EDS_PATH) as fp:
@@ -198,7 +203,7 @@ class TestEDS(unittest.TestCase):
                 self.verify_od(tempfile, doctype)
 
             # Test for unknown doctype
-            with self.assertRaises(NotImplementedError):
+            with self.assertRaises(ObjectDictionaryError):
                 tempfile = str(Path(tempdir, "test.unknown"))
                 canopen.export_od(self.od, tempfile, doc_type="unknown")
 

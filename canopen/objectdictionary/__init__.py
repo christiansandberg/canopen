@@ -50,7 +50,7 @@ def export_od(od, dest: Union[str, TextIO, None] = None, doc_type: Optional[str]
             from canopen.objectdictionary import eds
             return eds.export_dcf(od, dest)
         else:
-            raise NotImplementedError(f"No support for the {doc_type!r} format")
+            raise ObjectDictionaryError(f"No support for the {doc_type!r} format")
     finally:
         # If dest is opened in this fn, it should be closed
         if opened_here:
@@ -88,7 +88,8 @@ def import_od(
         from canopen.objectdictionary import epf
         return epf.import_epf(source)
     else:
-        raise NotImplementedError("No support for this format")
+        doc_type = suffix[1:]
+        raise ObjectDictionaryError(f"No support for the {doc_type!r} format")
 
 
 class ObjectDictionary(MutableMapping):
