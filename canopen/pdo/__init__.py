@@ -1,10 +1,18 @@
 import logging
 
 from canopen import node
-from canopen.pdo.base import PdoBase, PdoMaps
+from canopen.pdo.base import PdoBase, PdoMap, PdoMaps, PdoVariable
 
-# Compatibility
-from canopen.pdo.base import Variable
+
+__all__ = [
+    "PdoBase",
+    "PdoMap",
+    "PdoMaps",
+    "PdoVariable",
+    "PDO",
+    "RPDO",
+    "TPDO",
+]
 
 logger = logging.getLogger(__name__)
 
@@ -77,3 +85,7 @@ class TPDO(PdoBase):
                 pdo.stop()
         else:
             raise TypeError('The node type does not support this function.')
+
+
+# Compatibility
+Variable = PdoVariable
