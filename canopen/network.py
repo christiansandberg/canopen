@@ -92,7 +92,7 @@ class Network(MutableMapping):
 
         :param channel:
             Backend specific channel for the CAN interface.
-        :param str bustype:
+        :param str interface:
             Name of the interface. See
             `python-can manual <https://python-can.readthedocs.io/en/stable/configuration.html#interface-names>`__
             for full list of supported interfaces.

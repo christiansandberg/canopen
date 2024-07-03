@@ -107,12 +107,12 @@ The :code:`n` is the PDO index (normally 1 to 4). The second form of access is f
     # Arguments are passed to python-can's can.Bus() constructor
     # (see https://python-can.readthedocs.io/en/latest/bus.html).
     network.connect()
-    # network.connect(bustype='socketcan', channel='can0')
-    # network.connect(bustype='kvaser', channel=0, bitrate=250000)
-    # network.connect(bustype='pcan', channel='PCAN_USBBUS1', bitrate=250000)
-    # network.connect(bustype='ixxat', channel=0, bitrate=250000)
-    # network.connect(bustype='vector', app_name='CANalyzer', channel=0, bitrate=250000)
-    # network.connect(bustype='nican', channel='CAN0', bitrate=250000)
+    # network.connect(interface='socketcan', channel='can0')
+    # network.connect(interface='kvaser', channel=0, bitrate=250000)
+    # network.connect(interface='pcan', channel='PCAN_USBBUS1', bitrate=250000)
+    # network.connect(interface='ixxat', channel=0, bitrate=250000)
+    # network.connect(interface='vector', app_name='CANalyzer', channel=0, bitrate=250000)
+    # network.connect(interface='nican', channel='CAN0', bitrate=250000)
 
     # Read a variable using SDO
     device_name = node.sdo['Manufacturer device name'].raw
