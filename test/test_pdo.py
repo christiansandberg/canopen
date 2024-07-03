@@ -76,7 +76,7 @@ class TestPDO(unittest.TestCase):
         for pdo in "tpdo", "rpdo":
             with tempfile.NamedTemporaryFile(suffix=".csv") as tmp:
                 fn = tmp.name
-                with self.subTest(pdo=pdo, filename=fn):
+                with self.subTest(filename=fn, pdo=pdo):
                     getattr(self.node, pdo).export(fn)
                     with open(fn) as csv:
                         header = csv.readline()
