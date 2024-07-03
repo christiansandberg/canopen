@@ -4,7 +4,9 @@ import canopen
 from canopen.objectdictionary.eds import _signed_int_from_hex
 from canopen.utils import pretty_index
 
-EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
+
+SAMPLE_EDS = os.path.join(os.path.dirname(__file__), 'sample.eds')
+DATATYPES_EDS = os.path.join(os.path.dirname(__file__), 'datatypes.eds')
 
 
 class TestEDS(unittest.TestCase):
@@ -48,7 +50,7 @@ class TestEDS(unittest.TestCase):
     }
 
     def setUp(self):
-        self.od = canopen.import_od(EDS_PATH, 2)
+        self.od = canopen.import_od(SAMPLE_EDS, 2)
 
     def test_load_nonexisting_file(self):
         with self.assertRaises(IOError):
@@ -59,17 +61,32 @@ class TestEDS(unittest.TestCase):
             canopen.import_od(__file__)
 
     def test_load_file_object(self):
-        with open(EDS_PATH) as fp:
+        with open(SAMPLE_EDS) as fp:
             od = canopen.import_od(fp)
         self.assertTrue(len(od) > 0)
 
     def test_load_implicit_nodeid(self):
         # sample.eds has a DeviceComissioning section with NodeID set to 0x10.
-        od = canopen.import_od(EDS_PATH)
+        od = canopen.import_od(SAMPLE_EDS)
         self.assertEqual(od.node_id, 16)
 
+    def test_load_implicit_nodeid_fallback(self):
+        import io
+
+        # First, remove the NodeID option from DeviceComissioning.
+        with open(SAMPLE_EDS) as f:
+            lines = [L for L in f.readlines() if not L.startswith("NodeID=")]
+        with io.StringIO("".join(lines)) as buf:
+            buf.name = "mock.eds"
+            od = canopen.import_od(buf)
+            self.assertIsNone(od.node_id)
+
+        # Next, try an EDS file without a DeviceComissioning section.
+        od = canopen.import_od(DATATYPES_EDS)
+        self.assertIsNone(od.node_id)
+
     def test_load_explicit_nodeid(self):
-        od = canopen.import_od(EDS_PATH, node_id=3)
+        od = canopen.import_od(SAMPLE_EDS, node_id=3)
         self.assertEqual(od.node_id, 3)
 
     def test_variable(self):

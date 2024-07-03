@@ -88,7 +88,8 @@ def import_eds(source, node_id):
         od.bitrate = int(eds.get("DeviceComissioning", "Baudrate")) * 1000
 
         if node_id is None:
-            node_id = int(eds.get("DeviceComissioning", "NodeID"), base=0)
+            if val := eds.get("DeviceComissioning", "NodeID", fallback=None):
+                node_id = int(val, base=0)
         od.node_id = node_id
 
     for section in eds.sections():
