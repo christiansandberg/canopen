@@ -222,11 +222,14 @@ class TestEDS(unittest.TestCase):
         import io
         filelike_object = io.StringIO()
         self.addCleanup(filelike_object.close)
-        self.addCleanup(os.unlink, "filename")
         for dest in "filename", None, filelike_object:
             with self.subTest(dest=dest):
                 with self.assertRaisesRegex(ValueError, "'unknown'"):
                     canopen.export_od(self.od, dest, doc_type="unknown")
+                # Make sure no files are created is a filename is supplied.
+                if isinstance(dest, str):
+                    with self.assertRaises(FileNotFoundError):
+                        os.stat(dest)
 
     def test_export_eds_to_filelike_object(self):
         import io
