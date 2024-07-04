@@ -85,8 +85,8 @@ def import_eds(source, node_id):
                 pass
 
     if eds.has_section("DeviceComissioning"):
-        if val := eds.get("DeviceComissioning", "Baudrate", fallback=None):
-            od.bitrate = int(val) * 1000
+        if val := eds.getint("DeviceComissioning", "Baudrate", fallback=None):
+            od.bitrate = val * 1000
 
         if node_id is None:
             if val := eds.get("DeviceComissioning", "NodeID", fallback=None):
