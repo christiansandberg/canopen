@@ -1,10 +1,7 @@
 import logging
 import time
 import struct
-try:
-    import queue
-except ImportError:
-    import Queue as queue
+import queue
 
 logger = logging.getLogger(__name__)
 
@@ -242,12 +239,12 @@ class LssMaster:
         self.__send_command(message)
 
     def fast_scan(self):
-        """This command sends a series of fastscan message 
+        """This command sends a series of fastscan message
         to find unconfigured slave with lowest number of LSS idenities
 
         :return:
             True if a slave is found.
-            False if there is no candidate. 
+            False if there is no candidate.
             list is the LSS identities [vendor_id, product_code, revision_number, serial_number]
         :rtype: bool, list
         """
@@ -356,7 +353,7 @@ class LssMaster:
             raise LssError("Response message is not for the request")
 
         if error_code != ERROR_NONE:
-            error_msg = "LSS Error: %d" % error_code
+            error_msg = f"LSS Error: {error_code}"
             raise LssError(error_msg)
 
     def __send_command(self, message):
@@ -371,9 +368,7 @@ class LssMaster:
         :rtype: bytes
         """
 
-        message_str = " ".join(["{:02x}".format(x) for x in message])
-        logger.info(
-            "Sending LSS message {}".format(message_str))
+        logger.info("Sending LSS message %s", message.hex(" ").upper())
 
         response = None
         if not self.responses.empty():

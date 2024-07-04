@@ -17,11 +17,11 @@ class TestSDO(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.network1 = canopen.Network()
-        cls.network1.connect("test", bustype="virtual")
+        cls.network1.connect("test", interface="virtual")
         cls.remote_node = cls.network1.add_node(2, EDS_PATH)
 
         cls.network2 = canopen.Network()
-        cls.network2.connect("test", bustype="virtual")
+        cls.network2.connect("test", interface="virtual")
         cls.local_node = cls.network2.create_node(2, EDS_PATH)
 
         cls.remote_node2 = cls.network1.add_node(3, EDS_PATH)
@@ -89,7 +89,7 @@ class TestSDO(unittest.TestCase):
         self.assertEqual(value, b"Another cool device")
 
     def test_slave_send_heartbeat(self):
-        # Setting the heartbeat time should trigger hearbeating
+        # Setting the heartbeat time should trigger heartbeating
         # to start
         self.remote_node.sdo["Producer heartbeat time"].raw = 1000
         state = self.remote_node.nmt.wait_for_heartbeat()
@@ -180,11 +180,11 @@ class TestNMT(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.network1 = canopen.Network()
-        cls.network1.connect("test", bustype="virtual")
+        cls.network1.connect("test", interface="virtual")
         cls.remote_node = cls.network1.add_node(2, EDS_PATH)
 
         cls.network2 = canopen.Network()
-        cls.network2.connect("test", bustype="virtual")
+        cls.network2.connect("test", interface="virtual")
         cls.local_node = cls.network2.create_node(2, EDS_PATH)
 
         cls.remote_node2 = cls.network1.add_node(3, EDS_PATH)
@@ -242,11 +242,11 @@ class TestPDO(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.network1 = canopen.Network()
-        cls.network1.connect("test", bustype="virtual")
+        cls.network1.connect("test", interface="virtual")
         cls.remote_node = cls.network1.add_node(2, EDS_PATH)
 
         cls.network2 = canopen.Network()
-        cls.network2.connect("test", bustype="virtual")
+        cls.network2.connect("test", interface="virtual")
         cls.local_node = cls.network2.create_node(2, EDS_PATH)
 
     @classmethod

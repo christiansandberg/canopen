@@ -32,8 +32,8 @@ class TestNetwork(unittest.TestCase):
         self.assertListEqual(self.network.scanner.nodes, [2])
 
     def test_send(self):
-        bus = can.interface.Bus(bustype="virtual", channel=1)
-        self.network.connect(bustype="virtual", channel=1)
+        bus = can.interface.Bus(interface="virtual", channel=1)
+        self.network.connect(interface="virtual", channel=1)
 
         # Send standard ID
         self.network.send_message(0x123, [1, 2, 3, 4, 5, 6, 7, 8])
@@ -54,14 +54,14 @@ class TestNetwork(unittest.TestCase):
         self.network.disconnect()
 
     def test_send_perodic(self):
-        bus = can.interface.Bus(bustype="virtual", channel=1)
-        self.network.connect(bustype="virtual", channel=1)
+        bus = can.interface.Bus(interface="virtual", channel=1)
+        self.network.connect(interface="virtual", channel=1)
 
         task = self.network.send_periodic(0x123, [1, 2, 3], 0.01)
         time.sleep(0.1)
         # FIXME: This test is a little fragile, as the number of elements
         #        depends on the timing of the machine.
-        print("Queue size: %s" % (bus.queue.qsize(),))
+        print(f"Queue size: {bus.queue.qsize()}")
         self.assertTrue(9 <= bus.queue.qsize() <= 13)
         msg = bus.recv(0)
         self.assertIsNotNone(msg)

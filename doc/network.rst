@@ -25,11 +25,11 @@ See its documentation for specifics on how to configure your specific interface.
 Call the :meth:`~canopen.Network.connect` method to start the communication, optionally providing
 arguments passed to a the :class:`can.BusABC` constructor::
 
-    network.connect(channel='can0', bustype='socketcan')
-    # network.connect(bustype='kvaser', channel=0, bitrate=250000)
-    # network.connect(bustype='pcan', channel='PCAN_USBBUS1', bitrate=250000)
-    # network.connect(bustype='ixxat', channel=0, bitrate=250000)
-    # network.connect(bustype='nican', channel='CAN0', bitrate=250000)
+    network.connect(channel='can0', interface='socketcan')
+    # network.connect(interface='kvaser', channel=0, bitrate=250000)
+    # network.connect(interface='pcan', channel='PCAN_USBBUS1', bitrate=250000)
+    # network.connect(interface='ixxat', channel=0, bitrate=250000)
+    # network.connect(interface='nican', channel='CAN0', bitrate=250000)
 
 Add nodes to the network using the :meth:`~canopen.Network.add_node` method::
 
@@ -51,7 +51,7 @@ To automatically detect which nodes are present on the network, there is the
     # We may need to wait a short while here to allow all nodes to respond
     time.sleep(0.05)
     for node_id in network.scanner.nodes:
-        print("Found node %d!" % node_id)
+        print(f"Found node {node_id}!")
 
 Finally, make sure to disconnect after you are done::
 

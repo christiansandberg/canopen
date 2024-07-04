@@ -30,11 +30,14 @@ Examples
 --------
 
 SDO objects can be accessed using the ``.sdo`` member which works like a Python
-dictionary. Indexes and subindexes can be identified by either name or number.
+dictionary. Indexes can be identified by either name or number.
+There are two ways to idenity subindexes, either by using the index and subindex
+as separate arguments or by using a combined syntax using a dot.
 The code below only creates objects, no messages are sent or received yet::
 
     # Complex records
     command_all = node.sdo['ApplicationCommands']['CommandAll']
+    command_all = node.sdo['ApplicationCommands.CommandAll']
     actual_speed = node.sdo['ApplicationStatus']['ActualSpeed']
     control_mode = node.sdo['ApplicationSetupParameters']['RequestedControlMode']
 
@@ -47,7 +50,7 @@ The code below only creates objects, no messages are sent or received yet::
 To actually read or write the variables, use the ``.raw``, ``.phys``, ``.desc``,
 or ``.bits`` attributes::
 
-    print("The device type is 0x%X" % device_type.raw)
+    print(f"The device type is 0x{device_type.raw:X}")
 
     # Using value descriptions instead of integers (if supported by OD)
     control_mode.desc = 'Speed Mode'
@@ -56,11 +59,11 @@ or ``.bits`` attributes::
     command_all.bits[3] = 1
 
     # Read and write physical values scaled by a factor (if supported by OD)
-    print("The actual speed is %f rpm" % actual_speed.phys)
+    print(f"The actual speed is {actual_speed.phys} rpm")
 
     # Iterate over arrays or records
     for error in error_log.values():
-        print("Error 0x%X was found in the log" % error.raw)
+        print(f"Error 0x{error.raw:X} was found in the log")
 
 It is also possible to read and write to variables that are not in the Object
 Dictionary, but only using raw bytes::

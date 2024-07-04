@@ -1,11 +1,9 @@
 import logging
 from typing import Union
-try:
-    from collections.abc import Mapping
-except ImportError:
-    from collections import Mapping
+from collections.abc import Mapping
 
 from canopen import objectdictionary
+from canopen.utils import pretty_index
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +22,12 @@ class Variable:
         self.index = od.index
         #: Holds a local, overridable copy of the Object Subindex
         self.subindex = od.subindex
+
+    def __repr__(self) -> str:
+        subindex = self.subindex if isinstance(self.od.parent,
+            (objectdictionary.ODRecord, objectdictionary.ODArray)
+        ) else None
+        return f"<{type(self).__qualname__} {self.name!r} at {pretty_index(self.index, subindex)}>"
 
     def get_data(self) -> bytes:
         raise NotImplementedError("Variable is not readable")
@@ -58,11 +62,9 @@ class Variable:
         +---------------------------+----------------------------+
         | REALxx                    | :class:`float`             |
         +---------------------------+----------------------------+
-        | VISIBLE_STRING            | :class:`str` /             |
-        |                           | ``unicode`` (Python 2)     |
+        | VISIBLE_STRING            | :class:`str`               |
         +---------------------------+----------------------------+
-        | UNICODE_STRING            | :class:`str` /             |
-        |                           | ``unicode`` (Python 2)     |
+        | UNICODE_STRING            | :class:`str`               |
         +---------------------------+----------------------------+
         | OCTET_STRING              | :class:`bytes`             |
         +---------------------------+----------------------------+
@@ -73,17 +75,15 @@ class Variable:
         written as :class:`bytes`.
         """
         value = self.od.decode_raw(self.data)
-        text = "Value of %s (0x%X:%d) is %r" % (
-            self.name, self.index,
-            self.subindex, value)
+        text = f"Value of {self.name!r} ({pretty_index(self.index, self.subindex)}) is {value!r}"
         if value in self.od.value_descriptions:
-            text += " (%s)" % self.od.value_descriptions[value]
+            text += f" ({self.od.value_descriptions[value]})"
         logger.debug(text)
         return value
 
     @raw.setter
     def raw(self, value: Union[int, bool, float, str, bytes]):
-        logger.debug("Writing %s (0x%X:%d) = %r",
+        logger.debug("Writing %r (0x%04X:%02X) = %r",
                      self.name, self.index,
                      self.subindex, value)
         self.data = self.od.encode_raw(value)

@@ -2,14 +2,12 @@ import struct
 import logging
 import io
 import time
-try:
-    import queue
-except ImportError:
-    import Queue as queue
+import queue
 
 from canopen.network import CanError
 from canopen import objectdictionary
 from canopen.sdo.base import SdoBase
+from canopen.utils import pretty_index
 from canopen.sdo.constants import *
 from canopen.sdo.exceptions import *
 
@@ -28,6 +26,9 @@ class SdoClient(SdoBase):
     #: Seconds to wait before sending a request, for rate limiting
     PAUSE_BEFORE_SEND = 0.0
 
+    #: Seconds to wait before retrying a request after a send error
+    RETRY_DELAY = 0.1
+
     def __init__(self, rx_cobid, tx_cobid, od):
         """
         :param int rx_cobid:
@@ -45,10 +46,10 @@ class SdoClient(SdoBase):
 
     def send_request(self, request):
         retries_left = self.MAX_RETRIES
+        if self.PAUSE_BEFORE_SEND:
+            time.sleep(self.PAUSE_BEFORE_SEND)
         while True:
             try:
-                if self.PAUSE_BEFORE_SEND:
-                    time.sleep(self.PAUSE_BEFORE_SEND)
                 self.network.send_message(self.rx_cobid, request)
             except CanError as e:
                 # Could be a buffer overflow. Wait some time before trying again
@@ -56,7 +57,8 @@ class SdoClient(SdoBase):
                 if not retries_left:
                     raise
                 logger.info(str(e))
-                time.sleep(0.1)
+                if self.RETRY_DELAY:
+                    time.sleep(self.RETRY_DELAY)
             else:
                 break
 
@@ -85,7 +87,7 @@ class SdoClient(SdoBase):
             except SdoCommunicationError as e:
                 retries_left -= 1
                 if not retries_left:
-                    self.abort(0x5040000) 
+                    self.abort(0x5040000)
                     raise
                 logger.warning(str(e))
 
@@ -96,7 +98,7 @@ class SdoClient(SdoBase):
         # TODO: Is it necessary to include index and subindex?
         struct.pack_into("<L", request, 4, abort_code)
         self.send_request(request)
-        logger.error("Transfer aborted by client with code 0x{:08X}".format(abort_code))
+        logger.error("Transfer aborted by client with code 0x%08X", abort_code)
 
     def upload(self, index: int, subindex: int) -> bytes:
         """May be called to make a read operation without an Object Dictionary.
@@ -243,7 +245,7 @@ class ReadableStream(io.RawIOBase):
         self._toggle = 0
         self.pos = 0
 
-        logger.debug("Reading 0x%X:%d from node %d", index, subindex,
+        logger.debug("Reading 0x%04X:%02X from node %d", index, subindex,
                      sdo_client.rx_cobid - 0x600)
         request = bytearray(8)
         SDO_STRUCT.pack_into(request, 0, REQUEST_UPLOAD, index, subindex)
@@ -252,14 +254,14 @@ class ReadableStream(io.RawIOBase):
         res_data = response[4:8]
 
         if res_command & 0xE0 != RESPONSE_UPLOAD:
-            raise SdoCommunicationError("Unexpected response 0x%02X" % res_command)
+            raise SdoCommunicationError(f"Unexpected response 0x{res_command:02X}")
 
         # Check that the message is for us
         if res_index != index or res_subindex != subindex:
-            raise SdoCommunicationError((
-                "Node returned a value for 0x{:X}:{:d} instead, "
+            raise SdoCommunicationError(
+                f"Node returned a value for {pretty_index(res_index, res_subindex)} instead, "
                 "maybe there is another SDO client communicating "
-                "on the same SDO channel?").format(res_index, res_subindex))
+                "on the same SDO channel?")
 
         self.exp_data = None
         if res_command & EXPEDITED:
@@ -300,7 +302,7 @@ class ReadableStream(io.RawIOBase):
         response = self.sdo_client.request_response(request)
         res_command, = struct.unpack_from("B", response)
         if res_command & 0xE0 != RESPONSE_SEGMENT_UPLOAD:
-            raise SdoCommunicationError("Unexpected response 0x%02X" % res_command)
+            raise SdoCommunicationError(f"Unexpected response 0x{res_command:02X}")
         if res_command & TOGGLE_BIT != self._toggle:
             raise SdoCommunicationError("Toggle bit mismatch")
         length = 7 - ((res_command >> 1) & 0x7)
@@ -361,7 +363,7 @@ class WritableStream(io.RawIOBase):
             res_command, = struct.unpack_from("B", response)
             if res_command != RESPONSE_DOWNLOAD:
                 raise SdoCommunicationError(
-                    "Unexpected response 0x%02X" % res_command)
+                    f"Unexpected response 0x{res_command:02X}")
         else:
             # Expedited download
             # Prepare header (first 4 bytes in CAN message)
@@ -389,7 +391,7 @@ class WritableStream(io.RawIOBase):
             res_command, = struct.unpack_from("B", response)
             if res_command & 0xE0 != RESPONSE_DOWNLOAD:
                 raise SdoCommunicationError(
-                    "Unexpected response 0x%02X" % res_command)
+                    f"Unexpected response 0x{res_command:02X}")
             bytes_sent = len(b)
             self._done = True
         else:
@@ -413,8 +415,8 @@ class WritableStream(io.RawIOBase):
             res_command, = struct.unpack("B", response[0:1])
             if res_command & 0xE0 != RESPONSE_SEGMENT_DOWNLOAD:
                 raise SdoCommunicationError(
-                    "Unexpected response 0x%02X (expected 0x%02X)" %
-                    (res_command, RESPONSE_SEGMENT_DOWNLOAD))
+                    f"Unexpected response 0x{res_command:02X} "
+                    f"(expected 0x{RESPONSE_SEGMENT_DOWNLOAD:02X})")
         # Advance position
         self.pos += bytes_sent
         return bytes_sent
@@ -462,7 +464,7 @@ class BlockUploadStream(io.RawIOBase):
         :param int subindex:
             Object dictionary sub-index to read from.
         :param bool request_crc_support:
-            If crc calculation should be requested when using block transfer            
+            If crc calculation should be requested when using block transfer
         """
         self._done = False
         self.sdo_client = sdo_client
@@ -472,7 +474,7 @@ class BlockUploadStream(io.RawIOBase):
         self._ackseq = 0
         self._error = False
 
-        logger.debug("Reading 0x%X:%d from node %d", index, subindex,
+        logger.debug("Reading 0x%04X:%02X from node %d", index, subindex,
                      sdo_client.rx_cobid - 0x600)
         # Initiate Block Upload
         request = bytearray(8)
@@ -486,14 +488,14 @@ class BlockUploadStream(io.RawIOBase):
         if res_command & 0xE0 != RESPONSE_BLOCK_UPLOAD:
             self._error = True
             self.sdo_client.abort(0x05040001)
-            raise SdoCommunicationError("Unexpected response 0x%02X" % res_command)
+            raise SdoCommunicationError(f"Unexpected response 0x{res_command:02X}")
         # Check that the message is for us
         if res_index != index or res_subindex != subindex:
             self._error = True
-            raise SdoCommunicationError((
-                "Node returned a value for 0x{:X}:{:d} instead, "
+            raise SdoCommunicationError(
+                f"Node returned a value for {pretty_index(res_index, res_subindex)} instead, "
                 "maybe there is another SDO client communicating "
-                "on the same SDO channel?").format(res_index, res_subindex))
+                "on the same SDO channel?")
         if res_command & BLOCK_SIZE_SPECIFIED:
             self.size, = struct.unpack_from("<L", response, 4)
             logger.debug("Size is %d bytes", self.size)
@@ -580,7 +582,7 @@ class BlockUploadStream(io.RawIOBase):
         if res_command & 0xE0 != RESPONSE_BLOCK_UPLOAD:
             self._error = True
             self.sdo_client.abort(0x05040001)
-            raise SdoCommunicationError("Unexpected response 0x%02X" % res_command)
+            raise SdoCommunicationError(f"Unexpected response 0x{res_command:02X}")
         if res_command & 0x3 != END_BLOCK_TRANSFER:
             self._error = True
             self.sdo_client.abort(0x05040001)
@@ -627,7 +629,7 @@ class BlockDownloadStream(io.RawIOBase):
         :param int size:
             Size of data in number of bytes if known in advance.
         :param bool request_crc_support:
-            If crc calculation should be requested when using block transfer            
+            If crc calculation should be requested when using block transfer
         """
         self.sdo_client = sdo_client
         self.size = size
@@ -642,7 +644,7 @@ class BlockDownloadStream(io.RawIOBase):
         if request_crc_support:
             command |= CRC_SUPPORTED
         request = bytearray(8)
-        logger.info("Initiating block download for 0x%X:%d", index, subindex)
+        logger.info("Initiating block download for 0x%04X:%02X", index, subindex)
         if size is not None:
             logger.debug("Expected size of data is %d bytes", size)
             command |= BLOCK_SIZE_SPECIFIED
@@ -655,14 +657,14 @@ class BlockDownloadStream(io.RawIOBase):
         if res_command & 0xE0 != RESPONSE_BLOCK_DOWNLOAD:
             self.sdo_client.abort(0x05040001)
             raise SdoCommunicationError(
-                "Unexpected response 0x%02X" % res_command)
+                f"Unexpected response 0x{res_command:02X}")
         # Check that the message is for us
         if res_index != index or res_subindex != subindex:
             self.sdo_client.abort()
-            raise SdoCommunicationError((
-                "Node returned a value for 0x{:X}:{:d} instead, "
+            raise SdoCommunicationError(
+                f"Node returned a value for {pretty_index(res_index, res_subindex)} instead, "
                 "maybe there is another SDO client communicating "
-                "on the same SDO channel?").format(res_index, res_subindex))
+                "on the same SDO channel?")
         self._blksize, = struct.unpack_from("B", response, 4)
         logger.debug("Server requested a block size of %d", self._blksize)
         self.crc_supported = bool(res_command & CRC_SUPPORTED)
@@ -738,7 +740,7 @@ class BlockDownloadStream(io.RawIOBase):
         if res_command & 0xE0 != RESPONSE_BLOCK_DOWNLOAD:
             self.sdo_client.abort(0x05040001)
             raise SdoCommunicationError(
-                "Unexpected response 0x%02X" % res_command)
+                f"Unexpected response 0x{res_command:02X}")
         if res_command & 0x3 != BLOCK_TRANSFER_RESPONSE:
             self.sdo_client.abort(0x05040001)
             raise SdoCommunicationError("Server did not respond with a "
@@ -754,11 +756,11 @@ class BlockDownloadStream(io.RawIOBase):
         logger.debug("Server requested a block size of %d", blksize)
         self._blksize = blksize
         self._seqno = 0
-        
+
     def _retransmit(self, ackseq, blksize):
         """Retransmit the failed block"""
-        logger.info(("%d of %d sequences were received. "
-                 "Will start retransmission") % (ackseq, self._blksize))
+        logger.info("%d of %d sequences were received. "
+                    "Will start retransmission", ackseq, self._blksize)
         # Sub blocks betwen ackseq and end of corrupted block need to be resent
         # Get the part of the block to resend
         block = self._current_block[ackseq:]

@@ -6,7 +6,7 @@ class TestSync(unittest.TestCase):
 
     def test_sync_producer(self):
         network = canopen.Network()
-        network.connect(bustype="virtual", receive_own_messages=True)
+        network.connect(interface="virtual", receive_own_messages=True)
         producer = canopen.sync.SyncProducer(network)
         producer.transmit()
         msg = network.bus.recv(1)
@@ -16,7 +16,7 @@ class TestSync(unittest.TestCase):
 
     def test_sync_producer_counter(self):
         network = canopen.Network()
-        network.connect(bustype="virtual", receive_own_messages=True)
+        network.connect(interface="virtual", receive_own_messages=True)
         producer = canopen.sync.SyncProducer(network)
         producer.transmit(2)
         msg = network.bus.recv(1)

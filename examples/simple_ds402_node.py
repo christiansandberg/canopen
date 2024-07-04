@@ -11,7 +11,7 @@ try:
     network = canopen.Network()
 
     # Connect to the CAN bus
-    network.connect(bustype='kvaser', channel=0, bitrate=1000000)
+    network.connect(interface='kvaser', channel=0, bitrate=1000000)
 
     network.check()
 
@@ -26,17 +26,17 @@ try:
     #node.nmt.state = 'RESET'
     node.nmt.wait_for_bootup(15)
 
-    print('node state 1) = {0}'.format(node.nmt.state))
+    print(f'node state 1) = {node.nmt.state}')
 
     # Iterate over arrays or records
     error_log = node.sdo[0x1003]
     for error in error_log.values():
-        print("Error {0} was found in the log".format(error.raw))
+        print(f"Error {error.raw} was found in the log")
 
     for node_id in network:
         print(network[node_id])
 
-    print('node state 2) = {0}'.format(node.nmt.state))
+    print(f'node state 2) = {node.nmt.state}')
 
     # Read a variable using SDO
 
@@ -51,7 +51,7 @@ try:
 
     node.load_configuration()
 
-    print('node state 3) = {0}'.format(node.nmt.state))
+    print(f'node state 3) = {node.nmt.state}')
 
     node.setup_402_state_machine()
 
@@ -63,7 +63,7 @@ try:
 
     node.state = 'SWITCH ON DISABLED'
 
-    print('node state 4) = {0}'.format(node.nmt.state))
+    print(f'node state 4) = {node.nmt.state}')
 
     # Read PDO configuration from node
     node.tpdo.read()
@@ -115,7 +115,7 @@ try:
             raise Exception('Timeout when trying to change state')
         time.sleep(0.001)
 
-    print('Node Status {0}'.format(node.powerstate_402.state))
+    print(f'Node Status {node.powerstate_402.state}')
 
     # -----------------------------------------------------------------------------------------
     node.nmt.start_node_guarding(0.01)
@@ -132,8 +132,8 @@ try:
         # Read the state of the Statusword
         statusword = node.sdo[0x6041].raw
 
-        print('statusword: {0}'.format(statusword))
-        print('VEL: {0}'.format(speed))
+        print(f'statusword: {statusword}')
+        print(f'VEL: {speed}')
 
         time.sleep(0.01)
 
