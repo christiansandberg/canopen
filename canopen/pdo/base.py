@@ -1,5 +1,4 @@
 from __future__ import annotations
-import functools
 import threading
 import math
 from typing import Callable, Dict, Iterator, List, Optional, Union, TYPE_CHECKING
@@ -10,27 +9,12 @@ import binascii
 from canopen.sdo import SdoAbortedError
 from canopen import objectdictionary
 from canopen import variable
-try:
-    import canmatrix
-except ImportError:
-    canmatrix = None
 
 if TYPE_CHECKING:
     from canopen.network import Network
     from canopen import LocalNode, RemoteNode
     from canopen.pdo import RPDO, TPDO
     from canopen.sdo import SdoRecord
-
-
-def _disable_if(condition):
-    """Conditionally disable given function/method."""
-    def deco(func):
-        @functools.wraps(func)
-        def wrapper(*args, **kwds):
-            if not condition:
-                return func(*args, **kwds)
-        return wrapper
-    return deco
 
 PDO_NOT_VALID = 1 << 31
 RTR_NOT_ALLOWED = 1 << 30
@@ -91,7 +75,6 @@ class PdoBase(Mapping):
         for pdo_map in self.map.values():
             pdo_map.subscribe()
 
-    @_disable_if(canmatrix is None)
     def export(self, filename):
         """Export current configuration to a database file.
 
@@ -103,6 +86,8 @@ class PdoBase(Mapping):
 
         :param str filename:
             Filename to save to (e.g. DBC, DBF, ARXML, KCD etc)
+        :raises ImportError:
+            When the ``db_feature`` is not installed.
 
         :return: The CanMatrix object created
         :rtype: canmatrix.canmatrix.CanMatrix
