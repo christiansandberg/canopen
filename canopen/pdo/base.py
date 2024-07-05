@@ -87,7 +87,7 @@ class PdoBase(Mapping):
         :param str filename:
             Filename to save to (e.g. DBC, DBF, ARXML, KCD etc)
         :raises ImportError:
-            When the ``db_export`` is not installed.
+            When the ``db_export`` feature is not installed.
 
         :return: The CanMatrix object created
         :rtype: canmatrix.canmatrix.CanMatrix
