@@ -89,6 +89,21 @@ class TestEDS(unittest.TestCase):
         od = canopen.import_od(SAMPLE_EDS, node_id=3)
         self.assertEqual(od.node_id, 3)
 
+    def test_load_baudrate(self):
+        od = canopen.import_od(SAMPLE_EDS)
+        self.assertEqual(od.bitrate, 500_000)
+
+    def test_load_baudrate_fallback(self):
+        import io
+
+        # Remove the Baudrate option.
+        with open(SAMPLE_EDS) as f:
+            lines = [L for L in f.readlines() if not L.startswith("Baudrate=")]
+        with io.StringIO("".join(lines)) as buf:
+            buf.name = "mock.eds"
+            od = canopen.import_od(buf)
+            self.assertIsNone(od.bitrate)
+
     def test_variable(self):
         var = self.od['Producer heartbeat time']
         self.assertIsInstance(var, canopen.objectdictionary.ODVariable)

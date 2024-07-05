@@ -343,11 +343,20 @@ class PdoMap:
         self.callbacks.append(callback)
 
     def read(self, from_od=False) -> None:
-        """Read PDO configuration for this map using SDO."""
+        """Read PDO configuration for this map.
+        
+        :param from_od:
+            Read using SDO if False, read from object dictionary if True.
+            When reading from object dictionary, if DCF populated a value, the
+            DCF value will be used, otherwise the EDS default will be used instead.
+        """
 
         def _raw_from(param):
             if from_od:
-                return param.od.default
+                if param.od.value is not None:
+                    return param.od.value
+                else:
+                    return param.od.default
             return param.raw
 
         cob_id = _raw_from(self.com_record[1])
