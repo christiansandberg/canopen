@@ -6,7 +6,7 @@ The aim of the project is to support the most common parts of the CiA 301
 standard in a simple Pythonic interface. It is mainly targeted for testing and
 automation tasks rather than a standard compliant master implementation.
 
-The library supports Python 3.8+.
+The library supports Python 3.8 or newer.
 
 
 Features
@@ -36,11 +36,11 @@ Incomplete support for creating slave nodes also exists.
 Installation
 ------------
 
-Install from PyPI_ using pip::
+Install from PyPI_ using :program:`pip`::
 
     $ pip install canopen
 
-Install from latest master on GitHub::
+Install from latest ``master`` on GitHub::
 
     $ pip install https://github.com/christiansandberg/canopen/archive/master.zip
 
@@ -56,6 +56,10 @@ Unit tests can be run using the pytest_ framework::
     $ pip install pytest
     $ pytest -v
 
+You can also use :mod:`unittest` standard library module::
+
+    $ python3 -m unittest discover test -v
+
 Documentation
 -------------
 
@@ -65,7 +69,8 @@ http://canopen.readthedocs.io/en/latest/
 
 It can also be generated from a local clone using Sphinx_::
 
-    $ python setup.py build_sphinx
+    $ pip install -r doc/requirements.txt
+    $ make -C doc html
 
 
 Hardware support
