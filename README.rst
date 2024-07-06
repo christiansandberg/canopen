@@ -38,22 +38,22 @@ Installation
 
 Install from PyPI_ using :program:`pip`::
 
-    $ python3 -m pip install canopen
+    $ pip install canopen
 
 Install from latest ``master`` on GitHub::
 
-    $ python3 -m pip install https://github.com/christiansandberg/canopen/archive/master.zip
+    $ pip install https://github.com/christiansandberg/canopen/archive/master.zip
 
 If you want to be able to change the code while using it, clone it then install
 it in `develop mode`_::
 
     $ git clone https://github.com/christiansandberg/canopen.git
     $ cd canopen
-    $ python3 -m pip install -e .
+    $ pip install -e .
 
 Unit tests can be run using the pytest_ framework::
 
-    $ python3 -m pip install pytest
+    $ pip install pytest
     $ pytest -v
 
 You can also use :mod:`unittest` standard library module::
@@ -69,7 +69,7 @@ http://canopen.readthedocs.io/en/latest/
 
 It can also be generated from a local clone using Sphinx_::
 
-    $ python3 -m pip install -r doc/requirements.txt
+    $ pip install -r doc/requirements.txt
     $ make -C doc html
 
 
