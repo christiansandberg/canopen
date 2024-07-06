@@ -79,21 +79,23 @@ class PdoBase(Mapping):
         """Export current configuration to a database file.
 
         .. note::
-           This API depends on the :mod:`!canmatrix` optional dependency,
-           which can be installed by requesting the ``db_export`` feature::
+           This API requires the ``db_export`` feature to be installed::
 
               python3 -m pip install 'canopen[db_export]'
 
         :param str filename:
             Filename to save to (e.g. DBC, DBF, ARXML, KCD etc)
-        :raises ImportError:
-            When the ``db_export`` feature is not installed.
+        :raises NotImplementedError:
+            When the ``canopen[db_export]`` feature is not installed.
 
         :return: The CanMatrix object created
         :rtype: canmatrix.canmatrix.CanMatrix
         """
-        from canmatrix import canmatrix
-        from canmatrix import formats
+        try:
+            from canmatrix import canmatrix
+            from canmatrix import formats
+        except ImportError:
+            raise NotImplementedError("This feature requires the 'canopen[db_export]' feature")
 
         db = canmatrix.CanMatrix()
         for pdo_map in self.map.values():
