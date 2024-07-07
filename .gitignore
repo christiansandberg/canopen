@@ -27,10 +27,6 @@ var/
 *.egg
 build-deb/
 _version.py
-venv*/
-
-# macOS caches
-.DS_Store
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -52,7 +48,6 @@ nosetests.xml
 coverage.xml
 *,cover
 .hypothesis/
-default.profraw
 
 # Translations
 *.mo
@@ -78,6 +73,3 @@ target/
 
 *.kdev4
 *.kate-swp
-
-# Various temporary files.
-**/*.swp
