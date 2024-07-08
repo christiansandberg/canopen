@@ -1,14 +1,13 @@
-import os.path
 import unittest
-import canopen
 
-EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
+import canopen
+from .util import SAMPLE_EDS
 
 
 class TestPDO(unittest.TestCase):
 
     def test_bit_mapping(self):
-        node = canopen.Node(1, EDS_PATH)
+        node = canopen.Node(1, SAMPLE_EDS)
         map = node.pdo.tx[1]
         map.add_variable('INTEGER16 value')  # 0x2001
         map.add_variable('UNSIGNED8 value', length=4)  # 0x2002
@@ -56,7 +55,7 @@ class TestPDO(unittest.TestCase):
         self.assertEqual(node.pdo[0x1600][0x2002].raw, 0xf)
 
     def test_save_pdo(self):
-        node = canopen.Node(1, EDS_PATH)
+        node = canopen.Node(1, SAMPLE_EDS)
         node.tpdo.save()
         node.rpdo.save()
 

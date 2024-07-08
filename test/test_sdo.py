@@ -1,12 +1,10 @@
-import os
 import unittest
-# import binascii
-import canopen
-from canopen.objectdictionary import ODVariable
-import canopen.objectdictionary.datatypes as dt
 
-EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
-DATAEDS_PATH = os.path.join(os.path.dirname(__file__), 'datatypes.eds')
+import canopen
+import canopen.objectdictionary.datatypes as dt
+from canopen.objectdictionary import ODVariable
+from .util import SAMPLE_EDS, DATATYPES_EDS
+
 
 TX = 1
 RX = 2
@@ -26,17 +24,15 @@ class TestSDO(unittest.TestCase):
         """
         next_data = self.data.pop(0)
         self.assertEqual(next_data[0], TX, "No transmission was expected")
-        # print(f"> {binascii.hexlify(data)} ({binascii.hexlify(next_data[1])})")
         self.assertSequenceEqual(data, next_data[1])
         self.assertEqual(can_id, 0x602)
         while self.data and self.data[0][0] == RX:
-            # print(f"< {binascii.hexlify(self.data[0][1])}")
             self.network.notify(0x582, self.data.pop(0)[1], 0.0)
 
     def setUp(self):
         network = canopen.Network()
         network.send_message = self._send_message
-        node = network.add_node(2, EDS_PATH)
+        node = network.add_node(2, SAMPLE_EDS)
         node.sdo.RESPONSE_TIMEOUT = 0.01
         self.network = network
 
@@ -178,17 +174,15 @@ class TestSDOClientDatatypes(unittest.TestCase):
         """
         next_data = self.data.pop(0)
         self.assertEqual(next_data[0], TX, "No transmission was expected")
-        # print("> %s (%s)" % (binascii.hexlify(data), binascii.hexlify(next_data[1])))
         self.assertSequenceEqual(data, next_data[1])
         self.assertEqual(can_id, 0x602)
         while self.data and self.data[0][0] == RX:
-            # print("< %s" % binascii.hexlify(self.data[0][1]))
             self.network.notify(0x582, self.data.pop(0)[1], 0.0)
 
     def setUp(self):
         network = canopen.Network()
         network.send_message = self._send_message
-        node = network.add_node(2, DATAEDS_PATH)
+        node = network.add_node(2, DATATYPES_EDS)
         node.sdo.RESPONSE_TIMEOUT = 0.01
         self.node = node
         self.network = network
