@@ -2,7 +2,7 @@ import time
 import unittest
 
 import canopen
-from .util import EDS_PATH
+from .util import SAMPLE_EDS
 
 
 class TestSDO(unittest.TestCase):
@@ -14,15 +14,15 @@ class TestSDO(unittest.TestCase):
     def setUpClass(cls):
         cls.network1 = canopen.Network()
         cls.network1.connect("test", interface="virtual")
-        cls.remote_node = cls.network1.add_node(2, EDS_PATH)
+        cls.remote_node = cls.network1.add_node(2, SAMPLE_EDS)
 
         cls.network2 = canopen.Network()
         cls.network2.connect("test", interface="virtual")
-        cls.local_node = cls.network2.create_node(2, EDS_PATH)
+        cls.local_node = cls.network2.create_node(2, SAMPLE_EDS)
 
-        cls.remote_node2 = cls.network1.add_node(3, EDS_PATH)
+        cls.remote_node2 = cls.network1.add_node(3, SAMPLE_EDS)
 
-        cls.local_node2 = cls.network2.create_node(3, EDS_PATH)
+        cls.local_node2 = cls.network2.create_node(3, SAMPLE_EDS)
 
     @classmethod
     def tearDownClass(cls):
@@ -177,11 +177,11 @@ class TestPDO(unittest.TestCase):
     def setUpClass(cls):
         cls.network1 = canopen.Network()
         cls.network1.connect("test", interface="virtual")
-        cls.remote_node = cls.network1.add_node(2, EDS_PATH)
+        cls.remote_node = cls.network1.add_node(2, SAMPLE_EDS)
 
         cls.network2 = canopen.Network()
         cls.network2.connect("test", interface="virtual")
-        cls.local_node = cls.network2.create_node(2, EDS_PATH)
+        cls.local_node = cls.network2.create_node(2, SAMPLE_EDS)
 
     @classmethod
     def tearDownClass(cls):

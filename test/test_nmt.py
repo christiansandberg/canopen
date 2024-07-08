@@ -2,20 +2,20 @@ import time
 import unittest
 
 import canopen
-from .util import EDS_PATH
+from .util import SAMPLE_EDS
 
 
 class TestNmtSlave(unittest.TestCase):
     def setUp(self):
         self.network1 = canopen.Network()
         self.network1.connect("test", interface="virtual")
-        self.remote_node = self.network1.add_node(2, EDS_PATH)
+        self.remote_node = self.network1.add_node(2, SAMPLE_EDS)
 
         self.network2 = canopen.Network()
         self.network2.connect("test", interface="virtual")
-        self.local_node = self.network2.create_node(2, EDS_PATH)
-        self.remote_node2 = self.network1.add_node(3, EDS_PATH)
-        self.local_node2 = self.network2.create_node(3, EDS_PATH)
+        self.local_node = self.network2.create_node(2, SAMPLE_EDS)
+        self.remote_node2 = self.network1.add_node(3, SAMPLE_EDS)
+        self.local_node2 = self.network2.create_node(3, SAMPLE_EDS)
 
     def tearDown(self):
         self.network1.disconnect()
