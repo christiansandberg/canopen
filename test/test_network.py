@@ -1,4 +1,3 @@
-import time
 import unittest
 
 import canopen
@@ -10,7 +9,8 @@ class TestNetwork(unittest.TestCase):
 
     def setUp(self):
         network = canopen.Network()
-        network.add_node(2, SAMPLE_EDS)
+        with self.assertLogs():
+            network.add_node(2, SAMPLE_EDS)
         network.add_node(3, network[2].object_dictionary)
         self.network = network
 
@@ -31,7 +31,10 @@ class TestNetwork(unittest.TestCase):
 
     def test_send(self):
         bus = can.interface.Bus(interface="virtual", channel=1)
+        self.addCleanup(bus.shutdown)
+
         self.network.connect(interface="virtual", channel=1)
+        self.addCleanup(self.network.disconnect)
 
         # Send standard ID
         self.network.send_message(0x123, [1, 2, 3, 4, 5, 6, 7, 8])
@@ -48,33 +51,42 @@ class TestNetwork(unittest.TestCase):
         self.assertEqual(msg.arbitration_id, 0x12345)
         self.assertTrue(msg.is_extended_id)
 
-        bus.shutdown()
-        self.network.disconnect()
+    def test_send_periodic(self):
+        from threading import Event
 
-    def test_send_perodic(self):
-        bus = can.interface.Bus(interface="virtual", channel=1)
-        self.network.connect(interface="virtual", channel=1)
+        DATA1 = bytes([1, 2, 3])
+        DATA2 = bytes([4, 5, 6])
+        COB_ID = 0x123
+        TIMEOUT = 0.1
+        self.network.connect(
+            interface="virtual",
+            channel=1,
+            receive_own_messages=True
+        )
+        self.addCleanup(self.network.disconnect)
 
-        task = self.network.send_periodic(0x123, [1, 2, 3], 0.01)
-        time.sleep(0.1)
-        # FIXME: This test is a little fragile, as the number of elements
-        #        depends on the timing of the machine.
-        print(f"Queue size: {bus.queue.qsize()}")
-        self.assertTrue(9 <= bus.queue.qsize() <= 13)
-        msg = bus.recv(0)
-        self.assertIsNotNone(msg)
-        self.assertSequenceEqual(msg.data, [1, 2, 3])
-        # Update data
-        task.update([4, 5, 6])
-        time.sleep(0.02)
-        while msg is not None and msg.data == b'\x01\x02\x03':
-            msg = bus.recv(0)
-        self.assertIsNotNone(msg)
-        self.assertSequenceEqual(msg.data, [4, 5, 6])
-        task.stop()
+        acc = []
+        event = Event()
 
-        bus.shutdown()
-        self.network.disconnect()
+        def hook(id_, data, ts):
+            acc.append(data)
+            event.set()
+
+        self.network.subscribe(COB_ID, hook)
+        self.addCleanup(self.network.unsubscribe, COB_ID)
+
+        task = self.network.send_periodic(COB_ID, DATA1, TIMEOUT/10)
+        self.addCleanup(task.stop)
+
+        event.wait(TIMEOUT)
+        self.assertEqual(acc[0], DATA1)
+
+        # Update task data.
+        task.update(DATA2)
+        event.clear()
+        event.wait(TIMEOUT)
+
+        self.assertEqual(acc[-1], DATA2)
 
 
 class TestScanner(unittest.TestCase):
