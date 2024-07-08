@@ -2,7 +2,44 @@ import time
 import unittest
 
 import canopen
+from canopen.nmt import NMT_STATES, NMT_COMMANDS
 from .util import SAMPLE_EDS
+
+
+class TestNmtBase(unittest.TestCase):
+    def setUp(self):
+        node_id = 2
+        self.node_id = node_id
+        self.nmt = canopen.nmt.NmtBase(node_id)
+
+    def test_send_command(self):
+        dataset = (
+            "OPERATIONAL",
+            "PRE-OPERATIONAL",
+            "SLEEP",
+            "STANDBY",
+            "STOPPED",
+        )
+        for cmd in dataset:
+            with self.subTest(cmd=cmd):
+                code = NMT_COMMANDS[cmd]
+                self.nmt.send_command(code)
+                self.assertNotEqual(self.nmt.state, "INITIALISING")
+
+    def test_state_getset(self):
+        for state in NMT_STATES.values():
+            with self.subTest(state=state):
+                self.nmt.state = state
+                self.assertEqual(self.nmt.state, state)
+
+    def test_state_set_invalid(self):
+        with self.assertRaisesRegex(ValueError, "INVALID"):
+            self.nmt.state = "INVALID"
+
+    def test_state_get_invalid(self):
+        # This is a known bug; it will be changed in gh-500.
+        self.nmt._state = 255
+        self.assertEqual(self.nmt.state, 255)
 
 
 class TestNmtSlave(unittest.TestCase):
