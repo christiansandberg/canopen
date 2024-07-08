@@ -1,12 +1,10 @@
 import os
 import unittest
+
 import canopen
 from canopen.objectdictionary.eds import _signed_int_from_hex
 from canopen.utils import pretty_index
-
-
-SAMPLE_EDS = os.path.join(os.path.dirname(__file__), 'sample.eds')
-DATATYPES_EDS = os.path.join(os.path.dirname(__file__), 'datatypes.eds')
+from .util import SAMPLE_EDS, DATATYPES_EDS
 
 
 class TestEDS(unittest.TestCase):

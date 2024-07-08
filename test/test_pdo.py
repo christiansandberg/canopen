@@ -1,8 +1,7 @@
-import os.path
 import unittest
-import canopen
 
-EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
+import canopen
+from .util import EDS_PATH
 
 
 class TestPDO(unittest.TestCase):
