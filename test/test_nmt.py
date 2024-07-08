@@ -72,8 +72,7 @@ class TestNmtMaster(unittest.TestCase):
         # Skip the special INITIALISING case.
         for code in [st for st in NMT_STATES if st != 0]:
             with self.subTest(code=code):
-                data = bytes([code])
-                task = self.net.send_periodic(self.COB_ID, data, self.PERIOD)
+                task = self.net.send_periodic(self.COB_ID, [code], self.PERIOD)
                 self.addCleanup(task.stop)
                 actual = self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
                 task.stop()
@@ -81,14 +80,14 @@ class TestNmtMaster(unittest.TestCase):
                 self.assertEqual(actual, expected)
 
     def test_nmt_master_on_heartbeat_initialising(self):
-        task = self.net.send_periodic(self.COB_ID, b"\x00", self.PERIOD)
+        task = self.net.send_periodic(self.COB_ID, [0], self.PERIOD)
         self.addCleanup(task.stop)
         self.node.nmt.wait_for_bootup(self.TIMEOUT)
         state = self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
         self.assertEqual(state, "PRE-OPERATIONAL")
 
     def test_nmt_master_on_heartbeat_unknown_state(self):
-        task = self.net.send_periodic(self.COB_ID, b"\xcb", self.PERIOD)
+        task = self.net.send_periodic(self.COB_ID, [0xcb], self.PERIOD)
         self.addCleanup(task.stop)
         state = self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
         # Expect the high bit to be masked out, and the resulting integer
