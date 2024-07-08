@@ -1,18 +1,16 @@
 import time
-import os
 import unittest
+
 import canopen
-
 import can
-
-EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
+from .util import SAMPLE_EDS
 
 
 class TestNetwork(unittest.TestCase):
 
     def setUp(self):
         network = canopen.Network()
-        network.add_node(2, EDS_PATH)
+        network.add_node(2, SAMPLE_EDS)
         network.add_node(3, network[2].object_dictionary)
         self.network = network
 
