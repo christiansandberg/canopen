@@ -1,13 +1,12 @@
-import os.path
 import unittest
-import canopen
 
-EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
+import canopen
+from .util import SAMPLE_EDS
 
 
 class TestPDO(unittest.TestCase):
     def setUp(self):
-        node = canopen.Node(1, EDS_PATH)
+        node = canopen.Node(1, SAMPLE_EDS)
         pdo = node.pdo.tx[1]
         pdo.add_variable('INTEGER16 value')  # 0x2001
         pdo.add_variable('UNSIGNED8 value', length=4)  # 0x2002
