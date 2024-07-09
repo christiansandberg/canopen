@@ -86,10 +86,10 @@ class NmtBase:
         - 'RESET'
         - 'RESET COMMUNICATION'
         """
-        if self._state in NMT_STATES:
+        try:
             return NMT_STATES[self._state]
-        else:
-            return self._state
+        except KeyError:
+            return f"UNKNOWN STATE '{self._state}'"
 
     @state.setter
     def state(self, new_state: str):

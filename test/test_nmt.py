@@ -88,7 +88,6 @@ class TestNmtMaster(unittest.TestCase):
         state = self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
         self.assertEqual(state, "PRE-OPERATIONAL")
 
-    @unittest.expectedFailure
     def test_nmt_master_on_heartbeat_unknown_state(self):
         task = self.net.send_periodic(self.COB_ID, [0xcb], self.PERIOD)
         self.addCleanup(task.stop)
