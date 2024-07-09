@@ -1,4 +1,5 @@
 import unittest
+from threading import Event
 
 import canopen
 import can
@@ -52,12 +53,10 @@ class TestNetwork(unittest.TestCase):
         self.assertTrue(msg.is_extended_id)
 
     def test_send_periodic(self):
-        from threading import Event
-
         DATA1 = bytes([1, 2, 3])
         DATA2 = bytes([4, 5, 6])
         COB_ID = 0x123
-        TIMEOUT = 0.1
+        PERIOD = 0.1
         self.network.connect(
             interface="virtual",
             channel=1,
@@ -68,25 +67,28 @@ class TestNetwork(unittest.TestCase):
         acc = []
         event = Event()
 
-        def hook(id_, data, ts):
-            acc.append(data)
+        def hook(_, data, ts):
+            acc.append((data, ts))
             event.set()
 
         self.network.subscribe(COB_ID, hook)
         self.addCleanup(self.network.unsubscribe, COB_ID)
 
-        task = self.network.send_periodic(COB_ID, DATA1, TIMEOUT/10)
+        task = self.network.send_periodic(COB_ID, DATA1, PERIOD)
         self.addCleanup(task.stop)
 
-        event.wait(TIMEOUT)
-        self.assertEqual(acc[0], DATA1)
+        event.wait(PERIOD*2)
 
         # Update task data.
         task.update(DATA2)
         event.clear()
-        event.wait(TIMEOUT)
+        event.wait(PERIOD*2)
+        task.stop()
 
-        self.assertEqual(acc[-1], DATA2)
+        data = [v[0] for v in acc]
+        self.assertEqual(data, [DATA1, DATA2])
+        ts = [v[1] for v in acc]
+        self.assertAlmostEqual(ts[1]-ts[0], PERIOD, places=1)
 
 
 class TestScanner(unittest.TestCase):
