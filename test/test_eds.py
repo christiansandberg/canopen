@@ -4,7 +4,7 @@ import unittest
 import canopen
 from canopen.objectdictionary.eds import _signed_int_from_hex
 from canopen.utils import pretty_index
-from .util import SAMPLE_EDS, DATATYPES_EDS
+from .util import SAMPLE_EDS, DATATYPES_EDS, tmp_file
 
 
 class TestEDS(unittest.TestCase):
@@ -223,10 +223,9 @@ class TestEDS(unittest.TestCase):
 """.strip())
 
     def test_export_eds_to_file(self):
-        import tempfile
         for suffix in ".eds", ".dcf":
             for implicit in True, False:
-                with tempfile.NamedTemporaryFile(suffix=suffix) as tmp:
+                with tmp_file(suffix=suffix) as tmp:
                     dest = tmp.name
                     doctype = None if implicit else suffix[1:]
                     with self.subTest(dest=dest, doctype=doctype):
@@ -235,9 +234,8 @@ class TestEDS(unittest.TestCase):
 
     def test_export_eds_to_file_unknown_extension(self):
         import io
-        import tempfile
         for suffix in ".txt", "":
-            with tempfile.NamedTemporaryFile(suffix=suffix) as tmp:
+            with tmp_file(suffix=suffix) as tmp:
                 dest = tmp.name
                 with self.subTest(dest=dest, doctype=None):
                     canopen.export_od(self.od, dest)
