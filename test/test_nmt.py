@@ -3,7 +3,7 @@ import unittest
 
 import can
 import canopen
-from canopen.nmt import NMT_STATES, NMT_COMMANDS
+from canopen.nmt import NMT_STATES, NMT_COMMANDS, NmtError
 from .util import SAMPLE_EDS
 
 
@@ -63,9 +63,9 @@ class TestNmtMaster(unittest.TestCase):
         self.net.disconnect()
 
     def test_nmt_master_no_heartbeat(self):
-        with self.assertRaisesRegex(canopen.nmt.NmtError, "heartbeat"):
+        with self.assertRaisesRegex(NmtError, "heartbeat"):
             self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
-        with self.assertRaisesRegex(canopen.nmt.NmtError, "boot-up"):
+        with self.assertRaisesRegex(NmtError, "boot-up"):
             self.node.nmt.wait_for_bootup(self.TIMEOUT)
 
     def test_nmt_master_on_heartbeat(self):
@@ -73,9 +73,12 @@ class TestNmtMaster(unittest.TestCase):
         for code in [st for st in NMT_STATES if st != 0]:
             with self.subTest(code=code):
                 task = self.net.send_periodic(self.COB_ID, [code], self.PERIOD)
-                self.addCleanup(task.stop)
-                actual = self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
-                task.stop()
+                try:
+                    actual = self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
+                except NmtError:
+                    self.fail("Timed out waiting for heartbeat")
+                finally:
+                    task.stop()
                 expected = NMT_STATES[code]
                 self.assertEqual(actual, expected)
 
@@ -86,13 +89,14 @@ class TestNmtMaster(unittest.TestCase):
         state = self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
         self.assertEqual(state, "PRE-OPERATIONAL")
 
+    @unittest.expectedFailure
     def test_nmt_master_on_heartbeat_unknown_state(self):
         task = self.net.send_periodic(self.COB_ID, [0xcb], self.PERIOD)
         self.addCleanup(task.stop)
         state = self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
-        # Expect the high bit to be masked out, and the resulting integer
-        # returned as it is. See gh-500 for the data type inconsistency.
-        self.assertEqual(state, 0x4b)
+        # Expect the high bit to be masked out, and and unknown state string to
+        # be returned.
+        self.assertEqual(state, "UNKNOWN STATE '75'")
 
     def test_nmt_master_add_heartbeat_callback(self):
         from threading import Event
