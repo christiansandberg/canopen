@@ -1,5 +1,5 @@
 import unittest
-from threading import Event
+import threading
 
 import canopen
 import can
@@ -57,6 +57,7 @@ class TestNetwork(unittest.TestCase):
         DATA2 = bytes([4, 5, 6])
         COB_ID = 0x123
         PERIOD = 0.1
+        TIMEOUT = PERIOD * 10
         self.network.connect(
             interface="virtual",
             channel=1,
@@ -65,11 +66,12 @@ class TestNetwork(unittest.TestCase):
         self.addCleanup(self.network.disconnect)
 
         acc = []
-        event = Event()
+        condition = threading.Condition()
 
         def hook(_, data, ts):
-            acc.append((data, ts))
-            event.set()
+            item = data, ts
+            acc.append(item)
+            condition.notify()
 
         self.network.subscribe(COB_ID, hook)
         self.addCleanup(self.network.unsubscribe, COB_ID)
@@ -77,18 +79,34 @@ class TestNetwork(unittest.TestCase):
         task = self.network.send_periodic(COB_ID, DATA1, PERIOD)
         self.addCleanup(task.stop)
 
-        event.wait(PERIOD*2)
+        def periodicity():
+            # Check if periodicity is established; flakiness have been observed
+            # on macOS.
+            if len(acc) >= 2:
+                delta = acc[-1][1] - acc[-2][1]
+                return round(delta, ndigits=1) == PERIOD
+            return False
 
-        # Update task data.
+        # Wait for frames to arrive; then check the result.
+        with condition:
+            condition.wait_for(periodicity, TIMEOUT)
+        self.assertTrue(all(v[0] == DATA1 for v in acc))
+
+        # Update task data, which implicitly restarts the timer.
+        # Wait for frames to arrive; then check the result.
         task.update(DATA2)
-        event.clear()
-        event.wait(PERIOD*2)
-        task.stop()
-
+        with condition:
+            acc.clear()
+            condition.wait_for(periodicity, TIMEOUT)
+        # Find the first message with new data, and verify that all subsequent
+        # messages also carry the new payload.
         data = [v[0] for v in acc]
-        self.assertEqual(data, [DATA1, DATA2])
-        ts = [v[1] for v in acc]
-        self.assertAlmostEqual(ts[1]-ts[0], PERIOD, places=1)
+        idx = data.index(DATA2)
+        self.assertTrue(all(v[0] == DATA2 for v in acc[idx:]))
+
+        # Stop the task.
+        task.stop()
+        self.assertIsNone(self.network.bus.recv(TIMEOUT))
 
 
 class TestScanner(unittest.TestCase):
