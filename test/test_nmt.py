@@ -3,7 +3,7 @@ import unittest
 
 import can
 import canopen
-from canopen.nmt import NMT_STATES, NMT_COMMANDS, NmtError
+from canopen.nmt import COMMAND_TO_STATE, NMT_STATES, NMT_COMMANDS, NmtError
 from .util import SAMPLE_EDS
 
 
@@ -25,7 +25,8 @@ class TestNmtBase(unittest.TestCase):
             with self.subTest(cmd=cmd):
                 code = NMT_COMMANDS[cmd]
                 self.nmt.send_command(code)
-                self.assertNotEqual(self.nmt.state, "INITIALISING")
+                expected = NMT_STATES[COMMAND_TO_STATE[code]]
+                self.assertEqual(self.nmt.state, expected)
 
     def test_state_getset(self):
         for state in NMT_STATES.values():
@@ -75,8 +76,6 @@ class TestNmtMaster(unittest.TestCase):
                 task = self.net.send_periodic(self.COB_ID, [code], self.PERIOD)
                 try:
                     actual = self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
-                except NmtError:
-                    self.fail("Timed out waiting for heartbeat")
                 finally:
                     task.stop()
                 expected = NMT_STATES[code]
