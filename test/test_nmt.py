@@ -92,7 +92,7 @@ class TestNmtMaster(unittest.TestCase):
         task = self.net.send_periodic(self.COB_ID, [0xcb], self.PERIOD)
         self.addCleanup(task.stop)
         state = self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
-        # Expect the high bit to be masked out, and and unknown state string to
+        # Expect the high bit to be masked out, and a formatted string to
         # be returned.
         self.assertEqual(state, "UNKNOWN STATE '75'")
 
