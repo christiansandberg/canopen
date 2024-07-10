@@ -120,7 +120,7 @@ class TestNmtMaster(unittest.TestCase):
         # A message may have been in flight when we stopped the timer,
         # so allow a single failure.
         msg = self.bus.recv(self.TIMEOUT)
-        if msg:
+        if msg is not None:
             self.assertIsNone(self.bus.recv(self.TIMEOUT))
 
 

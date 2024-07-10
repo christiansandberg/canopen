@@ -110,7 +110,7 @@ class TestNetwork(unittest.TestCase):
         # so allow a single failure.
         bus = self.network.bus
         msg = bus.recv(TIMEOUT)
-        if msg:
+        if msg is not None:
             self.assertIsNone(bus.recv(TIMEOUT))
 
 
