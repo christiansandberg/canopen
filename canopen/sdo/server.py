@@ -172,6 +172,8 @@ class SdoServer(SdoBase):
         self.send_response(response)
 
     def send_response(self, response):
+        if self.network is None:
+            raise RuntimeError("A Network is required to send")
         self.network.send_message(self.tx_cobid, response)
 
     def abort(self, abort_code=0x08000000):

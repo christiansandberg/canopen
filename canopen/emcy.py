@@ -2,7 +2,10 @@ import struct
 import logging
 import threading
 import time
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from canopen.network import Network
 
 # Error code, error register, vendor specific data
 EMCY_STRUCT = struct.Struct("<HB5s")
@@ -82,14 +85,18 @@ class EmcyConsumer:
 class EmcyProducer:
 
     def __init__(self, cob_id: int):
-        self.network = None
+        self.network: Optional[Network] = None
         self.cob_id = cob_id
 
     def send(self, code: int, register: int = 0, data: bytes = b""):
+        if self.network is None:
+            raise RuntimeError("A Network is required")
         payload = EMCY_STRUCT.pack(code, register, data)
         self.network.send_message(self.cob_id, payload)
 
     def reset(self, register: int = 0, data: bytes = b""):
+        if self.network is None:
+            raise RuntimeError("A Network is required to reset")
         payload = EMCY_STRUCT.pack(0, register, data)
         self.network.send_message(self.cob_id, payload)
 

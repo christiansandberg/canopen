@@ -1,7 +1,13 @@
+from __future__ import annotations
+from typing import Optional, TYPE_CHECKING
 import logging
 import time
 import struct
 import queue
+
+if TYPE_CHECKING:
+    from canopen.network import Network
+
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +85,7 @@ class LssMaster:
     RESPONSE_TIMEOUT = 0.5
 
     def __init__(self):
-        self.network = None
+        self.network: Optional[Network] = None
         self._node_id = 0
         self._data = None
         self.responses = queue.Queue()
@@ -375,6 +381,8 @@ class LssMaster:
             logger.info("There were unexpected messages in the queue")
             self.responses = queue.Queue()
 
+        if self.network is None:
+            raise RuntimeError("A Network is required to do send messages")
         self.network.send_message(self.LSS_TX_COBID, message)
 
         if not bool(message[0] in ListMessageNeedResponse):

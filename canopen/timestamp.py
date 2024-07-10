@@ -1,6 +1,11 @@
+from __future__ import annotations
+from typing import Optional, TYPE_CHECKING
 import time
 import struct
-from typing import Optional
+
+if TYPE_CHECKING:
+    from canopen.network import Network
+
 
 # 1 Jan 1984
 OFFSET = 441763200
@@ -16,8 +21,8 @@ class TimeProducer:
     #: COB-ID of the SYNC message
     cob_id = 0x100
 
-    def __init__(self, network):
-        self.network = network
+    def __init__(self, network: Network):
+        self.network: Network = network
 
     def transmit(self, timestamp: Optional[float] = None):
         """Send out the TIME message once.

@@ -1,4 +1,8 @@
-from typing import Optional
+from __future__ import annotations
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from canopen.network import Network
 
 
 class SyncProducer:
@@ -7,8 +11,8 @@ class SyncProducer:
     #: COB-ID of the SYNC message
     cob_id = 0x80
 
-    def __init__(self, network):
-        self.network = network
+    def __init__(self, network: Network):
+        self.network: Network = network
         self.period: Optional[float] = None
         self._task = None
 
