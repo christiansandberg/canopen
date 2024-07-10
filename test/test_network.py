@@ -80,7 +80,7 @@ class TestNetwork(unittest.TestCase):
         self.addCleanup(task.stop)
 
         def periodicity():
-            # Check if periodicity is established; flakiness have been observed
+            # Check if periodicity is established; flakiness has been observed
             # on macOS.
             if len(acc) >= 2:
                 delta = acc[-1][1] - acc[-2][1]
