@@ -1,7 +1,7 @@
 import unittest
 
 import canopen
-from .util import SAMPLE_EDS
+from .util import SAMPLE_EDS, tmp_file
 
 
 class TestPDO(unittest.TestCase):
@@ -64,14 +64,13 @@ class TestPDO(unittest.TestCase):
         self.node.rpdo.save()
 
     def test_pdo_export(self):
-        import tempfile
         try:
             import canmatrix
         except ImportError:
             raise unittest.SkipTest("The PDO export API requires canmatrix")
 
         for pdo in "tpdo", "rpdo":
-            with tempfile.NamedTemporaryFile(suffix=".csv") as tmp:
+            with tmp_file(suffix=".csv") as tmp:
                 fn = tmp.name
                 with self.subTest(filename=fn, pdo=pdo):
                     getattr(self.node, pdo).export(fn)

@@ -5,16 +5,9 @@ import logging
 import threading
 from typing import Callable, Dict, Iterator, List, Optional, Union
 
-try:
-    import can
-    from can import Listener
-    from can import CanError
-except ImportError:
-    # Do not fail if python-can is not installed
-    can = None
-    CanError = Exception
-    class Listener:
-        """ Dummy listener """
+import can
+from can import Listener
+from can import CanError
 
 from canopen.node import RemoteNode, LocalNode
 from canopen.sync import SyncProducer
