@@ -106,7 +106,12 @@ class TestNetwork(unittest.TestCase):
 
         # Stop the task.
         task.stop()
-        self.assertIsNone(self.network.bus.recv(TIMEOUT))
+        # A message may have been in flight when we stopped the timer,
+        # so allow a single failure.
+        bus = self.network.bus
+        msg = bus.recv(TIMEOUT)
+        if msg:
+            self.assertIsNone(bus.recv(TIMEOUT))
 
 
 class TestScanner(unittest.TestCase):
