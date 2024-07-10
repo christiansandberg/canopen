@@ -1,5 +1,5 @@
 import logging
-from typing import Union, TextIO
+from typing import Union, TextIO, List, Optional
 
 from canopen.sdo import SdoClient, SdoCommunicationError, SdoAbortedError
 from canopen.nmt import NmtMaster
@@ -26,8 +26,8 @@ class RemoteNode(BaseNode):
 
     def __init__(
         self,
-        node_id: int,
-        object_dictionary: Union[ObjectDictionary, str, TextIO],
+        node_id: Optional[int],
+        object_dictionary: Union[ObjectDictionary, str, TextIO, None],
         load_od: bool = False,
     ):
         super(RemoteNode, self).__init__(node_id, object_dictionary)
@@ -35,7 +35,7 @@ class RemoteNode(BaseNode):
         #: Enable WORKAROUND for reversed PDO mapping entries
         self.curtis_hack = False
 
-        self.sdo_channels = []
+        self.sdo_channels: List[SdoClient] = []
         self.sdo = self.add_sdo(0x600 + self.id, 0x580 + self.id)
         self.tpdo = TPDO(self)
         self.rpdo = RPDO(self)
