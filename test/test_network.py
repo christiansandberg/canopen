@@ -61,7 +61,7 @@ class TestNetwork(unittest.TestCase):
         self.assertIsInstance(self.network[4], canopen.RemoteNode)
 
     def test_network_check(self):
-        self.network.connect(interface="virtual", channel="test")
+        self.network.connect(interface="virtual")
 
         def cleanup():
             # We must clear the fake exception installed below, since
@@ -94,10 +94,10 @@ class TestNetwork(unittest.TestCase):
         self.assertListEqual(self.network.scanner.nodes, [2])
 
     def test_network_send_message(self):
-        bus = can.interface.Bus(interface="virtual", channel=1)
+        bus = can.interface.Bus(interface="virtual")
         self.addCleanup(bus.shutdown)
 
-        self.network.connect(interface="virtual", channel=1)
+        self.network.connect(interface="virtual")
         self.addCleanup(self.network.disconnect)
 
         # Send standard ID
@@ -119,11 +119,7 @@ class TestNetwork(unittest.TestCase):
         N_HOOKS = 3
         accumulators = [] * N_HOOKS
 
-        self.network.connect(
-            interface="virtual",
-            channel="test",
-            receive_own_messages=True
-        )
+        self.network.connect(interface="virtual", receive_own_messages=True)
         self.addCleanup(self.network.disconnect)
 
         for i in range(N_HOOKS):
@@ -151,11 +147,7 @@ class TestNetwork(unittest.TestCase):
 
     def test_network_subscribe_multiple(self):
         N_HOOKS = 3
-        self.network.connect(
-            interface="virtual",
-            channel="test",
-            receive_own_messages=True
-        )
+        self.network.connect(interface="virtual", receive_own_messages=True)
         self.addCleanup(self.network.disconnect)
 
         accumulators = []
@@ -207,7 +199,7 @@ class TestNetwork(unittest.TestCase):
         self.assertEqual(accumulators[2], BATCH1 + [BATCH2] + [BATCH3])
 
     def test_network_context_manager(self):
-        with self.network.connect(interface="virtual", channel=1):
+        with self.network.connect(interface="virtual"):
             pass
         with self.assertRaisesRegex(RuntimeError, "Not connected"):
             self.network.send_message(0, [])
@@ -239,11 +231,7 @@ class TestNetwork(unittest.TestCase):
         DATA2 = bytes([4, 5, 6])
         COB_ID = 0x123
         PERIOD = 0.1
-        self.network.connect(
-            interface="virtual",
-            channel=1,
-            receive_own_messages=True
-        )
+        self.network.connect(interface="virtual", receive_own_messages=True)
         self.addCleanup(self.network.disconnect)
 
         acc = []
