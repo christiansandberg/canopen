@@ -136,8 +136,8 @@ class TestScanner(unittest.TestCase):
         net.connect()
         self.addCleanup(net.disconnect)
 
-        scanner = canopen.network.NodeScanner(net)
-        scanner.search()
+        self.scanner.network = net
+        self.scanner.search()
 
         payload = bytes([64, 0, 16, 0, 0, 0, 0, 0])
         acc = [bus.recv(self.TIMEOUT) for _ in range(127)]
@@ -159,8 +159,9 @@ class TestScanner(unittest.TestCase):
         net.connect()
         self.addCleanup(net.disconnect)
 
-        scanner = canopen.network.NodeScanner(net)
-        scanner.search(limit=1)
+        self.scanner.network = net
+        self.scanner.search(limit=1)
+
         msg = bus.recv(self.TIMEOUT)
         self.assertIsNotNone(msg)
         self.assertEqual(msg.arbitration_id, 0x601)
