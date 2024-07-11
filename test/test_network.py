@@ -98,7 +98,6 @@ class TestScanner(unittest.TestCase):
         self.scanner = canopen.network.NodeScanner()
 
     def test_scanner_on_message_received(self):
-        self.scanner.on_message_received(0x081)
         # Emergency frames should be recognized.
         self.scanner.on_message_received(0x081)
         # Heartbeats should be recognized.
