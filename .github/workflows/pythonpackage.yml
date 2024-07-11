@@ -66,5 +66,5 @@ jobs:
         cache-dependency-path: |
           'pyproject.toml'
           'requirements-dev.txt'
-    - run: pip install -r requirements-dev.txt
+    - run: pip install -r requirements-dev.txt -e .
     - run: mypy --config-file pyproject.toml .
