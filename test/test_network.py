@@ -127,11 +127,7 @@ class TestScanner(unittest.TestCase):
             self.scanner.search()
 
     def test_scanner_search(self):
-        bus = can.Bus(
-            interface="virtual",
-            channel="test",
-            receive_own_messages=True,
-        )
+        bus = can.Bus(interface="virtual", receive_own_messages=True)
         net = canopen.Network(bus)
         net.connect()
         self.addCleanup(net.disconnect)
@@ -150,11 +146,7 @@ class TestScanner(unittest.TestCase):
         self.assertIsNone(bus.recv(self.TIMEOUT))
 
     def test_scanner_search_limit(self):
-        bus = can.Bus(
-            interface="virtual",
-            channel="test",
-            receive_own_messages=True,
-        )
+        bus = can.Bus(interface="virtual", receive_own_messages=True)
         net = canopen.Network(bus)
         net.connect()
         self.addCleanup(net.disconnect)
