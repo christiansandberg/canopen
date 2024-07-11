@@ -75,9 +75,7 @@ class TestNetwork(unittest.TestCase):
         class Custom(Exception):
             pass
 
-
         self.network.notifier.exception = Custom("fake")
-
         with self.assertRaisesRegex(Custom, "fake"):
             with self.assertLogs(level=logging.ERROR):
                 self.network.check()
