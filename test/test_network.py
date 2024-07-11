@@ -62,20 +62,28 @@ class TestNetwork(unittest.TestCase):
 
     def test_network_check(self):
         self.network.connect(interface="virtual", channel="test")
-        self.addCleanup(self.network.disconnect)
+
+        def cleanup():
+            # We must clear the fake exception installed below, since
+            # .disconnect() implicitly calls .check() during test tear down.
+            self.network.notifier.exception = None
+            self.network.disconnect()
+
+        self.addCleanup(cleanup)
         self.assertIsNone(self.network.check())
 
         class Custom(Exception):
             pass
 
+
         self.network.notifier.exception = Custom("fake")
+
         with self.assertRaisesRegex(Custom, "fake"):
             with self.assertLogs(level=logging.ERROR):
                 self.network.check()
         with self.assertRaisesRegex(Custom, "fake"):
             with self.assertLogs(level=logging.ERROR):
                 self.network.disconnect()
-        self.network.notifier.exception = None
 
     def test_network_notify(self):
         with self.assertLogs():
