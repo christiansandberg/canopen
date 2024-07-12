@@ -69,9 +69,10 @@ class TestNetwork(unittest.TestCase):
         condition = threading.Condition()
 
         def hook(_, data, ts):
-            item = data, ts
-            acc.append(item)
-            condition.notify()
+            with condition:
+                item = data, ts
+                acc.append(item)
+                condition.notify_all()
 
         self.network.subscribe(COB_ID, hook)
         self.addCleanup(self.network.unsubscribe, COB_ID)
