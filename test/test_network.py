@@ -93,7 +93,7 @@ class TestNetwork(unittest.TestCase):
             condition.wait_for(periodicity, TIMEOUT)
         self.assertTrue(all(v[0] == DATA1 for v in acc))
 
-        # Update task data, which implicitly restarts the timer.
+        # Update task data, which may implicitly restart the timer.
         # Wait for frames to arrive; then check the result.
         task.update(DATA2)
         with condition:
