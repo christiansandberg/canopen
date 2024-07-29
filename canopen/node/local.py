@@ -35,6 +35,7 @@ class LocalNode(BaseNode):
         self.emcy = EmcyProducer(0x80 + self.id)
 
         self.nmt.add_state_change_callback(self._nmt_state_changed)
+        self.add_write_callback(self._tpdo_configuration_write)
 
     def associate_network(self, network):
         self.network = network
@@ -145,3 +146,23 @@ class LocalNode(BaseNode):
                     logger.info(f"TPDO {i} not enabled")
         elif old_state == "OPERATIONAL":
             self.tpdo.stop()
+
+    def _tpdo_configuration_write(self, index, subindex, od, data):
+        if 0x1800 <= index <= 0x19FF:
+            # Only allowed to edit pdo configuration in pre-op
+            if self.nmt.state != "PRE-OPERATIONAL":
+                logger.warning("Tried to configure tpdo when not in pre-op")
+                return
+            
+            if subindex == 0x01:
+                if len(data) == 4:
+                    tpdoNum = (index - 0x1800) + 1
+                    if tpdoNum in self.tpdo.map.keys():
+                        PDO_NOT_VALID = 1 << 31
+                        RTR_NOT_ALLOWED = 1 << 30
+
+                        cob_id = int.from_bytes(data, 'little') & 0x7FF
+
+                        self.tpdo.map[tpdoNum].cob_id = cob_id & 0x1FFFFFFF
+                        self.tpdo.map[tpdoNum].enabled = cob_id & PDO_NOT_VALID == 0
+                        self.tpdo.map[tpdoNum].rtr_allowed = cob_id & RTR_NOT_ALLOWED == 0
