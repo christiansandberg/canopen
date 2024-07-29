@@ -200,6 +200,15 @@ class TestPDO(unittest.TestCase):
         self.remote_node.pdo.save()
         self.local_node.pdo.save()
 
+    def test_send_pdo_on_operational(self):
+        self.local_node.tpdo[1].period = 0.5
+
+        self.local_node.nmt.state = 'INITIALISING'
+        self.local_node.nmt.state = 'PRE-OPERATIONAL'
+        self.local_node.nmt.state = 'OPERATIONAL'
+
+        self.assertNotEqual(self.local_node.tpdo[1]._task, None)
+
 
 if __name__ == "__main__":
     unittest.main()
