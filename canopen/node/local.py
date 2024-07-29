@@ -34,7 +34,7 @@ class LocalNode(BaseNode):
         self.add_write_callback(self.nmt.on_write)
         self.emcy = EmcyProducer(0x80 + self.id)
 
-        self.nmt.add_state_change_callback(self.nmt_state_changed)
+        self.nmt.add_state_change_callback(self._nmt_state_changed)
 
     def associate_network(self, network):
         self.network = network
@@ -130,7 +130,7 @@ class LocalNode(BaseNode):
             obj = obj[subindex]
         return obj
 
-    def nmt_state_changed(self, old_state, new_state):
+    def _nmt_state_changed(self, old_state, new_state):
         if new_state == "OPERATIONAL":
             for i, pdo in self.tpdo.map.items():
                 if pdo.enabled:
