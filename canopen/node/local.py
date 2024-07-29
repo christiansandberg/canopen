@@ -34,6 +34,8 @@ class LocalNode(BaseNode):
         self.add_write_callback(self.nmt.on_write)
         self.emcy = EmcyProducer(0x80 + self.id)
 
+        self.nmt.add_state_change_callback(self.nmt_state_changed)
+
     def associate_network(self, network):
         self.network = network
         self.sdo.network = network
@@ -127,3 +129,19 @@ class LocalNode(BaseNode):
                 raise SdoAbortedError(0x06090011)
             obj = obj[subindex]
         return obj
+
+    def nmt_state_changed(self, old_state, new_state):
+        if new_state == "OPERATIONAL":
+            for i, pdo in self.tpdo.map.items():
+                if pdo.enabled:
+                    try:
+                        pdo.start()
+                        logger.info(f"Successfully started TPDO {i}")
+                    except ValueError:
+                        logger.warning(f"Failed to start TPDO {i} due to missing period")
+                    except Exception as e:
+                        logger.error(f"Unknown error starting TPDO {i}: {str(e)}")
+                else:
+                    logger.info(f"TPDO {i} not enabled")
+        elif old_state == "OPERATIONAL":
+            self.tpdo.stop()
