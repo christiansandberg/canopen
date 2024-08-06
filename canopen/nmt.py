@@ -2,7 +2,10 @@ import threading
 import logging
 import struct
 import time
-from typing import Callable, Optional
+from typing import Callable, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from canopen.network import Network
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +48,7 @@ class NmtBase:
 
     def __init__(self, node_id: int):
         self.id = node_id
-        self.network = None
+        self.network: Optional[Network] = None
         self._state = 0
 
     def on_command(self, can_id, data, timestamp):
@@ -139,6 +142,8 @@ class NmtMaster(NmtBase):
         super(NmtMaster, self).send_command(code)
         logger.info(
             "Sending NMT command 0x%X to node %d", code, self.id)
+        if self.network is None:
+            raise RuntimeError("A Network is required to send")
         self.network.send_message(0, [code, self.id])
 
     def wait_for_heartbeat(self, timeout: float = 10):
@@ -181,6 +186,8 @@ class NmtMaster(NmtBase):
             Period (in seconds) at which the node guarding should be advertised to the slave node.
         """
         if self._node_guarding_producer : self.stop_node_guarding()
+        if self.network is None:
+            raise RuntimeError("A Network is required to send")
         self._node_guarding_producer = self.network.send_periodic(0x700 + self.id, None, period, True)
 
     def stop_node_guarding(self):
@@ -216,6 +223,8 @@ class NmtSlave(NmtBase):
 
         if self._state == 0:
             logger.info("Sending boot-up message")
+            if self.network is None:
+                raise RuntimeError("Cannot send without network")
             self.network.send_message(0x700 + self.id, [0])
 
         # The heartbeat service should start on the transition
@@ -246,6 +255,8 @@ class NmtSlave(NmtBase):
         self.stop_heartbeat()
         if heartbeat_time_ms > 0:
             logger.info("Start the heartbeat timer, interval is %d ms", self._heartbeat_time_ms)
+            if self.network is None:
+                raise RuntimeError("Cannot send without network")
             self._send_task = self.network.send_periodic(
                 0x700 + self.id, [self._state], heartbeat_time_ms / 1000.0)
 

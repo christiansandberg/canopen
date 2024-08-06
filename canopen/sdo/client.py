@@ -45,6 +45,8 @@ class SdoClient(SdoBase):
         self.responses.put(bytes(data))
 
     def send_request(self, request):
+        if self.network is None:
+            raise RuntimeError("A Network is required to send a request")
         retries_left = self.MAX_RETRIES
         if self.PAUSE_BEFORE_SEND:
             time.sleep(self.PAUSE_BEFORE_SEND)
