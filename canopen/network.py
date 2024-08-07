@@ -279,6 +279,17 @@ class Network(MutableMapping):
         return len(self.nodes)
 
 
+class _DummyNetwork(Network):
+    """Empty network implementation as a placeholder before actual initialization."""
+
+    def __init__(self, bus: Optional[can.BusABC] = None):
+        """Do not initialize attributes, by skipping the parent constructor."""
+
+    def __getattribute__(self, name):
+        raise RuntimeError("No actual Network object was assigned, "
+                           "try associating to a real network first.")
+
+
 class PeriodicMessageTask:
     """
     Task object to transmit a message periodically using python-can's
