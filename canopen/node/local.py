@@ -34,6 +34,9 @@ class LocalNode(BaseNode):
         self.add_write_callback(self.nmt.on_write)
         self.emcy = EmcyProducer(0x80 + self.id)
 
+        self.nmt.add_state_change_callback(self._nmt_state_changed)
+        self.add_write_callback(self._tpdo_configuration_write)
+
     def associate_network(self, network):
         self.network = network
         self.sdo.network = network
@@ -127,3 +130,39 @@ class LocalNode(BaseNode):
                 raise SdoAbortedError(0x06090011)
             obj = obj[subindex]
         return obj
+
+    def _nmt_state_changed(self, old_state, new_state):
+        if new_state == "OPERATIONAL":
+            for i, pdo in self.tpdo.map.items():
+                if pdo.enabled:
+                    try:
+                        pdo.start()
+                        logger.info(f"Successfully started TPDO {i}")
+                    except ValueError:
+                        logger.warning(f"Failed to start TPDO {i} due to missing period")
+                    except Exception as e:
+                        logger.error(f"Unknown error starting TPDO {i}: {str(e)}")
+                else:
+                    logger.info(f"TPDO {i} not enabled")
+        elif old_state == "OPERATIONAL":
+            self.tpdo.stop()
+
+    def _tpdo_configuration_write(self, index, subindex, od, data):
+        if 0x1800 <= index <= 0x19FF:
+            # Only allowed to edit pdo configuration in pre-op
+            if self.nmt.state != "PRE-OPERATIONAL":
+                logger.warning("Tried to configure tpdo when not in pre-op")
+                return
+            
+            if subindex == 0x01:
+                if len(data) == 4:
+                    tpdoNum = (index - 0x1800) + 1
+                    if tpdoNum in self.tpdo.map.keys():
+                        PDO_NOT_VALID = 1 << 31
+                        RTR_NOT_ALLOWED = 1 << 30
+
+                        cob_id = int.from_bytes(data, 'little') & 0x7FF
+
+                        self.tpdo.map[tpdoNum].cob_id = cob_id & 0x1FFFFFFF
+                        self.tpdo.map[tpdoNum].enabled = cob_id & PDO_NOT_VALID == 0
+                        self.tpdo.map[tpdoNum].rtr_allowed = cob_id & RTR_NOT_ALLOWED == 0
