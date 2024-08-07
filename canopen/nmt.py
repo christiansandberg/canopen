@@ -4,6 +4,8 @@ import struct
 import time
 from typing import Callable, Optional, TYPE_CHECKING
 
+import canopen.network
+
 if TYPE_CHECKING:
     from canopen.network import Network, PeriodicMessageTask
 
@@ -49,8 +51,7 @@ class NmtBase:
 
     def __init__(self, node_id: int):
         self.id = node_id
-        from canopen.network import _DummyNetwork
-        self.network: Network = _DummyNetwork()
+        self.network: Network = canopen.network._DummyNetwork()
         self._state = 0
 
     def on_command(self, can_id, data, timestamp):
