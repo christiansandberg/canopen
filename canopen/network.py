@@ -285,6 +285,10 @@ class _DummyNetwork(Network):
     def __init__(self, bus: Optional[can.BusABC] = None):
         """Do not initialize attributes, by skipping the parent constructor."""
 
+    def __getattribute__(self, name):
+        raise RuntimeError("No actual Network object was assigned, "
+                           "try associating to a real network first.")
+
 
 class PeriodicMessageTask:
     """
