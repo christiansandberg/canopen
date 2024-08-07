@@ -5,9 +5,7 @@ import time
 from typing import Callable, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from canopen.network import Network, PeriodicMessageTask, _DummyNetwork
-else:
-    def _DummyNetwork(): pass
+    from canopen.network import Network, PeriodicMessageTask
 
 
 logger = logging.getLogger(__name__)
@@ -51,6 +49,7 @@ class NmtBase:
 
     def __init__(self, node_id: int):
         self.id = node_id
+        from canopen.network import _DummyNetwork
         self.network: Network = _DummyNetwork()
         self._state = 0
 
