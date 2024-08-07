@@ -4,10 +4,10 @@ import struct
 import time
 from typing import Callable, Optional, TYPE_CHECKING
 
-from canopen.network import _DummyNetwork
-
 if TYPE_CHECKING:
-    from canopen.network import Network
+    from canopen.network import Network, PeriodicMessageTask, _DummyNetwork
+else:
+    def _DummyNetwork(): pass
 
 
 logger = logging.getLogger(__name__)
