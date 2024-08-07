@@ -2,7 +2,13 @@ import threading
 import logging
 import struct
 import time
-from typing import Callable, Optional
+from typing import Callable, Optional, TYPE_CHECKING
+
+from canopen.network import _DummyNetwork
+
+if TYPE_CHECKING:
+    from canopen.network import Network
+
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +51,7 @@ class NmtBase:
 
     def __init__(self, node_id: int):
         self.id = node_id
-        self.network = None
+        self.network: Network = _DummyNetwork()
         self._state = 0
 
     def on_command(self, can_id, data, timestamp):
