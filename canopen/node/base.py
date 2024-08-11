@@ -26,3 +26,7 @@ class BaseNode:
         self.object_dictionary = object_dictionary
 
         self.id = node_id or self.object_dictionary.node_id
+
+    def has_network(self) -> bool:
+        """Check whether the node has been associated to a network."""
+        return not isinstance(self.network, canopen.network._DummyNetwork)
