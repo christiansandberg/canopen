@@ -4,6 +4,7 @@ import binascii
 from typing import Iterator, Optional, Union
 from collections.abc import Mapping
 
+import canopen.network
 from canopen import objectdictionary
 from canopen import variable
 from canopen.utils import pretty_index
@@ -43,7 +44,7 @@ class SdoBase(Mapping):
         """
         self.rx_cobid = rx_cobid
         self.tx_cobid = tx_cobid
-        self.network = None
+        self.network: canopen.network.Network = canopen.network._DummyNetwork()
         self.od = od
 
     def __getitem__(
