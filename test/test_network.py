@@ -321,8 +321,13 @@ class TestScanner(unittest.TestCase):
             self.scanner.search()
 
     def test_scanner_search(self):
-        bus = can.Bus(interface="virtual", receive_own_messages=True)
-        net = canopen.Network(bus)
+        rxbus = can.Bus(interface="virtual")
+        self.addCleanup(rxbus.shutdown)
+
+        txbus = can.Bus(interface="virtual")
+        self.addCleanup(txbus.shutdown)
+
+        net = canopen.Network(txbus)
         net.connect()
         self.addCleanup(net.disconnect)
 
@@ -330,14 +335,14 @@ class TestScanner(unittest.TestCase):
         self.scanner.search()
 
         payload = bytes([64, 0, 16, 0, 0, 0, 0, 0])
-        acc = [bus.recv(self.TIMEOUT) for _ in range(127)]
+        acc = [rxbus.recv(self.TIMEOUT) for _ in range(127)]
         for node_id, msg in enumerate(acc, start=1):
             with self.subTest(node_id=node_id):
                 self.assertIsNotNone(msg)
                 self.assertEqual(msg.arbitration_id, 0x600 + node_id)
                 self.assertEqual(msg.data, payload)
         # Check that no spurious packets were sent.
-        self.assertIsNone(bus.recv(self.TIMEOUT))
+        self.assertIsNone(rxbus.recv(self.TIMEOUT))
 
     def test_scanner_search_limit(self):
         bus = can.Bus(interface="virtual", receive_own_messages=True)
