@@ -1,4 +1,6 @@
 from typing import TextIO, Union
+
+import canopen.network
 from canopen.objectdictionary import ObjectDictionary, import_od
 
 
@@ -17,7 +19,7 @@ class BaseNode:
         node_id: int,
         object_dictionary: Union[ObjectDictionary, str, TextIO],
     ):
-        self.network = None
+        self.network: canopen.network.Network = canopen.network._DummyNetwork()
 
         if not isinstance(object_dictionary, ObjectDictionary):
             object_dictionary = import_od(object_dictionary, node_id)
