@@ -38,7 +38,7 @@ class Network(MutableMapping):
         #: List of :class:`can.Listener` objects.
         #: Includes at least MessageListener.
         self.listeners = [MessageListener(self)]
-        self.notifier = None
+        self.notifier: Optional[can.Notifier] = None
         self.nodes: Dict[int, Union[RemoteNode, LocalNode]] = {}
         self.subscribers: Dict[int, List[Callback]] = {}
         self.send_lock = threading.Lock()
