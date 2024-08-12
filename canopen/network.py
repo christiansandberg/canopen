@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import MutableMapping
 import logging
 import threading
-from typing import Callable, Dict, Iterator, List, Optional, Union
+from typing import Callable, Dict, Final, Iterator, List, Optional, Union
 
 import can
 from can import Listener
@@ -291,7 +291,7 @@ class _UninitializedNetwork(Network):
 
 
 #: Singleton instance
-_UNINITIALIZED_NETWORK = _UninitializedNetwork()
+_UNINITIALIZED_NETWORK: Final[Network] = _UninitializedNetwork()
 
 
 class PeriodicMessageTask:
