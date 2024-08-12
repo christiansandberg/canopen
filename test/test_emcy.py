@@ -72,7 +72,7 @@ class TestEmcy(unittest.TestCase):
         self.assertEqual(len(self.emcy.active), 0)
 
     def test_emcy_consumer_wait(self):
-        PAUSE = TIMEOUT / 4
+        PAUSE = TIMEOUT / 2
 
         def push_err():
             self.emcy.on_emcy(0x81, b'\x01\x20\x01\x01\x02\x03\x04\x05', 100)
@@ -89,15 +89,15 @@ class TestEmcy(unittest.TestCase):
 
         # Check unfiltered wait, on success.
         timer = threading.Timer(PAUSE, push_err)
-        timer.start()
         with self.assertLogs(level=logging.INFO):
+            timer.start()
             err = self.emcy.wait(timeout=TIMEOUT)
         check_err(err)
 
         # Check filtered wait, on success.
         timer = threading.Timer(PAUSE, push_err)
-        timer.start()
         with self.assertLogs(level=logging.INFO):
+            timer.start()
             err = self.emcy.wait(0x2001, TIMEOUT)
         check_err(err)
 
