@@ -99,7 +99,6 @@ class TestEmcy(unittest.TestCase):
         timer.start()
         with self.assertLogs(level=logging.INFO):
             err = self.emcy.wait(0x2001, TIMEOUT)
-        self.assertIsNotNone(err)
         check_err(err)
 
         # Check filtered wait, on timeout.
