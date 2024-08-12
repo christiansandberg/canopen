@@ -35,7 +35,6 @@ class LocalNode(BaseNode):
         self.emcy = EmcyProducer(0x80 + self.id)
 
         self.nmt.add_state_change_callback(self._nmt_state_changed)
-        self.add_write_callback(self._tpdo_configuration_write)
 
     def associate_network(self, network):
         self.network = network
@@ -118,6 +117,15 @@ class LocalNode(BaseNode):
         self.data_store.setdefault(index, {})
         self.data_store[index][subindex] = bytes(data)
 
+        if 0x1800 <= index <= 0x19FF:
+            # TPDO Communication parameter changed
+            tpdoNum = (index - 0x1800) + 1
+            self._tpdo_configuration_write(tpdoNum)
+        elif 0x1A00 <= index <= 0x1BFF:
+            # TPDO Mapping parameter changed
+            tpdoNum = (index - 0x1A00) + 1
+            self._tpdo_configuration_write(tpdoNum)
+
     def _find_object(self, index, subindex):
         if index not in self.object_dictionary:
             # Index does not exist
@@ -133,36 +141,29 @@ class LocalNode(BaseNode):
 
     def _nmt_state_changed(self, old_state, new_state):
         if new_state == "OPERATIONAL":
-            for i, pdo in self.tpdo.map.items():
+            for pdo in self.tpdo.map.values():
                 if pdo.enabled:
                     try:
                         pdo.start()
-                        logger.info(f"Successfully started TPDO {i}")
+                        logger.info("Successfully started %s", pdo.name)
                     except ValueError:
-                        logger.warning(f"Failed to start TPDO {i} due to missing period")
-                    except Exception as e:
-                        logger.error(f"Unknown error starting TPDO {i}: {str(e)}")
+                        logger.warning("Failed to start %s due to missing period", pdo.name)
+                    except Exception:
+                        logger.exception("Unknown error starting %s", pdo.name)
                 else:
-                    logger.info(f"TPDO {i} not enabled")
-        elif old_state == "OPERATIONAL":
+                    logger.info("%s not enabled", pdo.name)
+        else:
             self.tpdo.stop()
 
-    def _tpdo_configuration_write(self, index, subindex, od, data):
-        if 0x1800 <= index <= 0x19FF:
-            # Only allowed to edit pdo configuration in pre-op
-            if self.nmt.state != "PRE-OPERATIONAL":
-                logger.warning("Tried to configure tpdo when not in pre-op")
-                return
-            
-            if subindex == 0x01:
-                if len(data) == 4:
-                    tpdoNum = (index - 0x1800) + 1
-                    if tpdoNum in self.tpdo.map.keys():
-                        PDO_NOT_VALID = 1 << 31
-                        RTR_NOT_ALLOWED = 1 << 30
+    def _tpdo_configuration_write(self, tpdoNum):
+        pdo = self.tpdo.map[tpdoNum]
 
-                        cob_id = int.from_bytes(data, 'little') & 0x7FF
-
-                        self.tpdo.map[tpdoNum].cob_id = cob_id & 0x1FFFFFFF
-                        self.tpdo.map[tpdoNum].enabled = cob_id & PDO_NOT_VALID == 0
-                        self.tpdo.map[tpdoNum].rtr_allowed = cob_id & RTR_NOT_ALLOWED == 0
+        # Only allowed to edit pdo configuration in pre-op or operational
+        if self.nmt.state not in ("PRE-OPERATIONAL", "OPERATIONAL"):
+            logger.warning("Tried to configure %s when not in pre-op or operational", pdo.name)
+            return
+        
+        try:
+            pdo.read(from_od=True)
+        except:
+            pass
