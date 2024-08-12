@@ -50,12 +50,12 @@ class LocalNode(BaseNode):
     def remove_network(self) -> None:
         self.network.unsubscribe(self.sdo.rx_cobid, self.sdo.on_request)
         self.network.unsubscribe(0, self.nmt.on_command)
-        self.network = canopen.network._DummyNetwork()
-        self.sdo.network = self.network
-        self.tpdo.network = self.network
-        self.rpdo.network = self.network
-        self.nmt.network = self.network
-        self.emcy.network = self.network
+        self.network = canopen.network._UNINITIALIZED_NETWORK
+        self.sdo.network = canopen.network._UNINITIALIZED_NETWORK
+        self.tpdo.network = canopen.network._UNINITIALIZED_NETWORK
+        self.rpdo.network = canopen.network._UNINITIALIZED_NETWORK
+        self.nmt.network = canopen.network._UNINITIALIZED_NETWORK
+        self.emcy.network = canopen.network._UNINITIALIZED_NETWORK
 
     def add_read_callback(self, callback):
         self._read_callbacks.append(callback)

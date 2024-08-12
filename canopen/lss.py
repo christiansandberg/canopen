@@ -82,7 +82,7 @@ class LssMaster:
     RESPONSE_TIMEOUT = 0.5
 
     def __init__(self) -> None:
-        self.network: canopen.network.Network = canopen.network._DummyNetwork()
+        self.network: canopen.network.Network = canopen.network._UNINITIALIZED_NETWORK
         self._node_id = 0
         self._data = None
         self.responses = queue.Queue()

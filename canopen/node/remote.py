@@ -68,12 +68,12 @@ class RemoteNode(BaseNode):
         self.network.unsubscribe(0x700 + self.id, self.nmt.on_heartbeat)
         self.network.unsubscribe(0x80 + self.id, self.emcy.on_emcy)
         self.network.unsubscribe(0, self.nmt.on_command)
-        self.network = canopen.network._DummyNetwork()
-        self.sdo.network = self.network
-        self.pdo.network = self.network
-        self.tpdo.network = self.network
-        self.rpdo.network = self.network
-        self.nmt.network = self.network
+        self.network = canopen.network._UNINITIALIZED_NETWORK
+        self.sdo.network = canopen.network._UNINITIALIZED_NETWORK
+        self.pdo.network = canopen.network._UNINITIALIZED_NETWORK
+        self.tpdo.network = canopen.network._UNINITIALIZED_NETWORK
+        self.rpdo.network = canopen.network._UNINITIALIZED_NETWORK
+        self.nmt.network = canopen.network._UNINITIALIZED_NETWORK
 
     def add_sdo(self, rx_cobid, tx_cobid):
         """Add an additional SDO channel.

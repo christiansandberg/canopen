@@ -85,7 +85,7 @@ class EmcyConsumer:
 class EmcyProducer:
 
     def __init__(self, cob_id: int):
-        self.network: canopen.network.Network = canopen.network._DummyNetwork()
+        self.network: canopen.network.Network = canopen.network._UNINITIALIZED_NETWORK
         self.cob_id = cob_id
 
     def send(self, code: int, register: int = 0, data: bytes = b""):

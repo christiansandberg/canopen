@@ -19,7 +19,7 @@ class BaseNode:
         node_id: int,
         object_dictionary: Union[ObjectDictionary, str, TextIO],
     ):
-        self.network: canopen.network.Network = canopen.network._DummyNetwork()
+        self.network: canopen.network.Network = canopen.network._UNINITIALIZED_NETWORK
 
         if not isinstance(object_dictionary, ObjectDictionary):
             object_dictionary = import_od(object_dictionary, node_id)
@@ -29,4 +29,4 @@ class BaseNode:
 
     def has_network(self) -> bool:
         """Check whether the node has been associated to a network."""
-        return not isinstance(self.network, canopen.network._DummyNetwork)
+        return not isinstance(self.network, canopen.network._UninitializedNetwork)

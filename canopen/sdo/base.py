@@ -44,7 +44,7 @@ class SdoBase(Mapping):
         """
         self.rx_cobid = rx_cobid
         self.tx_cobid = tx_cobid
-        self.network: canopen.network.Network = canopen.network._DummyNetwork()
+        self.network: canopen.network.Network = canopen.network._UNINITIALIZED_NETWORK
         self.od = od
 
     def __getitem__(

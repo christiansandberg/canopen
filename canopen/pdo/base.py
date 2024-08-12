@@ -30,7 +30,7 @@ class PdoBase(Mapping):
     """
 
     def __init__(self, node: Union[LocalNode, RemoteNode]):
-        self.network: canopen.network.Network = canopen.network._DummyNetwork()
+        self.network: canopen.network.Network = canopen.network._UNINITIALIZED_NETWORK
         self.map: Optional[PdoMaps] = None
         self.node: Union[LocalNode, RemoteNode] = node
 
