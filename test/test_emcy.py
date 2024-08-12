@@ -1,6 +1,7 @@
 import logging
 import threading
 import unittest
+from contextlib import contextmanager
 
 import can
 import canopen
@@ -84,34 +85,42 @@ class TestEmcy(unittest.TestCase):
                 data=bytes([1, 2, 3, 4, 5]), ts=100,
             )
 
+        @contextmanager
+        def timer(func):
+            t = threading.Timer(PAUSE, func)
+            try:
+                yield t
+            finally:
+                t.join(TIMEOUT)
+
         # Check unfiltered wait, on timeout.
         self.assertIsNone(self.emcy.wait(timeout=TIMEOUT))
 
         # Check unfiltered wait, on success.
-        timer = threading.Timer(PAUSE, push_err)
-        with self.assertLogs(level=logging.INFO):
-            timer.start()
-            err = self.emcy.wait(timeout=TIMEOUT)
+        with timer(push_err) as t:
+            with self.assertLogs(level=logging.INFO):
+                t.start()
+                err = self.emcy.wait(timeout=TIMEOUT)
         check_err(err)
 
         # Check filtered wait, on success.
-        timer = threading.Timer(PAUSE, push_err)
-        with self.assertLogs(level=logging.INFO):
-            timer.start()
-            err = self.emcy.wait(0x2001, TIMEOUT)
+        with timer(push_err) as t:
+            with self.assertLogs(level=logging.INFO):
+                t.start()
+                err = self.emcy.wait(0x2001, TIMEOUT)
         check_err(err)
 
         # Check filtered wait, on timeout.
-        timer = threading.Timer(PAUSE, push_err)
-        timer.start()
-        self.assertIsNone(self.emcy.wait(0x9000, TIMEOUT))
+        with timer(push_err) as t:
+            t.start()
+            self.assertIsNone(self.emcy.wait(0x9000, TIMEOUT))
 
         def push_reset():
             self.emcy.on_emcy(0x81, b'\x00\x00\x00\x00\x00\x00\x00\x00', 100)
 
-        timer = threading.Timer(PAUSE, push_reset)
-        timer.start()
-        self.assertIsNone(self.emcy.wait(0x9000, TIMEOUT))
+        with timer(push_reset) as t:
+            t.start()
+            self.assertIsNone(self.emcy.wait(0x9000, TIMEOUT))
 
 
 class TestEmcyError(unittest.TestCase):
