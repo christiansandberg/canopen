@@ -185,6 +185,7 @@ class TestEmcyProducer(unittest.TestCase):
         self.txbus = can.Bus(interface="virtual")
         self.rxbus = can.Bus(interface="virtual")
         self.net = canopen.Network(self.txbus)
+        self.net.NOTIFIER_SHUTDOWN_TIMEOUT = 0.0
         self.net.connect()
         self.emcy = canopen.emcy.EmcyProducer(0x80 + 1)
         self.emcy.network = self.net

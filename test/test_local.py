@@ -13,10 +13,12 @@ class TestSDO(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.network1 = canopen.Network()
+        cls.network1.NOTIFIER_SHUTDOWN_TIMEOUT = 0.0
         cls.network1.connect("test", interface="virtual")
         cls.remote_node = cls.network1.add_node(2, SAMPLE_EDS)
 
         cls.network2 = canopen.Network()
+        cls.network2.NOTIFIER_SHUTDOWN_TIMEOUT = 0.0
         cls.network2.connect("test", interface="virtual")
         cls.local_node = cls.network2.create_node(2, SAMPLE_EDS)
 
@@ -176,10 +178,12 @@ class TestPDO(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.network1 = canopen.Network()
+        cls.network1.NOTIFIER_SHUTDOWN_TIMEOUT = 0.0
         cls.network1.connect("test", interface="virtual")
         cls.remote_node = cls.network1.add_node(2, SAMPLE_EDS)
 
         cls.network2 = canopen.Network()
+        cls.network2.NOTIFIER_SHUTDOWN_TIMEOUT = 0.0
         cls.network2.connect("test", interface="virtual")
         cls.local_node = cls.network2.create_node(2, SAMPLE_EDS)
 
