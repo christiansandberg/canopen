@@ -77,33 +77,33 @@ class TestNmtMaster(unittest.TestCase):
             with self.subTest(code=code):
                 t = threading.Timer(0.01, self.dispatch_heartbeat, args=(code,))
                 t.start()
+                self.addCleanup(t.join)
                 actual = self.node.nmt.wait_for_heartbeat(0.1)
                 expected = NMT_STATES[code]
                 self.assertEqual(actual, expected)
-                t.join()
 
     def test_nmt_master_wait_for_bootup(self):
         t = threading.Timer(0.01, self.dispatch_heartbeat, args=(0x00,))
         t.start()
+        self.addCleanup(t.join)
         self.node.nmt.wait_for_bootup(self.TIMEOUT)
         self.assertEqual(self.node.nmt.state, "PRE-OPERATIONAL")
-        t.join()
 
     def test_nmt_master_on_heartbeat_initialising(self):
         t = threading.Timer(0.01, self.dispatch_heartbeat, args=(0x00,))
         t.start()
+        self.addCleanup(t.join)
         state = self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
         self.assertEqual(state, "PRE-OPERATIONAL")
-        t.join()
 
     def test_nmt_master_on_heartbeat_unknown_state(self):
         t = threading.Timer(0.01, self.dispatch_heartbeat, args=(0xcb,))
         t.start()
+        self.addCleanup(t.join)
         state = self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
         # Expect the high bit to be masked out, and a formatted string to
         # be returned.
         self.assertEqual(state, "UNKNOWN STATE '75'")
-        t.join()
 
     def test_nmt_master_add_heartbeat_callback(self):
         event = threading.Event()
