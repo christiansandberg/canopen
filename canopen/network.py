@@ -25,8 +25,8 @@ Callback = Callable[[int, bytearray, float], None]
 class Network(MutableMapping):
     """Representation of one CAN bus containing one or more nodes."""
 
-    NOTIFIER_CYCLE: float = 1.0  #: Maximum waiting time for one notifier iteration
-    NOTIFIER_SHUTDOWN_TIMEOUT: float = 5.0  #: Maximum waiting time to stop notifiers
+    NOTIFIER_CYCLE: float = 1.0  #: Maximum waiting time for one notifier iteration.
+    NOTIFIER_SHUTDOWN_TIMEOUT: float = 5.0  #: Maximum waiting time to stop notifiers.
 
     def __init__(self, bus: Optional[can.BusABC] = None):
         """
