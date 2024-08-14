@@ -249,9 +249,7 @@ class TestNetwork(unittest.TestCase):
             # Check if periodicity is established; flakiness has been observed
             # on macOS.
             end_time = time.time() + TIMEOUT
-            while True:
-                if time.time() >= end_time:
-                    break
+            while time.time() < end_time:
                 if msg := bus.recv(PERIOD):
                     acc.append(msg)
                 if len(acc) >= 2:
