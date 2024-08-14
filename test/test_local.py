@@ -89,7 +89,7 @@ class TestSDO(unittest.TestCase):
     def test_slave_send_heartbeat(self):
         # Setting the heartbeat time should trigger heartbeating
         # to start
-        self.remote_node.sdo["Producer heartbeat time"].raw = 1000
+        self.remote_node.sdo["Producer heartbeat time"].raw = 100
         state = self.remote_node.nmt.wait_for_heartbeat()
         self.local_node.nmt.stop_heartbeat()
         # The NMT master will change the state INITIALISING (0)
@@ -98,7 +98,7 @@ class TestSDO(unittest.TestCase):
 
     def test_nmt_state_initializing_to_preoper(self):
         # Initialize the heartbeat timer
-        self.local_node.sdo["Producer heartbeat time"].raw = 1000
+        self.local_node.sdo["Producer heartbeat time"].raw = 100
         self.local_node.nmt.stop_heartbeat()
         # This transition shall start the heartbeating
         self.local_node.nmt.state = 'INITIALISING'
