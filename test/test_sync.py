@@ -1,8 +1,9 @@
 import threading
 import unittest
 
-import can
 import canopen
+
+from .util import VirtualBus, VirtualNetwork
 
 
 PERIOD = 0.01
@@ -11,10 +12,10 @@ TIMEOUT = PERIOD * 10
 
 class TestSync(unittest.TestCase):
     def setUp(self):
-        self.net = canopen.Network()
-        self.net.connect(interface="virtual")
+        self.net = VirtualNetwork()
+        self.net.connect()
         self.sync = canopen.sync.SyncProducer(self.net)
-        self.rxbus = can.Bus(interface="virtual")
+        self.rxbus = VirtualBus()
 
     def tearDown(self):
         self.net.disconnect()

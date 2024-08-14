@@ -2,7 +2,7 @@ import time
 import unittest
 
 import canopen
-from .util import SAMPLE_EDS
+from .util import SAMPLE_EDS, VirtualNetwork
 
 
 class TestSDO(unittest.TestCase):
@@ -12,12 +12,12 @@ class TestSDO(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.network1 = canopen.Network()
-        cls.network1.connect("test", interface="virtual")
+        cls.network1 = VirtualNetwork()
+        cls.network1.connect()
         cls.remote_node = cls.network1.add_node(2, SAMPLE_EDS)
 
-        cls.network2 = canopen.Network()
-        cls.network2.connect("test", interface="virtual")
+        cls.network2 = VirtualNetwork()
+        cls.network2.connect()
         cls.local_node = cls.network2.create_node(2, SAMPLE_EDS)
 
         cls.remote_node2 = cls.network1.add_node(3, SAMPLE_EDS)
@@ -175,12 +175,12 @@ class TestPDO(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.network1 = canopen.Network()
-        cls.network1.connect("test", interface="virtual")
+        cls.network1 = VirtualNetwork()
+        cls.network1.connect()
         cls.remote_node = cls.network1.add_node(2, SAMPLE_EDS)
 
-        cls.network2 = canopen.Network()
-        cls.network2.connect("test", interface="virtual")
+        cls.network2 = VirtualNetwork()
+        cls.network2.connect()
         cls.local_node = cls.network2.create_node(2, SAMPLE_EDS)
 
     @classmethod

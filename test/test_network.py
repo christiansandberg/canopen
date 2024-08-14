@@ -4,7 +4,7 @@ import threading
 
 import canopen
 import can
-from .util import SAMPLE_EDS
+from .util import SAMPLE_EDS, VirtualBus, VirtualNetwork
 
 
 class TestNetwork(unittest.TestCase):
@@ -94,7 +94,7 @@ class TestNetwork(unittest.TestCase):
         self.assertListEqual(self.network.scanner.nodes, [2])
 
     def test_network_send_message(self):
-        bus = can.interface.Bus(interface="virtual")
+        bus = VirtualBus()
         self.addCleanup(bus.shutdown)
 
         self.network.connect(interface="virtual")
@@ -321,10 +321,10 @@ class TestScanner(unittest.TestCase):
             self.scanner.search()
 
     def test_scanner_search(self):
-        rxbus = can.Bus(interface="virtual")
+        rxbus = VirtualBus()
         self.addCleanup(rxbus.shutdown)
 
-        txbus = can.Bus(interface="virtual")
+        txbus = VirtualBus()
         self.addCleanup(txbus.shutdown)
 
         net = canopen.Network(txbus)
@@ -345,10 +345,12 @@ class TestScanner(unittest.TestCase):
         self.assertIsNone(rxbus.recv(self.TIMEOUT))
 
     def test_scanner_search_limit(self):
-        bus = can.Bus(interface="virtual", receive_own_messages=True)
-        net = canopen.Network(bus)
+        net = VirtualNetwork()
         net.connect()
         self.addCleanup(net.disconnect)
+
+        bus = VirtualBus()
+        self.addCleanup(bus.shutdown)
 
         self.scanner.network = net
         self.scanner.search(limit=1)

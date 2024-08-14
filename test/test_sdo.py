@@ -3,7 +3,8 @@ import unittest
 import canopen
 import canopen.objectdictionary.datatypes as dt
 from canopen.objectdictionary import ODVariable
-from .util import SAMPLE_EDS, DATATYPES_EDS
+
+from .util import SAMPLE_EDS, DATATYPES_EDS, VirtualNetwork
 
 
 TX = 1

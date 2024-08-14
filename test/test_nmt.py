@@ -1,10 +1,9 @@
 import time
 import unittest
 
-import can
 import canopen
 from canopen.nmt import COMMAND_TO_STATE, NMT_STATES, NMT_COMMANDS, NmtError
-from .util import SAMPLE_EDS
+from .util import SAMPLE_EDS, VirtualBus, VirtualNetwork
 
 
 class TestNmtBase(unittest.TestCase):
@@ -46,22 +45,21 @@ class TestNmtMaster(unittest.TestCase):
     TIMEOUT = PERIOD * 2
 
     def setUp(self):
-        bus = can.ThreadSafeBus(
-            interface="virtual",
-            channel="test",
-            receive_own_messages=True,
-        )
-        net = canopen.Network(bus)
-        net.connect()
+        rx_net = VirtualNetwork()
+        rx_net.connect()
         with self.assertLogs():
-            node = net.add_node(self.NODE_ID, SAMPLE_EDS)
+            node = rx_net.add_node(self.NODE_ID, SAMPLE_EDS)
 
-        self.bus = bus
-        self.net = net
+        tx_net = VirtualNetwork()
+        tx_net.connect()
+
+        self.rx_net = rx_net
+        self.tx_net = tx_net
         self.node = node
 
     def tearDown(self):
-        self.net.disconnect()
+        self.rx_net.disconnect()
+        self.tx_net.disconnect()
 
     def test_nmt_master_no_heartbeat(self):
         with self.assertRaisesRegex(NmtError, "heartbeat"):
@@ -73,7 +71,7 @@ class TestNmtMaster(unittest.TestCase):
         # Skip the special INITIALISING case.
         for code in [st for st in NMT_STATES if st != 0]:
             with self.subTest(code=code):
-                task = self.net.send_periodic(self.COB_ID, [code], self.PERIOD)
+                task = self.tx_net.send_periodic(self.COB_ID, [code], self.PERIOD)
                 try:
                     actual = self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
                 finally:
@@ -82,14 +80,14 @@ class TestNmtMaster(unittest.TestCase):
                 self.assertEqual(actual, expected)
 
     def test_nmt_master_on_heartbeat_initialising(self):
-        task = self.net.send_periodic(self.COB_ID, [0], self.PERIOD)
+        task = self.tx_net.send_periodic(self.COB_ID, [0], self.PERIOD)
         self.addCleanup(task.stop)
         self.node.nmt.wait_for_bootup(self.TIMEOUT)
         state = self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
         self.assertEqual(state, "PRE-OPERATIONAL")
 
     def test_nmt_master_on_heartbeat_unknown_state(self):
-        task = self.net.send_periodic(self.COB_ID, [0xcb], self.PERIOD)
+        task = self.tx_net.send_periodic(self.COB_ID, [0xcb], self.PERIOD)
         self.addCleanup(task.stop)
         state = self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
         # Expect the high bit to be masked out, and a formatted string to
@@ -105,13 +103,16 @@ class TestNmtMaster(unittest.TestCase):
             state = st
             event.set()
         self.node.nmt.add_heartbeat_callback(hook)
-        self.net.send_message(self.COB_ID, bytes([127]))
+        self.tx_net.send_message(self.COB_ID, bytes([127]))
         self.assertTrue(event.wait(self.TIMEOUT))
         self.assertEqual(state, 127)
 
     def test_nmt_master_node_guarding(self):
+        bus = VirtualBus()
+        self.addCleanup(bus.shutdown)
+
         self.node.nmt.start_node_guarding(self.PERIOD)
-        msg = self.bus.recv(self.TIMEOUT)
+        msg = bus.recv(self.TIMEOUT)
         self.assertIsNotNone(msg)
         self.assertEqual(msg.arbitration_id, self.COB_ID)
         self.assertEqual(msg.dlc, 0)
@@ -119,20 +120,20 @@ class TestNmtMaster(unittest.TestCase):
         self.node.nmt.stop_node_guarding()
         # A message may have been in flight when we stopped the timer,
         # so allow a single failure.
-        msg = self.bus.recv(self.TIMEOUT)
+        msg = bus.recv(self.TIMEOUT)
         if msg is not None:
-            self.assertIsNone(self.bus.recv(self.TIMEOUT))
+            self.assertIsNone(bus.recv(self.TIMEOUT))
 
 
 class TestNmtSlave(unittest.TestCase):
     def setUp(self):
-        self.network1 = canopen.Network()
-        self.network1.connect("test", interface="virtual")
+        self.network1 = VirtualNetwork()
+        self.network1.connect()
         with self.assertLogs():
             self.remote_node = self.network1.add_node(2, SAMPLE_EDS)
 
-        self.network2 = canopen.Network()
-        self.network2.connect("test", interface="virtual")
+        self.network2 = VirtualNetwork()
+        self.network2.connect()
         with self.assertLogs():
             self.local_node = self.network2.create_node(2, SAMPLE_EDS)
             self.remote_node2 = self.network1.add_node(3, SAMPLE_EDS)
