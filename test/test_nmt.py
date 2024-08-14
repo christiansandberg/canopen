@@ -52,6 +52,7 @@ class TestNmtMaster(unittest.TestCase):
             receive_own_messages=True,
         )
         net = canopen.Network(bus)
+        net.NOTIFIER_SHUTDOWN_TIMEOUT = 0.0
         net.connect()
         with self.assertLogs():
             node = net.add_node(self.NODE_ID, SAMPLE_EDS)
@@ -127,11 +128,13 @@ class TestNmtMaster(unittest.TestCase):
 class TestNmtSlave(unittest.TestCase):
     def setUp(self):
         self.network1 = canopen.Network()
+        self.network1.NOTIFIER_SHUTDOWN_TIMEOUT = 0.0
         self.network1.connect("test", interface="virtual")
         with self.assertLogs():
             self.remote_node = self.network1.add_node(2, SAMPLE_EDS)
 
         self.network2 = canopen.Network()
+        self.network2.NOTIFIER_SHUTDOWN_TIMEOUT = 0.0
         self.network2.connect("test", interface="virtual")
         with self.assertLogs():
             self.local_node = self.network2.create_node(2, SAMPLE_EDS)

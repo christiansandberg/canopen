@@ -12,6 +12,7 @@ TIMEOUT = PERIOD * 10
 class TestSync(unittest.TestCase):
     def setUp(self):
         self.net = canopen.Network()
+        self.net.NOTIFIER_SHUTDOWN_TIMEOUT = 0.0
         self.net.connect(interface="virtual")
         self.sync = canopen.sync.SyncProducer(self.net)
         self.rxbus = can.Bus(interface="virtual")

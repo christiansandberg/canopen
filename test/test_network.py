@@ -11,6 +11,7 @@ class TestNetwork(unittest.TestCase):
 
     def setUp(self):
         self.network = canopen.Network()
+        self.network.NOTIFIER_SHUTDOWN_TIMEOUT = 0.0
 
     def test_network_add_node(self):
         # Add using str.
@@ -328,6 +329,7 @@ class TestScanner(unittest.TestCase):
         self.addCleanup(txbus.shutdown)
 
         net = canopen.Network(txbus)
+        net.NOTIFIER_SHUTDOWN_TIMEOUT = 0.0
         net.connect()
         self.addCleanup(net.disconnect)
 
@@ -347,6 +349,7 @@ class TestScanner(unittest.TestCase):
     def test_scanner_search_limit(self):
         bus = can.Bus(interface="virtual", receive_own_messages=True)
         net = canopen.Network(bus)
+        net.NOTIFIER_SHUTDOWN_TIMEOUT = 0.0
         net.connect()
         self.addCleanup(net.disconnect)
 
