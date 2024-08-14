@@ -41,7 +41,7 @@ class Network(MutableMapping):
         #: List of :class:`can.Listener` objects.
         #: Includes at least MessageListener.
         self.listeners = [MessageListener(self)]
-        self.notifier = None
+        self.notifier: Optional[can.Notifier] = None
         self.nodes: Dict[int, Union[RemoteNode, LocalNode]] = {}
         self.subscribers: Dict[int, List[Callback]] = {}
         self.send_lock = threading.Lock()
@@ -311,7 +311,6 @@ class PeriodicMessageTask:
         self.msg = can.Message(is_extended_id=can_id > 0x7FF,
                                arbitration_id=can_id,
                                data=data, is_remote_frame=remote)
-        self._task = None
         self._start()
 
     def _start(self):
