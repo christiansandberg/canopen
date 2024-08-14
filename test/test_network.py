@@ -257,7 +257,8 @@ class TestNetwork(unittest.TestCase):
                 if len(acc) >= 2:
                     first, last = acc[-2:]
                     delta = last.timestamp - first.timestamp
-                    return round(delta, ndigits=2) == PERIOD
+                    if round(delta, ndigits=2) == PERIOD:
+                        return
             self.fail("Timed out")
 
         # Wait for frames to arrive; then check the result.
