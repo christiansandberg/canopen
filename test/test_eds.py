@@ -357,3 +357,7 @@ class TestEDS(unittest.TestCase):
                                      f" mismatch on {pretty_index(evar.index, evar.subindex)}")
 
                 self.assertEqual(self.od.comments, exported_od.comments)
+
+
+if __name__ == "__main__":
+    unittest.main()
