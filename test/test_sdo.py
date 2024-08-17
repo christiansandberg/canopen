@@ -10,6 +10,23 @@ TX = 1
 RX = 2
 
 
+class TestSDOVariables(unittest.TestCase):
+    """Some basic assumptions on the behavior of SDO variable objects.
+
+    Mostly what is stated in the API docs.
+    """
+
+    def setUp(self):
+        node = canopen.LocalNode(1, SAMPLE_EDS)
+        self.sdo_node = node.sdo
+
+    def test_array_members_dynamic(self):
+        """Check if sub-objects missing from OD entry are generated dynamically."""
+        array = self.sdo_node[0x1003]
+        for var in array.values():
+            self.assertIsInstance(var, canopen.sdo.SdoVariable)
+
+
 class TestSDO(unittest.TestCase):
     """
     Test SDO traffic by example. Most are taken from
