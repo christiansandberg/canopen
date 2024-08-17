@@ -23,7 +23,8 @@ class TestSDOVariables(unittest.TestCase):
     def test_record_iter_length(self):
         """Assume the "highest subindex supported" entry is not counted.
 
-        Sub-objects without an OD entry should be skipped as well."""
+        Sub-objects without an OD entry should be skipped as well.
+        """
         record = self.sdo_node[0x1018]
         subs = sum(1 for _ in iter(record))
         self.assertEqual(len(record), 3)
