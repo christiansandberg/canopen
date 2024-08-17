@@ -100,12 +100,7 @@ DataType=0x0007
 AccessType=ro
 PDOMapping=0
 
-[1018sub3]
-ParameterName=Revision number
-ObjectType=0x7
-DataType=0x0007
-AccessType=ro
-PDOMapping=0
+; [1018sub3] left out for testing
 
 [1018sub4]
 ParameterName=Serial number
