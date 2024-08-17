@@ -20,7 +20,6 @@ class TestSDOVariables(unittest.TestCase):
         node = canopen.LocalNode(1, SAMPLE_EDS)
         self.sdo_node = node.sdo
 
-    @unittest.expectedFailure
     def test_record_iter_length(self):
         """Assume the "highest subindex supported" entry is not counted.
 
