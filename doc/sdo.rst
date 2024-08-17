@@ -225,7 +225,7 @@ API
     .. describe:: iter(array)
 
        Return an iterator over the subindexes from the array.
-       This will make a SDO read operation on subindex 0 in order to get the
+       This will make an SDO read operation on subindex 0 in order to get the
        actual length of the array.  This "highest subindex" entry is officially
        not part of the data and thus skipped in the yielded values.
 
@@ -233,19 +233,19 @@ API
 
        Return ``True`` if the subindex (as int) or name (as string) exists in
        the array.
-       This will make a SDO read operation on subindex 0 in order to get the
+       This will make an SDO read operation on subindex 0 in order to get the
        actual length of the array.
 
     .. describe:: len(array)
 
        Return the length of the array, not counting the "highest subindex" entry
        itself.
-       This will make a SDO read operation on subindex 0.
+       This will make an SDO read operation on subindex 0.
 
     .. method:: values()
 
        Return a list of :class:`canopen.sdo.SdoVariable` in the array.
-       This will make a SDO read operation on subindex 0 in order to get the
+       This will make an SDO read operation on subindex 0 in order to get the
        actual length of the array.
 
 
