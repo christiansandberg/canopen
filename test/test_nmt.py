@@ -1,3 +1,4 @@
+import threading
 import time
 import unittest
 
@@ -41,28 +42,28 @@ class TestNmtBase(unittest.TestCase):
 
 class TestNmtMaster(unittest.TestCase):
     NODE_ID = 2
-    COB_ID = 0x700 + NODE_ID
     PERIOD = 0.01
-    TIMEOUT = PERIOD * 2
+    TIMEOUT = PERIOD * 10
 
     def setUp(self):
-        bus = can.ThreadSafeBus(
-            interface="virtual",
-            channel="test",
-            receive_own_messages=True,
-        )
-        net = canopen.Network(bus)
+        net = canopen.Network()
         net.NOTIFIER_SHUTDOWN_TIMEOUT = 0.0
-        net.connect()
+        net.connect(interface="virtual")
         with self.assertLogs():
             node = net.add_node(self.NODE_ID, SAMPLE_EDS)
 
-        self.bus = bus
+        self.bus = can.Bus(interface="virtual")
         self.net = net
         self.node = node
 
     def tearDown(self):
         self.net.disconnect()
+        self.bus.shutdown()
+
+    def dispatch_heartbeat(self, code):
+        cob_id = 0x700 + self.NODE_ID
+        hb = can.Message(arbitration_id=cob_id, data=[code])
+        self.bus.send(hb)
 
     def test_nmt_master_no_heartbeat(self):
         with self.assertRaisesRegex(NmtError, "heartbeat"):
@@ -74,39 +75,46 @@ class TestNmtMaster(unittest.TestCase):
         # Skip the special INITIALISING case.
         for code in [st for st in NMT_STATES if st != 0]:
             with self.subTest(code=code):
-                task = self.net.send_periodic(self.COB_ID, [code], self.PERIOD)
-                try:
-                    actual = self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
-                finally:
-                    task.stop()
+                t = threading.Timer(0.01, self.dispatch_heartbeat, args=(code,))
+                t.start()
+                self.addCleanup(t.join)
+                actual = self.node.nmt.wait_for_heartbeat(0.1)
                 expected = NMT_STATES[code]
                 self.assertEqual(actual, expected)
 
-    def test_nmt_master_on_heartbeat_initialising(self):
-        task = self.net.send_periodic(self.COB_ID, [0], self.PERIOD)
-        self.addCleanup(task.stop)
+    def test_nmt_master_wait_for_bootup(self):
+        t = threading.Timer(0.01, self.dispatch_heartbeat, args=(0x00,))
+        t.start()
+        self.addCleanup(t.join)
         self.node.nmt.wait_for_bootup(self.TIMEOUT)
+        self.assertEqual(self.node.nmt.state, "PRE-OPERATIONAL")
+
+    def test_nmt_master_on_heartbeat_initialising(self):
+        t = threading.Timer(0.01, self.dispatch_heartbeat, args=(0x00,))
+        t.start()
+        self.addCleanup(t.join)
         state = self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
         self.assertEqual(state, "PRE-OPERATIONAL")
 
     def test_nmt_master_on_heartbeat_unknown_state(self):
-        task = self.net.send_periodic(self.COB_ID, [0xcb], self.PERIOD)
-        self.addCleanup(task.stop)
+        t = threading.Timer(0.01, self.dispatch_heartbeat, args=(0xcb,))
+        t.start()
+        self.addCleanup(t.join)
         state = self.node.nmt.wait_for_heartbeat(self.TIMEOUT)
         # Expect the high bit to be masked out, and a formatted string to
         # be returned.
         self.assertEqual(state, "UNKNOWN STATE '75'")
 
     def test_nmt_master_add_heartbeat_callback(self):
-        from threading import Event
-        event = Event()
+        event = threading.Event()
         state = None
         def hook(st):
             nonlocal state
             state = st
             event.set()
         self.node.nmt.add_heartbeat_callback(hook)
-        self.net.send_message(self.COB_ID, bytes([127]))
+
+        self.dispatch_heartbeat(0x7f)
         self.assertTrue(event.wait(self.TIMEOUT))
         self.assertEqual(state, 127)
 
@@ -114,7 +122,7 @@ class TestNmtMaster(unittest.TestCase):
         self.node.nmt.start_node_guarding(self.PERIOD)
         msg = self.bus.recv(self.TIMEOUT)
         self.assertIsNotNone(msg)
-        self.assertEqual(msg.arbitration_id, self.COB_ID)
+        self.assertEqual(msg.arbitration_id, 0x700 + self.NODE_ID)
         self.assertEqual(msg.dlc, 0)
 
         self.node.nmt.stop_node_guarding()
