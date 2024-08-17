@@ -20,6 +20,15 @@ class TestSDOVariables(unittest.TestCase):
         node = canopen.LocalNode(1, SAMPLE_EDS)
         self.sdo_node = node.sdo
 
+    def test_record_iter_length(self):
+        """Assume the "highest subindex supported" entry is not counted.
+
+        Sub-objects without an OD entry should be skipped as well."""
+        record = self.sdo_node[0x1018]
+        subs = sum(1 for _ in iter(record))
+        self.assertEqual(len(record), 3)
+        self.assertEqual(subs, 3)
+
     def test_array_iter_length(self):
         """Assume the "highest subindex supported" entry is not counted."""
         array = self.sdo_node[0x1003]
