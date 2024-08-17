@@ -121,7 +121,7 @@ class TestEDS(unittest.TestCase):
     def test_record(self):
         record = self.od['Identity object']
         self.assertIsInstance(record, canopen.objectdictionary.ODRecord)
-        self.assertEqual(len(record), 5)
+        self.assertEqual(len(record), 4)
         self.assertEqual(record.index, 0x1018)
         self.assertEqual(record.name, 'Identity object')
         var = record['Vendor-ID']
