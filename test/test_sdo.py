@@ -20,6 +20,17 @@ class TestSDOVariables(unittest.TestCase):
         node = canopen.LocalNode(1, SAMPLE_EDS)
         self.sdo_node = node.sdo
 
+    def test_array_iter_length(self):
+        """Assume the "highest subindex supported" entry is not counted."""
+        array = self.sdo_node[0x1003]
+        subs = sum(1 for _ in iter(array))
+        self.assertEqual(len(array), 3)
+        self.assertEqual(subs, 3)
+        # Simulate more entries getting added dynamically
+        array[0].set_data(b'\x08')
+        subs = sum(1 for _ in iter(array))
+        self.assertEqual(subs, 8)
+
     def test_array_members_dynamic(self):
         """Check if sub-objects missing from OD entry are generated dynamically."""
         array = self.sdo_node[0x1003]
