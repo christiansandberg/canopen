@@ -51,6 +51,15 @@ class NmtBase:
         self.id = node_id
         self.network = None
         self._state = 0
+        self._state_change_callbacks = []
+
+    def add_state_change_callback(self, callback: Callable[[str, str], None]):
+        """Add function to be called on nmt state change.
+
+        :param callback:
+            Function that should accept an old NMT state and new NMT state as arguments.
+        """
+        self._state_change_callbacks.append(callback)
 
     def on_command(self, can_id, data, timestamp):
         cmd, node_id = struct.unpack_from("BB", data)
@@ -61,6 +70,8 @@ class NmtBase:
                 if new_state != self._state:
                     logger.info("New NMT state %s, old state %s",
                                 NMT_STATES[new_state], NMT_STATES[self._state])
+                    for callback in self._state_change_callbacks:
+                        callback(old_state = NMT_STATES[self._state], new_state = NMT_STATES[new_state])
                 self._state = new_state
 
     def send_command(self, code: int):
@@ -73,6 +84,9 @@ class NmtBase:
             new_state = COMMAND_TO_STATE[code]
             logger.info("Changing NMT state on node %d from %s to %s",
                         self.id, NMT_STATES[self._state], NMT_STATES[new_state])
+            if new_state != self._state:
+                for callback in self._state_change_callbacks:
+                    callback(old_state = NMT_STATES[self._state], new_state = NMT_STATES[new_state])
             self._state = new_state
 
     @property

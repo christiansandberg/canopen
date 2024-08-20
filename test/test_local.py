@@ -204,6 +204,37 @@ class TestPDO(unittest.TestCase):
         self.remote_node.pdo.save()
         self.local_node.pdo.save()
 
+    def test_send_pdo_on_operational(self):
+        self.local_node.tpdo[1].period = 0.5
+
+        self.local_node.nmt.state = 'INITIALISING'
+        self.local_node.nmt.state = 'PRE-OPERATIONAL'
+        self.local_node.nmt.state = 'OPERATIONAL'
+
+        self.assertNotEqual(self.local_node.tpdo[1]._task, None)
+
+    def test_config_pdo(self):
+        # Disable tpdo 1
+        self.local_node.tpdo[1].enabled = False
+        self.local_node.tpdo[1].cob_id = 0
+        self.local_node.tpdo[1].period = 0.5 # manually assign a period
+
+        self.local_node.nmt.state = 'INITIALISING'
+        self.local_node.nmt.state = 'PRE-OPERATIONAL'
+
+        # Attempt to re-enable tpdo 1 via sdo writing
+        PDO_NOT_VALID = 1 << 31
+        odDefaultVal = self.local_node.object_dictionary["Transmit PDO 0 communication parameters.COB-ID use by TPDO 1"].default
+        enabledCobId = odDefaultVal & ~PDO_NOT_VALID # Ensure invalid bit is not set
+
+        self.remote_node.sdo["Transmit PDO 0 communication parameters.COB-ID use by TPDO 1"].raw = enabledCobId
+
+        # Transition to operational
+        self.local_node.nmt.state = 'OPERATIONAL'
+
+        # Ensure tpdo automatically started with transition
+        self.assertNotEqual(self.local_node.tpdo[1]._task, None)
+
 
 if __name__ == "__main__":
     unittest.main()

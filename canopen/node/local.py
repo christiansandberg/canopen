@@ -34,6 +34,8 @@ class LocalNode(BaseNode):
         self.add_write_callback(self.nmt.on_write)
         self.emcy = EmcyProducer(0x80 + self.id)
 
+        self.nmt.add_state_change_callback(self._nmt_state_changed)
+
     def associate_network(self, network):
         self.network = network
         self.sdo.network = network
@@ -115,6 +117,15 @@ class LocalNode(BaseNode):
         self.data_store.setdefault(index, {})
         self.data_store[index][subindex] = bytes(data)
 
+        if 0x1800 <= index <= 0x19FF:
+            # TPDO Communication parameter changed
+            tpdoNum = (index - 0x1800) + 1
+            self._tpdo_configuration_write(tpdoNum)
+        elif 0x1A00 <= index <= 0x1BFF:
+            # TPDO Mapping parameter changed
+            tpdoNum = (index - 0x1A00) + 1
+            self._tpdo_configuration_write(tpdoNum)
+
     def _find_object(self, index, subindex):
         if index not in self.object_dictionary:
             # Index does not exist
@@ -127,3 +138,32 @@ class LocalNode(BaseNode):
                 raise SdoAbortedError(0x06090011)
             obj = obj[subindex]
         return obj
+
+    def _nmt_state_changed(self, old_state, new_state):
+        if new_state == "OPERATIONAL":
+            for pdo in self.tpdo.map.values():
+                if pdo.enabled:
+                    try:
+                        pdo.start()
+                        logger.info("Successfully started %s", pdo.name)
+                    except ValueError:
+                        logger.warning("Failed to start %s due to missing period", pdo.name)
+                    except Exception:
+                        logger.exception("Unknown error starting %s", pdo.name)
+                else:
+                    logger.info("%s not enabled", pdo.name)
+        else:
+            self.tpdo.stop()
+
+    def _tpdo_configuration_write(self, tpdoNum):
+        pdo = self.tpdo.map[tpdoNum]
+
+        # Only allowed to edit pdo configuration in pre-op or operational
+        if self.nmt.state not in ("PRE-OPERATIONAL", "OPERATIONAL"):
+            logger.warning("Tried to configure %s when not in pre-op or operational", pdo.name)
+            return
+        
+        try:
+            pdo.read(from_od=True)
+        except:
+            pass
