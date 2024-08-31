@@ -93,14 +93,24 @@ class PdoBase(Mapping):
     def export(self, filename):
         """Export current configuration to a database file.
 
+        .. note::
+           This API requires the ``db_export`` feature to be installed::
+
+              python3 -m pip install 'canopen[db_export]'
+
         :param str filename:
             Filename to save to (e.g. DBC, DBF, ARXML, KCD etc)
+        :raises NotImplementedError:
+            When the ``canopen[db_export]`` feature is not installed.
 
         :return: The CanMatrix object created
         :rtype: canmatrix.canmatrix.CanMatrix
         """
-        from canmatrix import canmatrix
-        from canmatrix import formats
+        try:
+            from canmatrix import canmatrix
+            from canmatrix import formats
+        except ImportError:
+            raise NotImplementedError("This feature requires the 'canopen[db_export]' feature")
 
         db = canmatrix.CanMatrix()
         for pdo_map in self.map.values():
@@ -407,36 +417,54 @@ class PdoMap:
 
     @ensure_not_async  # NOTE: Safeguard for accidental async use
     def read(self, from_od=False) -> None:
-        """Read PDO configuration for this map using SDO or from OD."""
+        """Read PDO configuration for this map.
+
+        :param from_od:
+            Read using SDO if False, read from object dictionary if True.
+            When reading from object dictionary, if DCF populated a value, the
+            DCF value will be used, otherwise the EDS default will be used instead.
+        """
         gen = self.read_generator()
-        var = next(gen)
-        while var:
+        param = next(gen)
+        while param:
             if from_od:
-                # Use default value from OD
-                value = var.od.default
+                # Use value from OD
+                if param.od.value is not None:
+                    value = param.od.value
+                else:
+                    value = param.od.default
             else:
                 # Get value from SDO
                 # NOTE: Blocking call
-                value = var.raw
+                value = param.raw
             try:
                 # Deliver value into read_generator and wait for next object
-                var = gen.send(value)
+                param = gen.send(value)
             except StopIteration:
                 break
 
     async def aread(self, from_od=False) -> None:
-        """Read PDO configuration for this map using SDO, async variant."""
+        """Read PDO configuration for this map. Async variant.
+
+        :param from_od:
+            Read using SDO if False, read from object dictionary if True.
+            When reading from object dictionary, if DCF populated a value, the
+            DCF value will be used, otherwise the EDS default will be used instead.
+        """
         gen = self.read_generator()
-        var = next(gen)
-        while var:
+        param = next(gen)
+        while param:
             if from_od:
-                # Use default value from OD
-                value = var.od.default
+                # Use value from OD
+                if param.od.value is not None:
+                    value = param.od.value
+                else:
+                    value = param.od.default
             else:
                 # Get value from SDO
-                value = await var.aget_raw()
+                value = await param.aget_raw()
             try:
-                var = gen.send(value)
+                param = gen.send(value)
             except StopIteration:
                 break
 

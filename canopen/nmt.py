@@ -8,7 +8,8 @@ from typing import Callable, Optional, TYPE_CHECKING
 from canopen.async_guard import ensure_not_async
 
 if TYPE_CHECKING:
-    from canopen.network import Network
+    from canopen.network import Network, PeriodicMessageTask
+
 
 logger = logging.getLogger(__name__)
 
@@ -94,10 +95,10 @@ class NmtBase:
         - 'RESET'
         - 'RESET COMMUNICATION'
         """
-        if self._state in NMT_STATES:
+        try:
             return NMT_STATES[self._state]
-        else:
-            return self._state
+        except KeyError:
+            return f"UNKNOWN STATE '{self._state}'"
 
     @state.setter
     def state(self, new_state: str):
@@ -115,7 +116,7 @@ class NmtMaster(NmtBase):
     def __init__(self, node_id: int):
         super(NmtMaster, self).__init__(node_id)
         self._state_received = None
-        self._node_guarding_producer = None
+        self._node_guarding_producer: Optional[PeriodicMessageTask] = None
         #: Timestamp of last heartbeat message
         self.timestamp: Optional[float] = None
         self.state_update = threading.Condition()
@@ -259,7 +260,7 @@ class NmtSlave(NmtBase):
 
     def __init__(self, node_id: int, local_node):
         super(NmtSlave, self).__init__(node_id)
-        self._send_task = None
+        self._send_task: Optional[PeriodicMessageTask] = None
         self._heartbeat_time_ms = 0
         self._local_node = local_node
 

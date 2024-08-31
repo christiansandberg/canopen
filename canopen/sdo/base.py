@@ -120,7 +120,8 @@ class SdoRecord(Mapping):
         return SdoVariable(self.sdo_node, self.od[subindex])
 
     def __iter__(self) -> Iterator[int]:
-        return iter(self.od)
+        # Skip the "highest subindex" entry, which is not part of the data
+        return filter(None, iter(self.od))
 
     async def aiter(self):
         for i in iter(self.od):
@@ -130,7 +131,8 @@ class SdoRecord(Mapping):
         return self.aiter()
 
     def __len__(self) -> int:
-        return len(self.od)
+        # Skip the "highest subindex" entry, which is not part of the data
+        return len(self.od) - int(0 in self.od)
 
     async def alen(self) -> int:
         return len(self.od)
@@ -152,6 +154,7 @@ class SdoArray(Mapping):
         return SdoVariable(self.sdo_node, self.od[subindex])
 
     def __iter__(self) -> Iterator[int]:
+        # Skip the "highest subindex" entry, which is not part of the data
         return iter(range(1, len(self) + 1))
 
     async def aiter(self):

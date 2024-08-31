@@ -1,15 +1,51 @@
-import os
 import unittest
-# import binascii
-import canopen
-from canopen.objectdictionary import ODVariable
-import canopen.objectdictionary.datatypes as dt
 
-EDS_PATH = os.path.join(os.path.dirname(__file__), 'sample.eds')
-DATAEDS_PATH = os.path.join(os.path.dirname(__file__), 'datatypes.eds')
+import canopen
+import canopen.objectdictionary.datatypes as dt
+from canopen.objectdictionary import ODVariable
+from .util import SAMPLE_EDS, DATATYPES_EDS
+
 
 TX = 1
 RX = 2
+
+
+class TestSDOVariables(unittest.TestCase):
+    """Some basic assumptions on the behavior of SDO variable objects.
+
+    Mostly what is stated in the API docs.
+    """
+
+    def setUp(self):
+        node = canopen.LocalNode(1, SAMPLE_EDS)
+        self.sdo_node = node.sdo
+
+    def test_record_iter_length(self):
+        """Assume the "highest subindex supported" entry is not counted.
+
+        Sub-objects without an OD entry should be skipped as well.
+        """
+        record = self.sdo_node[0x1018]
+        subs = sum(1 for _ in iter(record))
+        self.assertEqual(len(record), 3)
+        self.assertEqual(subs, 3)
+
+    def test_array_iter_length(self):
+        """Assume the "highest subindex supported" entry is not counted."""
+        array = self.sdo_node[0x1003]
+        subs = sum(1 for _ in iter(array))
+        self.assertEqual(len(array), 3)
+        self.assertEqual(subs, 3)
+        # Simulate more entries getting added dynamically
+        array[0].set_data(b'\x08')
+        subs = sum(1 for _ in iter(array))
+        self.assertEqual(subs, 8)
+
+    def test_array_members_dynamic(self):
+        """Check if sub-objects missing from OD entry are generated dynamically."""
+        array = self.sdo_node[0x1003]
+        for var in array.values():
+            self.assertIsInstance(var, canopen.sdo.SdoVariable)
 
 
 class TestSDO(unittest.TestCase):
@@ -26,17 +62,16 @@ class TestSDO(unittest.TestCase):
         """
         next_data = self.data.pop(0)
         self.assertEqual(next_data[0], TX, "No transmission was expected")
-        # print(f"> {binascii.hexlify(data)} ({binascii.hexlify(next_data[1])})")
         self.assertSequenceEqual(data, next_data[1])
         self.assertEqual(can_id, 0x602)
         while self.data and self.data[0][0] == RX:
-            # print(f"< {binascii.hexlify(self.data[0][1])}")
             self.network.notify(0x582, self.data.pop(0)[1], 0.0)
 
     def setUp(self):
         network = canopen.Network()
+        network.NOTIFIER_SHUTDOWN_TIMEOUT = 0.0
         network.send_message = self._send_message
-        node = network.add_node(2, EDS_PATH)
+        node = network.add_node(2, SAMPLE_EDS)
         node.sdo.RESPONSE_TIMEOUT = 0.01
         self.network = network
 
@@ -178,17 +213,16 @@ class TestSDOClientDatatypes(unittest.TestCase):
         """
         next_data = self.data.pop(0)
         self.assertEqual(next_data[0], TX, "No transmission was expected")
-        # print("> %s (%s)" % (binascii.hexlify(data), binascii.hexlify(next_data[1])))
         self.assertSequenceEqual(data, next_data[1])
         self.assertEqual(can_id, 0x602)
         while self.data and self.data[0][0] == RX:
-            # print("< %s" % binascii.hexlify(self.data[0][1]))
             self.network.notify(0x582, self.data.pop(0)[1], 0.0)
 
     def setUp(self):
         network = canopen.Network()
+        network.NOTIFIER_SHUTDOWN_TIMEOUT = 0.0
         network.send_message = self._send_message
-        node = network.add_node(2, DATAEDS_PATH)
+        node = network.add_node(2, DATATYPES_EDS)
         node.sdo.RESPONSE_TIMEOUT = 0.01
         self.node = node
         self.network = network

@@ -9,6 +9,19 @@ except ImportError:
     # package is not installed
     __version__ = "unknown"
 
-Node = RemoteNode
-
+__all__ = [
+    "Network",
+    "NodeScanner",
+    "RemoteNode",
+    "LocalNode",
+    "SdoCommunicationError",
+    "SdoAbortedError",
+    "import_od",
+    "export_od",
+    "ObjectDictionary",
+    "ObjectDictionaryError",
+    "BaseNode402",
+]
 __pypi_url__ = "https://pypi.org/project/canopen/"
+
+Node = RemoteNode

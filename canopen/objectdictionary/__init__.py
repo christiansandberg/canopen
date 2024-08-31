@@ -9,48 +9,65 @@ from collections.abc import MutableMapping, Mapping
 import logging
 
 from canopen.objectdictionary.datatypes import *
+from canopen.objectdictionary.datatypes import IntegerN, UnsignedN
 from canopen.utils import pretty_index
 
 logger = logging.getLogger(__name__)
 
 
-def export_od(od, dest: Union[str, TextIO, None] = None, doc_type: Optional[str] = None):
-    """ Export :class: ObjectDictionary to a file.
+def export_od(
+    od: ObjectDictionary,
+    dest: Union[str, TextIO, None] = None,
+    doc_type: Optional[str] = None
+) -> None:
+    """Export an object dictionary.
 
     :param od:
-        :class: ObjectDictionary object to be exported
+        The object dictionary to be exported.
     :param dest:
-        export destination. filename, or file-like object or None.
-        if None, the document is returned as string
-    :param doc_type: type of document to export.
-       If a filename is given for dest, this default to the file extension.
-       Otherwise, this defaults to "eds"
-    :rtype: str or None
+        The export destination as a filename, a file-like object, or ``None``.
+        If ``None``, the document is written to :data:`sys.stdout`.
+    :param doc_type:
+       The type of document to export.
+       If *dest* is a file-like object or ``None``,
+       *doc_type* must be explicitly provided.
+       If *dest* is a filename and its extension is ``.eds`` or ``.dcf``,
+       *doc_type* defaults to that extension (the preceeding dot excluded);
+       else, it defaults to ``eds``.
+    :raises ValueError:
+        When exporting to an unknown format.
     """
+    supported_doctypes = {"eds", "dcf"}
+    if doc_type and doc_type not in supported_doctypes:
+        supported = ", ".join(supported_doctypes)
+        raise ValueError(
+            f"Cannot export to the {doc_type!r} format; "
+            f"supported formats: {supported}"
+        )
 
-    doctypes = {"eds", "dcf"}
-    if isinstance(dest, str):
-        if doc_type is None:
-            for t in doctypes:
-                if dest.endswith(f".{t}"):
-                    doc_type = t
-                    break
+    opened_here = False
+    try:
+        if isinstance(dest, str):
+            if doc_type is None:
+                for t in supported_doctypes:
+                    if dest.endswith(f".{t}"):
+                        doc_type = t
+                        break
+                else:
+                    doc_type = "eds"
+            dest = open(dest, 'w')
+            opened_here = True
 
-        if doc_type is None:
-            doc_type = "eds"
-        dest = open(dest, 'w')
-    assert doc_type in doctypes
-
-    if doc_type == "eds":
-        from canopen.objectdictionary import eds
-        return eds.export_eds(od, dest)
-    elif doc_type == "dcf":
-        from canopen.objectdictionary import eds
-        return eds.export_dcf(od, dest)
-
-    # If dest is opened in this fn, it should be closed
-    if type(dest) is str:
-        dest.close()
+        if doc_type == "eds":
+            from canopen.objectdictionary import eds
+            return eds.export_eds(od, dest)
+        elif doc_type == "dcf":
+            from canopen.objectdictionary import eds
+            return eds.export_dcf(od, dest)
+    finally:
+        # If dest is opened in this fn, it should be closed
+        if opened_here:
+            dest.close()
 
 
 def import_od(
@@ -60,10 +77,14 @@ def import_od(
     """Parse an EDS, DCF, or EPF file.
 
     :param source:
-        Path to object dictionary file or a file like object or an EPF XML tree.
-
-    :return:
-        An Object Dictionary instance.
+        The path to object dictionary file, a file like object, or an EPF XML tree.
+    :param node_id:
+        For EDS and DCF files, the node ID to use.
+        For other formats, this parameter is ignored.
+    :raises ObjectDictionaryError:
+        For object dictionary errors and inconsistencies.
+    :raises ValueError:
+        When passed a file of an unknown format.
     """
     if source is None:
         return ObjectDictionary()
@@ -84,7 +105,12 @@ def import_od(
         from canopen.objectdictionary import epf
         return epf.import_epf(source)
     else:
-        raise NotImplementedError("No support for this format")
+        doc_type = suffix[1:]
+        allowed = ", ".join(["eds", "dcf", "epf"])
+        raise ValueError(
+            f"Cannot import from the {doc_type!r} format; "
+            f"supported formats: {allowed}"
+        )
 
 
 class ObjectDictionary(MutableMapping):

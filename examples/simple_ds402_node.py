@@ -11,7 +11,7 @@ try:
     network = canopen.Network()
 
     # Connect to the CAN bus
-    network.connect(bustype='kvaser', channel=0, bitrate=1000000)
+    network.connect(interface='kvaser', channel=0, bitrate=1000000)
 
     network.check()
 

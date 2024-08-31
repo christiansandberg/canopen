@@ -1,8 +1,10 @@
 # inspired by the NmtMaster code
 import logging
 import time
+from typing import Dict
 
 from canopen.node import RemoteNode
+from canopen.pdo import PdoMap
 from canopen.sdo import SdoCommunicationError
 
 logger = logging.getLogger(__name__)
@@ -213,8 +215,8 @@ class BaseNode402(RemoteNode):
     def __init__(self, node_id, object_dictionary):
         super(BaseNode402, self).__init__(node_id, object_dictionary)
         self.tpdo_values = {}  # { index: value from last received TPDO }
-        self.tpdo_pointers = {}  # { index: pdo.PdoMap instance }
-        self.rpdo_pointers = {}  # { index: pdo.PdoMap instance }
+        self.tpdo_pointers: Dict[int, PdoMap] = {}
+        self.rpdo_pointers: Dict[int, PdoMap] = {}
 
     def setup_402_state_machine(self, read_pdos=True):
         """Configure the state machine by searching for a TPDO that has the StatusWord mapped.
@@ -491,11 +493,10 @@ class BaseNode402(RemoteNode):
         return self._op_mode_support & bits == bits
 
     # NOTE: Blocking
-    def on_TPDOs_update_callback(self, mapobject):
+    def on_TPDOs_update_callback(self, mapobject: PdoMap):
         """Cache updated values from a TPDO received from this node.
 
         :param mapobject: The received PDO message.
-        :type mapobject: canopen.pdo.PdoMap
         """
         # NOTE: Callback. Called from another thread unless async
         for obj in mapobject:
