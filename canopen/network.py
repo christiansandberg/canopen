@@ -120,9 +120,8 @@ class Network(MutableMapping):
         # The optional loop parameter goes to can.Notifier()
         kwargs_notifier = {}
         if "loop" in kwargs:
-            kwargs_notifier["loop"] = kwargs["loop"]
-            self.loop = kwargs["loop"]
-            del kwargs["loop"]
+            self.loop = kwargs.pop("loop")
+            kwargs_notifier["loop"] = self.loop
             # Register this function as the means to check if canopen is run in
             # async mode. This enables the @ensure_not_async() decorator to
             # work. See async_guard.py
