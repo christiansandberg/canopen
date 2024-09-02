@@ -427,15 +427,19 @@ class PdoMap:
         for var in self.map:
             logger.info("Writing %s (0x%04X:%02X, %d bits) to PDO map",
                         var.name, var.index, var.subindex, var.length)
-            if getattr(self.pdo_node.node, "curtis_hack", False):
-                # Curtis HACK: mixed up field order
-                self.map_array[subindex].raw = (var.index |
-                                                var.subindex << 16 |
-                                                var.length << 24)
-            else:
-                self.map_array[subindex].raw = (var.index << 16 |
-                                                var.subindex << 8 |
-                                                var.length)
+            try:
+                if getattr(self.pdo_node.node, "curtis_hack", False):
+                    # Curtis HACK: mixed up field order
+                    self.map_array[subindex].raw = (var.index |
+                                                    var.subindex << 16 |
+                                                    var.length << 24)
+                else:
+                    self.map_array[subindex].raw = (var.index << 16 |
+                                                    var.subindex << 8 |
+                                                    var.length)
+            except SdoAbortedError as e:
+                if e.code != 0x06010002:
+                    raise
             subindex += 1
         try:
             self.map_array[0].raw = len(self.map)
