@@ -1,6 +1,7 @@
 import logging
 import threading
 import unittest
+from contextlib import contextmanager
 
 import can
 import canopen
@@ -72,7 +73,7 @@ class TestEmcy(unittest.TestCase):
         self.assertEqual(len(self.emcy.active), 0)
 
     def test_emcy_consumer_wait(self):
-        PAUSE = TIMEOUT / 4
+        PAUSE = TIMEOUT / 2
 
         def push_err():
             self.emcy.on_emcy(0x81, b'\x01\x20\x01\x01\x02\x03\x04\x05', 100)
@@ -84,34 +85,42 @@ class TestEmcy(unittest.TestCase):
                 data=bytes([1, 2, 3, 4, 5]), ts=100,
             )
 
+        @contextmanager
+        def timer(func):
+            t = threading.Timer(PAUSE, func)
+            try:
+                yield t
+            finally:
+                t.join(TIMEOUT)
+
         # Check unfiltered wait, on timeout.
         self.assertIsNone(self.emcy.wait(timeout=TIMEOUT))
 
         # Check unfiltered wait, on success.
-        timer = threading.Timer(PAUSE, push_err)
-        timer.start()
-        with self.assertLogs(level=logging.INFO):
-            err = self.emcy.wait(timeout=TIMEOUT)
+        with timer(push_err) as t:
+            with self.assertLogs(level=logging.INFO):
+                t.start()
+                err = self.emcy.wait(timeout=TIMEOUT)
         check_err(err)
 
         # Check filtered wait, on success.
-        timer = threading.Timer(PAUSE, push_err)
-        timer.start()
-        with self.assertLogs(level=logging.INFO):
-            err = self.emcy.wait(0x2001, TIMEOUT)
+        with timer(push_err) as t:
+            with self.assertLogs(level=logging.INFO):
+                t.start()
+                err = self.emcy.wait(0x2001, TIMEOUT)
         check_err(err)
 
         # Check filtered wait, on timeout.
-        timer = threading.Timer(PAUSE, push_err)
-        timer.start()
-        self.assertIsNone(self.emcy.wait(0x9000, TIMEOUT))
+        with timer(push_err) as t:
+            t.start()
+            self.assertIsNone(self.emcy.wait(0x9000, TIMEOUT))
 
         def push_reset():
             self.emcy.on_emcy(0x81, b'\x00\x00\x00\x00\x00\x00\x00\x00', 100)
 
-        timer = threading.Timer(PAUSE, push_reset)
-        timer.start()
-        self.assertIsNone(self.emcy.wait(0x9000, TIMEOUT))
+        with timer(push_reset) as t:
+            t.start()
+            self.assertIsNone(self.emcy.wait(0x9000, TIMEOUT))
 
 
 class TestEmcyError(unittest.TestCase):
@@ -176,6 +185,7 @@ class TestEmcyProducer(unittest.TestCase):
         self.txbus = can.Bus(interface="virtual")
         self.rxbus = can.Bus(interface="virtual")
         self.net = canopen.Network(self.txbus)
+        self.net.NOTIFIER_SHUTDOWN_TIMEOUT = 0.0
         self.net.connect()
         self.emcy = canopen.emcy.EmcyProducer(0x80 + 1)
         self.emcy.network = self.net
@@ -208,3 +218,7 @@ class TestEmcyProducer(unittest.TestCase):
         check(res=b'\x00\x00\x00\x00\x00\x00\x00\x00')
         check(3, res=b'\x00\x00\x03\x00\x00\x00\x00\x00')
         check(3, b"\xaa\xbb", res=b'\x00\x00\x03\xaa\xbb\x00\x00\x00')
+
+
+if __name__ == "__main__":
+    unittest.main()
