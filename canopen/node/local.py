@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import logging
 from typing import Dict, Union
 
+import canopen.network
 from canopen.node.base import BaseNode
 from canopen.sdo import SdoServer, SdoAbortedError
 from canopen.pdo import PDO, TPDO, RPDO
@@ -34,7 +37,7 @@ class LocalNode(BaseNode):
         self.add_write_callback(self.nmt.on_write)
         self.emcy = EmcyProducer(0x80 + self.id)
 
-    def associate_network(self, network):
+    def associate_network(self, network: canopen.network.Network):
         self.network = network
         self.sdo.network = network
         self.tpdo.network = network
@@ -44,15 +47,15 @@ class LocalNode(BaseNode):
         network.subscribe(self.sdo.rx_cobid, self.sdo.on_request)
         network.subscribe(0, self.nmt.on_command)
 
-    def remove_network(self):
+    def remove_network(self) -> None:
         self.network.unsubscribe(self.sdo.rx_cobid, self.sdo.on_request)
         self.network.unsubscribe(0, self.nmt.on_command)
-        self.network = None
-        self.sdo.network = None
-        self.tpdo.network = None
-        self.rpdo.network = None
-        self.nmt.network = None
-        self.emcy.network = None
+        self.network = canopen.network._UNINITIALIZED_NETWORK
+        self.sdo.network = canopen.network._UNINITIALIZED_NETWORK
+        self.tpdo.network = canopen.network._UNINITIALIZED_NETWORK
+        self.rpdo.network = canopen.network._UNINITIALIZED_NETWORK
+        self.nmt.network = canopen.network._UNINITIALIZED_NETWORK
+        self.emcy.network = canopen.network._UNINITIALIZED_NETWORK
 
     def add_read_callback(self, callback):
         self._read_callbacks.append(callback)

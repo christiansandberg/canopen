@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import MutableMapping
 import logging
 import threading
-from typing import Callable, Dict, Iterator, List, Optional, Union
+from typing import Callable, Dict, Final, Iterator, List, Optional, Union
 
 import can
 from can import Listener
@@ -280,6 +280,21 @@ class Network(MutableMapping):
 
     def __len__(self) -> int:
         return len(self.nodes)
+
+
+class _UninitializedNetwork(Network):
+    """Empty network implementation as a placeholder before actual initialization."""
+
+    def __init__(self, bus: Optional[can.BusABC] = None):
+        """Do not initialize attributes, by skipping the parent constructor."""
+
+    def __getattribute__(self, name):
+        raise RuntimeError("No actual Network object was assigned, "
+                           "try associating to a real network first.")
+
+
+#: Singleton instance
+_UNINITIALIZED_NETWORK: Final[Network] = _UninitializedNetwork()
 
 
 class PeriodicMessageTask:

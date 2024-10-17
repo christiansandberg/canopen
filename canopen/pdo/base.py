@@ -6,12 +6,12 @@ from collections.abc import Mapping
 import logging
 import binascii
 
+import canopen.network
 from canopen.sdo import SdoAbortedError
 from canopen import objectdictionary
 from canopen import variable
 
 if TYPE_CHECKING:
-    from canopen.network import Network
     from canopen import LocalNode, RemoteNode
     from canopen.pdo import RPDO, TPDO
     from canopen.sdo import SdoRecord
@@ -30,7 +30,7 @@ class PdoBase(Mapping):
     """
 
     def __init__(self, node: Union[LocalNode, RemoteNode]):
-        self.network: Optional[Network] = None
+        self.network: canopen.network.Network = canopen.network._UNINITIALIZED_NETWORK
         self.map: Optional[PdoMaps] = None
         self.node: Union[LocalNode, RemoteNode] = node
 
