@@ -1,5 +1,5 @@
-import struct
 import logging
+import struct
 import threading
 import time
 from typing import Callable, List, Optional

@@ -1,7 +1,7 @@
 import logging
-import time
-import struct
 import queue
+import struct
+import time
 
 import canopen.network
 

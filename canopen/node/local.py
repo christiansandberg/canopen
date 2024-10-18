@@ -4,13 +4,14 @@ import logging
 from typing import Dict, Union
 
 import canopen.network
-from canopen.node.base import BaseNode
-from canopen.sdo import SdoServer, SdoAbortedError
-from canopen.pdo import PDO, TPDO, RPDO
-from canopen.nmt import NmtSlave
-from canopen.emcy import EmcyProducer
-from canopen.objectdictionary import ObjectDictionary
 from canopen import objectdictionary
+from canopen.emcy import EmcyProducer
+from canopen.nmt import NmtSlave
+from canopen.node.base import BaseNode
+from canopen.objectdictionary import ObjectDictionary
+from canopen.pdo import PDO, RPDO, TPDO
+from canopen.sdo import SdoAbortedError, SdoServer
+
 
 logger = logging.getLogger(__name__)
 

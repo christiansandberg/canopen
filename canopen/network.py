@@ -1,21 +1,21 @@
 from __future__ import annotations
 
-from collections.abc import MutableMapping
 import logging
 import threading
+from collections.abc import MutableMapping
 from typing import Callable, Dict, Final, Iterator, List, Optional, Union
 
 import can
 from can import Listener
-from can import CanError
 
-from canopen.node import RemoteNode, LocalNode
+from canopen.lss import LssMaster
+from canopen.nmt import NmtMaster
+from canopen.node import LocalNode, RemoteNode
+from canopen.objectdictionary import ObjectDictionary
+from canopen.objectdictionary.eds import import_from_node
 from canopen.sync import SyncProducer
 from canopen.timestamp import TimeProducer
-from canopen.nmt import NmtMaster
-from canopen.lss import LssMaster
-from canopen.objectdictionary.eds import import_from_node
-from canopen.objectdictionary import ObjectDictionary
+
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,6 @@
-import threading
 import logging
 import struct
+import threading
 import time
 from typing import Callable, Optional, TYPE_CHECKING
 
