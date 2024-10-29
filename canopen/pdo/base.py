@@ -77,6 +77,11 @@ class PdoBase(Mapping):
         for pdo_map in self.map.values():
             pdo_map.subscribe()
 
+    def unsubscribe(self) -> None:
+        """Unregister the node's PDOs for reception on the network."""
+        for pdo_map in self.map.values():
+            pdo_map.unsubscribe()
+            
     def export(self, filename):
         """Export current configuration to a database file.
 
@@ -469,6 +474,12 @@ class PdoMap:
             logger.info("Subscribing to enabled PDO 0x%X on the network", self.cob_id)
             self.pdo_node.network.subscribe(self.cob_id, self.on_message)
 
+    def unsubscribe(self) -> None:
+        """Unregister the PDO for reception on the network."""
+        if self.enabled:
+            logger.info("Unsubscribing from enabled PDO 0x%X on the network", self.cob_id)
+            self.pdo_node.network.unsubscribe(self.cob_id, self.on_message)
+
     def clear(self) -> None:
         """Clear all variables from this map."""
         self.map = []
@@ -533,6 +544,13 @@ class PdoMap:
         if not self.period:
             raise ValueError("A valid transmission period has not been given")
         logger.info("Starting %s with a period of %s seconds", self.name, self.period)
+
+        if self.cob_id is None and self.predefined_cob_id is not None:
+            self.cob_id = self.predefined_cob_id
+            logger.info("Using predefined COB-ID 0x%X", self.cob_id)
+
+        if self.cob_id is None:
+            raise ValueError("COB-ID has not been set")
 
         self._task = self.pdo_node.network.send_periodic(
             self.cob_id, self.data, self.period)

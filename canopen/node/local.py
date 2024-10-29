@@ -51,6 +51,7 @@ class LocalNode(BaseNode):
     def remove_network(self) -> None:
         self.network.unsubscribe(self.sdo.rx_cobid, self.sdo.on_request)
         self.network.unsubscribe(0, self.nmt.on_command)
+        self.stop_pdo_services()
         self.network = canopen.network._UNINITIALIZED_NETWORK
         self.sdo.network = canopen.network._UNINITIALIZED_NETWORK
         self.tpdo.network = canopen.network._UNINITIALIZED_NETWORK
@@ -63,6 +64,21 @@ class LocalNode(BaseNode):
 
     def add_write_callback(self, callback):
         self._write_callbacks.append(callback)
+
+    def start_pdo_services(self, period: float):
+        """
+        Start the PDO related services of the node.
+        :param period: Service interval in seconds.
+        """
+        self.rpdo.subscribe()
+        self.tpdo.start(period=period)
+
+    def stop_pdo_services(self):
+        """
+        Stop the PDO related services of the node.
+        """
+        self.rpdo.unsubscribe()
+        self.tpdo.stop()
 
     def get_data(
         self, index: int, subindex: int, check_readable: bool = False
