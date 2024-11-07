@@ -129,10 +129,9 @@ class TPDO(PdoBase):
         """
         if isinstance(self.node, node.LocalNode):
             for pdo in self.map.values():
-                data = pdo.data
                 for variable in pdo:
-                    self.pack_data(data, variable)
-                pdo.start()
+                    self.pack_data(pdo.data, variable)
+                pdo.update()
         else:
             raise TypeError("The node type does not support this function.")
 
