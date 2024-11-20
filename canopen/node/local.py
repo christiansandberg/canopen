@@ -65,14 +65,20 @@ class LocalNode(BaseNode):
     def add_write_callback(self, callback):
         self._write_callbacks.append(callback)
 
-    def start_pdo_services(self, period: float):
+    def start_pdo_services(
+        self, period: float, enable_rpdo: bool = True, enable_tpdo: bool = True
+    ):
         """
         Start the PDO related services of the node.
         :param period: Service interval in seconds.
+        :param enable_rpdo: Enable RPDO service.
+        :param enable_tpdo: Enable TPDO service.
         """
-        self.rpdo.read(from_od=True)
-        self.tpdo.read(from_od=True, subscribe=False)
-        self.tpdo.start(period=period)
+        if enable_rpdo:
+            self.rpdo.read(from_od=True, subscribe=True)
+        if enable_tpdo:
+            self.tpdo.read(from_od=True, subscribe=False)
+            self.tpdo.start(period=period)
 
     def stop_pdo_services(self):
         """
