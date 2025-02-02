@@ -33,7 +33,8 @@ class Network(MutableMapping):
     NOTIFIER_CYCLE: float = 1.0  #: Maximum waiting time for one notifier iteration.
     NOTIFIER_SHUTDOWN_TIMEOUT: float = 5.0  #: Maximum waiting time to stop notifiers.
 
-    def __init__(self, bus: Optional[can.BusABC] = None, loop: Optional[AbstractEventLoop] = None):
+    def __init__(self, bus: Optional[can.BusABC] = None, notifier: Optional[can.Notifier] = None,
+                 loop: Optional[AbstractEventLoop] = None):
         """
         :param can.BusABC bus:
             A python-can bus instance to re-use.
@@ -47,7 +48,7 @@ class Network(MutableMapping):
         #: List of :class:`can.Listener` objects.
         #: Includes at least MessageListener.
         self.listeners = [MessageListener(self)]
-        self.notifier: Optional[can.Notifier] = None
+        self.notifier: Optional[can.Notifier] = notifier
         self.nodes: Dict[int, Union[RemoteNode, LocalNode]] = {}
         self.subscribers: Dict[int, List[Callback]] = {}
         self.send_lock = threading.Lock()
@@ -58,6 +59,11 @@ class Network(MutableMapping):
 
         self.lss = LssMaster()
         self.lss.network = self
+
+        # Register this function as the means to check if canopen is run in
+        # async mode. This enables the @ensure_not_async() decorator to
+        # work. See async_guard.py
+        set_async_sentinel(self.is_async)
 
         if self.is_async():
             self.subscribe(self.lss.LSS_RX_COBID, self.lss.aon_message_received)
@@ -117,19 +123,13 @@ class Network(MutableMapping):
                 if node.object_dictionary.bitrate:
                     kwargs["bitrate"] = node.object_dictionary.bitrate
                     break
-        # The optional loop parameter goes to can.Notifier()
-        kwargs_notifier = {}
-        if "loop" in kwargs:
-            self.loop = kwargs.pop("loop")
-            kwargs_notifier["loop"] = self.loop
-            # Register this function as the means to check if canopen is run in
-            # async mode. This enables the @ensure_not_async() decorator to
-            # work. See async_guard.py
-            set_async_sentinel(self.is_async)
         if self.bus is None:
             self.bus = can.Bus(*args, **kwargs)
         logger.info("Connected to '%s'", self.bus.channel_info)
-        self.notifier = can.Notifier(self.bus, self.listeners, self.NOTIFIER_CYCLE, **kwargs_notifier)
+        if self.notifier is None:
+            self.notifier = can.Notifier(self.bus, [], self.NOTIFIER_CYCLE, loop=self.loop)
+        for listener in self.listeners:
+            self.notifier.add_listener(listener)
         return self
 
     def disconnect(self) -> None:
