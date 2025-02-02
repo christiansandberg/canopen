@@ -107,8 +107,6 @@ class Network(MutableMapping):
             for full list of supported interfaces.
         :param int bitrate:
             Bitrate in bit/s.
-        :param loop:
-            Optional, pass the loop parameter if running under asyncio
 
         :raises can.CanError:
             When connection fails.
