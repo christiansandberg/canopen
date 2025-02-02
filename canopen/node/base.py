@@ -1,9 +1,7 @@
-from typing import TextIO, Union, Optional, TYPE_CHECKING
+from typing import TextIO, Union
 
+import canopen.network
 from canopen.objectdictionary import ObjectDictionary, import_od
-
-if TYPE_CHECKING:
-    from canopen.network import Network
 
 
 class BaseNode:
@@ -21,7 +19,7 @@ class BaseNode:
         node_id: int,
         object_dictionary: Union[ObjectDictionary, str, TextIO],
     ):
-        self.network: Optional[Network] = None
+        self.network: canopen.network.Network = canopen.network._UNINITIALIZED_NETWORK
 
         if not isinstance(object_dictionary, ObjectDictionary):
             object_dictionary = import_od(object_dictionary, node_id)
@@ -30,3 +28,7 @@ class BaseNode:
         self.id = node_id or self.object_dictionary.node_id
 
     # FIXME: Should associate_network() and remove_network() be a part of the base API?
+
+    def has_network(self) -> bool:
+        """Check whether the node has been associated to a network."""
+        return not isinstance(self.network, canopen.network._UninitializedNetwork)

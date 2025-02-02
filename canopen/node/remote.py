@@ -1,16 +1,16 @@
 from __future__ import annotations
+
 import logging
-from typing import Union, TextIO, List, TYPE_CHECKING
+from typing import TextIO, Union, List
 
-from canopen.sdo import SdoClient, SdoCommunicationError, SdoAbortedError
-from canopen.nmt import NmtMaster
+import canopen.network
 from canopen.emcy import EmcyConsumer
-from canopen.pdo import TPDO, RPDO, PDO
-from canopen.objectdictionary import ODRecord, ODArray, ODVariable, ObjectDictionary
+from canopen.nmt import NmtMaster
 from canopen.node.base import BaseNode
+from canopen.objectdictionary import ODArray, ODRecord, ODVariable, ObjectDictionary
+from canopen.pdo import PDO, RPDO, TPDO
+from canopen.sdo import SdoAbortedError, SdoClient, SdoCommunicationError
 
-if TYPE_CHECKING:
-    from canopen.network import Network
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class RemoteNode(BaseNode):
         if load_od:
             self.load_configuration()
 
-    def associate_network(self, network: Network):
+    def associate_network(self, network: canopen.network.Network):
         self.network = network
         self.sdo.network = network
         self.pdo.network = network
@@ -67,23 +67,22 @@ class RemoteNode(BaseNode):
             network.subscribe(0x80 + self.id, self.emcy.on_emcy)
         network.subscribe(0, self.nmt.on_command)
 
-    def remove_network(self):
-        network = self.network
+    def remove_network(self) -> None:
         for sdo in self.sdo_channels:
-            network.unsubscribe(sdo.tx_cobid, sdo.on_response)
-        if network.is_async():
-            network.unsubscribe(0x700 + self.id, self.nmt.aon_heartbeat)
-            network.unsubscribe(0x80 + self.id, self.emcy.aon_emcy)
+            self.network.unsubscribe(sdo.tx_cobid, sdo.on_response)
+        if self.network.is_async():
+            self.network.unsubscribe(0x700 + self.id, self.nmt.aon_heartbeat)
+            self.network.unsubscribe(0x80 + self.id, self.emcy.aon_emcy)
         else:
-            network.unsubscribe(0x700 + self.id, self.nmt.on_heartbeat)
-            network.unsubscribe(0x80 + self.id, self.emcy.on_emcy)
-        network.unsubscribe(0, self.nmt.on_command)
-        self.network = None
-        self.sdo.network = None
-        self.pdo.network = None
-        self.tpdo.network = None
-        self.rpdo.network = None
-        self.nmt.network = None
+            self.network.unsubscribe(0x700 + self.id, self.nmt.on_heartbeat)
+            self.network.unsubscribe(0x80 + self.id, self.emcy.on_emcy)
+        self.network.unsubscribe(0, self.nmt.on_command)
+        self.network = canopen.network._UNINITIALIZED_NETWORK
+        self.sdo.network = canopen.network._UNINITIALIZED_NETWORK
+        self.pdo.network = canopen.network._UNINITIALIZED_NETWORK
+        self.tpdo.network = canopen.network._UNINITIALIZED_NETWORK
+        self.rpdo.network = canopen.network._UNINITIALIZED_NETWORK
+        self.nmt.network = canopen.network._UNINITIALIZED_NETWORK
 
     def add_sdo(self, rx_cobid, tx_cobid):
         """Add an additional SDO channel.
@@ -100,7 +99,7 @@ class RemoteNode(BaseNode):
         """
         client = SdoClient(rx_cobid, tx_cobid, self.object_dictionary)
         self.sdo_channels.append(client)
-        if self.network is not None:
+        if self.has_network():
             self.network.subscribe(client.tx_cobid, client.on_response)
         return client
 

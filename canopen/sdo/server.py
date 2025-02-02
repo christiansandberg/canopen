@@ -1,13 +1,16 @@
-from typing import TYPE_CHECKING
-import logging
+from __future__ import annotations
 
+import logging
+from typing import TYPE_CHECKING
+
+from canopen.async_guard import ensure_not_async
 from canopen.sdo.base import SdoBase
 from canopen.sdo.constants import *
 from canopen.sdo.exceptions import *
-from canopen.async_guard import ensure_not_async
 
 if TYPE_CHECKING:
     from canopen.node.local import LocalNode
+
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +18,7 @@ logger = logging.getLogger(__name__)
 class SdoServer(SdoBase):
     """Creates an SDO server."""
 
-    def __init__(self, rx_cobid, tx_cobid, node: 'LocalNode'):
+    def __init__(self, rx_cobid, tx_cobid, node: LocalNode):
         """
         :param int rx_cobid:
             COB-ID that the server receives on (usually 0x600 + node ID)

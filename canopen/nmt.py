@@ -1,14 +1,15 @@
-import threading
+import asyncio
 import logging
 import struct
+import threading
 import time
-import asyncio
 from typing import Callable, Optional, TYPE_CHECKING
 
 from canopen.async_guard import ensure_not_async
+import canopen.network
 
 if TYPE_CHECKING:
-    from canopen.network import Network, PeriodicMessageTask
+    from canopen.network import PeriodicMessageTask
 
 
 logger = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ class NmtBase:
 
     def __init__(self, node_id: int):
         self.id = node_id
-        self.network: Optional[Network] = None
+        self.network: canopen.network.Network = canopen.network._UNINITIALIZED_NETWORK
         self._state = 0
 
     def on_command(self, can_id, data, timestamp):

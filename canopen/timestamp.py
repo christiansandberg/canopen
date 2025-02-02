@@ -1,6 +1,6 @@
 from __future__ import annotations
-import time
 import struct
+import time
 from typing import Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:

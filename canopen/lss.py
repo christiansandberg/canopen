@@ -1,14 +1,13 @@
-from typing import Optional, TYPE_CHECKING
-import logging
-import time
-import struct
-import queue
 import asyncio
+import logging
+import queue
+import struct
+import time
+from typing import Optional, TYPE_CHECKING
 
 from canopen.async_guard import ensure_not_async
+import canopen.network
 
-if TYPE_CHECKING:
-    from canopen.network import Network
 
 logger = logging.getLogger(__name__)
 
@@ -85,8 +84,8 @@ class LssMaster:
     #: Max time in seconds to wait for response from server
     RESPONSE_TIMEOUT = 0.5
 
-    def __init__(self):
-        self.network: Optional[Network] = None
+    def __init__(self) -> None:
+        self.network: canopen.network.Network = canopen.network._UNINITIALIZED_NETWORK
         self._node_id = 0
         self._data = None
         self.responses = queue.Queue()

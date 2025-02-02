@@ -1,26 +1,23 @@
 from __future__ import annotations
-from collections.abc import MutableMapping
+
+import asyncio
 import logging
 import threading
-from typing import Callable, Dict, Iterator, List, Optional, Union, TYPE_CHECKING
-import asyncio
-
-if TYPE_CHECKING:
-    from can import BusABC, Notifier
-    from asyncio import AbstractEventLoop
+from collections.abc import MutableMapping
+from typing import Callable, Dict, Final, Iterator, List, Optional, Union
 
 import can
 from can import Listener
-from can import CanError
 
-from canopen.node import RemoteNode, LocalNode
+from canopen.async_guard import set_async_sentinel
+from canopen.lss import LssMaster
+from canopen.nmt import NmtMaster
+from canopen.node import LocalNode, RemoteNode
+from canopen.objectdictionary import ObjectDictionary
+from canopen.objectdictionary.eds import import_from_node
 from canopen.sync import SyncProducer
 from canopen.timestamp import TimeProducer
-from canopen.nmt import NmtMaster
-from canopen.lss import LssMaster
-from canopen.objectdictionary.eds import import_from_node
-from canopen.objectdictionary import ObjectDictionary
-from canopen.async_guard import set_async_sentinel
+
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +31,7 @@ class Network(MutableMapping):
     NOTIFIER_SHUTDOWN_TIMEOUT: float = 5.0  #: Maximum waiting time to stop notifiers.
 
     def __init__(self, bus: Optional[can.BusABC] = None, notifier: Optional[can.Notifier] = None,
-                 loop: Optional[AbstractEventLoop] = None):
+                 loop: Optional[asyncio.AbstractEventLoop] = None):
         """
         :param can.BusABC bus:
             A python-can bus instance to re-use.
@@ -312,6 +309,21 @@ class Network(MutableMapping):
 
     def __len__(self) -> int:
         return len(self.nodes)
+
+
+class _UninitializedNetwork(Network):
+    """Empty network implementation as a placeholder before actual initialization."""
+
+    def __init__(self, bus: Optional[can.BusABC] = None):
+        """Do not initialize attributes, by skipping the parent constructor."""
+
+    def __getattribute__(self, name):
+        raise RuntimeError("No actual Network object was assigned, "
+                           "try associating to a real network first.")
+
+
+#: Singleton instance
+_UNINITIALIZED_NETWORK: Final[Network] = _UninitializedNetwork()
 
 
 class PeriodicMessageTask:

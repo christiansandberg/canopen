@@ -1,14 +1,13 @@
-import struct
-import logging
-import threading
 import asyncio
+import logging
+import struct
+import threading
 import time
-from typing import Callable, List, Optional, TYPE_CHECKING
+from typing import Callable, List, Optional
 
 from canopen.async_guard import ensure_not_async
+import canopen.network
 
-if TYPE_CHECKING:
-    from canopen.network import Network
 
 # Error code, error register, vendor specific data
 EMCY_STRUCT = struct.Struct("<HB5s")
@@ -117,7 +116,7 @@ class EmcyConsumer:
 class EmcyProducer:
 
     def __init__(self, cob_id: int):
-        self.network: Optional[Network] = None
+        self.network: canopen.network.Network = canopen.network._UNINITIALIZED_NETWORK
         self.cob_id = cob_id
 
     def send(self, code: int, register: int = 0, data: bytes = b""):
