@@ -114,11 +114,7 @@ class TestSDO(unittest.TestCase):
             (RX, b"\xa1\x00\x00\x00\x00\x00\x00\x00"),
         ]
         data = b"A really really long string..."
-        with (
-            self.network[2]
-            .sdo["Writable string"]
-            .open("wb", size=len(data), block_transfer=True) as fp
-        ):
+        with self.network[2].sdo["Writable string"].open("wb", size=len(data), block_transfer=True) as fp:
             fp.write(data)
 
     def test_block_upload(self):
