@@ -1,11 +1,12 @@
 import copy
 import logging
 import re
-from configparser import RawConfigParser, NoOptionError, NoSectionError
+from configparser import NoOptionError, NoSectionError, RawConfigParser
 
 from canopen import objectdictionary
 from canopen.objectdictionary import ObjectDictionary, datatypes
 from canopen.sdo import SdoClient
+
 
 logger = logging.getLogger(__name__)
 
@@ -85,9 +86,13 @@ def import_eds(source, node_id):
                 pass
 
     if eds.has_section("DeviceComissioning"):
-        od.bitrate = int(eds.get("DeviceComissioning", "Baudrate")) * 1000
-        od.node_id = int(eds.get("DeviceComissioning", "NodeID"), 0)
-        node_id = node_id or od.node_id
+        if val := eds.getint("DeviceComissioning", "Baudrate", fallback=None):
+            od.bitrate = val * 1000
+
+        if node_id is None:
+            if val := eds.get("DeviceComissioning", "NodeID", fallback=None):
+                node_id = int(val, base=0)
+        od.node_id = node_id
 
     for section in eds.sections():
         # Match dummy definitions

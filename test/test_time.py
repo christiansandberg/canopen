@@ -1,4 +1,5 @@
 import unittest
+
 import canopen
 
 
@@ -6,7 +7,8 @@ class TestTime(unittest.TestCase):
 
     def test_time_producer(self):
         network = canopen.Network()
-        network.connect(bustype="virtual", receive_own_messages=True)
+        network.NOTIFIER_SHUTDOWN_TIMEOUT = 0.0
+        network.connect(interface="virtual", receive_own_messages=True)
         producer = canopen.timestamp.TimeProducer(network)
         producer.transmit(1486236238)
         msg = network.bus.recv(1)

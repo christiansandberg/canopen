@@ -1,20 +1,22 @@
 from __future__ import annotations
-import threading
-import math
-from typing import Callable, Dict, Iterator, List, Optional, Union, TYPE_CHECKING
-from collections.abc import Mapping
-import logging
-import binascii
 
-from canopen.sdo import SdoAbortedError
+import binascii
+import logging
+import math
+import threading
+from collections.abc import Mapping
+from typing import Callable, Dict, Iterator, List, Optional, TYPE_CHECKING, Union
+
+import canopen.network
 from canopen import objectdictionary
 from canopen import variable
+from canopen.sdo import SdoAbortedError
 
 if TYPE_CHECKING:
-    from canopen.network import Network
     from canopen import LocalNode, RemoteNode
     from canopen.pdo import RPDO, TPDO
     from canopen.sdo import SdoRecord
+
 
 PDO_NOT_VALID = 1 << 31
 RTR_NOT_ALLOWED = 1 << 30
@@ -30,7 +32,7 @@ class PdoBase(Mapping):
     """
 
     def __init__(self, node: Union[LocalNode, RemoteNode]):
-        self.network: Optional[Network] = None
+        self.network: canopen.network.Network = canopen.network._UNINITIALIZED_NETWORK
         self.map: Optional[PdoMaps] = None
         self.node: Union[LocalNode, RemoteNode] = node
 
@@ -78,14 +80,24 @@ class PdoBase(Mapping):
     def export(self, filename):
         """Export current configuration to a database file.
 
+        .. note::
+           This API requires the ``db_export`` feature to be installed::
+
+              python3 -m pip install 'canopen[db_export]'
+
         :param str filename:
             Filename to save to (e.g. DBC, DBF, ARXML, KCD etc)
+        :raises NotImplementedError:
+            When the ``canopen[db_export]`` feature is not installed.
 
         :return: The CanMatrix object created
         :rtype: canmatrix.canmatrix.CanMatrix
         """
-        from canmatrix import canmatrix
-        from canmatrix import formats
+        try:
+            from canmatrix import canmatrix
+            from canmatrix import formats
+        except ImportError:
+            raise NotImplementedError("This feature requires the 'canopen[db_export]' feature")
 
         db = canmatrix.CanMatrix()
         for pdo_map in self.map.values():
@@ -320,11 +332,20 @@ class PdoMap:
         self.callbacks.append(callback)
 
     def read(self, from_od=False) -> None:
-        """Read PDO configuration for this map using SDO."""
+        """Read PDO configuration for this map.
+        
+        :param from_od:
+            Read using SDO if False, read from object dictionary if True.
+            When reading from object dictionary, if DCF populated a value, the
+            DCF value will be used, otherwise the EDS default will be used instead.
+        """
 
         def _raw_from(param):
             if from_od:
-                return param.od.default
+                if param.od.value is not None:
+                    return param.od.value
+                else:
+                    return param.od.default
             return param.raw
 
         cob_id = _raw_from(self.com_record[1])
